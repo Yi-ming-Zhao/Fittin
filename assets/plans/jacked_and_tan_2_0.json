@@ -1,0 +1,4961 @@
+{
+  "id": "jacked-and-tan-2-0",
+  "name": "Jacked & Tan 2.0 (TM Periodized)",
+  "description": "A 4-day Jacked & Tan 2.0 built around training max inputs and fixed 6-week prescriptions. Exercise selection follows the checked-in workbook while the app derives weekly loads from the selected lift mappings.",
+  "engineFamily": "periodized_tm",
+  "requiredTrainingMaxKeys": [
+    "squat",
+    "bench",
+    "deadlift",
+    "overhead_press"
+  ],
+  "engineConfig": {
+    "cycleLengthWeeks": 6
+  },
+  "phases": [
+    {
+      "id": "main-phase",
+      "name": "6-Week Main Block",
+      "workouts": [
+        {
+          "id": "jat-day1",
+          "name": "Squat & Pull",
+          "dayLabel": "Day 1",
+          "estimatedDurationMinutes": 75,
+          "exercises": [
+            {
+              "id": "jat-day1-comp-squat",
+              "exerciseId": "competition_squat",
+              "name": "Competition Squat",
+              "initialBaseWeight": 0,
+              "tier": "T1",
+              "restSeconds": 210,
+              "trainingMaxLift": "squat",
+              "trainingMaxMultiplier": 1.0,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day1-comp-squat-week-1",
+                  "name": "Week 1 3x6+",
+                  "basePercent": 0.7,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-comp-squat-week-2",
+                  "name": "Week 2 4x5+",
+                  "basePercent": 0.75,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-comp-squat-week-3",
+                  "name": "Week 3 5x4+",
+                  "basePercent": 0.8,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-comp-squat-week-4",
+                  "name": "Week 4 6x3+",
+                  "basePercent": 0.85,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-comp-squat-week-5",
+                  "name": "Week 5 8x2+",
+                  "basePercent": 0.9,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-comp-squat-week-6",
+                  "name": "Week 6 10x1+",
+                  "basePercent": 0.95,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "比赛深蹲"
+              }
+            },
+            {
+              "id": "jat-day1-block-pull",
+              "exerciseId": "block_pull",
+              "name": "Block Pull",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 150,
+              "trainingMaxLift": "deadlift",
+              "trainingMaxMultiplier": 0.9,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day1-block-pull-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-block-pull-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-block-pull-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-block-pull-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-block-pull-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-block-pull-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "架上拉"
+              }
+            },
+            {
+              "id": "jat-day1-leg-press",
+              "exerciseId": "leg_press",
+              "name": "Leg Press",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "trainingMaxLift": "squat",
+              "trainingMaxMultiplier": 0.95,
+              "roundingIncrement": 5.0,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day1-leg-press-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-press-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-press-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-press-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-press-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-press-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "腿举"
+              }
+            },
+            {
+              "id": "jat-day1-barbell-row",
+              "exerciseId": "barbell_row",
+              "name": "Barbell Row",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.55,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day1-barbell-row-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-barbell-row-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-barbell-row-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-barbell-row-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-barbell-row-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-barbell-row-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "杠铃划船"
+              }
+            },
+            {
+              "id": "jat-day1-leg-curl",
+              "exerciseId": "leg_curl",
+              "name": "Leg Curl",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "deadlift",
+              "trainingMaxMultiplier": 0.28,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day1-leg-curl-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-curl-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-curl-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-curl-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-curl-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day1-leg-curl-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "腿弯举"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "深蹲与拉"
+          },
+          "localizedDayLabel": {
+            "zh": "第1天"
+          }
+        },
+        {
+          "id": "jat-day2",
+          "name": "Bench & Delts",
+          "dayLabel": "Day 2",
+          "estimatedDurationMinutes": 70,
+          "exercises": [
+            {
+              "id": "jat-day2-bench",
+              "exerciseId": "bench_press",
+              "name": "Bench Press",
+              "initialBaseWeight": 0,
+              "tier": "T1",
+              "restSeconds": 210,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 1.0,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day2-bench-week-1",
+                  "name": "Week 1 3x6+",
+                  "basePercent": 0.7,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-bench-week-2",
+                  "name": "Week 2 4x5+",
+                  "basePercent": 0.75,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-bench-week-3",
+                  "name": "Week 3 5x4+",
+                  "basePercent": 0.8,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-bench-week-4",
+                  "name": "Week 4 6x3+",
+                  "basePercent": 0.85,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-bench-week-5",
+                  "name": "Week 5 8x2+",
+                  "basePercent": 0.9,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-bench-week-6",
+                  "name": "Week 6 10x1+",
+                  "basePercent": 0.95,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "卧推"
+              }
+            },
+            {
+              "id": "jat-day2-cgbp",
+              "exerciseId": "close_grip_bench_press",
+              "name": "Close-Grip Bench Press",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 150,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.9,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day2-cgbp-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-cgbp-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-cgbp-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-cgbp-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-cgbp-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-cgbp-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "窄握卧推"
+              }
+            },
+            {
+              "id": "jat-day2-incline-db",
+              "exerciseId": "incline_db_bench",
+              "name": "Incline DB Bench",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.7,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day2-incline-db-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-incline-db-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-incline-db-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-incline-db-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-incline-db-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-incline-db-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "上斜哑铃卧推"
+              }
+            },
+            {
+              "id": "jat-day2-db-press",
+              "exerciseId": "db_seated_press",
+              "name": "DB Seated Press",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "overhead_press",
+              "trainingMaxMultiplier": 0.45,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day2-db-press-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-db-press-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-db-press-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-db-press-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-db-press-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-db-press-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "坐姿哑铃推举"
+              }
+            },
+            {
+              "id": "jat-day2-lateral",
+              "exerciseId": "lateral_raises",
+              "name": "Lateral Raises",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 75,
+              "trainingMaxLift": "overhead_press",
+              "trainingMaxMultiplier": 0.22,
+              "roundingIncrement": 1.0,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day2-lateral-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-lateral-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-lateral-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-lateral-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-lateral-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day2-lateral-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "侧平举"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "卧推与三角肌"
+          },
+          "localizedDayLabel": {
+            "zh": "第2天"
+          }
+        },
+        {
+          "id": "jat-day3",
+          "name": "Lower Pull",
+          "dayLabel": "Day 3",
+          "estimatedDurationMinutes": 75,
+          "exercises": [
+            {
+              "id": "jat-day3-aux-squat",
+              "exerciseId": "auxiliary_squat",
+              "name": "Auxiliary Squat",
+              "initialBaseWeight": 0,
+              "tier": "T1",
+              "restSeconds": 210,
+              "trainingMaxLift": "squat",
+              "trainingMaxMultiplier": 0.95,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day3-aux-squat-week-1",
+                  "name": "Week 1 3x6+",
+                  "basePercent": 0.7,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-aux-squat-week-2",
+                  "name": "Week 2 4x5+",
+                  "basePercent": 0.75,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-aux-squat-week-3",
+                  "name": "Week 3 5x4+",
+                  "basePercent": 0.8,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-aux-squat-week-4",
+                  "name": "Week 4 6x3+",
+                  "basePercent": 0.85,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-aux-squat-week-5",
+                  "name": "Week 5 8x2+",
+                  "basePercent": 0.9,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-aux-squat-week-6",
+                  "name": "Week 6 10x1+",
+                  "basePercent": 0.95,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "辅助深蹲"
+              }
+            },
+            {
+              "id": "jat-day3-rdl",
+              "exerciseId": "romanian_deadlift",
+              "name": "Romanian Deadlift",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 150,
+              "trainingMaxLift": "deadlift",
+              "trainingMaxMultiplier": 0.85,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day3-rdl-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-rdl-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-rdl-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-rdl-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-rdl-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-rdl-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "罗马尼亚硬拉"
+              }
+            },
+            {
+              "id": "jat-day3-close-pulldown",
+              "exerciseId": "close_grip_lat_pulldown",
+              "name": "Close-Grip Lat Pulldown",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.6,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day3-close-pulldown-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-close-pulldown-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-close-pulldown-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-close-pulldown-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-close-pulldown-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-close-pulldown-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "窄握高位下拉"
+              }
+            },
+            {
+              "id": "jat-day3-supported-row",
+              "exerciseId": "chest_supported_row",
+              "name": "Chest-Supported Row",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day3-supported-row-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-supported-row-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-supported-row-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-supported-row-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-supported-row-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-supported-row-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "胸托划船"
+              }
+            },
+            {
+              "id": "jat-day3-lunge",
+              "exerciseId": "walking_lunge",
+              "name": "Walking Lunge",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "squat",
+              "trainingMaxMultiplier": 0.4,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day3-lunge-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-lunge-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-lunge-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-lunge-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-lunge-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day3-lunge-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "行走弓步"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "下肢与拉"
+          },
+          "localizedDayLabel": {
+            "zh": "第3天"
+          }
+        },
+        {
+          "id": "jat-day4",
+          "name": "Press & Bench",
+          "dayLabel": "Day 4",
+          "estimatedDurationMinutes": 80,
+          "exercises": [
+            {
+              "id": "jat-day4-press",
+              "exerciseId": "standing_barbell_press",
+              "name": "Standing Barbell Press",
+              "initialBaseWeight": 0,
+              "tier": "T1",
+              "restSeconds": 180,
+              "trainingMaxLift": "overhead_press",
+              "trainingMaxMultiplier": 1.0,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day4-press-week-1",
+                  "name": "Week 1 3x6+",
+                  "basePercent": 0.7,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-press-week-2",
+                  "name": "Week 2 4x5+",
+                  "basePercent": 0.75,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-press-week-3",
+                  "name": "Week 3 5x4+",
+                  "basePercent": 0.8,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-press-week-4",
+                  "name": "Week 4 6x3+",
+                  "basePercent": 0.85,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-press-week-5",
+                  "name": "Week 5 8x2+",
+                  "basePercent": 0.9,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-press-week-6",
+                  "name": "Week 6 10x1+",
+                  "basePercent": 0.95,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "站姿杠铃推举"
+              }
+            },
+            {
+              "id": "jat-day4-slingshot",
+              "exerciseId": "slingshot_bench",
+              "name": "Slingshot Bench",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 180,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 1.05,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day4-slingshot-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-slingshot-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-slingshot-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-slingshot-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-slingshot-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-slingshot-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "弹弓卧推"
+              }
+            },
+            {
+              "id": "jat-day4-legless-bench",
+              "exerciseId": "legless_bench_press",
+              "name": "Legless Bench Press",
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 150,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.88,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day4-legless-bench-week-1",
+                  "name": "Week 1 4x10",
+                  "basePercent": 0.55,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-legless-bench-week-2",
+                  "name": "Week 2 4x8",
+                  "basePercent": 0.6,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 8,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-legless-bench-week-3",
+                  "name": "Week 3 5x6",
+                  "basePercent": 0.65,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 6,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-legless-bench-week-4",
+                  "name": "Week 4 5x5",
+                  "basePercent": 0.7,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-legless-bench-week-5",
+                  "name": "Week 5 6x4",
+                  "basePercent": 0.72,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 4,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-legless-bench-week-6",
+                  "name": "Week 6 3x10",
+                  "basePercent": 0.6,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "无腿卧推"
+              }
+            },
+            {
+              "id": "jat-day4-wide-pulldown",
+              "exerciseId": "wide_grip_lat_pulldown",
+              "name": "Wide-Grip Lat Pulldown",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.62,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day4-wide-pulldown-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-wide-pulldown-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-wide-pulldown-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-wide-pulldown-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-wide-pulldown-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-wide-pulldown-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "宽握高位下拉"
+              }
+            },
+            {
+              "id": "jat-day4-face-pull",
+              "exerciseId": "face_pull",
+              "name": "Face Pull",
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 75,
+              "trainingMaxLift": "overhead_press",
+              "trainingMaxMultiplier": 0.3,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "stages": [
+                {
+                  "id": "jat-day4-face-pull-week-1",
+                  "name": "Week 1 3x15",
+                  "basePercent": 0.4,
+                  "order": 0,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-face-pull-week-2",
+                  "name": "Week 2 3x15",
+                  "basePercent": 0.42,
+                  "order": 1,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-face-pull-week-3",
+                  "name": "Week 3 4x12",
+                  "basePercent": 0.44,
+                  "order": 2,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-face-pull-week-4",
+                  "name": "Week 4 4x12",
+                  "basePercent": 0.46,
+                  "order": 3,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-face-pull-week-5",
+                  "name": "Week 5 4x10",
+                  "basePercent": 0.48,
+                  "order": 4,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                },
+                {
+                  "id": "jat-day4-face-pull-week-6",
+                  "name": "Week 6 3x15",
+                  "basePercent": 0.42,
+                  "order": 5,
+                  "engineConfig": {},
+                  "sets": [
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 15,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": []
+                }
+              ],
+              "localizedName": {
+                "zh": "面拉"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "推举与卧推"
+          },
+          "localizedDayLabel": {
+            "zh": "第4天"
+          }
+        }
+      ]
+    }
+  ],
+  "localizedName": {
+    "zh": "Jacked & Tan 2.0（训练最大值周期版）"
+  },
+  "localizedDescription": {
+    "zh": "基于训练最大值输入和固定六周处方构建的四天 Jacked & Tan 2.0。动作选择遵循仓库内表格，训练重量由应用按主项映射自动计算。"
+  }
+}

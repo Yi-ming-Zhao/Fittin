@@ -1,0 +1,2247 @@
+{
+  "id": "gzclp-4day-12week",
+  "name": "GZCLP 4-Day 12-Week",
+  "description": "Seeded from the checked-in 2.0_GZCLP 4-Day 12-Week workbook using the populated Day 1 to Day 4 exercise lineup.",
+  "phases": [
+    {
+      "id": "gzclp-rotation",
+      "name": "4-Day Rotation",
+      "workouts": [
+        {
+          "id": "day1",
+          "name": "Squat Focus",
+          "dayLabel": "Day 1",
+          "estimatedDurationMinutes": 55,
+          "exercises": [
+            {
+              "id": "day1-squat",
+              "exerciseId": "squat",
+              "name": "Squat",
+              "initialBaseWeight": 135.0,
+              "tier": "T1",
+              "restSeconds": 180,
+              "stages": [
+                {
+                  "id": "t1-3x5",
+                  "name": "3x5+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5925925925925926,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7037037037037037,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8518518518518519,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-4x3"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-4x3",
+                  "name": "4x3+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5925925925925926,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7037037037037037,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8518518518518519,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-5x2"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 1,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-5x2",
+                  "name": "5x2+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5925925925925926,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7037037037037037,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8518518518518519,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "MULTIPLY_WEIGHT",
+                          "amount": null,
+                          "multiplier": 0.9,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-3x5"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 2,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "squat",
+              "trainingMaxMultiplier": 0.85,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "深蹲"
+              }
+            },
+            {
+              "id": "day1-barbell-row",
+              "exerciseId": "barbell_row",
+              "name": "Barbell Row",
+              "initialBaseWeight": 70.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6071428571428571,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7142857142857143,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8571428571428571,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "杠铃划船"
+              }
+            },
+            {
+              "id": "day1-lat-pulldowns",
+              "exerciseId": "lat_pulldowns",
+              "name": "Lat Pulldowns",
+              "initialBaseWeight": 105.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5952380952380952,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6904761904761905,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8571428571428571,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "高位下拉"
+              }
+            },
+            {
+              "id": "day1-bicep-curls",
+              "exerciseId": "bicep_curls",
+              "name": "Bicep Curls",
+              "initialBaseWeight": 30.0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "stages": [
+                {
+                  "id": "t3-4x12",
+                  "name": "4x12+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5833333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6666666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "二头弯举"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "深蹲主项日"
+          },
+          "localizedDayLabel": {
+            "zh": "第1天"
+          }
+        },
+        {
+          "id": "day2",
+          "name": "Bench Focus",
+          "dayLabel": "Day 2",
+          "estimatedDurationMinutes": 50,
+          "exercises": [
+            {
+              "id": "day2-bench",
+              "exerciseId": "bench_press",
+              "name": "Bench",
+              "initialBaseWeight": 85.0,
+              "tier": "T1",
+              "restSeconds": 180,
+              "stages": [
+                {
+                  "id": "t1-3x5",
+                  "name": "3x5+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5882352941176471,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7058823529411765,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8529411764705882,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-4x3"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-4x3",
+                  "name": "4x3+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5882352941176471,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7058823529411765,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8529411764705882,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-5x2"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 1,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-5x2",
+                  "name": "5x2+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5882352941176471,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7058823529411765,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8529411764705882,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "MULTIPLY_WEIGHT",
+                          "amount": null,
+                          "multiplier": 0.9,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-3x5"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 2,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.85,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "Bench"
+              }
+            },
+            {
+              "id": "day2-incline-db-bench",
+              "exerciseId": "incline_db_bench",
+              "name": "Incline DB Bench",
+              "initialBaseWeight": 12.5,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "上斜哑铃卧推"
+              }
+            },
+            {
+              "id": "day2-close-grip-bench",
+              "exerciseId": "close_grip_bench_press",
+              "name": "Close Grip Bench Press",
+              "initialBaseWeight": 60.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5833333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "Close Grip Bench Press"
+              }
+            },
+            {
+              "id": "day2-db-seated-press",
+              "exerciseId": "db_seated_press",
+              "name": "DB Seated Press",
+              "initialBaseWeight": 12.5,
+              "tier": "T3",
+              "restSeconds": 90,
+              "stages": [
+                {
+                  "id": "t3-4x12",
+                  "name": "4x12+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "坐姿哑铃推举"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "卧推主项日"
+          },
+          "localizedDayLabel": {
+            "zh": "第2天"
+          }
+        },
+        {
+          "id": "day3",
+          "name": "Deadlift Focus",
+          "dayLabel": "Day 3",
+          "estimatedDurationMinutes": 55,
+          "exercises": [
+            {
+              "id": "day3-deadlift",
+              "exerciseId": "deadlift",
+              "name": "Deadlift",
+              "initialBaseWeight": 120.0,
+              "tier": "T1",
+              "restSeconds": 180,
+              "stages": [
+                {
+                  "id": "t1-3x5",
+                  "name": "3x5+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6041666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8541666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-4x3"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-4x3",
+                  "name": "4x3+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6041666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8541666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-5x2"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 1,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-5x2",
+                  "name": "5x2+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6041666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8541666666666666,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 5.0,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "MULTIPLY_WEIGHT",
+                          "amount": null,
+                          "multiplier": 0.9,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-3x5"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 2,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "deadlift",
+              "trainingMaxMultiplier": 0.85,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "硬拉"
+              }
+            },
+            {
+              "id": "day3-chest-supported-row",
+              "exerciseId": "chest_supported_row",
+              "name": "Chest-Supported Row",
+              "initialBaseWeight": 45.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6111111111111112,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7222222222222222,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "胸托划船"
+              }
+            },
+            {
+              "id": "day3-lat-pulldowns",
+              "exerciseId": "lat_pulldowns",
+              "name": "Lat Pulldowns",
+              "initialBaseWeight": 60.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5833333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "高位下拉"
+              }
+            },
+            {
+              "id": "day3-close-grip-pulldown",
+              "exerciseId": "close_grip_pulldown",
+              "name": "Close-Grip Pulldown",
+              "initialBaseWeight": 70.0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "stages": [
+                {
+                  "id": "t3-4x12",
+                  "name": "4x12+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6071428571428571,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7142857142857143,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8571428571428571,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "Close-Grip Pulldown"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "硬拉主项日"
+          },
+          "localizedDayLabel": {
+            "zh": "第3天"
+          }
+        },
+        {
+          "id": "day4",
+          "name": "Press Focus",
+          "dayLabel": "Day 4",
+          "estimatedDurationMinutes": 45,
+          "exercises": [
+            {
+              "id": "day4-ohp",
+              "exerciseId": "overhead_press",
+              "name": "OHP",
+              "initialBaseWeight": 45.0,
+              "tier": "T1",
+              "restSeconds": 180,
+              "stages": [
+                {
+                  "id": "t1-3x5",
+                  "name": "3x5+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6111111111111112,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7222222222222222,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-4x3"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-4x3",
+                  "name": "4x3+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6111111111111112,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7222222222222222,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 3,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-5x2"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 1,
+                  "engineConfig": {}
+                },
+                {
+                  "id": "t1-5x2",
+                  "name": "5x2+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6111111111111112,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7222222222222222,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 2,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "MULTIPLY_WEIGHT",
+                          "amount": null,
+                          "multiplier": 0.9,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "JUMP_TO_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": "t1-3x5"
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 2,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "overhead_press",
+              "trainingMaxMultiplier": 0.85,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "OHP"
+              }
+            },
+            {
+              "id": "day4-bench",
+              "exerciseId": "bench_press",
+              "name": "Bench",
+              "initialBaseWeight": 60.0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5833333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.7083333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8333333333333334,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "ADD_WEIGHT",
+                          "amount": 2.5,
+                          "multiplier": null,
+                          "targetStageId": null
+                        },
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "Bench"
+              }
+            },
+            {
+              "id": "day4-db-seated-press",
+              "exerciseId": "db_seated_press",
+              "name": "DB Seated Press",
+              "initialBaseWeight": 12.5,
+              "tier": "T2",
+              "restSeconds": 120,
+              "stages": [
+                {
+                  "id": "t2-3x10",
+                  "name": "3x10",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.6,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.8,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 10,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "坐姿哑铃推举"
+              }
+            },
+            {
+              "id": "day4-lateral-raises",
+              "exerciseId": "lateral_raises",
+              "name": "Lateral Raises",
+              "initialBaseWeight": 10.0,
+              "tier": "T3",
+              "restSeconds": 90,
+              "stages": [
+                {
+                  "id": "t3-4x12",
+                  "name": "4x12+",
+                  "sets": [
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.5,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.75,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 5,
+                      "intensity": 0.75,
+                      "isAmrap": false,
+                      "kind": "warmup"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": false,
+                      "kind": "working"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1.0,
+                      "isAmrap": true,
+                      "kind": "working"
+                    }
+                  ],
+                  "rules": [
+                    {
+                      "condition": "on_success",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    },
+                    {
+                      "condition": "on_failure",
+                      "actions": [
+                        {
+                          "type": "STAY_STAGE",
+                          "amount": null,
+                          "multiplier": null,
+                          "targetStageId": null
+                        }
+                      ]
+                    }
+                  ],
+                  "basePercent": 1.0,
+                  "order": 0,
+                  "engineConfig": {}
+                }
+              ],
+              "trainingMaxLift": "bench",
+              "trainingMaxMultiplier": 0.5,
+              "roundingIncrement": 2.5,
+              "engineConfig": {},
+              "localizedName": {
+                "zh": "侧平举"
+              }
+            }
+          ],
+          "localizedName": {
+            "zh": "推举主项日"
+          },
+          "localizedDayLabel": {
+            "zh": "第4天"
+          }
+        }
+      ]
+    }
+  ],
+  "engineFamily": "linear_tm",
+  "requiredTrainingMaxKeys": [
+    "squat",
+    "bench",
+    "deadlift",
+    "overhead_press"
+  ],
+  "engineConfig": {
+    "cycleLengthWeeks": 12
+  },
+  "localizedName": {
+    "zh": "GZCLP 四天十二周"
+  },
+  "localizedDescription": {
+    "zh": "根据仓库内 2.0_GZCLP 4-Day 12-Week 表格生成，采用第 1 天到第 4 天的动作安排。"
+  }
+}
