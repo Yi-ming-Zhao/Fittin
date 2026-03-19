@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:isar/isar.dart';
 import 'package:fittin_v2/src/data/models/app_state_collection.dart';
-import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/instance_collection.dart';
+import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
+import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
@@ -14,12 +16,17 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:uuid/uuid.dart';
 
 class DatabaseRepository {
   static const _activeStateKey = 'active-instance-selection';
   static const _localeStateKey = 'app-locale';
   static const _analyticsFormulaStateKey = 'analytics-formula';
+  static const _glassOpacityKey = 'glass-opacity';
+  static const _deviceIdStateKey = 'device-id';
   final Isar? _isar;
+
+  Isar? get isar => _isar;
 
   DatabaseRepository([this._isar]);
 
@@ -58,6 +65,9 @@ class DatabaseRepository {
     PlanTemplate template, {
     bool isBuiltIn = false,
     String? sourceTemplateId,
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
   }) async {
     final Map<String, dynamic> templateJson = template.toJson();
     final String serialized = jsonEncode(templateJson);
@@ -71,13 +81,27 @@ class DatabaseRepository {
       ..description = template.description
       ..isBuiltIn = existing?.isBuiltIn ?? isBuiltIn
       ..sourceTemplateId = existing?.sourceTemplateId ?? sourceTemplateId
+      ..ownerUserId = existing?.ownerUserId ?? ownerUserId
       ..createdAt = existing?.createdAt ?? DateTime.now()
       ..lastModifiedAt = DateTime.now()
+      ..deletedAt = null
+      ..lastSyncedAt = existing?.lastSyncedAt
+      ..version = (existing?.version ?? 0) + 1
+      ..syncStatusKey =
+          syncStatus ?? _defaultSyncStatus(ownerUserId ?? existing?.ownerUserId)
+      ..lastModifiedByDeviceId = deviceId ?? existing?.lastModifiedByDeviceId
       ..rawJsonPayload = serialized;
 
     await _database.writeTxn(() async {
       await _database.templateCollections.putByTemplateId(collection);
     });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.template,
+      entityId: template.id,
+      ownerUserId: collection.ownerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: collection.syncStatusKey,
+    );
   }
 
   Future<PlanTemplate?> fetchTemplate(String templateId) async {
@@ -88,22 +112,36 @@ class DatabaseRepository {
     return PlanTemplate.fromJson(jsonDecode(collection.rawJsonPayload));
   }
 
-  Future<StoredTemplateRecord?> fetchStoredTemplate(String templateId) async {
+  Future<StoredTemplateRecord?> fetchStoredTemplate(
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     final collection = await _database.templateCollections.getByTemplateId(
       templateId,
     );
     if (collection == null) {
       return null;
     }
-    final instanceCount = await _instanceCountForTemplate(templateId);
+    if (!_templateVisibleToUser(collection, ownerUserId)) {
+      return null;
+    }
+    final instanceCount = await _instanceCountForTemplate(
+      templateId,
+      ownerUserId: ownerUserId,
+    );
     return _toStoredTemplateRecord(collection, instanceCount);
   }
 
-  Future<List<StoredTemplateRecord>> fetchTemplates() async {
+  Future<List<StoredTemplateRecord>> fetchTemplates({
+    String? ownerUserId,
+  }) async {
     final collections = await _database.templateCollections.where().findAll();
     final instances = await _database.instanceCollections.where().findAll();
     final counts = <String, int>{};
     for (final instance in instances) {
+      if (!_ownerMatches(instance.ownerUserId, ownerUserId)) {
+        continue;
+      }
       counts.update(
         instance.templateId,
         (value) => value + 1,
@@ -112,6 +150,7 @@ class DatabaseRepository {
     }
 
     final records = collections
+        .where((collection) => _templateVisibleToUser(collection, ownerUserId))
         .map(
           (collection) => _toStoredTemplateRecord(
             collection,
@@ -182,18 +221,29 @@ class DatabaseRepository {
   }
 
   Future<String?> fetchActiveInstanceId() async {
+    return fetchActiveInstanceIdForUser(null);
+  }
+
+  Future<String?> fetchActiveInstanceIdForUser(String? ownerUserId) async {
     final state = await _database.appStateCollections.getByStateKey(
-      _activeStateKey,
+      _scopedStateKey(_activeStateKey, ownerUserId),
     );
     return state?.activeInstanceId;
   }
 
   Future<void> saveActiveInstanceId(String instanceId) async {
+    return saveActiveInstanceIdForUser(instanceId, null);
+  }
+
+  Future<void> saveActiveInstanceIdForUser(
+    String instanceId,
+    String? ownerUserId,
+  ) async {
     final existing = await _database.appStateCollections.getByStateKey(
-      _activeStateKey,
+      _scopedStateKey(_activeStateKey, ownerUserId),
     );
     final state = AppStateCollection()
-      ..stateKey = _activeStateKey
+      ..stateKey = _scopedStateKey(_activeStateKey, ownerUserId)
       ..activeInstanceId = instanceId
       ..updatedAt = DateTime.now();
     if (existing != null) {
@@ -206,8 +256,12 @@ class DatabaseRepository {
   }
 
   Future<void> clearActiveInstanceId() async {
+    return clearActiveInstanceIdForUser(null);
+  }
+
+  Future<void> clearActiveInstanceIdForUser(String? ownerUserId) async {
     final existing = await _database.appStateCollections.getByStateKey(
-      _activeStateKey,
+      _scopedStateKey(_activeStateKey, ownerUserId),
     );
     if (existing == null) {
       return;
@@ -215,7 +269,7 @@ class DatabaseRepository {
 
     final state = AppStateCollection()
       ..id = existing.id
-      ..stateKey = _activeStateKey
+      ..stateKey = _scopedStateKey(_activeStateKey, ownerUserId)
       ..updatedAt = DateTime.now();
 
     await _database.writeTxn(() async {
@@ -269,8 +323,35 @@ class DatabaseRepository {
     });
   }
 
+  Future<double> fetchGlassOpacity() async {
+    final state = await _database.appStateCollections.getByStateKey(
+      _glassOpacityKey,
+    );
+    return state?.glassOpacity ?? 0.3;
+  }
+
+  Future<void> saveGlassOpacity(double opacity) async {
+    final existing = await _database.appStateCollections.getByStateKey(
+      _glassOpacityKey,
+    );
+    final state = existing ?? AppStateCollection();
+    state.stateKey = _glassOpacityKey;
+    state.glassOpacity = opacity;
+    state.updatedAt = DateTime.now();
+
+    await _database.writeTxn(() async {
+      await _database.appStateCollections.putByStateKey(state);
+    });
+  }
+
   Future<StoredTrainingInstance?> fetchActiveInstance() async {
-    final activeInstanceId = await fetchActiveInstanceId();
+    return fetchActiveInstanceForUser(null);
+  }
+
+  Future<StoredTrainingInstance?> fetchActiveInstanceForUser(
+    String? ownerUserId,
+  ) async {
+    final activeInstanceId = await fetchActiveInstanceIdForUser(ownerUserId);
     if (activeInstanceId == null) {
       return null;
     }
@@ -278,44 +359,60 @@ class DatabaseRepository {
   }
 
   Future<StoredTrainingInstance?> fetchInstanceForTemplate(
-    String templateId,
-  ) async {
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     final collections = await _database.instanceCollections
         .filter()
         .templateIdEqualTo(templateId)
         .findAll();
-    if (collections.isEmpty) {
+    final filtered = collections
+        .where(
+          (collection) => _ownerMatches(collection.ownerUserId, ownerUserId),
+        )
+        .toList();
+    if (filtered.isEmpty) {
       return null;
     }
 
-    collections.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    final collection = collections.first;
+    filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final collection = filtered.first;
     return StoredTrainingInstance(
       instanceId: collection.instanceId,
       templateId: collection.templateId,
       currentWorkoutIndex: collection.currentWorkoutIndex,
-      trainingMaxProfile:
-          collection.trainingMaxProfileJson == null
+      ownerUserId: collection.ownerUserId,
+      trainingMaxProfile: collection.trainingMaxProfileJson == null
           ? TrainingMaxProfile.empty
           : TrainingMaxProfile.fromJson(
               jsonDecode(collection.trainingMaxProfileJson!)
                   as Map<String, dynamic>,
             ),
-      engineState:
-          collection.engineStateJson == null
+      engineState: collection.engineStateJson == null
           ? const {}
           : jsonDecode(collection.engineStateJson!) as Map<String, dynamic>,
       states: collection.currentStatesJson
           .map((encoded) => TrainingState.fromJson(jsonDecode(encoded)))
           .toList(),
+      createdAt: collection.createdAt,
+      updatedAt: collection.lastModifiedAt,
+      deletedAt: collection.deletedAt,
+      version: collection.version,
+      syncStatus: collection.syncStatusKey,
+      lastSyncedAt: collection.lastSyncedAt,
+      lastModifiedByDeviceId: collection.lastModifiedByDeviceId,
     );
   }
 
   Future<TrainingMaxSetupRequirement?> activationRequirementForTemplate(
-    String templateId,
-  ) async {
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     await ensureDefaultProgramSeeded();
-    final existingInstance = await fetchInstanceForTemplate(templateId);
+    final existingInstance = await fetchInstanceForTemplate(
+      templateId,
+      ownerUserId: ownerUserId,
+    );
     if (existingInstance != null) {
       return null;
     }
@@ -335,23 +432,32 @@ class DatabaseRepository {
   Future<StoredTrainingInstance> activateTemplate(
     String templateId, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    String? ownerUserId,
   }) async {
     await ensureDefaultProgramSeeded();
-    final existingInstance = await fetchInstanceForTemplate(templateId);
+    final existingInstance = await fetchInstanceForTemplate(
+      templateId,
+      ownerUserId: ownerUserId,
+    );
     final instance =
         existingInstance ??
         await _createInstanceForTemplate(
           templateId: templateId,
           preferredInstanceId: _defaultInstanceIdForTemplate(templateId),
           trainingMaxProfile: trainingMaxProfile,
+          ownerUserId: ownerUserId,
         );
-    await saveActiveInstanceId(instance.instanceId);
+    await saveActiveInstanceIdForUser(instance.instanceId, ownerUserId);
     return instance;
   }
 
   // ---------- Instances ---------- //
 
-  Future<void> saveInstance(StoredTrainingInstance data) async {
+  Future<void> saveInstance(
+    StoredTrainingInstance data, {
+    String? syncStatus,
+    String? deviceId,
+  }) async {
     final encodedStates = data.states
         .map((state) => jsonEncode(state.toJson()))
         .toList();
@@ -366,12 +472,33 @@ class DatabaseRepository {
       ..trainingMaxProfileJson = jsonEncode(data.trainingMaxProfile.toJson())
       ..engineStateJson = jsonEncode(data.engineState)
       ..currentWorkoutIndex = data.currentWorkoutIndex
+      ..ownerUserId = data.ownerUserId ?? existing?.ownerUserId
       ..createdAt = existing?.createdAt ?? DateTime.now()
-      ..lastModifiedAt = DateTime.now();
+      ..lastModifiedAt = DateTime.now()
+      ..deletedAt = data.deletedAt
+      ..lastSyncedAt = data.lastSyncedAt
+      ..version =
+          (existing?.version ?? data.version) + (existing == null ? 0 : 1)
+      ..syncStatusKey =
+          syncStatus ??
+          (data.syncStatus.isEmpty
+              ? _defaultSyncStatus(data.ownerUserId ?? existing?.ownerUserId)
+              : data.syncStatus)
+      ..lastModifiedByDeviceId =
+          deviceId ??
+          data.lastModifiedByDeviceId ??
+          existing?.lastModifiedByDeviceId;
 
     await _database.writeTxn(() async {
       await _database.instanceCollections.putByInstanceId(instance);
     });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.instance,
+      entityId: data.instanceId,
+      ownerUserId: instance.ownerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: instance.syncStatusKey,
+    );
   }
 
   Future<StoredTrainingInstance?> fetchInstance(String instanceId) async {
@@ -384,46 +511,81 @@ class DatabaseRepository {
       instanceId: instance.instanceId,
       templateId: instance.templateId,
       currentWorkoutIndex: instance.currentWorkoutIndex,
-      trainingMaxProfile:
-          instance.trainingMaxProfileJson == null
+      ownerUserId: instance.ownerUserId,
+      trainingMaxProfile: instance.trainingMaxProfileJson == null
           ? TrainingMaxProfile.empty
           : TrainingMaxProfile.fromJson(
               jsonDecode(instance.trainingMaxProfileJson!)
                   as Map<String, dynamic>,
             ),
-      engineState:
-          instance.engineStateJson == null
+      engineState: instance.engineStateJson == null
           ? const {}
           : jsonDecode(instance.engineStateJson!) as Map<String, dynamic>,
       states: instance.currentStatesJson
           .map((encoded) => TrainingState.fromJson(jsonDecode(encoded)))
           .toList(),
+      createdAt: instance.createdAt,
+      updatedAt: instance.lastModifiedAt,
+      deletedAt: instance.deletedAt,
+      version: instance.version,
+      syncStatus: instance.syncStatusKey,
+      lastSyncedAt: instance.lastSyncedAt,
+      lastModifiedByDeviceId: instance.lastModifiedByDeviceId,
     );
   }
 
   // ---------- Workflow Logs ---------- //
 
-  Future<void> logWorkout(WorkoutLog logRecord) async {
+  Future<void> logWorkout(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
     final encodedLog = jsonEncode(logRecord.toJson());
+    final logId =
+        '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}';
+    final existing = await _database.workoutLogCollections.getByLogId(logId);
 
     final collection = WorkoutLogCollection()
-      ..logId =
-          '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}'
+      ..logId = logId
       ..instanceId = logRecord.instanceId
       ..workoutId = logRecord.workoutId
       ..workoutName = logRecord.workoutName
+      ..ownerUserId = ownerUserId ?? existing?.ownerUserId
       ..rawJsonPayload = encodedLog
-      ..completedAt = logRecord.completedAt;
+      ..completedAt = logRecord.completedAt
+      ..deletedAt = null
+      ..lastSyncedAt = existing?.lastSyncedAt
+      ..version = (existing?.version ?? 0) + 1
+      ..syncStatusKey =
+          syncStatus ?? _defaultSyncStatus(ownerUserId ?? existing?.ownerUserId)
+      ..lastModifiedByDeviceId = deviceId ?? existing?.lastModifiedByDeviceId;
 
     await _database.writeTxn(() async {
       await _database.workoutLogCollections.putByLogId(collection);
     });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.workoutLog,
+      entityId: logId,
+      ownerUserId: collection.ownerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: collection.syncStatusKey,
+    );
   }
 
-  Future<List<WorkoutLog>> fetchWorkoutLogs(String instanceId) async {
+  Future<List<WorkoutLog>> fetchWorkoutLogs(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
     final collections = await _database.workoutLogCollections.where().findAll();
     final logs = collections
-        .where((collection) => collection.instanceId == instanceId)
+        .where(
+          (collection) =>
+              collection.instanceId == instanceId &&
+              collection.deletedAt == null &&
+              _ownerMatches(collection.ownerUserId, ownerUserId),
+        )
         .map(
           (collection) =>
               WorkoutLog.fromJson(jsonDecode(collection.rawJsonPayload)),
@@ -433,9 +595,14 @@ class DatabaseRepository {
     return logs;
   }
 
-  Future<List<WorkoutLog>> fetchAllWorkoutLogs() async {
+  Future<List<WorkoutLog>> fetchAllWorkoutLogs({String? ownerUserId}) async {
     final collections = await _database.workoutLogCollections.where().findAll();
     final logs = collections
+        .where(
+          (collection) =>
+              collection.deletedAt == null &&
+              _ownerMatches(collection.ownerUserId, ownerUserId),
+        )
         .map(
           (collection) =>
               WorkoutLog.fromJson(jsonDecode(collection.rawJsonPayload)),
@@ -445,12 +612,17 @@ class DatabaseRepository {
     return logs;
   }
 
-  Future<int> _instanceCountForTemplate(String templateId) async {
+  Future<int> _instanceCountForTemplate(
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     final instances = await _database.instanceCollections
         .filter()
         .templateIdEqualTo(templateId)
         .findAll();
-    return instances.length;
+    return instances
+        .where((instance) => _ownerMatches(instance.ownerUserId, ownerUserId))
+        .length;
   }
 
   StoredTemplateRecord _toStoredTemplateRecord(
@@ -464,7 +636,148 @@ class DatabaseRepository {
       createdAt: collection.createdAt,
       lastModifiedAt: collection.lastModifiedAt,
       instanceCount: instanceCount,
+      ownerUserId: collection.ownerUserId,
+      deletedAt: collection.deletedAt,
+      version: collection.version,
+      syncStatus: collection.syncStatusKey,
+      lastSyncedAt: collection.lastSyncedAt,
+      lastModifiedByDeviceId: collection.lastModifiedByDeviceId,
     );
+  }
+
+  Future<String> fetchOrCreateDeviceId() async {
+    final existing = await _database.appStateCollections.getByStateKey(
+      _deviceIdStateKey,
+    );
+    if (existing?.stringValue case final value?) {
+      return value;
+    }
+    final deviceId = const Uuid().v4();
+    final state = AppStateCollection()
+      ..stateKey = _deviceIdStateKey
+      ..stringValue = deviceId
+      ..updatedAt = DateTime.now();
+    await _database.writeTxn(() async {
+      await _database.appStateCollections.putByStateKey(state);
+    });
+    return deviceId;
+  }
+
+  Future<void> claimLocalDataForUser(String ownerUserId) async {
+    final now = DateTime.now();
+    final queuedUpserts = <(String entityType, String entityId, String? ownerUserId)>[];
+    await _database.writeTxn(() async {
+      final templates = await _database.templateCollections.where().findAll();
+      for (final template in templates) {
+        if (!template.isBuiltIn && template.ownerUserId == null) {
+          template.ownerUserId = ownerUserId;
+          template.syncStatusKey = SyncStatusKeys.pendingUpload;
+          template.lastModifiedAt = now;
+          await _database.templateCollections.put(template);
+          queuedUpserts.add((
+            SyncEntityTypes.template,
+            template.templateId,
+            ownerUserId,
+          ));
+        }
+      }
+
+      final instances = await _database.instanceCollections.where().findAll();
+      for (final instance in instances) {
+        if (instance.ownerUserId == null) {
+          instance.ownerUserId = ownerUserId;
+          instance.syncStatusKey = SyncStatusKeys.pendingUpload;
+          instance.lastModifiedAt = now;
+          await _database.instanceCollections.put(instance);
+          queuedUpserts.add((
+            SyncEntityTypes.instance,
+            instance.instanceId,
+            ownerUserId,
+          ));
+        }
+      }
+
+      final logs = await _database.workoutLogCollections.where().findAll();
+      for (final log in logs) {
+        if (log.ownerUserId == null) {
+          log.ownerUserId = ownerUserId;
+          log.syncStatusKey = SyncStatusKeys.pendingUpload;
+          await _database.workoutLogCollections.put(log);
+          queuedUpserts.add((
+            SyncEntityTypes.workoutLog,
+            log.logId,
+            ownerUserId,
+          ));
+        }
+      }
+    });
+
+    for (final item in queuedUpserts) {
+      await _enqueueSync(
+        entityType: item.$1,
+        entityId: item.$2,
+        ownerUserId: item.$3,
+        operationType: SyncOperationTypes.upsert,
+        syncStatus: SyncStatusKeys.pendingUpload,
+      );
+    }
+  }
+
+  bool _templateVisibleToUser(
+    TemplateCollection collection,
+    String? ownerUserId,
+  ) {
+    if (collection.deletedAt != null) {
+      return false;
+    }
+    if (collection.isBuiltIn) {
+      return true;
+    }
+    return _ownerMatches(collection.ownerUserId, ownerUserId);
+  }
+
+  bool _ownerMatches(String? recordOwnerUserId, String? ownerUserId) {
+    return recordOwnerUserId == ownerUserId;
+  }
+
+  String _defaultSyncStatus(String? ownerUserId) {
+    return ownerUserId == null
+        ? SyncStatusKeys.localOnly
+        : SyncStatusKeys.pendingUpload;
+  }
+
+  String _scopedStateKey(String baseKey, String? ownerUserId) {
+    if (ownerUserId == null || ownerUserId.isEmpty) {
+      return baseKey;
+    }
+    return '$baseKey:$ownerUserId';
+  }
+
+  Future<void> _enqueueSync({
+    required String entityType,
+    required String entityId,
+    required String operationType,
+    required String? ownerUserId,
+    required String syncStatus,
+  }) async {
+    if (syncStatus == SyncStatusKeys.synced) {
+      return;
+    }
+    final queueKey = '$entityType:$entityId';
+    final existing = await _database.syncQueueCollections.getByQueueKey(
+      queueKey,
+    );
+    final queueItem = SyncQueueCollection()
+      ..queueKey = queueKey
+      ..ownerUserId = ownerUserId
+      ..entityType = entityType
+      ..entityId = entityId
+      ..operationType = operationType
+      ..createdAt = existing?.createdAt ?? DateTime.now()
+      ..updatedAt = DateTime.now();
+    await _database.writeTxn(() async {
+      await _database.syncQueueCollections.putByQueueKey(queueItem);
+    });
   }
 
   String _slugifyTemplateId(String value) {
@@ -510,6 +823,7 @@ class DatabaseRepository {
     required String templateId,
     required String preferredInstanceId,
     required TrainingMaxProfile trainingMaxProfile,
+    String? ownerUserId,
   }) async {
     final template = await fetchTemplate(templateId);
     if (template == null) {
@@ -526,6 +840,7 @@ class DatabaseRepository {
       instanceId: preferredInstanceId,
       templateId: templateId,
       currentWorkoutIndex: 0,
+      ownerUserId: ownerUserId,
       trainingMaxProfile: trainingMaxProfile,
       engineState: buildInitialEngineState(template),
       states: buildStarterStatesForTemplate(
@@ -556,6 +871,12 @@ class StoredTemplateRecord {
     required this.createdAt,
     required this.lastModifiedAt,
     required this.instanceCount,
+    this.ownerUserId,
+    this.deletedAt,
+    this.version = 1,
+    this.syncStatus = SyncStatusKeys.localOnly,
+    this.lastSyncedAt,
+    this.lastModifiedByDeviceId,
   });
 
   final PlanTemplate template;
@@ -564,6 +885,12 @@ class StoredTemplateRecord {
   final DateTime createdAt;
   final DateTime lastModifiedAt;
   final int instanceCount;
+  final String? ownerUserId;
+  final DateTime? deletedAt;
+  final int version;
+  final String syncStatus;
+  final DateTime? lastSyncedAt;
+  final String? lastModifiedByDeviceId;
 
   bool get isUserOwned => !isBuiltIn;
 }
@@ -573,33 +900,67 @@ class StoredTrainingInstance {
     required this.instanceId,
     required this.templateId,
     required this.currentWorkoutIndex,
+    this.ownerUserId,
     this.trainingMaxProfile = TrainingMaxProfile.empty,
     this.engineState = const {},
     required this.states,
-  });
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    this.deletedAt,
+    this.version = 1,
+    this.syncStatus = SyncStatusKeys.localOnly,
+    this.lastSyncedAt,
+    this.lastModifiedByDeviceId,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? DateTime.now();
 
   final String instanceId;
   final String templateId;
   final int currentWorkoutIndex;
+  final String? ownerUserId;
   final TrainingMaxProfile trainingMaxProfile;
   final Map<String, dynamic> engineState;
   final List<TrainingState> states;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final int version;
+  final String syncStatus;
+  final DateTime? lastSyncedAt;
+  final String? lastModifiedByDeviceId;
 
   StoredTrainingInstance copyWith({
     String? instanceId,
     String? templateId,
     int? currentWorkoutIndex,
+    String? ownerUserId,
     TrainingMaxProfile? trainingMaxProfile,
     Map<String, dynamic>? engineState,
     List<TrainingState>? states,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? deletedAt,
+    int? version,
+    String? syncStatus,
+    DateTime? lastSyncedAt,
+    String? lastModifiedByDeviceId,
   }) {
     return StoredTrainingInstance(
       instanceId: instanceId ?? this.instanceId,
       templateId: templateId ?? this.templateId,
       currentWorkoutIndex: currentWorkoutIndex ?? this.currentWorkoutIndex,
+      ownerUserId: ownerUserId ?? this.ownerUserId,
       trainingMaxProfile: trainingMaxProfile ?? this.trainingMaxProfile,
       engineState: engineState ?? this.engineState,
       states: states ?? this.states,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      version: version ?? this.version,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      lastModifiedByDeviceId:
+          lastModifiedByDeviceId ?? this.lastModifiedByDeviceId,
     );
   }
 }

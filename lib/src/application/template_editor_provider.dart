@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/local/local_plan_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/template_validation.dart';
 
 final templateLibraryProvider = FutureProvider<List<StoredTemplateRecord>>((
   ref,
 ) async {
-  final repository = ref.watch(databaseRepositoryProvider);
+  final repository = ref.watch(localPlanRepositoryProvider);
   await repository.ensureDefaultProgramSeeded();
   return repository.fetchTemplates();
 });
@@ -65,6 +66,8 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   final Ref _ref;
 
   DatabaseRepository get _repository => _ref.read(databaseRepositoryProvider);
+  LocalPlanRepository get _localPlanRepository =>
+      _ref.read(localPlanRepositoryProvider);
 
   Future<void> loadTemplate(String templateId) async {
     state = state.copyWith(
@@ -76,14 +79,17 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
 
     try {
       await _repository.ensureDefaultProgramSeeded();
-      final record = await _repository.fetchStoredTemplate(templateId);
+      final record = await _localPlanRepository.fetchStoredTemplate(templateId);
       if (record == null) {
         throw StateError('Template not found: $templateId');
       }
+      final normalizedTemplate = _normalizeTemplateForEditing(record.template);
       state = TemplateEditorState(
         sourceTemplate: record,
-        draft: record.template,
-        validationErrors: TemplateValidation.validate(record.template).errors,
+        draft: normalizedTemplate,
+        validationErrors: TemplateValidation.validate(
+          normalizedTemplate,
+        ).errors,
       );
     } catch (error) {
       state = TemplateEditorState(errorMessage: error.toString());
@@ -104,6 +110,10 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
 
   void updateTemplateDescription(String value) {
     _updateDraft((draft) => draft.copyWith(description: value));
+  }
+
+  void updateScheduleMode(String value) {
+    _updateDraft((draft) => draft.copyWith(scheduleMode: value));
   }
 
   void addWorkout() {
@@ -249,6 +259,18 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
       workoutIndex,
       exerciseIndex,
       (exercise) => exercise.copyWith(initialBaseWeight: value < 0 ? 0 : value),
+    );
+  }
+
+  void updateExerciseLoadUnit(
+    int workoutIndex,
+    int exerciseIndex,
+    String value,
+  ) {
+    _updateExercise(
+      workoutIndex,
+      exerciseIndex,
+      (exercise) => exercise.copyWith(loadUnit: value),
     );
   }
 
@@ -419,6 +441,26 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
     );
   }
 
+  void updateSetType(
+    int workoutIndex,
+    int exerciseIndex,
+    int stageIndex,
+    int setIndex,
+    String value,
+  ) {
+    _updateSet(
+      workoutIndex,
+      exerciseIndex,
+      stageIndex,
+      setIndex,
+      (set) => set.copyWith(
+        setType: value,
+        isAmrap: value == SetTypes.amrapSet,
+        kind: value == SetTypes.warmupSet ? SetKinds.warmup : SetKinds.working,
+      ),
+    );
+  }
+
   void addRuleAction(
     int workoutIndex,
     int exerciseIndex,
@@ -545,7 +587,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
     state = state.copyWith(isSaving: true, clearError: true, clearInfo: true);
 
     try {
-      final record = await _repository.saveEditedTemplate(
+      final record = await _localPlanRepository.saveEditedTemplate(
         draft: draft,
         originalTemplateId: state.sourceTemplate?.template.id,
       );
@@ -694,12 +736,57 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
       id: _newId('template'),
       name: 'Custom Plan',
       description: 'Editable training plan',
+      scheduleMode: PlanScheduleModes.linear,
       phases: [
         Phase(
           id: _newId('phase'),
           name: 'Main Phase',
           workouts: [_newWorkout()],
         ),
+      ],
+    );
+  }
+
+  PlanTemplate _normalizeTemplateForEditing(PlanTemplate template) {
+    return template.copyWith(
+      scheduleMode: template.resolvedScheduleMode,
+      phases: [
+        for (final phase in template.phases)
+          phase.copyWith(
+            workouts: [
+              for (final workout in phase.workouts)
+                workout.copyWith(
+                  exercises: [
+                    for (final exercise in workout.exercises)
+                      exercise.copyWith(
+                        loadUnit:
+                            LoadUnits.supported.contains(exercise.loadUnit)
+                            ? exercise.loadUnit
+                            : LoadUnits.kg,
+                        stages: [
+                          for (final stage in exercise.stages)
+                            stage.copyWith(
+                              sets: [
+                                for (final set in stage.sets)
+                                  set.copyWith(
+                                    setType: set.resolvedSetType,
+                                    kind:
+                                        set.resolvedSetType ==
+                                            SetTypes.warmupSet
+                                        ? SetKinds.warmup
+                                        : SetKinds.working,
+                                    isAmrap:
+                                        set.resolvedSetType ==
+                                        SetTypes.amrapSet,
+                                  ),
+                              ],
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+            ],
+          ),
       ],
     );
   }
@@ -732,6 +819,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
       initialBaseWeight: 20,
       tier: 'T2',
       restSeconds: 120,
+      loadUnit: LoadUnits.kg,
       stages: [_newStage()],
     );
   }
@@ -770,13 +858,18 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   }
 
   SetDefinition _newSetDefinition({
-    String kind = 'working',
+    String kind = SetKinds.working,
+    String? setType,
     double intensity = 1,
   }) {
     return SetDefinition(
-      targetReps: kind == 'warmup' ? 5 : 10,
+      targetReps: kind == SetKinds.warmup ? 5 : 10,
       intensity: intensity,
       kind: kind,
+      setType:
+          setType ??
+          (kind == SetKinds.warmup ? SetTypes.warmupSet : SetTypes.straightSet),
+      isAmrap: setType == SetTypes.amrapSet,
     );
   }
 

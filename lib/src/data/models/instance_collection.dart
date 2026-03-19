@@ -1,4 +1,5 @@
 import 'package:isar/isar.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 
 part 'instance_collection.g.dart';
 
@@ -22,8 +23,21 @@ class InstanceCollection {
   String? engineStateJson;
 
   late int currentWorkoutIndex;
+  @Index()
+  String? ownerUserId;
 
   late DateTime createdAt;
 
   late DateTime lastModifiedAt;
+  DateTime? deletedAt;
+  DateTime? lastSyncedAt;
+  late int version;
+  late String syncStatusKey;
+  String? lastModifiedByDeviceId;
+
+  @ignore
+  bool get isPendingSync =>
+      syncStatusKey == SyncStatusKeys.pendingUpload ||
+      syncStatusKey == SyncStatusKeys.pendingDelete ||
+      syncStatusKey == SyncStatusKeys.conflict;
 }

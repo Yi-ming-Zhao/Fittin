@@ -22,6 +22,10 @@ class TemplateValidation {
       errors.add('Template name is required.');
     }
 
+    if (!PlanScheduleModes.supported.contains(template.scheduleMode)) {
+      errors.add('Template schedule mode is invalid.');
+    }
+
     if (template.phases.isEmpty || template.workouts.isEmpty) {
       errors.add('At least one workout is required.');
       return TemplateValidationResult(errors);
@@ -40,6 +44,11 @@ class TemplateValidation {
         final exerciseLabel = exercise.name.trim().isEmpty ? exercise.id : exercise.name;
         if (exercise.name.trim().isEmpty) {
           errors.add('Exercise "$exerciseLabel" must have a name.');
+        }
+        if (!LoadUnits.supported.contains(exercise.loadUnit)) {
+          errors.add(
+            'Exercise "$exerciseLabel" uses an unsupported load unit.',
+          );
         }
         if (exercise.stages.isEmpty) {
           errors.add('Exercise "$exerciseLabel" must contain at least one stage.');
@@ -84,9 +93,33 @@ class TemplateValidation {
                 'Stage "$stageLabel" in exercise "$exerciseLabel" has a set with invalid role.',
               );
             }
+            if (!SetTypes.supported.contains(set.resolvedSetType)) {
+              errors.add(
+                'Stage "$stageLabel" in exercise "$exerciseLabel" has a set with invalid type.',
+              );
+            }
+            if (set.kind == SetKinds.warmup &&
+                set.resolvedSetType != SetTypes.warmupSet) {
+              errors.add(
+                'Stage "$stageLabel" in exercise "$exerciseLabel" has a warmup set with an invalid set type.',
+              );
+            }
+            if (set.kind == SetKinds.working &&
+                set.resolvedSetType == SetTypes.warmupSet) {
+              errors.add(
+                'Stage "$stageLabel" in exercise "$exerciseLabel" has a working set marked as warmup.',
+              );
+            }
           }
 
           for (final rule in stage.rules) {
+            if (template.isPeriodized &&
+                (rule.condition == 'on_success' ||
+                    rule.condition == 'on_failure')) {
+              errors.add(
+                'Stage "$stageLabel" in exercise "$exerciseLabel" uses a linear-only rule in a periodized template.',
+              );
+            }
             for (final action in rule.actions) {
               if (!supportedActionTypes.contains(action.type)) {
                 errors.add(

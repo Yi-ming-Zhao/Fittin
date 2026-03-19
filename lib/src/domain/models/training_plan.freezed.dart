@@ -27,6 +27,7 @@ mixin _$PlanTemplate {
   Map<String, String> get localizedDescription =>
       throw _privateConstructorUsedError;
   String get engineFamily => throw _privateConstructorUsedError;
+  String get scheduleMode => throw _privateConstructorUsedError;
   List<String> get requiredTrainingMaxKeys =>
       throw _privateConstructorUsedError;
   Map<String, dynamic> get engineConfig => throw _privateConstructorUsedError;
@@ -51,6 +52,7 @@ abstract class $PlanTemplateCopyWith<$Res> {
       Map<String, String> localizedName,
       Map<String, String> localizedDescription,
       String engineFamily,
+      String scheduleMode,
       List<String> requiredTrainingMaxKeys,
       Map<String, dynamic> engineConfig,
       List<Phase> phases});
@@ -75,6 +77,7 @@ class _$PlanTemplateCopyWithImpl<$Res, $Val extends PlanTemplate>
     Object? localizedName = null,
     Object? localizedDescription = null,
     Object? engineFamily = null,
+    Object? scheduleMode = null,
     Object? requiredTrainingMaxKeys = null,
     Object? engineConfig = null,
     Object? phases = null,
@@ -103,6 +106,10 @@ class _$PlanTemplateCopyWithImpl<$Res, $Val extends PlanTemplate>
       engineFamily: null == engineFamily
           ? _value.engineFamily
           : engineFamily // ignore: cast_nullable_to_non_nullable
+              as String,
+      scheduleMode: null == scheduleMode
+          ? _value.scheduleMode
+          : scheduleMode // ignore: cast_nullable_to_non_nullable
               as String,
       requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
           ? _value.requiredTrainingMaxKeys
@@ -135,6 +142,7 @@ abstract class _$$PlanTemplateImplCopyWith<$Res>
       Map<String, String> localizedName,
       Map<String, String> localizedDescription,
       String engineFamily,
+      String scheduleMode,
       List<String> requiredTrainingMaxKeys,
       Map<String, dynamic> engineConfig,
       List<Phase> phases});
@@ -157,6 +165,7 @@ class __$$PlanTemplateImplCopyWithImpl<$Res>
     Object? localizedName = null,
     Object? localizedDescription = null,
     Object? engineFamily = null,
+    Object? scheduleMode = null,
     Object? requiredTrainingMaxKeys = null,
     Object? engineConfig = null,
     Object? phases = null,
@@ -186,6 +195,10 @@ class __$$PlanTemplateImplCopyWithImpl<$Res>
           ? _value.engineFamily
           : engineFamily // ignore: cast_nullable_to_non_nullable
               as String,
+      scheduleMode: null == scheduleMode
+          ? _value.scheduleMode
+          : scheduleMode // ignore: cast_nullable_to_non_nullable
+              as String,
       requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
           ? _value._requiredTrainingMaxKeys
           : requiredTrainingMaxKeys // ignore: cast_nullable_to_non_nullable
@@ -212,6 +225,7 @@ class _$PlanTemplateImpl implements _PlanTemplate {
       final Map<String, String> localizedName = const <String, String>{},
       final Map<String, String> localizedDescription = const <String, String>{},
       this.engineFamily = 'legacy',
+      this.scheduleMode = PlanScheduleModes.legacy,
       final List<String> requiredTrainingMaxKeys = const [],
       final Map<String, dynamic> engineConfig = const <String, dynamic>{},
       required final List<Phase> phases})
@@ -252,6 +266,9 @@ class _$PlanTemplateImpl implements _PlanTemplate {
   @override
   @JsonKey()
   final String engineFamily;
+  @override
+  @JsonKey()
+  final String scheduleMode;
   final List<String> _requiredTrainingMaxKeys;
   @override
   @JsonKey()
@@ -281,7 +298,7 @@ class _$PlanTemplateImpl implements _PlanTemplate {
 
   @override
   String toString() {
-    return 'PlanTemplate(id: $id, name: $name, description: $description, localizedName: $localizedName, localizedDescription: $localizedDescription, engineFamily: $engineFamily, requiredTrainingMaxKeys: $requiredTrainingMaxKeys, engineConfig: $engineConfig, phases: $phases)';
+    return 'PlanTemplate(id: $id, name: $name, description: $description, localizedName: $localizedName, localizedDescription: $localizedDescription, engineFamily: $engineFamily, scheduleMode: $scheduleMode, requiredTrainingMaxKeys: $requiredTrainingMaxKeys, engineConfig: $engineConfig, phases: $phases)';
   }
 
   @override
@@ -299,6 +316,8 @@ class _$PlanTemplateImpl implements _PlanTemplate {
                 .equals(other._localizedDescription, _localizedDescription) &&
             (identical(other.engineFamily, engineFamily) ||
                 other.engineFamily == engineFamily) &&
+            (identical(other.scheduleMode, scheduleMode) ||
+                other.scheduleMode == scheduleMode) &&
             const DeepCollectionEquality().equals(
                 other._requiredTrainingMaxKeys, _requiredTrainingMaxKeys) &&
             const DeepCollectionEquality()
@@ -316,6 +335,7 @@ class _$PlanTemplateImpl implements _PlanTemplate {
       const DeepCollectionEquality().hash(_localizedName),
       const DeepCollectionEquality().hash(_localizedDescription),
       engineFamily,
+      scheduleMode,
       const DeepCollectionEquality().hash(_requiredTrainingMaxKeys),
       const DeepCollectionEquality().hash(_engineConfig),
       const DeepCollectionEquality().hash(_phases));
@@ -342,6 +362,7 @@ abstract class _PlanTemplate implements PlanTemplate {
       final Map<String, String> localizedName,
       final Map<String, String> localizedDescription,
       final String engineFamily,
+      final String scheduleMode,
       final List<String> requiredTrainingMaxKeys,
       final Map<String, dynamic> engineConfig,
       required final List<Phase> phases}) = _$PlanTemplateImpl;
@@ -361,6 +382,8 @@ abstract class _PlanTemplate implements PlanTemplate {
   Map<String, String> get localizedDescription;
   @override
   String get engineFamily;
+  @override
+  String get scheduleMode;
   @override
   List<String> get requiredTrainingMaxKeys;
   @override
@@ -863,6 +886,7 @@ mixin _$Exercise {
   String? get trainingMaxLift => throw _privateConstructorUsedError;
   double get trainingMaxMultiplier => throw _privateConstructorUsedError;
   double get roundingIncrement => throw _privateConstructorUsedError;
+  String get loadUnit => throw _privateConstructorUsedError;
   Map<String, dynamic> get engineConfig => throw _privateConstructorUsedError;
   List<SetScheme> get stages => throw _privateConstructorUsedError;
 
@@ -888,6 +912,7 @@ abstract class $ExerciseCopyWith<$Res> {
       String? trainingMaxLift,
       double trainingMaxMultiplier,
       double roundingIncrement,
+      String loadUnit,
       Map<String, dynamic> engineConfig,
       List<SetScheme> stages});
 }
@@ -915,6 +940,7 @@ class _$ExerciseCopyWithImpl<$Res, $Val extends Exercise>
     Object? trainingMaxLift = freezed,
     Object? trainingMaxMultiplier = null,
     Object? roundingIncrement = null,
+    Object? loadUnit = null,
     Object? engineConfig = null,
     Object? stages = null,
   }) {
@@ -959,6 +985,10 @@ class _$ExerciseCopyWithImpl<$Res, $Val extends Exercise>
           ? _value.roundingIncrement
           : roundingIncrement // ignore: cast_nullable_to_non_nullable
               as double,
+      loadUnit: null == loadUnit
+          ? _value.loadUnit
+          : loadUnit // ignore: cast_nullable_to_non_nullable
+              as String,
       engineConfig: null == engineConfig
           ? _value.engineConfig
           : engineConfig // ignore: cast_nullable_to_non_nullable
@@ -990,6 +1020,7 @@ abstract class _$$ExerciseImplCopyWith<$Res>
       String? trainingMaxLift,
       double trainingMaxMultiplier,
       double roundingIncrement,
+      String loadUnit,
       Map<String, dynamic> engineConfig,
       List<SetScheme> stages});
 }
@@ -1015,6 +1046,7 @@ class __$$ExerciseImplCopyWithImpl<$Res>
     Object? trainingMaxLift = freezed,
     Object? trainingMaxMultiplier = null,
     Object? roundingIncrement = null,
+    Object? loadUnit = null,
     Object? engineConfig = null,
     Object? stages = null,
   }) {
@@ -1059,6 +1091,10 @@ class __$$ExerciseImplCopyWithImpl<$Res>
           ? _value.roundingIncrement
           : roundingIncrement // ignore: cast_nullable_to_non_nullable
               as double,
+      loadUnit: null == loadUnit
+          ? _value.loadUnit
+          : loadUnit // ignore: cast_nullable_to_non_nullable
+              as String,
       engineConfig: null == engineConfig
           ? _value._engineConfig
           : engineConfig // ignore: cast_nullable_to_non_nullable
@@ -1085,6 +1121,7 @@ class _$ExerciseImpl implements _Exercise {
       this.trainingMaxLift,
       this.trainingMaxMultiplier = 1.0,
       this.roundingIncrement = 2.5,
+      this.loadUnit = LoadUnits.kg,
       final Map<String, dynamic> engineConfig = const <String, dynamic>{},
       required final List<SetScheme> stages})
       : _localizedName = localizedName,
@@ -1127,6 +1164,9 @@ class _$ExerciseImpl implements _Exercise {
   @override
   @JsonKey()
   final double roundingIncrement;
+  @override
+  @JsonKey()
+  final String loadUnit;
   final Map<String, dynamic> _engineConfig;
   @override
   @JsonKey()
@@ -1146,7 +1186,7 @@ class _$ExerciseImpl implements _Exercise {
 
   @override
   String toString() {
-    return 'Exercise(id: $id, exerciseId: $exerciseId, name: $name, localizedName: $localizedName, initialBaseWeight: $initialBaseWeight, tier: $tier, restSeconds: $restSeconds, trainingMaxLift: $trainingMaxLift, trainingMaxMultiplier: $trainingMaxMultiplier, roundingIncrement: $roundingIncrement, engineConfig: $engineConfig, stages: $stages)';
+    return 'Exercise(id: $id, exerciseId: $exerciseId, name: $name, localizedName: $localizedName, initialBaseWeight: $initialBaseWeight, tier: $tier, restSeconds: $restSeconds, trainingMaxLift: $trainingMaxLift, trainingMaxMultiplier: $trainingMaxMultiplier, roundingIncrement: $roundingIncrement, loadUnit: $loadUnit, engineConfig: $engineConfig, stages: $stages)';
   }
 
   @override
@@ -1171,6 +1211,8 @@ class _$ExerciseImpl implements _Exercise {
                 other.trainingMaxMultiplier == trainingMaxMultiplier) &&
             (identical(other.roundingIncrement, roundingIncrement) ||
                 other.roundingIncrement == roundingIncrement) &&
+            (identical(other.loadUnit, loadUnit) ||
+                other.loadUnit == loadUnit) &&
             const DeepCollectionEquality()
                 .equals(other._engineConfig, _engineConfig) &&
             const DeepCollectionEquality().equals(other._stages, _stages));
@@ -1190,6 +1232,7 @@ class _$ExerciseImpl implements _Exercise {
       trainingMaxLift,
       trainingMaxMultiplier,
       roundingIncrement,
+      loadUnit,
       const DeepCollectionEquality().hash(_engineConfig),
       const DeepCollectionEquality().hash(_stages));
 
@@ -1219,6 +1262,7 @@ abstract class _Exercise implements Exercise {
       final String? trainingMaxLift,
       final double trainingMaxMultiplier,
       final double roundingIncrement,
+      final String loadUnit,
       final Map<String, dynamic> engineConfig,
       required final List<SetScheme> stages}) = _$ExerciseImpl;
 
@@ -1245,6 +1289,8 @@ abstract class _Exercise implements Exercise {
   double get trainingMaxMultiplier;
   @override
   double get roundingIncrement;
+  @override
+  String get loadUnit;
   @override
   Map<String, dynamic> get engineConfig;
   @override
@@ -1558,6 +1604,7 @@ mixin _$SetDefinition {
       throw _privateConstructorUsedError; // multiplier of TM or base weight e.g. 0.85
   bool get isAmrap => throw _privateConstructorUsedError;
   String get kind => throw _privateConstructorUsedError;
+  String get setType => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -1571,7 +1618,12 @@ abstract class $SetDefinitionCopyWith<$Res> {
           SetDefinition value, $Res Function(SetDefinition) then) =
       _$SetDefinitionCopyWithImpl<$Res, SetDefinition>;
   @useResult
-  $Res call({int targetReps, double intensity, bool isAmrap, String kind});
+  $Res call(
+      {int targetReps,
+      double intensity,
+      bool isAmrap,
+      String kind,
+      String setType});
 }
 
 /// @nodoc
@@ -1591,6 +1643,7 @@ class _$SetDefinitionCopyWithImpl<$Res, $Val extends SetDefinition>
     Object? intensity = null,
     Object? isAmrap = null,
     Object? kind = null,
+    Object? setType = null,
   }) {
     return _then(_value.copyWith(
       targetReps: null == targetReps
@@ -1609,6 +1662,10 @@ class _$SetDefinitionCopyWithImpl<$Res, $Val extends SetDefinition>
           ? _value.kind
           : kind // ignore: cast_nullable_to_non_nullable
               as String,
+      setType: null == setType
+          ? _value.setType
+          : setType // ignore: cast_nullable_to_non_nullable
+              as String,
     ) as $Val);
   }
 }
@@ -1621,7 +1678,12 @@ abstract class _$$SetDefinitionImplCopyWith<$Res>
       __$$SetDefinitionImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({int targetReps, double intensity, bool isAmrap, String kind});
+  $Res call(
+      {int targetReps,
+      double intensity,
+      bool isAmrap,
+      String kind,
+      String setType});
 }
 
 /// @nodoc
@@ -1639,6 +1701,7 @@ class __$$SetDefinitionImplCopyWithImpl<$Res>
     Object? intensity = null,
     Object? isAmrap = null,
     Object? kind = null,
+    Object? setType = null,
   }) {
     return _then(_$SetDefinitionImpl(
       targetReps: null == targetReps
@@ -1657,6 +1720,10 @@ class __$$SetDefinitionImplCopyWithImpl<$Res>
           ? _value.kind
           : kind // ignore: cast_nullable_to_non_nullable
               as String,
+      setType: null == setType
+          ? _value.setType
+          : setType // ignore: cast_nullable_to_non_nullable
+              as String,
     ));
   }
 }
@@ -1668,7 +1735,8 @@ class _$SetDefinitionImpl implements _SetDefinition {
       {required this.targetReps,
       required this.intensity,
       this.isAmrap = false,
-      this.kind = 'working'});
+      this.kind = SetKinds.working,
+      this.setType = SetTypes.straightSet});
 
   factory _$SetDefinitionImpl.fromJson(Map<String, dynamic> json) =>
       _$$SetDefinitionImplFromJson(json);
@@ -1684,10 +1752,13 @@ class _$SetDefinitionImpl implements _SetDefinition {
   @override
   @JsonKey()
   final String kind;
+  @override
+  @JsonKey()
+  final String setType;
 
   @override
   String toString() {
-    return 'SetDefinition(targetReps: $targetReps, intensity: $intensity, isAmrap: $isAmrap, kind: $kind)';
+    return 'SetDefinition(targetReps: $targetReps, intensity: $intensity, isAmrap: $isAmrap, kind: $kind, setType: $setType)';
   }
 
   @override
@@ -1700,13 +1771,14 @@ class _$SetDefinitionImpl implements _SetDefinition {
             (identical(other.intensity, intensity) ||
                 other.intensity == intensity) &&
             (identical(other.isAmrap, isAmrap) || other.isAmrap == isAmrap) &&
-            (identical(other.kind, kind) || other.kind == kind));
+            (identical(other.kind, kind) || other.kind == kind) &&
+            (identical(other.setType, setType) || other.setType == setType));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode =>
-      Object.hash(runtimeType, targetReps, intensity, isAmrap, kind);
+      Object.hash(runtimeType, targetReps, intensity, isAmrap, kind, setType);
 
   @JsonKey(ignore: true)
   @override
@@ -1727,7 +1799,8 @@ abstract class _SetDefinition implements SetDefinition {
       {required final int targetReps,
       required final double intensity,
       final bool isAmrap,
-      final String kind}) = _$SetDefinitionImpl;
+      final String kind,
+      final String setType}) = _$SetDefinitionImpl;
 
   factory _SetDefinition.fromJson(Map<String, dynamic> json) =
       _$SetDefinitionImpl.fromJson;
@@ -1740,6 +1813,8 @@ abstract class _SetDefinition implements SetDefinition {
   bool get isAmrap;
   @override
   String get kind;
+  @override
+  String get setType;
   @override
   @JsonKey(ignore: true)
   _$$SetDefinitionImplCopyWith<_$SetDefinitionImpl> get copyWith =>

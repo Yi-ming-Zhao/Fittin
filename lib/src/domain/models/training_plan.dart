@@ -3,6 +3,48 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'training_plan.freezed.dart';
 part 'training_plan.g.dart';
 
+abstract final class PlanScheduleModes {
+  static const legacy = 'legacy';
+  static const linear = 'linear';
+  static const periodized = 'periodized';
+  static const supported = {legacy, linear, periodized};
+}
+
+abstract final class SetKinds {
+  static const warmup = 'warmup';
+  static const working = 'working';
+}
+
+abstract final class SetTypes {
+  static const straightSet = 'straight_set';
+  static const topSet = 'top_set';
+  static const backoffSet = 'backoff_set';
+  static const amrapSet = 'amrap_set';
+  static const warmupSet = 'warmup_set';
+  static const supported = {
+    straightSet,
+    topSet,
+    backoffSet,
+    amrapSet,
+    warmupSet,
+  };
+}
+
+abstract final class LoadUnits {
+  static const kg = 'kg';
+  static const lbs = 'lbs';
+  static const bodyweight = 'bodyweight';
+  static const cableStack = 'cable_stack';
+  static const percent1rm = 'percent_1rm';
+  static const supported = {
+    kg,
+    lbs,
+    bodyweight,
+    cableStack,
+    percent1rm,
+  };
+}
+
 @freezed
 class PlanTemplate with _$PlanTemplate {
   const factory PlanTemplate({
@@ -12,6 +54,7 @@ class PlanTemplate with _$PlanTemplate {
     @Default(<String, String>{}) Map<String, String> localizedName,
     @Default(<String, String>{}) Map<String, String> localizedDescription,
     @Default('legacy') String engineFamily,
+    @Default(PlanScheduleModes.legacy) String scheduleMode,
     @Default([]) List<String> requiredTrainingMaxKeys,
     @Default(<String, dynamic>{}) Map<String, dynamic> engineConfig,
     required List<Phase> phases,
@@ -61,6 +104,7 @@ class Exercise with _$Exercise {
     String? trainingMaxLift,
     @Default(1.0) double trainingMaxMultiplier,
     @Default(2.5) double roundingIncrement,
+    @Default(LoadUnits.kg) String loadUnit,
     @Default(<String, dynamic>{}) Map<String, dynamic> engineConfig,
     required List<SetScheme>
     stages, // Progression stages e.g. Stage 1: 5x3, Stage 2: 6x2
@@ -92,7 +136,8 @@ class SetDefinition with _$SetDefinition {
     required int targetReps,
     required double intensity, // multiplier of TM or base weight e.g. 0.85
     @Default(false) bool isAmrap,
-    @Default('working') String kind,
+    @Default(SetKinds.working) String kind,
+    @Default(SetTypes.straightSet) String setType,
   }) = _SetDefinition;
 
   factory SetDefinition.fromJson(Map<String, dynamic> json) =>
@@ -162,6 +207,20 @@ extension LocalizedPlanTemplateLookup on PlanTemplate {
       localizedDescription[localeCode] ?? description;
 }
 
+extension PlanTemplateEditorLookup on PlanTemplate {
+  String get resolvedScheduleMode {
+    if (scheduleMode != PlanScheduleModes.legacy) {
+      return scheduleMode;
+    }
+    return engineFamily == 'periodized_tm'
+        ? PlanScheduleModes.periodized
+        : PlanScheduleModes.linear;
+  }
+
+  bool get isPeriodized => resolvedScheduleMode == PlanScheduleModes.periodized;
+  bool get isLinear => resolvedScheduleMode == PlanScheduleModes.linear;
+}
+
 extension LocalizedWorkoutLookup on Workout {
   String displayName(String localeCode) =>
       localizedName[localeCode] ?? name;
@@ -181,5 +240,22 @@ extension ExerciseLookup on Exercise {
       (stage) => stage.id == stageId,
       orElse: () => stages.first,
     );
+  }
+
+  bool get usesPercent1rm => loadUnit == LoadUnits.percent1rm;
+}
+
+extension SetDefinitionLookup on SetDefinition {
+  String get resolvedSetType {
+    if (setType.isNotEmpty) {
+      return setType;
+    }
+    if (kind == SetKinds.warmup) {
+      return SetTypes.warmupSet;
+    }
+    if (isAmrap) {
+      return SetTypes.amrapSet;
+    }
+    return SetTypes.straightSet;
   }
 }

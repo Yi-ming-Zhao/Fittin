@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/local/local_instance_repository.dart';
+import 'package:fittin_v2/src/data/local/local_plan_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 
 class PlanLibraryItem {
@@ -44,10 +46,11 @@ class PlanLibraryActionState {
 final planLibraryItemsProvider = FutureProvider<List<PlanLibraryItem>>((
   ref,
 ) async {
-  final repository = ref.watch(databaseRepositoryProvider);
-  await repository.ensureDefaultProgramSeeded();
-  final templates = await repository.fetchTemplates();
-  final activeInstance = await repository.fetchActiveInstance();
+  final planRepository = ref.watch(localPlanRepositoryProvider);
+  final instanceRepository = ref.watch(localInstanceRepositoryProvider);
+  await planRepository.ensureDefaultProgramSeeded();
+  final templates = await planRepository.fetchTemplates();
+  final activeInstance = await instanceRepository.fetchActiveInstance();
   final activeTemplateId = activeInstance?.templateId;
 
   return [
@@ -82,7 +85,7 @@ class PlanLibraryActionNotifier extends StateNotifier<PlanLibraryActionState> {
 
     try {
       await _ref
-          .read(databaseRepositoryProvider)
+          .read(localInstanceRepositoryProvider)
           .activateTemplate(
             record.template.id,
             trainingMaxProfile: trainingMaxProfile,

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
+import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 
 import '../support/in_memory_database_repository.dart';
@@ -31,7 +32,9 @@ void main() {
 
     notifier.updateTemplateName('GZCLP Custom');
     notifier.updateSetTargetReps(0, 0, 0, 1, 12);
-    notifier.updateSetAmrap(0, 0, 0, 1, true);
+    notifier.updateSetType(0, 0, 0, 1, SetTypes.amrapSet);
+    notifier.updateExerciseLoadUnit(0, 0, LoadUnits.lbs);
+    notifier.updateScheduleMode(PlanScheduleModes.linear);
 
     final saved = await notifier.saveTemplate();
     final state = container!.read(templateEditorProvider);
@@ -62,10 +65,26 @@ void main() {
           .stages
           .first
           .sets[1]
-          .isAmrap,
-      isTrue,
+          .resolvedSetType,
+      SetTypes.amrapSet,
     );
+    expect(saved.template.workouts.first.exercises.first.loadUnit, LoadUnits.lbs);
+    expect(saved.template.resolvedScheduleMode, PlanScheduleModes.linear);
     expect(state.infoMessage, 'Saved as a new template copy.');
+  });
+
+  test('loading a periodized built-in template normalizes editor metadata', () async {
+    final notifier = container!.read(templateEditorProvider.notifier);
+    await notifier.loadTemplate(JackedAndTanSeed.templateId);
+
+    final state = container!.read(templateEditorProvider);
+    final draft = state.draft!;
+
+    expect(draft.resolvedScheduleMode, PlanScheduleModes.periodized);
+    expect(
+      draft.workouts.first.exercises.first.stages.first.sets.first.setType,
+      isNotEmpty,
+    );
   });
 
   test('invalid drafts are blocked from saving', () async {

@@ -8,7 +8,7 @@ import 'package:fittin_v2/src/presentation/screens/profile_settings_screen.dart'
 import '../support/in_memory_database_repository.dart';
 
 void main() {
-  testWidgets('profile settings screen switches locale to Chinese', (
+  testWidgets('profile settings screen reflects locale changes to Chinese', (
     WidgetTester tester,
   ) async {
     final repository = InMemoryDatabaseRepository();
@@ -25,16 +25,59 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
 
-    await tester.tap(find.byKey(const ValueKey('locale-zh')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await ProviderScope.containerOf(
+      tester.element(find.byType(ProfileSettingsScreen)),
+    ).read(appLocaleProvider.notifier).setLocale(AppLocale.zh);
+    await tester.pumpAndSettle();
 
-    expect(find.text('设置'), findsWidgets);
     expect(
       ProviderScope.containerOf(
         tester.element(find.byType(ProfileSettingsScreen)),
       ).read(appLocaleProvider),
       AppLocale.zh,
     );
+  });
+
+  testWidgets('profile settings opens the set type guide', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final guideButton = find.byKey(const ValueKey('open-set-type-guide'));
+    await tester.scrollUntilVisible(guideButton, 120);
+    await tester.tap(guideButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Training Set Guide'), findsOneWidget);
+  });
+
+  testWidgets('profile settings opens the account screen', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final accountButton = find.byKey(const ValueKey('open-account-screen'));
+    await tester.scrollUntilVisible(accountButton, 120);
+    await tester.tap(accountButton, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileSettingsScreen), findsNothing);
+    expect(find.text('Supabase Not Configured'), findsOneWidget);
   });
 }

@@ -58,10 +58,16 @@ class GlassBottomNav extends StatelessWidget {
                   onTap: () => onTap(2),
                 ),
                 _NavItem(
-                  navKey: const ValueKey('nav-profile'),
-                  icon: Icons.person_outline_rounded,
+                  navKey: const ValueKey('nav-body'),
+                  icon: Icons.accessibility_new_rounded,
                   isActive: currentIndex == 3,
                   onTap: () => onTap(3),
+                ),
+                _NavItem(
+                  navKey: const ValueKey('nav-profile'),
+                  icon: Icons.person_outline_rounded,
+                  isActive: currentIndex == 4,
+                  onTap: () => onTap(4),
                 ),
               ],
             ),

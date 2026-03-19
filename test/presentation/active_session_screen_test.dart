@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
-import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/presentation/screens/active_session_screen.dart';
 
 import '../support/fake_today_workout_gateway.dart';

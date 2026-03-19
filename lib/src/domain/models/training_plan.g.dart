@@ -21,6 +21,7 @@ _$PlanTemplateImpl _$$PlanTemplateImplFromJson(Map<String, dynamic> json) =>
               ) ??
               const <String, String>{},
       engineFamily: json['engineFamily'] as String? ?? 'legacy',
+      scheduleMode: json['scheduleMode'] as String? ?? PlanScheduleModes.legacy,
       requiredTrainingMaxKeys:
           (json['requiredTrainingMaxKeys'] as List<dynamic>?)
                   ?.map((e) => e as String)
@@ -41,6 +42,7 @@ Map<String, dynamic> _$$PlanTemplateImplToJson(_$PlanTemplateImpl instance) =>
       'localizedName': instance.localizedName,
       'localizedDescription': instance.localizedDescription,
       'engineFamily': instance.engineFamily,
+      'scheduleMode': instance.scheduleMode,
       'requiredTrainingMaxKeys': instance.requiredTrainingMaxKeys,
       'engineConfig': instance.engineConfig,
       'phases': instance.phases,
@@ -109,6 +111,7 @@ _$ExerciseImpl _$$ExerciseImplFromJson(Map<String, dynamic> json) =>
       trainingMaxMultiplier:
           (json['trainingMaxMultiplier'] as num?)?.toDouble() ?? 1.0,
       roundingIncrement: (json['roundingIncrement'] as num?)?.toDouble() ?? 2.5,
+      loadUnit: json['loadUnit'] as String? ?? LoadUnits.kg,
       engineConfig: json['engineConfig'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
       stages: (json['stages'] as List<dynamic>)
@@ -128,6 +131,7 @@ Map<String, dynamic> _$$ExerciseImplToJson(_$ExerciseImpl instance) =>
       'trainingMaxLift': instance.trainingMaxLift,
       'trainingMaxMultiplier': instance.trainingMaxMultiplier,
       'roundingIncrement': instance.roundingIncrement,
+      'loadUnit': instance.loadUnit,
       'engineConfig': instance.engineConfig,
       'stages': instance.stages,
     };
@@ -164,7 +168,8 @@ _$SetDefinitionImpl _$$SetDefinitionImplFromJson(Map<String, dynamic> json) =>
       targetReps: (json['targetReps'] as num).toInt(),
       intensity: (json['intensity'] as num).toDouble(),
       isAmrap: json['isAmrap'] as bool? ?? false,
-      kind: json['kind'] as String? ?? 'working',
+      kind: json['kind'] as String? ?? SetKinds.working,
+      setType: json['setType'] as String? ?? SetTypes.straightSet,
     );
 
 Map<String, dynamic> _$$SetDefinitionImplToJson(_$SetDefinitionImpl instance) =>
@@ -173,6 +178,7 @@ Map<String, dynamic> _$$SetDefinitionImplToJson(_$SetDefinitionImpl instance) =>
       'intensity': instance.intensity,
       'isAmrap': instance.isAmrap,
       'kind': instance.kind,
+      'setType': instance.setType,
     };
 
 _$ProgressionRuleImpl _$$ProgressionRuleImplFromJson(

@@ -43,6 +43,10 @@ dependencies:
   mobile_scanner: ^7.2.0
   google_fonts: ^8.0.2
   path_provider: ^2.1.5
+  intl: ^0.20.2
+  uuid: ^4.5.3
+  collection: ^1.19.1
+  supabase_flutter: ^2.9.1
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +71,8 @@ flutter:
   assets:
     - assets/plans/gzclp_4day_12week.json
     - assets/plans/jacked_and_tan_2_0.json
+    - assets/guides/set_types_en.md
+    - assets/guides/set_types_zh.md
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

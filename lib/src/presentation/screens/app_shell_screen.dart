@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/glass_bottom_nav.dart';
 import 'home_dashboard_screen.dart';
 import 'plan_library_screen.dart';
-import 'progress_analytics_screen.dart';
+import 'pr_dashboard_screen.dart';
+import 'body_metrics_screen.dart';
 import 'profile_settings_screen.dart';
 
 class AppShellScreen extends ConsumerStatefulWidget {
@@ -35,7 +36,8 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         children: [
           const HomeDashboardScreen(),
           const PlanLibraryScreen(),
-          const ProgressAnalyticsScreen(),
+          const PRDashboardScreen(),
+          const BodyMetricsScreen(),
           const ProfileSettingsScreen(),
         ],
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
@@ -13,7 +14,8 @@ final databaseRepositoryProvider = Provider<DatabaseRepository>((ref) {
 
 final todayWorkoutGatewayProvider = Provider<TodayWorkoutGateway>((ref) {
   final repository = ref.watch(databaseRepositoryProvider);
-  return DatabaseTodayWorkoutGateway(repository);
+  final ownerUserId = ref.watch(currentUserIdProvider);
+  return DatabaseTodayWorkoutGateway(repository, ownerUserId: ownerUserId);
 });
 
 final todayWorkoutSummaryProvider = FutureProvider<TodayWorkoutSummary>((

@@ -17,9 +17,10 @@ abstract class TodayWorkoutGateway {
 }
 
 class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
-  DatabaseTodayWorkoutGateway(this._repository);
+  DatabaseTodayWorkoutGateway(this._repository, {this.ownerUserId});
 
   final DatabaseRepository _repository;
+  final String? ownerUserId;
 
   @override
   Future<PlanTemplate> loadActiveTemplate() async {
@@ -59,14 +60,13 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   @override
   Future<void> concludeWorkoutSession(WorkoutSessionState session) async {
     final context = await _loadContext();
-    final result = ProgramEngineDispatcher.resolve(
-      context.template.engineFamily,
-    ).conclude(
-      template: context.template,
-      instance: context.instance,
-      session: session,
-      stateByExerciseId: context.stateByExerciseId,
-    );
+    final result =
+        ProgramEngineDispatcher.resolve(context.template.engineFamily).conclude(
+          template: context.template,
+          instance: context.instance,
+          session: session,
+          stateByExerciseId: context.stateByExerciseId,
+        );
 
     await _repository.logWorkout(
       WorkoutLog(
@@ -77,6 +77,7 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
         completedAt: DateTime.now(),
         exercises: result.logs,
       ),
+      ownerUserId: ownerUserId,
     );
 
     await _repository.saveInstance(
@@ -95,7 +96,7 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
 
   Future<_ProgramContext> _loadContext() async {
     await _repository.ensureDefaultProgramSeeded();
-    final instance = await _repository.fetchActiveInstance();
+    final instance = await _repository.fetchActiveInstanceForUser(ownerUserId);
     final template = instance == null
         ? null
         : await _repository.fetchTemplate(instance.templateId);

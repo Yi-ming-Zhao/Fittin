@@ -33,30 +33,60 @@ const InstanceCollectionSchema = CollectionSchema(
       name: r'currentWorkoutIndex',
       type: IsarType.long,
     ),
-    r'engineStateJson': PropertySchema(
+    r'deletedAt': PropertySchema(
       id: 3,
+      name: r'deletedAt',
+      type: IsarType.dateTime,
+    ),
+    r'engineStateJson': PropertySchema(
+      id: 4,
       name: r'engineStateJson',
       type: IsarType.string,
     ),
     r'instanceId': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'instanceId',
       type: IsarType.string,
     ),
     r'lastModifiedAt': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'lastModifiedAt',
       type: IsarType.dateTime,
     ),
+    r'lastModifiedByDeviceId': PropertySchema(
+      id: 7,
+      name: r'lastModifiedByDeviceId',
+      type: IsarType.string,
+    ),
+    r'lastSyncedAt': PropertySchema(
+      id: 8,
+      name: r'lastSyncedAt',
+      type: IsarType.dateTime,
+    ),
+    r'ownerUserId': PropertySchema(
+      id: 9,
+      name: r'ownerUserId',
+      type: IsarType.string,
+    ),
+    r'syncStatusKey': PropertySchema(
+      id: 10,
+      name: r'syncStatusKey',
+      type: IsarType.string,
+    ),
     r'templateId': PropertySchema(
-      id: 6,
+      id: 11,
       name: r'templateId',
       type: IsarType.string,
     ),
     r'trainingMaxProfileJson': PropertySchema(
-      id: 7,
+      id: 12,
       name: r'trainingMaxProfileJson',
       type: IsarType.string,
+    ),
+    r'version': PropertySchema(
+      id: 13,
+      name: r'version',
+      type: IsarType.long,
     )
   },
   estimateSize: _instanceCollectionEstimateSize,
@@ -86,6 +116,19 @@ const InstanceCollectionSchema = CollectionSchema(
       properties: [
         IndexPropertySchema(
           name: r'templateId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        )
+      ],
+    ),
+    r'ownerUserId': IndexSchema(
+      id: 1631799950038639233,
+      name: r'ownerUserId',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'ownerUserId',
           type: IndexType.hash,
           caseSensitive: true,
         )
@@ -120,6 +163,19 @@ int _instanceCollectionEstimateSize(
     }
   }
   bytesCount += 3 + object.instanceId.length * 3;
+  {
+    final value = object.lastModifiedByDeviceId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.ownerUserId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.syncStatusKey.length * 3;
   bytesCount += 3 + object.templateId.length * 3;
   {
     final value = object.trainingMaxProfileJson;
@@ -139,11 +195,17 @@ void _instanceCollectionSerialize(
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeStringList(offsets[1], object.currentStatesJson);
   writer.writeLong(offsets[2], object.currentWorkoutIndex);
-  writer.writeString(offsets[3], object.engineStateJson);
-  writer.writeString(offsets[4], object.instanceId);
-  writer.writeDateTime(offsets[5], object.lastModifiedAt);
-  writer.writeString(offsets[6], object.templateId);
-  writer.writeString(offsets[7], object.trainingMaxProfileJson);
+  writer.writeDateTime(offsets[3], object.deletedAt);
+  writer.writeString(offsets[4], object.engineStateJson);
+  writer.writeString(offsets[5], object.instanceId);
+  writer.writeDateTime(offsets[6], object.lastModifiedAt);
+  writer.writeString(offsets[7], object.lastModifiedByDeviceId);
+  writer.writeDateTime(offsets[8], object.lastSyncedAt);
+  writer.writeString(offsets[9], object.ownerUserId);
+  writer.writeString(offsets[10], object.syncStatusKey);
+  writer.writeString(offsets[11], object.templateId);
+  writer.writeString(offsets[12], object.trainingMaxProfileJson);
+  writer.writeLong(offsets[13], object.version);
 }
 
 InstanceCollection _instanceCollectionDeserialize(
@@ -156,12 +218,18 @@ InstanceCollection _instanceCollectionDeserialize(
   object.createdAt = reader.readDateTime(offsets[0]);
   object.currentStatesJson = reader.readStringList(offsets[1]) ?? [];
   object.currentWorkoutIndex = reader.readLong(offsets[2]);
-  object.engineStateJson = reader.readStringOrNull(offsets[3]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[3]);
+  object.engineStateJson = reader.readStringOrNull(offsets[4]);
   object.id = id;
-  object.instanceId = reader.readString(offsets[4]);
-  object.lastModifiedAt = reader.readDateTime(offsets[5]);
-  object.templateId = reader.readString(offsets[6]);
-  object.trainingMaxProfileJson = reader.readStringOrNull(offsets[7]);
+  object.instanceId = reader.readString(offsets[5]);
+  object.lastModifiedAt = reader.readDateTime(offsets[6]);
+  object.lastModifiedByDeviceId = reader.readStringOrNull(offsets[7]);
+  object.lastSyncedAt = reader.readDateTimeOrNull(offsets[8]);
+  object.ownerUserId = reader.readStringOrNull(offsets[9]);
+  object.syncStatusKey = reader.readString(offsets[10]);
+  object.templateId = reader.readString(offsets[11]);
+  object.trainingMaxProfileJson = reader.readStringOrNull(offsets[12]);
+  object.version = reader.readLong(offsets[13]);
   return object;
 }
 
@@ -179,15 +247,27 @@ P _instanceCollectionDeserializeProp<P>(
     case 2:
       return (reader.readLong(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 5:
-      return (reader.readDateTime(offset)) as P;
-    case 6:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readDateTime(offset)) as P;
     case 7:
       return (reader.readStringOrNull(offset)) as P;
+    case 8:
+      return (reader.readDateTimeOrNull(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readString(offset)) as P;
+    case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
+      return (reader.readLong(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -427,6 +507,73 @@ extension InstanceCollectionQueryWhere
               indexName: r'templateId',
               lower: [],
               upper: [templateId],
+              includeUpper: false,
+            ));
+      }
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterWhereClause>
+      ownerUserIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'ownerUserId',
+        value: [null],
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterWhereClause>
+      ownerUserIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.between(
+        indexName: r'ownerUserId',
+        lower: [null],
+        includeLower: false,
+        upper: [],
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterWhereClause>
+      ownerUserIdEqualTo(String? ownerUserId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(IndexWhereClause.equalTo(
+        indexName: r'ownerUserId',
+        value: [ownerUserId],
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterWhereClause>
+      ownerUserIdNotEqualTo(String? ownerUserId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ownerUserId',
+              lower: [],
+              upper: [ownerUserId],
+              includeUpper: false,
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ownerUserId',
+              lower: [ownerUserId],
+              includeLower: false,
+              upper: [],
+            ));
+      } else {
+        return query
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ownerUserId',
+              lower: [ownerUserId],
+              includeLower: false,
+              upper: [],
+            ))
+            .addWhereClause(IndexWhereClause.between(
+              indexName: r'ownerUserId',
+              lower: [],
+              upper: [ownerUserId],
               includeUpper: false,
             ));
       }
@@ -767,6 +914,80 @@ extension InstanceCollectionQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
         property: r'currentWorkoutIndex',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      deletedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deletedAt',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
@@ -1178,6 +1399,526 @@ extension InstanceCollectionQueryFilter
   }
 
   QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastModifiedByDeviceId',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastModifiedByDeviceId',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastModifiedByDeviceId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'lastModifiedByDeviceId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'lastModifiedByDeviceId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastModifiedByDeviceId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastModifiedByDeviceIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'lastModifiedByDeviceId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastSyncedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastSyncedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastSyncedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      lastSyncedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastSyncedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'ownerUserId',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'ownerUserId',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'ownerUserId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'ownerUserId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'ownerUserId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerUserId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      ownerUserIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'ownerUserId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'syncStatusKey',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'syncStatusKey',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'syncStatusKey',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'syncStatusKey',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      syncStatusKeyIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'syncStatusKey',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
       templateIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1468,6 +2209,62 @@ extension InstanceCollectionQueryFilter
       ));
     });
   }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      versionEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      versionGreaterThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      versionLessThan(
+    int value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'version',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterFilterCondition>
+      versionBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'version',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
 }
 
 extension InstanceCollectionQueryObject
@@ -1503,6 +2300,20 @@ extension InstanceCollectionQuerySortBy
       sortByCurrentWorkoutIndexDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentWorkoutIndex', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
     });
   }
 
@@ -1549,6 +2360,62 @@ extension InstanceCollectionQuerySortBy
   }
 
   QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByLastModifiedByDeviceId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastModifiedByDeviceId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByLastModifiedByDeviceIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastModifiedByDeviceId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByLastSyncedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByOwnerUserId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerUserId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByOwnerUserIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerUserId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortBySyncStatusKey() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'syncStatusKey', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortBySyncStatusKeyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'syncStatusKey', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
       sortByTemplateId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'templateId', Sort.asc);
@@ -1573,6 +2440,20 @@ extension InstanceCollectionQuerySortBy
       sortByTrainingMaxProfileJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'trainingMaxProfileJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      sortByVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.desc);
     });
   }
 }
@@ -1604,6 +2485,20 @@ extension InstanceCollectionQuerySortThenBy
       thenByCurrentWorkoutIndexDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'currentWorkoutIndex', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
     });
   }
 
@@ -1664,6 +2559,62 @@ extension InstanceCollectionQuerySortThenBy
   }
 
   QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByLastModifiedByDeviceId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastModifiedByDeviceId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByLastModifiedByDeviceIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastModifiedByDeviceId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByLastSyncedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastSyncedAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByOwnerUserId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerUserId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByOwnerUserIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerUserId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenBySyncStatusKey() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'syncStatusKey', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenBySyncStatusKeyDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'syncStatusKey', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
       thenByTemplateId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'templateId', Sort.asc);
@@ -1688,6 +2639,20 @@ extension InstanceCollectionQuerySortThenBy
       thenByTrainingMaxProfileJsonDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'trainingMaxProfileJson', Sort.desc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.asc);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QAfterSortBy>
+      thenByVersionDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'version', Sort.desc);
     });
   }
 }
@@ -1716,6 +2681,13 @@ extension InstanceCollectionQueryWhereDistinct
   }
 
   QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
       distinctByEngineStateJson({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'engineStateJson',
@@ -1738,6 +2710,36 @@ extension InstanceCollectionQueryWhereDistinct
   }
 
   QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctByLastModifiedByDeviceId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastModifiedByDeviceId',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctByLastSyncedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastSyncedAt');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctByOwnerUserId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'ownerUserId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctBySyncStatusKey({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'syncStatusKey',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
       distinctByTemplateId({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'templateId', caseSensitive: caseSensitive);
@@ -1749,6 +2751,13 @@ extension InstanceCollectionQueryWhereDistinct
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'trainingMaxProfileJson',
           caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<InstanceCollection, InstanceCollection, QDistinct>
+      distinctByVersion() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'version');
     });
   }
 }
@@ -1782,6 +2791,13 @@ extension InstanceCollectionQueryProperty
     });
   }
 
+  QueryBuilder<InstanceCollection, DateTime?, QQueryOperations>
+      deletedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deletedAt');
+    });
+  }
+
   QueryBuilder<InstanceCollection, String?, QQueryOperations>
       engineStateJsonProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1803,6 +2819,34 @@ extension InstanceCollectionQueryProperty
     });
   }
 
+  QueryBuilder<InstanceCollection, String?, QQueryOperations>
+      lastModifiedByDeviceIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastModifiedByDeviceId');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, DateTime?, QQueryOperations>
+      lastSyncedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastSyncedAt');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, String?, QQueryOperations>
+      ownerUserIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'ownerUserId');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, String, QQueryOperations>
+      syncStatusKeyProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'syncStatusKey');
+    });
+  }
+
   QueryBuilder<InstanceCollection, String, QQueryOperations>
       templateIdProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1814,6 +2858,12 @@ extension InstanceCollectionQueryProperty
       trainingMaxProfileJsonProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'trainingMaxProfileJson');
+    });
+  }
+
+  QueryBuilder<InstanceCollection, int, QQueryOperations> versionProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'version');
     });
   }
 }

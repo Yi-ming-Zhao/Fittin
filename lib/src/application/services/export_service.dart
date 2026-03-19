@@ -93,6 +93,10 @@ class ExportService {
       case 'basePercent':
       case 'intensity':
         return value == 1 || value == 1.0;
+      case 'scheduleMode':
+        return value == 'legacy';
+      case 'loadUnit':
+        return value == 'kg';
       case 'roundingIncrement':
         return value == 2.5;
       case 'order':
@@ -101,6 +105,8 @@ class ExportService {
         return value == false;
       case 'kind':
         return value == 'working';
+      case 'setType':
+        return value == 'straight_set';
       default:
         return false;
     }

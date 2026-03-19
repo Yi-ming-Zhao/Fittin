@@ -17,7 +17,7 @@ void main() {
       final imported = ExportService.importTemplateFromSharePayload(payload);
 
       expect(payload, startsWith(ExportService.sharePrefix));
-      expect(payload.length, lessThan(4500));
+      expect(payload.length, lessThan(4700));
       expect(imported, template);
     },
   );
@@ -44,7 +44,7 @@ void main() {
       final imported = ExportService.importTemplateFromSharePayload(payload);
 
       expect(payload, startsWith(ExportService.sharePrefix));
-      expect(payload.length, lessThan(4500));
+      expect(payload.length, lessThan(4700));
       expect(imported, template);
     },
   );

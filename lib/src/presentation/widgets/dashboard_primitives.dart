@@ -1,6 +1,8 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 
 class DashboardPageScaffold extends StatelessWidget {
   const DashboardPageScaffold({
@@ -162,41 +164,47 @@ class DashboardSurfaceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final content = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(radius),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: highlight ? 0.14 : 0.09),
-                Colors.white.withValues(alpha: 0.035),
-              ],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: highlight ? 0.18 : 0.08),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: 28,
-                offset: const Offset(0, 14),
-              ),
-              if (highlight)
-                BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  blurRadius: 40,
-                  offset: const Offset(0, 0),
+    final content = Consumer(
+      builder: (context, ref, child) {
+        final glassOpacity = ref.watch(uiSettingsProvider);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(radius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: highlight ? (glassOpacity * 0.47) : (glassOpacity * 0.3)),
+                    Colors.white.withValues(alpha: glassOpacity * 0.12),
+                  ],
                 ),
-            ],
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: highlight ? (glassOpacity * 0.6) : (glassOpacity * 0.27)),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.24),
+                    blurRadius: 28,
+                    offset: const Offset(0, 14),
+                  ),
+                  if (highlight)
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                      blurRadius: 40,
+                      offset: const Offset(0, 0),
+                    ),
+                ],
+              ),
+              child: Padding(padding: padding, child: child!),
+            ),
           ),
-          child: Padding(padding: padding, child: child),
-        ),
-      ),
+        );
+      },
+      child: child,
     );
 
     if (onTap == null) return content;
@@ -374,6 +382,59 @@ class PremiumPrimaryButton extends StatelessWidget {
               )
             : Icon(icon ?? Icons.arrow_forward_rounded),
         label: Text(label),
+      ),
+    );
+  }
+}
+
+class GlassActionButton extends StatelessWidget {
+  const GlassActionButton({
+    super.key,
+    required this.label,
+    this.icon,
+    this.onPressed,
+  });
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onPressed,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.white.withValues(alpha: 0.08),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 16, color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

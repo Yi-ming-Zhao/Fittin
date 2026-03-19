@@ -12,6 +12,8 @@ class AppStateCollection {
   String? activeInstanceId;
   String? localeCode;
   String? analyticsFormulaKey;
+  double? glassOpacity;
+  String? stringValue;
 
   late DateTime updatedAt;
 }

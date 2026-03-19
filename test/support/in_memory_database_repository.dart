@@ -15,6 +15,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   AppLocale _appLocale = AppLocale.en;
   OneRepMaxFormula _analyticsFormula = OneRepMaxFormula.epley;
   final List<WorkoutLog> _workoutLogs = [];
+  String? _deviceId;
 
   @override
   Future<void> ensureDefaultProgramSeeded() async {
@@ -27,6 +28,9 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     PlanTemplate template, {
     bool isBuiltIn = false,
     String? sourceTemplateId,
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
   }) async {
     final existing = _templates[template.id];
     final now = DateTime.now();
@@ -37,6 +41,11 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       createdAt: existing?.createdAt ?? now,
       lastModifiedAt: now,
       instanceCount: existing?.instanceCount ?? 0,
+      ownerUserId: existing?.ownerUserId ?? ownerUserId,
+      version: (existing?.version ?? 0) + 1,
+      syncStatus:
+          syncStatus ?? (ownerUserId == null ? 'local_only' : 'pending_upload'),
+      lastModifiedByDeviceId: deviceId,
     );
   }
 
@@ -46,9 +55,15 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
-  Future<StoredTemplateRecord?> fetchStoredTemplate(String templateId) async {
+  Future<StoredTemplateRecord?> fetchStoredTemplate(
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     final record = _templates[templateId];
     if (record == null) {
+      return null;
+    }
+    if (!record.isBuiltIn && record.ownerUserId != ownerUserId) {
       return null;
     }
 
@@ -59,14 +74,29 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       createdAt: record.createdAt,
       lastModifiedAt: record.lastModifiedAt,
       instanceCount: _instances.values
-          .where((instance) => instance.templateId == templateId)
+          .where(
+            (instance) =>
+                instance.templateId == templateId &&
+                instance.ownerUserId == ownerUserId,
+          )
           .length,
+      ownerUserId: record.ownerUserId,
+      version: record.version,
+      syncStatus: record.syncStatus,
+      lastSyncedAt: record.lastSyncedAt,
+      lastModifiedByDeviceId: record.lastModifiedByDeviceId,
     );
   }
 
   @override
-  Future<List<StoredTemplateRecord>> fetchTemplates() async {
-    final records = await Future.wait(_templates.keys.map(fetchStoredTemplate));
+  Future<List<StoredTemplateRecord>> fetchTemplates({
+    String? ownerUserId,
+  }) async {
+    final records = await Future.wait(
+      _templates.keys.map(
+        (key) => fetchStoredTemplate(key, ownerUserId: ownerUserId),
+      ),
+    );
     final nonNullRecords = records.whereType<StoredTemplateRecord>().toList();
     nonNullRecords.sort((a, b) {
       if (a.isBuiltIn != b.isBuiltIn) {
@@ -78,7 +108,11 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
-  Future<void> saveInstance(StoredTrainingInstance data) async {
+  Future<void> saveInstance(
+    StoredTrainingInstance data, {
+    String? syncStatus,
+    String? deviceId,
+  }) async {
     _instances[data.instanceId] = data;
   }
 
@@ -112,6 +146,50 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<String> fetchOrCreateDeviceId() async {
+    _deviceId ??= 'test-device-id';
+    return _deviceId!;
+  }
+
+  @override
+  Future<void> claimLocalDataForUser(String ownerUserId) async {
+    final updatedTemplates = <String, StoredTemplateRecord>{};
+    for (final entry in _templates.entries) {
+      final record = entry.value;
+      updatedTemplates[entry.key] = StoredTemplateRecord(
+        template: record.template,
+        isBuiltIn: record.isBuiltIn,
+        sourceTemplateId: record.sourceTemplateId,
+        createdAt: record.createdAt,
+        lastModifiedAt: record.lastModifiedAt,
+        instanceCount: record.instanceCount,
+        ownerUserId: record.isBuiltIn
+            ? null
+            : (record.ownerUserId ?? ownerUserId),
+        deletedAt: record.deletedAt,
+        version: record.version,
+        syncStatus: record.isBuiltIn ? record.syncStatus : 'pending_upload',
+        lastSyncedAt: record.lastSyncedAt,
+        lastModifiedByDeviceId: record.lastModifiedByDeviceId,
+      );
+    }
+    _templates
+      ..clear()
+      ..addAll(updatedTemplates);
+
+    final updatedInstances = <String, StoredTrainingInstance>{};
+    for (final entry in _instances.entries) {
+      updatedInstances[entry.key] = entry.value.copyWith(
+        ownerUserId: entry.value.ownerUserId ?? ownerUserId,
+        syncStatus: 'pending_upload',
+      );
+    }
+    _instances
+      ..clear()
+      ..addAll(updatedInstances);
+  }
+
+  @override
   Future<StoredTrainingInstance?> fetchActiveInstance() async {
     final activeInstanceId = _activeInstanceId;
     if (activeInstanceId == null) {
@@ -122,11 +200,16 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
 
   @override
   Future<StoredTrainingInstance?> fetchInstanceForTemplate(
-    String templateId,
-  ) async {
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     final matches =
         _instances.values
-            .where((instance) => instance.templateId == templateId)
+            .where(
+              (instance) =>
+                  instance.templateId == templateId &&
+                  instance.ownerUserId == ownerUserId,
+            )
             .toList()
           ..sort((a, b) => a.instanceId.compareTo(b.instanceId));
     return matches.isEmpty ? null : matches.first;
@@ -134,10 +217,14 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
 
   @override
   Future<TrainingMaxSetupRequirement?> activationRequirementForTemplate(
-    String templateId,
-  ) async {
+    String templateId, {
+    String? ownerUserId,
+  }) async {
     await ensureDefaultProgramSeeded();
-    final existing = await fetchInstanceForTemplate(templateId);
+    final existing = await fetchInstanceForTemplate(
+      templateId,
+      ownerUserId: ownerUserId,
+    );
     if (existing != null) {
       return null;
     }
@@ -157,9 +244,13 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   Future<StoredTrainingInstance> activateTemplate(
     String templateId, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    String? ownerUserId,
   }) async {
     await ensureDefaultProgramSeeded();
-    final existing = await fetchInstanceForTemplate(templateId);
+    final existing = await fetchInstanceForTemplate(
+      templateId,
+      ownerUserId: ownerUserId,
+    );
     if (existing != null) {
       _activeInstanceId = existing.instanceId;
       return existing;
@@ -181,6 +272,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       instanceId: instanceId,
       templateId: templateId,
       currentWorkoutIndex: 0,
+      ownerUserId: ownerUserId,
       trainingMaxProfile: trainingMaxProfile,
       engineState: buildInitialEngineState(template),
       states: buildStarterStatesForTemplate(
@@ -194,24 +286,30 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
-  Future<void> logWorkout(WorkoutLog logRecord) async {
+  Future<void> logWorkout(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
     _workoutLogs.add(logRecord);
   }
 
   @override
-  Future<List<WorkoutLog>> fetchWorkoutLogs(String instanceId) async {
-    final logs = _workoutLogs
-        .where((log) => log.instanceId == instanceId)
-        .toList()
-      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
+  Future<List<WorkoutLog>> fetchWorkoutLogs(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    final logs =
+        _workoutLogs.where((log) => log.instanceId == instanceId).toList()
+          ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return logs;
   }
 
   @override
-  Future<List<WorkoutLog>> fetchAllWorkoutLogs() async {
-    final logs = [..._workoutLogs]..sort(
-      (a, b) => b.completedAt.compareTo(a.completedAt),
-    );
+  Future<List<WorkoutLog>> fetchAllWorkoutLogs({String? ownerUserId}) async {
+    final logs = [..._workoutLogs]
+      ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return logs;
   }
 }

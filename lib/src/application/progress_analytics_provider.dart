@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 
@@ -82,7 +83,9 @@ class AnalyticsFormulaNotifier extends StateNotifier<OneRepMaxFormula> {
   final Ref _ref;
 
   Future<void> _load() async {
-    final formula = await _ref.read(databaseRepositoryProvider).fetchAnalyticsFormula();
+    final formula = await _ref
+        .read(databaseRepositoryProvider)
+        .fetchAnalyticsFormula();
     if (mounted) {
       state = formula;
     }
@@ -99,7 +102,7 @@ class AnalyticsFormulaNotifier extends StateNotifier<OneRepMaxFormula> {
 
 final progressAnalyticsOverviewProvider =
     FutureProvider<ProgressAnalyticsOverview>((ref) async {
-      final repository = ref.watch(databaseRepositoryProvider);
+      final repository = ref.watch(localWorkoutLogRepositoryProvider);
       final formula = ref.watch(analyticsFormulaProvider);
       final logs = await repository.fetchAllWorkoutLogs();
       return buildProgressAnalytics(logs, formula);
@@ -123,14 +126,16 @@ ProgressAnalyticsOverview buildProgressAnalytics(
     }
 
     for (final exercise in log.exercises) {
-      byExercise.putIfAbsent(exercise.exerciseId, () => []).add(
-        _ExerciseLogEntry(
-          exerciseId: exercise.exerciseId,
-          exerciseName: exercise.exerciseName,
-          completedAt: log.completedAt,
-          sets: exercise.sets,
-        ),
-      );
+      byExercise
+          .putIfAbsent(exercise.exerciseId, () => [])
+          .add(
+            _ExerciseLogEntry(
+              exerciseId: exercise.exerciseId,
+              exerciseName: exercise.exerciseName,
+              completedAt: log.completedAt,
+              sets: exercise.sets,
+            ),
+          );
 
       if (isRecent) {
         for (final set in exercise.sets) {
@@ -142,15 +147,18 @@ ProgressAnalyticsOverview buildProgressAnalytics(
     }
   }
 
-  final summaries = byExercise.entries
-      .map((entry) => _buildExerciseSummary(entry.key, entry.value, formula))
-      .whereType<ExerciseProgressSummary>()
-      .toList()
-    ..sort((a, b) {
-      final deltaA = a.recentChange ?? -999999;
-      final deltaB = b.recentChange ?? -999999;
-      return deltaB.compareTo(deltaA);
-    });
+  final summaries =
+      byExercise.entries
+          .map(
+            (entry) => _buildExerciseSummary(entry.key, entry.value, formula),
+          )
+          .whereType<ExerciseProgressSummary>()
+          .toList()
+        ..sort((a, b) {
+          final deltaA = a.recentChange ?? -999999;
+          final deltaB = b.recentChange ?? -999999;
+          return deltaB.compareTo(deltaA);
+        });
 
   return ProgressAnalyticsOverview(
     completedWorkoutCount: logs.length,
@@ -224,16 +232,23 @@ ExerciseProgressSummary? _buildExerciseSummary(
     return null;
   }
 
-  final currentEstimated = estimatedPoints.isEmpty ? null : estimatedPoints.last.value;
+  final currentEstimated = estimatedPoints.isEmpty
+      ? null
+      : estimatedPoints.last.value;
   final bestEstimated = estimatedPoints.isEmpty
       ? null
-      : estimatedPoints.map((point) => point.value).reduce((a, b) => a > b ? a : b);
+      : estimatedPoints
+            .map((point) => point.value)
+            .reduce((a, b) => a > b ? a : b);
   final currentActual = actualPoints.isEmpty ? null : actualPoints.last.value;
   final bestActual = actualPoints.isEmpty
       ? null
-      : actualPoints.map((point) => point.value).reduce((a, b) => a > b ? a : b);
+      : actualPoints
+            .map((point) => point.value)
+            .reduce((a, b) => a > b ? a : b);
   final recentChange = estimatedPoints.length >= 2
-      ? estimatedPoints.last.value - estimatedPoints[estimatedPoints.length - 2].value
+      ? estimatedPoints.last.value -
+            estimatedPoints[estimatedPoints.length - 2].value
       : null;
 
   if (bestEstimated != null && currentEstimated == bestEstimated) {
@@ -255,12 +270,15 @@ ExerciseProgressSummary? _buildExerciseSummary(
           return setScore > bestScore ? set : best;
         });
     if (strongestSet != null) {
-      prs.add('${strongestSet.weight.toStringAsFixed(1)} x ${strongestSet.completedReps}');
+      prs.add(
+        '${strongestSet.weight.toStringAsFixed(1)} x ${strongestSet.completedReps}',
+      );
     }
   }
 
   final lastCompletedAt = entries.last.completedAt;
-  final isStagnating = (currentEstimated != null || currentActual != null) &&
+  final isStagnating =
+      (currentEstimated != null || currentActual != null) &&
       DateTime.now().difference(lastCompletedAt).inDays >= 42;
 
   return ExerciseProgressSummary(

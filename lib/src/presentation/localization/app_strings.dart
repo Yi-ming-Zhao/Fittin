@@ -82,25 +82,91 @@ class AppStrings {
   String get estimatedTrend => isChinese ? '预估 1RM 趋势' : 'Estimated 1RM trend';
   String get actualTrend => isChinese ? '真实 1RM 记录' : 'Actual 1RM history';
   String noRecentChangeLabel() => isChinese ? '暂无变化样本' : 'No recent delta';
-  String kilograms(double value) =>
-      isChinese ? '${value.toStringAsFixed(1)} 公斤' : '${value.toStringAsFixed(1)} kg';
+  String kilograms(double value) => isChinese
+      ? '${value.toStringAsFixed(1)} 公斤'
+      : '${value.toStringAsFixed(1)} kg';
   String plusMinusKilograms(double value) {
     final prefix = value > 0 ? '+' : '';
     return isChinese
         ? '$prefix${value.toStringAsFixed(1)} 公斤'
         : '$prefix${value.toStringAsFixed(1)} kg';
   }
+
   String sessionsLogged(int count) =>
       isChinese ? '$count 次记录' : '$count sessions';
   String daysAgo(int days) =>
       isChinese ? '$days 天前' : '$days day${days == 1 ? '' : 's'} ago';
   String get profile => isChinese ? '我的' : 'Profile';
   String get settings => isChinese ? '设置' : 'Settings';
+  String get account => isChinese ? '账户' : 'Account';
+  String get accountSubtitle => isChinese
+      ? '登录后可在后续版本中同步你的计划与训练记录'
+      : 'Sign in to prepare plan and training sync in upcoming builds';
+  String get signedOut => isChinese ? '未登录' : 'Signed out';
+  String get signedIn => isChinese ? '已登录' : 'Signed in';
+  String get signedInNoEmail => isChinese ? '已登录账户' : 'Signed-in account';
+  String get signIn => isChinese ? '登录' : 'Sign In';
+  String get createAccount => isChinese ? '创建账户' : 'Create Account';
+  String get signOut => isChinese ? '退出登录' : 'Sign Out';
+  String get email => isChinese ? '邮箱' : 'Email';
+  String get password => isChinese ? '密码' : 'Password';
+  String get manageAccount => isChinese ? '管理账户' : 'Manage Account';
+  String get cloudSyncComingSoon => isChinese
+      ? '账号已就绪，云同步会在后续任务中接入。'
+      : 'Account support is ready. Cloud sync will land in follow-up tasks.';
+  String get supabaseUnavailable =>
+      isChinese ? 'Supabase 尚未配置' : 'Supabase Not Configured';
+  String get supabaseUnavailableHint => isChinese
+      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY。'
+      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first.';
+  String get workingState => isChinese ? '处理中...' : 'Working...';
   String get language => isChinese ? '语言' : 'Language';
   String get languageSubtitle =>
       isChinese ? '切换应用界面和内置计划语言' : 'Switch app and built-in plan language';
   String get chinese => '中文';
   String get english => 'English';
+  String get trainingSetGuide => isChinese ? '训练组类型指南' : 'Training Set Guide';
+  String get trainingSetGuideSubtitle => isChinese
+      ? '查看 AMRAP、Top Set、Backoff Set 等组类型说明'
+      : 'Review AMRAP, top set, backoff set, and other set types';
+  String get openGuide => isChinese ? '查看指南' : 'Open Guide';
+  String get templateEditor => isChinese ? '计划编辑' : 'Template Editor';
+  String get scheduleMode => isChinese ? '计划模式' : 'Schedule Mode';
+  String get linearPlan => isChinese ? '线性计划' : 'Linear Plan';
+  String get periodizedPlan => isChinese ? '周期计划' : 'Periodized Plan';
+  String get weekDaySlot => isChinese ? '周/天槽位' : 'Week/Day Slot';
+  String get setType => isChinese ? '组类型' : 'Set Type';
+  String get loadUnit => isChinese ? '单位' : 'Load Unit';
+  String get templateName => isChinese ? '计划名称' : 'Template Name';
+  String get workoutName => isChinese ? '训练日名称' : 'Workout Name';
+  String get dayLabel => isChinese ? '日标签' : 'Day Label';
+  String get minutes => isChinese ? '分钟' : 'Minutes';
+  String get movementId => isChinese ? '动作 ID' : 'Movement Id';
+  String get tier => isChinese ? '层级' : 'Tier';
+  String get restSeconds => isChinese ? '休息（秒）' : 'Rest (sec)';
+  String get startWeight => isChinese ? '起始重量' : 'Start Weight';
+  String get stageName => isChinese ? '阶段名称' : 'Stage Name';
+  String get sets => isChinese ? '训练组' : 'Sets';
+  String get progression => isChinese ? '进展规则' : 'Progression';
+  String get onSuccess => isChinese ? '成功后' : 'On Success';
+  String get onFailure => isChinese ? '失败后' : 'On Failure';
+  String get role => isChinese ? '角色' : 'Role';
+  String get reps => isChinese ? '次数' : 'Reps';
+  String get intensity => isChinese ? '强度' : 'Intensity';
+  String get warmup => isChinese ? '热身组' : 'Warmup';
+  String get working => isChinese ? '工作组' : 'Working';
+  String get addWorkout => isChinese ? '新增训练日' : 'Add Workout';
+  String get addExercise => isChinese ? '新增动作' : 'Add Exercise';
+  String get addStage => isChinese ? '新增阶段' : 'Add Stage';
+  String get addSet => isChinese ? '新增训练组' : 'Add Set';
+  String get save => isChinese ? '保存' : 'Save';
+  String get share => isChinese ? '分享' : 'Share';
+  String get topSet => isChinese ? '顶组' : 'Top Set';
+  String get straightSet => isChinese ? '直组' : 'Straight Set';
+  String get backoffSet => isChinese ? '回退组' : 'Backoff Set';
+  String get amrapSet => isChinese ? 'AMRAP 组' : 'AMRAP Set';
+  String get percent1rm => isChinese ? '1RM 百分比' : '%1RM';
+  String get cableStack => isChinese ? '龙门架片数' : 'Cable Stack';
   String get shareTrainingPlan => isChinese ? '分享训练计划' : 'SHARE TRAINING PLAN';
   String get qrContainsPlan => isChinese
       ? '这个二维码包含完整计划 JSON 的压缩分享内容。'
@@ -108,9 +174,8 @@ class AppStrings {
   String payloadSize(int length) =>
       isChinese ? '载荷长度：$length 字符' : 'Payload size: $length chars';
   String get scanPlanQr => isChinese ? '扫描计划二维码' : 'SCAN A PLAN QR';
-  String importedTemplate(String name) => isChinese
-      ? '已将 $name 导入到本地模板。'
-      : 'Imported $name to local templates.';
+  String importedTemplate(String name) =>
+      isChinese ? '已将 $name 导入到本地模板。' : 'Imported $name to local templates.';
   String get invalidPlanQr =>
       isChinese ? '无效的训练计划二维码。' : 'Invalid training plan QR code.';
   String get noActiveWorkoutSession =>
@@ -118,8 +183,8 @@ class AppStrings {
   String get workoutSaved =>
       isChinese ? '训练已保存，已载入下一次训练。' : 'Workout saved. Next day loaded.';
   String get saving => isChinese ? '保存中...' : 'Saving...';
-  String get concludeWorkout =>
-      isChinese ? '完成本次训练' : 'Conclude Workout';
-  String get noActivePlan =>
-      isChinese ? '当前没有激活的训练计划，请先去计划库开始。' : 'No active training plan instance. Open Plan Library to start one.';
+  String get concludeWorkout => isChinese ? '完成本次训练' : 'Conclude Workout';
+  String get noActivePlan => isChinese
+      ? '当前没有激活的训练计划，请先去计划库开始。'
+      : 'No active training plan instance. Open Plan Library to start one.';
 }

@@ -31,32 +31,26 @@ class AppColors {
     switch (type) {
       case AppThemeType.ocean:
         return const ColorScheme.dark(
-          background: oceanBackground,
           surface: oceanSurface,
           primary: oceanPrimary,
           onPrimary: oceanOnPrimary,
-          onBackground: oceanTextPrimary,
           onSurface: oceanTextPrimary,
           outline: oceanTextSecondary,
         );
       case AppThemeType.sunset:
         return const ColorScheme.dark(
-          background: sunsetBackground,
           surface: sunsetSurface,
           primary: sunsetPrimary,
           onPrimary: sunsetOnPrimary,
-          onBackground: sunsetTextPrimary,
           onSurface: sunsetTextPrimary,
           outline: sunsetTextSecondary,
         );
       case AppThemeType.minimalDark:
       default:
         return const ColorScheme.dark(
-          background: darkBackground,
           surface: darkSurface,
           primary: darkPrimary,
           onPrimary: darkOnPrimary,
-          onBackground: darkTextPrimary,
           onSurface: darkTextPrimary,
           outline: darkTextSecondary,
         );

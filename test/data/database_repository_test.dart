@@ -3,6 +3,7 @@ import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
+import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 
 import '../support/in_memory_database_repository.dart';
@@ -60,6 +61,65 @@ void main() {
       expect((await repository.fetchTemplates()).length, 1);
     },
   );
+
+  test('template metadata persists richer editor fields', () async {
+    final base = await GzclpSeed.loadTemplate();
+    final template = base.copyWith(
+      id: 'rich-template',
+      scheduleMode: PlanScheduleModes.linear,
+      phases: [
+        base.phases.first.copyWith(
+          workouts: [
+            base.workouts.first.copyWith(
+              exercises: [
+                base.workouts.first.exercises.first.copyWith(
+                  loadUnit: LoadUnits.percent1rm,
+                  stages: [
+                    base.workouts.first.exercises.first.stages.first.copyWith(
+                      sets: [
+                        base
+                            .workouts
+                            .first
+                            .exercises
+                            .first
+                            .stages
+                            .first
+                            .sets
+                            .first
+                            .copyWith(setType: SetTypes.topSet),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+
+    await repository.saveTemplate(template);
+    final loaded = await repository.fetchTemplate('rich-template');
+
+    expect(loaded!.resolvedScheduleMode, PlanScheduleModes.linear);
+    expect(
+      loaded.workouts.first.exercises.first.loadUnit,
+      LoadUnits.percent1rm,
+    );
+    expect(
+      loaded
+          .workouts
+          .first
+          .exercises
+          .first
+          .stages
+          .first
+          .sets
+          .first
+          .resolvedSetType,
+      SetTypes.topSet,
+    );
+  });
 
   test('editing a template with active instances forks a new copy', () async {
     await repository.saveTemplate(
@@ -188,5 +248,51 @@ void main() {
     await repository.saveAnalyticsFormula(OneRepMaxFormula.brzycki);
 
     expect(await repository.fetchAnalyticsFormula(), OneRepMaxFormula.brzycki);
+  });
+
+  test(
+    'claimLocalDataForUser migrates anonymous local records into user scope',
+    () async {
+      await repository.saveTemplate(
+        (await GzclpSeed.loadTemplate()).copyWith(
+          id: 'anon-template',
+          name: 'Anonymous Template',
+        ),
+      );
+      await repository.saveInstance(
+        StoredTrainingInstance(
+          instanceId: 'anon-instance',
+          templateId: 'anon-template',
+          currentWorkoutIndex: 0,
+          states: GzclpSeed.buildStarterStates(await GzclpSeed.loadTemplate()),
+        ),
+      );
+
+      await repository.claimLocalDataForUser('user-123');
+
+      final template = await repository.fetchStoredTemplate(
+        'anon-template',
+        ownerUserId: 'user-123',
+      );
+      final instance = await repository.fetchInstanceForTemplate(
+        'anon-template',
+        ownerUserId: 'user-123',
+      );
+
+      expect(template, isNotNull);
+      expect(template!.ownerUserId, 'user-123');
+      expect(template.syncStatus, 'pending_upload');
+      expect(instance, isNotNull);
+      expect(instance!.ownerUserId, 'user-123');
+      expect(instance.syncStatus, 'pending_upload');
+    },
+  );
+
+  test('fetchOrCreateDeviceId returns a stable device id', () async {
+    final first = await repository.fetchOrCreateDeviceId();
+    final second = await repository.fetchOrCreateDeviceId();
+
+    expect(first, isNotEmpty);
+    expect(second, first);
   });
 }
