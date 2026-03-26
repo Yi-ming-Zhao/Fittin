@@ -30,6 +30,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final strings = AppStrings.of(context, ref);
     final authState = ref.watch(authStateProvider);
     final controllerState = ref.watch(authControllerProvider);
+    final syncState = ref.watch(syncControllerProvider);
     final supabaseState = ref.watch(supabaseBootstrapProvider);
     final currentUser = authState.valueOrNull;
 
@@ -68,18 +69,27 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             )
           else if (currentUser != null)
             _SignedInCard(
+              strings: strings,
+              syncState: syncState,
               email: currentUser.email ?? strings.signedInNoEmail,
-              onRetrySync: controllerState.isSubmitting
+              onRetrySync: controllerState.isSubmitting || syncState.isRunning
                   ? null
                   : () async {
                       await ref
                           .read(syncControllerProvider.notifier)
-                          .synchronize();
+                          .synchronizeWithRecovery();
                     },
               onSignOut: controllerState.isSubmitting
                   ? null
                   : () async {
-                      await ref.read(authControllerProvider.notifier).signOut();
+                      final signedOut = await ref
+                          .read(authControllerProvider.notifier)
+                          .signOut();
+                      if (signedOut && context.mounted) {
+                        ref
+                            .read(syncControllerProvider.notifier)
+                            .clearForSignedOutUser();
+                      }
                     },
             )
           else
@@ -178,11 +188,15 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
 class _SignedInCard extends StatelessWidget {
   const _SignedInCard({
+    required this.strings,
+    required this.syncState,
     required this.email,
     required this.onRetrySync,
     required this.onSignOut,
   });
 
+  final AppStrings strings;
+  final SyncControllerState syncState;
   final String email;
   final VoidCallback? onRetrySync;
   final VoidCallback? onSignOut;
@@ -190,6 +204,18 @@ class _SignedInCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final statusText = switch (syncState.stage) {
+      SyncStage.hydrating => strings.syncHydrating,
+      SyncStage.syncing => strings.syncInProgress,
+      SyncStage.synced => strings.syncComplete,
+      SyncStage.retryNeeded => syncState.errorMessage == null
+          ? strings.syncRetryNeeded
+          : '${strings.syncRetryNeeded} ${syncState.errorMessage!}',
+      SyncStage.idle => strings.syncReady,
+    };
+    final syncButtonLabel = syncState.stage == SyncStage.retryNeeded
+        ? strings.retrySync
+        : strings.syncNow;
     return DashboardSurfaceCard(
       radius: 28,
       highlight: true,
@@ -204,7 +230,7 @@ class _SignedInCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Cloud sync is ready for this account once the next tasks are implemented.',
+            statusText,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.72),
             ),
@@ -213,13 +239,13 @@ class _SignedInCard extends StatelessWidget {
           FilledButton.tonal(
             key: const ValueKey('retry-sync-button'),
             onPressed: onRetrySync,
-            child: const Text('Retry Sync'),
+            child: Text(syncButtonLabel),
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(
             key: const ValueKey('sign-out-button'),
             onPressed: onSignOut,
-            child: const Text('Sign Out'),
+            child: Text(strings.signOut),
           ),
         ],
       ),

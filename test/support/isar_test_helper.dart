@@ -13,7 +13,10 @@ Future<void> initializeTestIsarCore() async {
   final libraryPath =
       '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dev/isar_flutter_libs-3.1.0+1/macos/libisar.dylib';
   await Isar.initializeIsarCore(
-    libraries: {Abi.macosArm64: libraryPath},
+    libraries: {
+      Abi.macosX64: libraryPath,
+      Abi.macosArm64: libraryPath,
+    },
   );
 }
 

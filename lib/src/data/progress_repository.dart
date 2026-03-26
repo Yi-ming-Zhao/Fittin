@@ -205,6 +205,8 @@ class ProgressRepository {
   }
 
   Future<void> claimLocalDataForUser(String ownerUserId) async {
+    final claimedMetrics = <String>[];
+    final claimedPhotos = <String>[];
     await _isar.writeTxn(() async {
       final metrics = await _isar.bodyMetricCollections.where().findAll();
       for (final metric in metrics) {
@@ -212,6 +214,7 @@ class ProgressRepository {
           metric.ownerUserId = ownerUserId;
           metric.syncStatusKey = SyncStatusKeys.pendingUpload;
           await _isar.bodyMetricCollections.put(metric);
+          claimedMetrics.add(metric.metricId);
         }
       }
 
@@ -221,38 +224,29 @@ class ProgressRepository {
           photo.ownerUserId = ownerUserId;
           photo.syncStatusKey = SyncStatusKeys.pendingUpload;
           await _isar.progressPhotoCollections.put(photo);
+          claimedPhotos.add(photo.photoId);
         }
       }
     });
 
-    final metrics = await _isar.bodyMetricCollections.where().findAll();
-    for (final metric in metrics) {
-      if (metric.ownerUserId == ownerUserId) {
-        await _enqueueSync(
-          entityType: SyncEntityTypes.bodyMetric,
-          entityId: metric.metricId,
-          ownerUserId: ownerUserId,
-          operationType: metric.deletedAt == null
-              ? SyncOperationTypes.upsert
-              : SyncOperationTypes.delete,
-          syncStatus: metric.syncStatusKey,
-        );
-      }
+    for (final metricId in claimedMetrics) {
+      await _enqueueSync(
+        entityType: SyncEntityTypes.bodyMetric,
+        entityId: metricId,
+        ownerUserId: ownerUserId,
+        operationType: SyncOperationTypes.upsert,
+        syncStatus: SyncStatusKeys.pendingUpload,
+      );
     }
 
-    final photos = await _isar.progressPhotoCollections.where().findAll();
-    for (final photo in photos) {
-      if (photo.ownerUserId == ownerUserId) {
-        await _enqueueSync(
-          entityType: SyncEntityTypes.progressPhoto,
-          entityId: photo.photoId,
-          ownerUserId: ownerUserId,
-          operationType: photo.deletedAt == null
-              ? SyncOperationTypes.upsert
-              : SyncOperationTypes.delete,
-          syncStatus: photo.syncStatusKey,
-        );
-      }
+    for (final photoId in claimedPhotos) {
+      await _enqueueSync(
+        entityType: SyncEntityTypes.progressPhoto,
+        entityId: photoId,
+        ownerUserId: ownerUserId,
+        operationType: SyncOperationTypes.upsert,
+        syncStatus: SyncStatusKeys.pendingUpload,
+      );
     }
   }
 

@@ -79,7 +79,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      strings.cloudSyncComingSoon,
+                      strings.accountSubtitle,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(
                           context,

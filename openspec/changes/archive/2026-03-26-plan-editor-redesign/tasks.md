@@ -31,5 +31,5 @@
 ## 6. Verification
 
 - [x] 6.1 Add model and repository tests covering `scheduleMode`, `setType`, and `loadUnit` persistence.
-- [ ] 6.2 Add widget tests for linear editor flow, periodized `WnDn` slot editing, and engine-aware rule visibility.
+- [x] 6.2 Add widget tests for linear editor flow, periodized `WnDn` slot editing, and engine-aware rule visibility.
 - [x] 6.3 Add coverage for the bilingual set-type guide entry and rendering behavior.

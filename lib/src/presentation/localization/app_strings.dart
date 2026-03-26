@@ -100,8 +100,8 @@ class AppStrings {
   String get settings => isChinese ? '设置' : 'Settings';
   String get account => isChinese ? '账户' : 'Account';
   String get accountSubtitle => isChinese
-      ? '登录后可在后续版本中同步你的计划与训练记录'
-      : 'Sign in to prepare plan and training sync in upcoming builds';
+      ? '登录后即可在设备间同步你的计划、训练记录和进度数据'
+      : 'Sign in to sync your plans, workouts, and progress across devices';
   String get signedOut => isChinese ? '未登录' : 'Signed out';
   String get signedIn => isChinese ? '已登录' : 'Signed in';
   String get signedInNoEmail => isChinese ? '已登录账户' : 'Signed-in account';
@@ -111,14 +111,25 @@ class AppStrings {
   String get email => isChinese ? '邮箱' : 'Email';
   String get password => isChinese ? '密码' : 'Password';
   String get manageAccount => isChinese ? '管理账户' : 'Manage Account';
-  String get cloudSyncComingSoon => isChinese
-      ? '账号已就绪，云同步会在后续任务中接入。'
-      : 'Account support is ready. Cloud sync will land in follow-up tasks.';
+  String get syncReady =>
+      isChinese ? '已登录，等待开始同步。' : 'Signed in and ready to sync.';
+  String get syncHydrating => isChinese
+      ? '正在载入此账户的云端数据...'
+      : 'Loading this account\'s cloud data...';
+  String get syncInProgress =>
+      isChinese ? '正在同步最新更改...' : 'Syncing your latest changes...';
+  String get syncComplete =>
+      isChinese ? '云端数据已同步。' : 'Cloud data is synced.';
+  String get syncRetryNeeded => isChinese
+      ? '同步未完成，请重试。'
+      : 'Sync did not complete. Retry is needed.';
+  String get syncNow => isChinese ? '立即同步' : 'Sync Now';
+  String get retrySync => isChinese ? '重试同步' : 'Retry Sync';
   String get supabaseUnavailable =>
       isChinese ? 'Supabase 尚未配置' : 'Supabase Not Configured';
   String get supabaseUnavailableHint => isChinese
-      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY。'
-      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first.';
+      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY；Debug 模式下会优先尝试连接本地 Supabase 开发环境。'
+      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first; debug builds will also try the local Supabase dev stack.';
   String get workingState => isChinese ? '处理中...' : 'Working...';
   String get language => isChinese ? '语言' : 'Language';
   String get languageSubtitle =>

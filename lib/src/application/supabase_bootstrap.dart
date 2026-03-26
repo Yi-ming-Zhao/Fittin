@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -40,16 +41,27 @@ final supabaseClientProvider = Provider<SupabaseClient?>((ref) {
 Future<SupabaseBootstrapState> initializeSupabase() async {
   const url = String.fromEnvironment('SUPABASE_URL');
   const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+  const localDevUrl = 'http://127.0.0.1:55321';
+  const localDevPublishableKey =
+      'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 
-  if (url.isEmpty || anonKey.isEmpty) {
+  final resolvedUrl = url.isNotEmpty ? url : (kDebugMode ? localDevUrl : '');
+  final resolvedAnonKey = anonKey.isNotEmpty
+      ? anonKey
+      : (kDebugMode ? localDevPublishableKey : '');
+
+  if (resolvedUrl.isEmpty || resolvedAnonKey.isEmpty) {
     return const SupabaseBootstrapState.unavailable(
-      'Missing SUPABASE_URL or SUPABASE_ANON_KEY dart define.',
+      'Missing SUPABASE_URL or SUPABASE_ANON_KEY dart define. Debug builds fall back to the local Supabase dev stack when available.',
     );
   }
 
   try {
-    await Supabase.initialize(url: url, anonKey: anonKey);
-    return const SupabaseBootstrapState.configured(url: url, anonKey: anonKey);
+    await Supabase.initialize(url: resolvedUrl, anonKey: resolvedAnonKey);
+    return SupabaseBootstrapState.configured(
+      url: resolvedUrl,
+      anonKey: resolvedAnonKey,
+    );
   } catch (error) {
     return SupabaseBootstrapState.unavailable(error.toString());
   }

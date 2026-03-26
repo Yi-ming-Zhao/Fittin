@@ -1,8 +1,4 @@
-## Purpose
-
-Define account sign-up, sign-in, session restoration, and sign-out behavior for authenticated users.
-
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: User Account Authentication
 The system MUST allow a user to create an account, sign in, restore an authenticated session, and sign out by using Supabase Auth. Authenticated state changes MUST also trigger the correct synchronization lifecycle so the signed-in experience reflects the user's actual cloud-backed dataset and the signed-out experience stops user-scoped sync work safely.

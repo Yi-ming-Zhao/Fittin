@@ -206,11 +206,16 @@ class SyncService {
       table: 'body_metrics',
       userId: ownerUserId,
     );
+    final progressPhotos = await _remoteRepository.fetchRows(
+      table: 'progress_photos',
+      userId: ownerUserId,
+    );
 
     await _mergePlans(plans, ownerUserId);
     await _mergeInstances(instances, ownerUserId);
     await _mergeWorkoutLogs(logs, ownerUserId);
     await _mergeBodyMetrics(metrics, ownerUserId);
+    await _mergeProgressPhotos(progressPhotos, ownerUserId);
   }
 
   Future<void> _mergePlans(
@@ -221,13 +226,8 @@ class SyncService {
       final existing = await _isar.templateCollections.getByTemplateId(
         row['id'] as String,
       );
-      if (existing != null &&
-          existing.syncStatusKey == SyncStatusKeys.pendingUpload &&
-          existing.version > (row['version'] as int? ?? 0)) {
-        existing.syncStatusKey = SyncStatusKeys.conflict;
-        await _isar.writeTxn(() async {
-          await _isar.templateCollections.putByTemplateId(existing);
-        });
+      if (_shouldMarkTemplateConflict(existing, row['version'])) {
+        await _markTemplateConflict(existing!);
         continue;
       }
 
@@ -264,8 +264,8 @@ class SyncService {
         row['id'] as String,
       );
       final remoteVersion = row['version'] as int? ?? 1;
-      if (existing != null &&
-          existing.syncStatus == SyncStatusKeys.pendingUpload &&
+      if (_isPendingLocalConflict(existing?.syncStatus) &&
+          existing != null &&
           existing.version > remoteVersion) {
         await _databaseRepository.saveInstance(
           existing.copyWith(syncStatus: SyncStatusKeys.conflict),
@@ -314,7 +314,12 @@ class SyncService {
       final existing = await _isar.workoutLogCollections.getByLogId(
         row['id'] as String,
       );
+      if (_shouldMarkWorkoutLogConflict(existing, row['version'])) {
+        await _markWorkoutLogConflict(existing!);
+        continue;
+      }
       if (existing != null &&
+          !_isPendingLocalConflict(existing.syncStatusKey) &&
           existing.version > (row['version'] as int? ?? 0)) {
         continue;
       }
@@ -345,6 +350,19 @@ class SyncService {
     String ownerUserId,
   ) async {
     for (final row in rows) {
+      final existing = await _isar.bodyMetricCollections
+          .filter()
+          .metricIdEqualTo(row['id'] as String)
+          .findFirst();
+      if (_shouldMarkBodyMetricConflict(existing, row['version'])) {
+        await _markBodyMetricConflict(existing!);
+        continue;
+      }
+      if (existing != null &&
+          !_isPendingLocalConflict(existing.syncStatusKey) &&
+          existing.version > (row['version'] as int? ?? 0)) {
+        continue;
+      }
       final metric = BodyMetricCollection()
         ..metricId = row['id'] as String
         ..ownerUserId = ownerUserId
@@ -358,10 +376,6 @@ class SyncService {
         ..version = row['version'] as int? ?? 1
         ..syncStatusKey = SyncStatusKeys.synced
         ..lastModifiedByDeviceId = row['last_modified_by_device_id'] as String?;
-      final existing = await _isar.bodyMetricCollections
-          .filter()
-          .metricIdEqualTo(metric.metricId)
-          .findFirst();
       if (existing != null) {
         metric.id = existing.id;
       }
@@ -371,9 +385,61 @@ class SyncService {
     }
   }
 
+  Future<void> _mergeProgressPhotos(
+    List<Map<String, dynamic>> rows,
+    String ownerUserId,
+  ) async {
+    for (final row in rows) {
+      final existing = await _isar.progressPhotoCollections
+          .filter()
+          .photoIdEqualTo(row['id'] as String)
+          .findFirst();
+      if (_shouldMarkProgressPhotoConflict(existing, row['version'])) {
+        await _markProgressPhotoConflict(existing!);
+        continue;
+      }
+      if (existing != null &&
+          !_isPendingLocalConflict(existing.syncStatusKey) &&
+          existing.version > (row['version'] as int? ?? 0)) {
+        continue;
+      }
+
+      final storagePath = row['storage_path'] as String? ?? '';
+      final collection = ProgressPhotoCollection()
+        ..photoId = row['id'] as String
+        ..ownerUserId = ownerUserId
+        ..timestamp = DateTime.parse(
+          (row['captured_at'] ?? row['created_at']) as String,
+        ).toLocal()
+        ..filePath = existing?.filePath.isNotEmpty == true
+            ? existing!.filePath
+            : storagePath
+        ..label = row['label'] as String?
+        ..metadataJson = row['metadata_json'] as String?
+        ..deletedAt = _parseDateTime(row['deleted_at'])
+        ..lastSyncedAt = DateTime.now()
+        ..version = row['version'] as int? ?? 1
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastModifiedByDeviceId = row['last_modified_by_device_id'] as String?;
+      if (existing != null) {
+        collection.id = existing.id;
+      }
+      await _isar.writeTxn(() async {
+        await _isar.progressPhotoCollections.put(collection);
+      });
+    }
+  }
+
   Future<void> _markTemplateSynced(TemplateCollection collection) async {
     collection.syncStatusKey = SyncStatusKeys.synced;
     collection.lastSyncedAt = DateTime.now();
+    await _isar.writeTxn(() async {
+      await _isar.templateCollections.putByTemplateId(collection);
+    });
+  }
+
+  Future<void> _markTemplateConflict(TemplateCollection collection) async {
+    collection.syncStatusKey = SyncStatusKeys.conflict;
     await _isar.writeTxn(() async {
       await _isar.templateCollections.putByTemplateId(collection);
     });
@@ -401,9 +467,23 @@ class SyncService {
     });
   }
 
+  Future<void> _markWorkoutLogConflict(WorkoutLogCollection collection) async {
+    collection.syncStatusKey = SyncStatusKeys.conflict;
+    await _isar.writeTxn(() async {
+      await _isar.workoutLogCollections.putByLogId(collection);
+    });
+  }
+
   Future<void> _markBodyMetricSynced(BodyMetricCollection collection) async {
     collection.syncStatusKey = SyncStatusKeys.synced;
     collection.lastSyncedAt = DateTime.now();
+    await _isar.writeTxn(() async {
+      await _isar.bodyMetricCollections.put(collection);
+    });
+  }
+
+  Future<void> _markBodyMetricConflict(BodyMetricCollection collection) async {
+    collection.syncStatusKey = SyncStatusKeys.conflict;
     await _isar.writeTxn(() async {
       await _isar.bodyMetricCollections.put(collection);
     });
@@ -417,6 +497,57 @@ class SyncService {
     await _isar.writeTxn(() async {
       await _isar.progressPhotoCollections.put(collection);
     });
+  }
+
+  Future<void> _markProgressPhotoConflict(
+    ProgressPhotoCollection collection,
+  ) async {
+    collection.syncStatusKey = SyncStatusKeys.conflict;
+    await _isar.writeTxn(() async {
+      await _isar.progressPhotoCollections.put(collection);
+    });
+  }
+
+  bool _shouldMarkTemplateConflict(
+    TemplateCollection? existing,
+    Object? remoteVersion,
+  ) {
+    return existing != null &&
+        _isPendingLocalConflict(existing.syncStatusKey) &&
+        existing.version > (remoteVersion as int? ?? 0);
+  }
+
+  bool _shouldMarkWorkoutLogConflict(
+    WorkoutLogCollection? existing,
+    Object? remoteVersion,
+  ) {
+    return existing != null &&
+        _isPendingLocalConflict(existing.syncStatusKey) &&
+        existing.version > (remoteVersion as int? ?? 0);
+  }
+
+  bool _shouldMarkBodyMetricConflict(
+    BodyMetricCollection? existing,
+    Object? remoteVersion,
+  ) {
+    return existing != null &&
+        _isPendingLocalConflict(existing.syncStatusKey) &&
+        existing.version > (remoteVersion as int? ?? 0);
+  }
+
+  bool _shouldMarkProgressPhotoConflict(
+    ProgressPhotoCollection? existing,
+    Object? remoteVersion,
+  ) {
+    return existing != null &&
+        _isPendingLocalConflict(existing.syncStatusKey) &&
+        existing.version > (remoteVersion as int? ?? 0);
+  }
+
+  bool _isPendingLocalConflict(String? syncStatus) {
+    return syncStatus == SyncStatusKeys.pendingUpload ||
+        syncStatus == SyncStatusKeys.pendingDelete ||
+        syncStatus == SyncStatusKeys.conflict;
   }
 
   DateTime? _parseDateTime(Object? value) {

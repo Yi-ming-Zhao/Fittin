@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 
 import '../support/fake_auth_repository.dart';
 import '../support/in_memory_database_repository.dart';
+
+class _TestSyncController extends StateNotifier<SyncControllerState> {
+  _TestSyncController(super.state);
+}
 
 void main() {
   testWidgets('account screen signs in from the entry form', (
@@ -120,11 +125,51 @@ void main() {
 
     expect(find.text('restored@test.dev'), findsOneWidget);
     expect(find.byKey(const ValueKey('retry-sync-button')), findsOneWidget);
+    expect(find.text('Signed in and ready to sync.'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('sign-out-button')));
     await tester.pumpAndSettle();
 
     expect(authRepository.signedOut, isTrue);
     expect(find.byKey(const ValueKey('account-email-field')), findsOneWidget);
+  });
+
+  testWidgets('account screen surfaces retry-needed sync state', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository(
+      initialUser: const AuthUser(id: 'retry-user', email: 'retry@test.dev'),
+    );
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          authRepositoryProvider.overrideWithValue(authRepository),
+          syncControllerProvider.overrideWith(
+            (ref) => _TestSyncController(
+              const SyncControllerState(
+                stage: SyncStage.retryNeeded,
+                activeUserId: 'retry-user',
+                errorMessage: 'Network timeout',
+              ),
+            ),
+          ),
+          supabaseBootstrapProvider.overrideWithValue(
+            const SupabaseBootstrapState.configured(
+              url: 'https://example.supabase.co',
+              anonKey: 'anon-key',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: AccountScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Retry is needed.'), findsOneWidget);
+    expect(find.textContaining('Network timeout'), findsOneWidget);
+    expect(find.text('Retry Sync'), findsOneWidget);
   });
 }
