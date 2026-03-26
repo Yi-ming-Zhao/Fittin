@@ -51,6 +51,7 @@ app.*.map.json
 .codex/
 .cursor/
 .gemini/
+.github/
 
 # macOS
 .DS_Store
