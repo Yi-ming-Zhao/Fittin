@@ -43,3 +43,18 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# IDE / AI tools
+.vscode/
+.agent/
+.claude/
+.codex/
+.cursor/
+.gemini/
+
+# macOS
+.DS_Store
+
+# build / temp
+*.log
+*.tmp
