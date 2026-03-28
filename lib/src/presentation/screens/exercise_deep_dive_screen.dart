@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/progress_service.dart';
+import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/line_chart_painter.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
@@ -15,12 +16,13 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final progressService = ref.watch(progressServiceProvider);
+    final strings = AppStrings.of(context, ref);
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: CustomScrollView(
         slivers: [
-          _buildHeroAppBar(context, theme),
+          _buildHeroAppBar(context, theme, strings),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -29,13 +31,13 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                 children: [
                   const SizedBox(height: 24),
                   // Quick stats row
-                  _buildQuickStats(theme),
+                  _buildQuickStats(theme, strings),
                   const SizedBox(height: 24),
-                  _buildTrendChart(context, progressService),
+                  _buildTrendChart(context, progressService, strings),
                   const SizedBox(height: 32),
-                  DashboardSectionLabel(label: 'SESSION HISTORY'),
+                  DashboardSectionLabel(label: strings.sessionHistory),
                   const SizedBox(height: 16),
-                  _buildHistoryList(context),
+                  _buildHistoryList(context, strings),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -47,7 +49,11 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
   }
 
   // Task 4.3: ExerciseHeroHeader with high-contrast gradient
-  Widget _buildHeroAppBar(BuildContext context, ThemeData theme) {
+  Widget _buildHeroAppBar(
+    BuildContext context,
+    ThemeData theme,
+    AppStrings strings,
+  ) {
     return SliverAppBar(
       expandedHeight: 260,
       pinned: true,
@@ -79,7 +85,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
             ),
             if (summary.currentEstimatedOneRepMax != null)
               Text(
-                'E1RM: ${summary.currentEstimatedOneRepMax!.toStringAsFixed(1)} kg',
+                strings.e1rmLabel(summary.currentEstimatedOneRepMax!),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w700,
@@ -143,7 +149,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildQuickStats(ThemeData theme) {
+  Widget _buildQuickStats(ThemeData theme, AppStrings strings) {
     final current = summary.currentEstimatedOneRepMax;
     final change = summary.recentChange;
 
@@ -159,19 +165,19 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(
           child: DashboardStatCard(
-            label: '30D CHANGE',
+            label: strings.change30d,
             value: change != null
                 ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}'
                 : '—',
-            caption: change != null && change > 0 ? 'Gaining' : null,
+            caption: change != null && change > 0 ? strings.gaining : null,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: DashboardStatCard(
-            label: 'SESSIONS',
+            label: strings.encounterCount,
             value: '${summary.estimatedHistory.length}',
-            caption: 'Total logged',
+            caption: strings.totalLogged,
           ),
         ),
       ],
@@ -179,7 +185,11 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
   }
 
   // Task 4.2: StrengthTrendsOverlayChart showing 1/3/5RM lines
-  Widget _buildTrendChart(BuildContext context, ProgressService service) {
+  Widget _buildTrendChart(
+    BuildContext context,
+    ProgressService service,
+    AppStrings strings,
+  ) {
     if (summary.estimatedHistory.isEmpty) return const SizedBox.shrink();
 
     final recent = summary.estimatedHistory.length > 10
@@ -210,7 +220,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     }
 
     return ChartContainer(
-      title: 'Strength Trends Overlay',
+      title: strings.strengthTrendsOverlay,
       height: 220,
       headerAction: Row(
         mainAxisSize: MainAxisSize.min,
@@ -235,7 +245,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryList(BuildContext context) {
+  Widget _buildHistoryList(BuildContext context, AppStrings strings) {
     return Column(
       children: summary.estimatedHistory.reversed.map((point) {
         return Padding(
@@ -250,12 +260,13 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        DateFormat('MMMM d, yyyy').format(point.completedAt),
+                        DateFormat.yMMMMd(strings.isChinese ? 'zh' : 'en')
+                            .format(point.completedAt),
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${point.weight} kg × ${point.reps} reps',
+                        '${strings.kilograms(point.weight)} × ${point.reps}',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 13,

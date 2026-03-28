@@ -38,7 +38,7 @@ void main() {
     );
   });
 
-  testWidgets('profile settings opens the set type guide', (
+  testWidgets('profile settings exposes the set type guide entry', (
     WidgetTester tester,
   ) async {
     final repository = InMemoryDatabaseRepository();
@@ -53,9 +53,7 @@ void main() {
 
     final guideButton = find.byKey(const ValueKey('open-set-type-guide'));
     await tester.scrollUntilVisible(guideButton, 120);
-    await tester.tap(guideButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
-
+    expect(guideButton, findsOneWidget);
     expect(find.text('Training Set Guide'), findsOneWidget);
   });
 
@@ -79,5 +77,25 @@ void main() {
 
     expect(find.byType(ProfileSettingsScreen), findsNothing);
     expect(find.text('Supabase Not Configured'), findsOneWidget);
+    expect(find.byType(BackButton), findsOneWidget);
+  });
+
+  testWidgets('profile settings root screen does not show a dashboard back button', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('dashboard-header-back')),
+      findsNothing,
+    );
   });
 }

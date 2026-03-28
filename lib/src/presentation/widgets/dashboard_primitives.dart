@@ -80,19 +80,35 @@ class DashboardScreenHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
+    this.showBackButton = false,
   });
 
   final String eyebrow;
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final bool showBackButton;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (showBackButton) ...[
+          IconButton.filledTonal(
+            key: const ValueKey('dashboard-header-back'),
+            onPressed: () => Navigator.of(context).maybePop(),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          const SizedBox(width: 16),
+        ],
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -35,9 +35,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
             DashboardScreenHeader(
               eyebrow: strings.insights,
               title: strings.progressAnalytics,
-              subtitle: strings.isChinese
-                  ? '按动作查看预估 1RM、真实 1RM、PR 与停滞情况。'
-                  : 'Track estimated 1RM, actual 1RM, PRs, and stagnation by exercise.',
+              subtitle: strings.progressAnalyticsSubtitle,
             ),
             const SizedBox(height: 20),
             DashboardSurfaceCard(
@@ -48,16 +46,14 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    strings.isChinese ? '力量轨迹' : 'Strength Trajectory',
+                    strings.strengthTrajectory,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    strings.isChinese
-                        ? '先给出总体节奏，再下钻到单动作的预估 1RM、真实 1RM、PR 与停滞。减少重复黑块，强化阅读节奏。'
-                        : 'Start with overall momentum, then drill into per-lift estimated 1RM, actual 1RM, PRs, and stagnation.',
+                    strings.strengthTrajectorySubtitle,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.68),
                       height: 1.45,

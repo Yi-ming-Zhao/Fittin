@@ -32,3 +32,11 @@ The plan editor MUST render set-type choice as a deliberate premium selection co
 #### Scenario: User chooses a set category
 - **WHEN** the user edits a set inside the plan editor
 - **THEN** the set-type control presents structured options such as `top set` or `AMRAP set` in a visually intentional premium selector with clear selected state.
+
+### Requirement: Premium Subpage Back Affordance
+The premium minimal redesign MUST give secondary pages a consistent back-navigation affordance that matches the app's premium visual language instead of relying on inconsistent default headers or leaving pages without a visible return action.
+
+#### Scenario: User opens a premium-styled subpage
+- **WHEN** the user navigates to a secondary page with custom or premium header styling
+- **THEN** the page shows a deliberate back icon treatment that feels visually integrated with the rest of the interface
+- **AND** the icon remains easy to discover on both mobile and macOS layouts.

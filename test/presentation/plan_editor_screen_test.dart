@@ -118,6 +118,7 @@ PlanTemplate _buildPeriodizedTemplate() {
 Future<void> _pumpScreen(
   WidgetTester tester, {
   required PlanTemplate draft,
+  bool pushFromHome = false,
 }) async {
   final repository = InMemoryDatabaseRepository();
 
@@ -129,7 +130,27 @@ Future<void> _pumpScreen(
           (ref) => _StubTemplateEditorNotifier(ref, draft),
         ),
       ],
-      child: const MaterialApp(home: PlanEditorScreen(templateId: 'ignored')),
+      child: MaterialApp(
+        home: pushFromHome
+            ? Scaffold(
+                body: Builder(
+                  builder: (context) => Center(
+                    child: FilledButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const PlanEditorScreen(templateId: 'ignored'),
+                          ),
+                        );
+                      },
+                      child: const Text('Open editor'),
+                    ),
+                  ),
+                ),
+              )
+            : const PlanEditorScreen(templateId: 'ignored'),
+      ),
     ),
   );
   await tester.pump();
@@ -165,6 +186,28 @@ void main() {
 
     await _scrollUntilVisible(tester, find.text('Add Workout'));
     expect(find.text('Add Workout'), findsOneWidget);
+  });
+
+  testWidgets('plan editor shows a dashboard back button when pushed', (
+    WidgetTester tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      draft: _buildLinearTemplate(),
+      pushFromHome: true,
+    );
+
+    await tester.tap(find.text('Open editor'));
+    await tester.pumpAndSettle();
+
+    final backButton = find.byKey(const ValueKey('dashboard-header-back'));
+    expect(backButton, findsOneWidget);
+
+    await tester.tap(backButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open editor'), findsOneWidget);
+    expect(find.byType(PlanEditorScreen), findsNothing);
   });
 
   testWidgets('plan editor focuses periodized templates by week and day slot', (

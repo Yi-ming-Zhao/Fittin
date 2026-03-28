@@ -1,7 +1,3 @@
-## Purpose
-
-Define the body metrics and progress photo experience for tracking physical changes over time.
-
 ## ADDED Requirements
 
 ### Requirement: Body Metrics Page Hierarchy
@@ -36,6 +32,8 @@ The Body Metrics screen MUST present the measurement log as contextual support f
 - **THEN** each entry shows its recorded date
 - **AND** the list is visually subordinate to the primary summary modules
 - **AND** the log remains usable as a review and cleanup surface for prior measurements.
+
+## MODIFIED Requirements
 
 ### Requirement: Visual Consistency with Home Dashboard
 The Body Metrics module MUST follow the Premium Glassmorphism style: using `onSurface.withValues(alpha: 0.03)` base layers, thin borders, and vibrant primary-color highlights for primary call-to-actions.
@@ -81,10 +79,3 @@ The metric tiles MUST clearly communicate whether a metric has a current value, 
 - **THEN** the relevant card shows the latest value
 - **AND** the card explains that trend comparison is not available yet
 - **AND** the page avoids displaying a misleading zero-change or blank delta treatment.
-
-### Requirement: Progress Photo Vault
-The system MUST support storing and viewing progress photos, specifically enabling a side-by-side comparison mode between two selected dates.
-
-#### Scenario: Comparing photos
-- **WHEN** the user enters the photo comparison mode
-- **THEN** the system displays two selected photos labeled "Today" and "[Date]" for visual side-by-side review.

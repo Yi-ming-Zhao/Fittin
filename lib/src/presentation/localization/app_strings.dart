@@ -53,6 +53,13 @@ class AppStrings {
   String get insightsSubtitle =>
       isChinese ? '训练分析会显示在这里。' : 'Progress analytics will live here.';
   String get progressAnalytics => isChinese ? '进步分析' : 'Progress Analytics';
+  String get progressAnalyticsSubtitle => isChinese
+      ? '按动作查看预估 1RM、真实 1RM、PR 与停滞情况。'
+      : 'Track estimated 1RM, actual 1RM, PRs, and stagnation by exercise.';
+  String get strengthTrajectory => isChinese ? '力量轨迹' : 'Strength Trajectory';
+  String get strengthTrajectorySubtitle => isChinese
+      ? '先给出总体节奏，再下钻到单动作的预估 1RM、真实 1RM、PR 与停滞。减少重复黑块，强化阅读节奏。'
+      : 'Start with overall momentum, then drill into per-lift estimated 1RM, actual 1RM, PRs, and stagnation.';
   String get analyticsEmptyTitle =>
       isChinese ? '还没有足够的训练记录' : 'Not enough training history yet';
   String get analyticsEmptySubtitle => isChinese
@@ -96,6 +103,50 @@ class AppStrings {
       isChinese ? '$count 次记录' : '$count sessions';
   String daysAgo(int days) =>
       isChinese ? '$days 天前' : '$days day${days == 1 ? '' : 's'} ago';
+  String get advancedAnalytics => isChinese ? '趋势与分析' : 'Trends & Analytics';
+  String get advancedAnalyticsSubtitle => isChinese
+      ? '从训练一致性和负荷分布里查看长期节奏。'
+      : 'Review long-term rhythm through consistency and training load.';
+  String get consistencyByWeek => isChinese ? '按周' : 'Week';
+  String get consistencyByMonth => isChinese ? '按月' : 'Month';
+  String get consistencyByPlan => isChinese ? '从计划开始' : 'From Plan Start';
+  String get trainingConsistency =>
+      isChinese ? '训练一致性' : 'Training Consistency';
+  String get consistencyHint => isChinese
+      ? '点击有记录的日期可查看当天训练内容。'
+      : 'Tap a recorded day to inspect that day\'s training log.';
+  String get noConsistencyRecords =>
+      isChinese ? '这个时间范围还没有训练记录。' : 'No training records for this range yet.';
+  String consistencySessions(int count) =>
+      isChinese ? '$count 次训练' : '$count session${count == 1 ? '' : 's'}';
+  String get muscleTrainingLoad =>
+      isChinese ? '肌群训练负荷（每周组数）' : 'Muscle Training Load (Sets/Week)';
+  String get anatomicalLoadMap => isChinese ? '解剖负荷图' : 'ANATOMICAL LOAD MAP';
+  String get anatomicalLoadPlaceholder => isChinese
+      ? '更高分辨率的肌群激活叠加图会在后续版本中推出。'
+      : 'High-resolution muscle activation overlay\ncoming in a future update.';
+  String get recordedWorkoutDetails =>
+      isChinese ? '训练记录详情' : 'Workout Record Details';
+  String recordedDayTitle(DateTime date) => isChinese
+      ? '${date.year}年${date.month}月${date.day}日'
+      : '${date.month}/${date.day}/${date.year}';
+  String get workoutSummaryLabel => isChinese ? '训练概览' : 'Workout Summary';
+  String setSummary(int sets, double volume) => isChinese
+      ? '$sets 组 · ${volume.toStringAsFixed(1)} 公斤吨位'
+      : '$sets sets · ${volume.toStringAsFixed(1)} kg volume';
+  String get completedSets => isChinese ? '已完成组数' : 'Completed sets';
+  String get noWorkoutRecordsForDay => isChinese
+      ? '当天没有可展示的训练记录。'
+      : 'No workout records available for that day.';
+  String get sessionHistory => isChinese ? '训练历史' : 'SESSION HISTORY';
+  String e1rmLabel(double value) => isChinese
+      ? '预估 1RM：${value.toStringAsFixed(1)} 公斤'
+      : 'E1RM: ${value.toStringAsFixed(1)} kg';
+  String get change30d => isChinese ? '30天变化' : '30D CHANGE';
+  String get gaining => isChinese ? '提升中' : 'Gaining';
+  String get totalLogged => isChinese ? '累计记录' : 'Total logged';
+  String get strengthTrendsOverlay =>
+      isChinese ? '力量趋势叠加' : 'Strength Trends Overlay';
   String get profile => isChinese ? '我的' : 'Profile';
   String get settings => isChinese ? '设置' : 'Settings';
   String get account => isChinese ? '账户' : 'Account';
@@ -113,16 +164,13 @@ class AppStrings {
   String get manageAccount => isChinese ? '管理账户' : 'Manage Account';
   String get syncReady =>
       isChinese ? '已登录，等待开始同步。' : 'Signed in and ready to sync.';
-  String get syncHydrating => isChinese
-      ? '正在载入此账户的云端数据...'
-      : 'Loading this account\'s cloud data...';
+  String get syncHydrating =>
+      isChinese ? '正在载入此账户的云端数据...' : 'Loading this account\'s cloud data...';
   String get syncInProgress =>
       isChinese ? '正在同步最新更改...' : 'Syncing your latest changes...';
-  String get syncComplete =>
-      isChinese ? '云端数据已同步。' : 'Cloud data is synced.';
-  String get syncRetryNeeded => isChinese
-      ? '同步未完成，请重试。'
-      : 'Sync did not complete. Retry is needed.';
+  String get syncComplete => isChinese ? '云端数据已同步。' : 'Cloud data is synced.';
+  String get syncRetryNeeded =>
+      isChinese ? '同步未完成，请重试。' : 'Sync did not complete. Retry is needed.';
   String get syncNow => isChinese ? '立即同步' : 'Sync Now';
   String get retrySync => isChinese ? '重试同步' : 'Retry Sync';
   String get supabaseUnavailable =>
@@ -172,6 +220,94 @@ class AppStrings {
   String get addSet => isChinese ? '新增训练组' : 'Add Set';
   String get save => isChinese ? '保存' : 'Save';
   String get share => isChinese ? '分享' : 'Share';
+  String get composition => isChinese ? '身体构成' : 'COMPOSITION';
+  String get bodyMetrics => isChinese ? '身体指标' : 'Body Metrics';
+  String get bodyMetricsSubtitle => isChinese
+      ? '在杠铃之外，持续记录你的身体变化。'
+      : 'Track your physical transformation beyond the barbell.';
+  String get currentSnapshot => isChinese ? '当前快照' : 'CURRENT SNAPSHOT';
+  String get measurementLog => isChinese ? '测量记录' : 'MEASUREMENT LOG';
+  String get progressSurface => isChinese ? '进展主视图' : 'Progress Surface';
+  String get weightProgression => isChinese ? '体重趋势' : 'Weight Progression';
+  String get bodyFat => isChinese ? '体脂' : 'BODY FAT';
+  String get waist => isChinese ? '腰围' : 'WAIST';
+  String get recordFirstCheckIn =>
+      isChinese ? '记录你的第一次身体检查' : 'Record your first check-in';
+  String get noWeightTrendYet =>
+      isChinese ? '暂时还没有体重趋势' : 'Weight trend not available yet';
+  String get bodyMetricsHeroEmptyBody => isChinese
+      ? '先记录体重、体脂、腰围或备注，让这个页面从空白占位变成真正的进展仪表盘。'
+      : 'Start with weight, body fat, waist, or a quick note so this page can become a progress dashboard instead of an empty shell.';
+  String get bodyMetricsHeroPartialBody => isChinese
+      ? '你已经保存了部分测量，但还没有体重趋势。补充一次更完整的记录后，这里会显示主要进展视图。'
+      : 'You have measurements saved, but no weight trend yet. Add a fuller check-in to unlock the primary progress view.';
+  String get addFirstMeasurement =>
+      isChinese ? '添加第一次测量' : 'Add first measurement';
+  String get addCompleteMeasurement =>
+      isChinese ? '添加完整测量' : 'Add complete measurement';
+  String get heroAreaIntentionalHint => isChinese
+      ? '即使趋势数据还不存在，这个主区域也应该保持明确而有意义。'
+      : 'This hero area stays intentional even before trend data exists.';
+  String latestWeightOn(double weight, String dateLabel) => isChinese
+      ? '最新：${weight.toStringAsFixed(1)} 公斤 · $dateLabel'
+      : 'Latest: ${weight.toStringAsFixed(1)} kg on $dateLabel';
+  String latestWeightDelta(double weight, String deltaLabel) => isChinese
+      ? '最新：${weight.toStringAsFixed(1)} 公斤（$deltaLabel）'
+      : 'Latest: ${weight.toStringAsFixed(1)} kg ($deltaLabel)';
+  String get completeMetricsHint => isChinese
+      ? '继续补充体脂和腰围，获得更完整的身体快照。'
+      : 'Keep going to complete body fat and waist for a fuller snapshot.';
+  String get weightTrendAnchorHint => isChinese
+      ? '最新体重趋势会作为这个身体构成页面的主线索。'
+      : 'Your latest body-weight trend anchors the rest of this composition view.';
+  String get noBodyMeasurementsYet =>
+      isChinese ? '还没有身体测量记录' : 'No body measurements yet';
+  String get latestCheckInIncomplete =>
+      isChinese ? '你最近一次记录还不完整' : 'Your latest check-in is incomplete';
+  String get emptyMeasurementsCallout => isChinese
+      ? '先添加第一次测量，这里就会开始形成趋势和当前快照。'
+      : 'Add your first measurement to start building trend context and a current snapshot.';
+  String get partialMeasurementsCallout => isChinese
+      ? '你已经记录了一部分数据，但关键指标还不完整。补充一次测量后，这页会提供更好的对比信息。'
+      : 'You have data recorded, but some key metrics are still missing. Add another measurement to complete your snapshot and unlock better comparisons.';
+  String get addMeasurement => isChinese ? '添加测量' : 'Add measurement';
+  String get completeLatestSnapshot =>
+      isChinese ? '补完整最新快照' : 'Complete latest snapshot';
+  String get noRecordedEntries => isChinese ? '暂无已记录条目' : 'No recorded entries';
+  String latestEntry(DateTime timestamp) => isChinese
+      ? '最近记录：${longDate(timestamp)}'
+      : 'Latest entry: ${longDate(timestamp)}';
+
+  String get comparisonNotAvailableYet =>
+      isChinese ? '暂时还没有可比较的上一条记录。' : 'Comparison not available yet.';
+  String get addThisMetricNextCheckIn =>
+      isChinese ? '下一次记录时补上这个指标。' : 'Add this metric in your next check-in.';
+  String get notYetRecorded => isChinese ? '尚未记录' : 'Not yet recorded';
+  String bodyMetricChangeVsPrevious(double delta, String unit) {
+    final prefix = delta > 0 ? '+' : '';
+    return isChinese
+        ? '相较上一条可比较记录：$prefix${delta.toStringAsFixed(1)} $unit'
+        : 'Change vs previous comparable entry: $prefix${delta.toStringAsFixed(1)} $unit';
+  }
+
+  String get bodyMeasurementLogEmpty => isChinese
+      ? '保存第一条身体记录后，测量日志会显示在这里。'
+      : 'Your measurement log will appear here once you save a check-in.';
+  String get addMeasurementTitle => isChinese ? '添加身体测量' : 'Add Measurement';
+  String get weightKgLabel => isChinese ? '体重（kg）' : 'Weight (kg)';
+  String get bodyFatLabel => isChinese ? '体脂（%）' : 'Body fat (%)';
+  String get waistCmLabel => isChinese ? '腰围（cm）' : 'Waist (cm)';
+  String get noteOptional => isChinese ? '备注（可选）' : 'Note (optional)';
+  String get deleteMeasurement => isChinese ? '删除测量记录' : 'Delete measurement';
+  String get waistSuffix => isChinese ? '腰围' : 'waist';
+  String shortMonthDay(DateTime date) => isChinese
+      ? '${date.month}月${date.day}日'
+      : '${_englishMonthShort(date.month)} ${date.day}';
+  String longDate(DateTime date) => isChinese
+      ? '${date.year}年${date.month}月${date.day}日'
+      : '${_englishMonthShort(date.month)} ${date.day}, ${date.year}';
+  String weekdayName(DateTime date) =>
+      isChinese ? _chineseWeekday(date.weekday) : _englishWeekday(date.weekday);
   String get topSet => isChinese ? '顶组' : 'Top Set';
   String get straightSet => isChinese ? '直组' : 'Straight Set';
   String get backoffSet => isChinese ? '回退组' : 'Backoff Set';
@@ -198,4 +334,40 @@ class AppStrings {
   String get noActivePlan => isChinese
       ? '当前没有激活的训练计划，请先去计划库开始。'
       : 'No active training plan instance. Open Plan Library to start one.';
+
+  String _englishMonthShort(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
+  }
+
+  String _englishWeekday(int weekday) {
+    const weekdays = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    return weekdays[weekday - 1];
+  }
+
+  String _chineseWeekday(int weekday) {
+    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    return weekdays[weekday - 1];
+  }
 }

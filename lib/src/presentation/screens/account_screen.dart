@@ -33,9 +33,13 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final syncState = ref.watch(syncControllerProvider);
     final supabaseState = ref.watch(supabaseBootstrapProvider);
     final currentUser = authState.valueOrNull;
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
-      appBar: AppBar(title: Text(strings.account)),
+      appBar: AppBar(
+        title: Text(strings.account),
+        automaticallyImplyLeading: canPop,
+      ),
       body: DashboardPageScaffold(
         bottomPadding: 40,
         children: [
@@ -43,6 +47,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
             eyebrow: strings.profile,
             title: strings.account,
             subtitle: strings.accountSubtitle,
+            showBackButton: false,
           ),
           const SizedBox(height: 24),
           if (!supabaseState.isConfigured)

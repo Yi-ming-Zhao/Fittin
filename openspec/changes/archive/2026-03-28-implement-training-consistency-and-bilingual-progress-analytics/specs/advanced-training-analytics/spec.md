@@ -1,8 +1,4 @@
-## Purpose
-
-Define advanced analytics views that help users interpret consistency, volume distribution, and training load over time.
-
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Consistency Heatmap
 The system MUST provide a training consistency explorer that visualizes completed training sessions by day and lets the user switch between recent weekly, monthly, and active-plan-relative weekly views.
@@ -29,20 +25,7 @@ The consistency explorer MUST:
 - **THEN** the screen groups days into sequential week buckets counted from the active plan start
 - **AND** the labels make it clear which week of the active plan each row or segment represents.
 
-### Requirement: Muscle Volume Distribution
-The system MUST visualize weekly set volume per muscle group using horizontal progress bars.
-
-#### Scenario: Checking training balance
-- **WHEN** a user reviews the analytics
-- **THEN** they see horizontal bars for categories like "Chest", "Lats", "Quads"
-- **AND** each bar shows the number of completed sets relative to a target (e.g., 9/10 sets).
-
-### Requirement: Anatomical Load Visualization
-The system SHOULD include an anatomical human body diagram where muscle groups are highlighted based on their relative training load in the current training cycle.
-
-#### Scenario: Quick scan of muscle focus
-- **WHEN** the user opens the training load tab
-- **THEN** an anatomical diagram displays variations in highlight intensity on specific muscle groups reflecting the volume distribution.
+## ADDED Requirements
 
 ### Requirement: Consistency Day Drilldown
 The system MUST let the user open the concrete training record for a selected day directly from the consistency explorer.

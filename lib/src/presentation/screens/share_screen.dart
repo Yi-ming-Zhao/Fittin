@@ -23,10 +23,12 @@ class ShareScreen extends ConsumerWidget {
     final sharePayload = ExportService.exportTemplateToSharePayload(
       planTemplate,
     );
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
+        automaticallyImplyLeading: canPop,
         title: Text(
           strings.shareTrainingPlan,
           style: theme.textTheme.titleMedium?.copyWith(letterSpacing: 2.5),
@@ -154,9 +156,11 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final canPop = Navigator.of(context).canPop();
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: canPop,
         title: Text(
           AppStrings.of(context, ref).scanPlanQr,
           style: theme.textTheme.titleMedium?.copyWith(letterSpacing: 2.5),

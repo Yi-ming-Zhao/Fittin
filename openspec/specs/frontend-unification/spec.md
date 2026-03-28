@@ -8,6 +8,21 @@ The system MUST apply a consistent premium visual language across the active wor
 - **THEN** the screens share the same spacing rhythm, surface treatment, section labeling, and typography hierarchy
 - **AND** the non-home screens no longer appear visually disconnected from the home dashboard.
 
+### Requirement: Bilingual Support Across New And Updated Screens
+The system MUST ensure that every newly created screen and every materially modified screen supports the app's bilingual experience in English and Chinese.
+
+This requirement applies to page titles, section labels, button text, empty states, helper copy, and other user-facing interface text introduced or changed during the screen work.
+
+#### Scenario: Shipping a new screen
+- **WHEN** a new screen is added to the app
+- **THEN** all user-facing interface text on that screen is available in both English and Chinese
+- **AND** the screen renders correctly in either supported language without clipped or ambiguous labels.
+
+#### Scenario: Updating an existing screen
+- **WHEN** an existing screen is visually or structurally modified
+- **THEN** any newly introduced or updated user-facing interface text on that screen remains available in both English and Chinese
+- **AND** the updated layout preserves readability, hierarchy, and action clarity in both supported languages.
+
 ### Requirement: Shared Section and Surface Patterns
 The system MUST render major screen regions using reusable soft-surface cards and grouped content sections instead of dense default layouts.
 

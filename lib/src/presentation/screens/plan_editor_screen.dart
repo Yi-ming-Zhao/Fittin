@@ -70,6 +70,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         DashboardScreenHeader(
           eyebrow: strings.templateEditor,
           title: draft.name,
+          showBackButton: true,
           subtitle: draft.isPeriodized
               ? (strings.isChinese
                     ? '按周/天槽位精细修改周期计划，不再一次看完整个周期。'

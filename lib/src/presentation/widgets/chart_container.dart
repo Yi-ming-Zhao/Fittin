@@ -28,8 +28,8 @@ class ChartContainer extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (title != null) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title!.toUpperCase(),
@@ -39,7 +39,10 @@ class ChartContainer extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                if (headerAction != null) headerAction!,
+                if (headerAction != null) ...[
+                  const SizedBox(height: 12),
+                  headerAction!,
+                ],
               ],
             ),
             const SizedBox(height: 20),
