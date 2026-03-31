@@ -368,6 +368,26 @@ class ActiveSessionScreen extends ConsumerWidget {
           icon: Icons.check_circle_outline_rounded,
           loading: sessionState.isLoading,
           onPressed: () async {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: Text(strings.confirmConcludeWorkoutTitle),
+                content: Text(strings.confirmConcludeWorkoutMessage),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    child: Text(strings.cancel),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    child: Text(strings.concludeWorkout),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true) {
+              return;
+            }
             final success = await notifier.concludeSession();
             if (!context.mounted) return;
             if (success) {

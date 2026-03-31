@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
@@ -69,9 +71,33 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      final session = await _ref
+      final repository = _ref.read(databaseRepositoryProvider);
+      final ownerUserId = _ref.read(currentUserIdProvider);
+      final activeInstance = await repository.fetchActiveInstanceForUser(
+        ownerUserId,
+      );
+      WorkoutSessionState? session;
+      if (activeInstance != null) {
+        final persistedDraft = await repository.fetchActiveSessionDraft(
+          activeInstance.instanceId,
+          ownerUserId: ownerUserId,
+        );
+        if (persistedDraft != null &&
+            persistedDraft.instanceId == activeInstance.instanceId) {
+          session = persistedDraft;
+        } else if (persistedDraft != null) {
+          await repository.clearActiveSessionDraft(
+            activeInstance.instanceId,
+            ownerUserId: ownerUserId,
+          );
+        }
+      }
+      session ??= await _ref
           .read(todayWorkoutGatewayProvider)
           .loadTodayWorkoutSession();
+      unawaited(
+        repository.saveActiveSessionDraft(session, ownerUserId: ownerUserId),
+      );
       state = SessionState(activeWorkout: session);
     } catch (error) {
       state = SessionState(errorMessage: error.toString());
@@ -84,9 +110,9 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       return;
     }
 
-    state = state.copyWith(
-      activeWorkout: workout.copyWith(currentExerciseIndex: index),
-      clearError: true,
+    _setActiveWorkout(
+      workout.copyWith(currentExerciseIndex: index),
+      preserveLoading: false,
     );
   }
 
@@ -138,12 +164,12 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       sets: updatedSets,
     );
 
-    state = state.copyWith(
-      activeWorkout: workout.copyWith(
+    _setActiveWorkout(
+      workout.copyWith(
         exercises: updatedExercises,
         currentExerciseIndex: nextExerciseIndex,
       ),
-      clearError: true,
+      preserveLoading: false,
     );
   }
 
@@ -166,6 +192,13 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       await _ref
           .read(todayWorkoutGatewayProvider)
           .concludeWorkoutSession(workout);
+      final ownerUserId = _ref.read(currentUserIdProvider);
+      await _ref
+          .read(databaseRepositoryProvider)
+          .clearActiveSessionDraft(
+            workout.instanceId,
+            ownerUserId: ownerUserId,
+          );
       state = SessionState();
       _ref.invalidate(todayWorkoutSummaryProvider);
       _ref.invalidate(progressAnalyticsOverviewProvider);
@@ -206,9 +239,26 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       sets: updatedSets,
     );
 
+    _setActiveWorkout(
+      workout.copyWith(exercises: updatedExercises),
+      preserveLoading: false,
+    );
+  }
+
+  void _setActiveWorkout(
+    WorkoutSessionState workout, {
+    required bool preserveLoading,
+  }) {
     state = state.copyWith(
-      activeWorkout: workout.copyWith(exercises: updatedExercises),
+      isLoading: preserveLoading ? state.isLoading : false,
+      activeWorkout: workout,
       clearError: true,
+    );
+    final ownerUserId = _ref.read(currentUserIdProvider);
+    unawaited(
+      _ref
+          .read(databaseRepositoryProvider)
+          .saveActiveSessionDraft(workout, ownerUserId: ownerUserId),
     );
   }
 }

@@ -11,6 +11,7 @@ import 'package:fittin_v2/src/data/web_local_store.dart';
 import 'package:fittin_v2/src/data/web_storage_models.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
+import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:uuid/uuid.dart';
@@ -25,6 +26,7 @@ class WebDatabaseRepository extends DatabaseRepository {
   static const _deviceIdStateKey = 'device-id';
   static const _homeDisplayNameKey = 'home-display-name';
   static const _homeMilestonesLastSeenAtKey = 'home-milestones-last-seen-at';
+  static const _activeSessionDraftKey = 'active-session-draft';
 
   final WebLocalStore store;
 
@@ -323,6 +325,48 @@ class WebDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<WorkoutSessionState?> fetchActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    final key = _scopedStateKey(
+      '$_activeSessionDraftKey:$instanceId',
+      ownerUserId,
+    );
+    final raw = await _fetchStringState(key);
+    if (raw == null) {
+      return null;
+    }
+    return WorkoutSessionState.fromJson(
+      jsonDecode(raw) as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<void> saveActiveSessionDraft(
+    WorkoutSessionState draft, {
+    String? ownerUserId,
+  }) async {
+    await _saveStringState(
+      _scopedStateKey(
+        '$_activeSessionDraftKey:${draft.instanceId}',
+        ownerUserId,
+      ),
+      jsonEncode(draft.toJson()),
+    );
+  }
+
+  @override
+  Future<void> clearActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    await _clearStateByKey(
+      _scopedStateKey('$_activeSessionDraftKey:$instanceId', ownerUserId),
+    );
+  }
+
+  @override
   Future<StoredTrainingInstance?> fetchActiveInstance() async {
     return fetchActiveInstanceForUser(null);
   }
@@ -492,8 +536,13 @@ class WebDatabaseRepository extends DatabaseRepository {
     String? syncStatus,
     String? deviceId,
   }) async {
-    final logId =
-        '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}';
+    final resolvedLog = logRecord.logId.isEmpty
+        ? logRecord.copyWith(
+            logId:
+                '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}',
+          )
+        : logRecord;
+    final logId = resolvedLog.logId;
     final existing = await store.getRecord(WebStoreNames.workoutLogs, logId);
     final resolvedOwnerUserId =
         ownerUserId ?? existing?['ownerUserId'] as String?;
@@ -501,12 +550,12 @@ class WebDatabaseRepository extends DatabaseRepository {
         syncStatus ?? _defaultSyncStatus(resolvedOwnerUserId);
     final doc = <String, dynamic>{
       'logId': logId,
-      'instanceId': logRecord.instanceId,
-      'workoutId': logRecord.workoutId,
-      'workoutName': logRecord.workoutName,
+      'instanceId': resolvedLog.instanceId,
+      'workoutId': resolvedLog.workoutId,
+      'workoutName': resolvedLog.workoutName,
       'ownerUserId': resolvedOwnerUserId,
-      'rawJsonPayload': jsonEncode(logRecord.toJson()),
-      'completedAt': serializeStoredDateTime(logRecord.completedAt),
+      'rawJsonPayload': jsonEncode(resolvedLog.toJson()),
+      'completedAt': serializeStoredDateTime(resolvedLog.completedAt),
       'deletedAt': null,
       'lastSyncedAt': existing?['lastSyncedAt'],
       'version': (existing?['version'] as int? ?? 0) + 1,
@@ -517,6 +566,62 @@ class WebDatabaseRepository extends DatabaseRepository {
     await _enqueueSync(
       entityType: SyncEntityTypes.workoutLog,
       entityId: logId,
+      ownerUserId: resolvedOwnerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: resolvedSyncStatus,
+    );
+  }
+
+  @override
+  Future<WorkoutLog?> fetchWorkoutLogById(
+    String logId, {
+    String? ownerUserId,
+  }) async {
+    final doc = await store.getRecord(WebStoreNames.workoutLogs, logId);
+    if (doc == null ||
+        parseStoredDateTime(doc['deletedAt']) != null ||
+        !_ownerMatches(doc['ownerUserId'] as String?, ownerUserId)) {
+      return null;
+    }
+    return workoutLogFromDoc(doc);
+  }
+
+  @override
+  Future<void> updateWorkoutLog(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    final existing = await store.getRecord(
+      WebStoreNames.workoutLogs,
+      logRecord.logId,
+    );
+    if (existing == null) {
+      throw StateError('Workout log not found: ${logRecord.logId}');
+    }
+    final resolvedOwnerUserId =
+        ownerUserId ?? existing['ownerUserId'] as String?;
+    final resolvedSyncStatus =
+        syncStatus ?? _defaultSyncStatus(resolvedOwnerUserId);
+    final doc = <String, dynamic>{
+      'logId': logRecord.logId,
+      'instanceId': logRecord.instanceId,
+      'workoutId': logRecord.workoutId,
+      'workoutName': logRecord.workoutName,
+      'ownerUserId': resolvedOwnerUserId,
+      'rawJsonPayload': jsonEncode(logRecord.toJson()),
+      'completedAt': serializeStoredDateTime(logRecord.completedAt),
+      'deletedAt': existing['deletedAt'],
+      'lastSyncedAt': existing['lastSyncedAt'],
+      'version': (existing['version'] as int? ?? 0) + 1,
+      'syncStatusKey': resolvedSyncStatus,
+      'lastModifiedByDeviceId': deviceId ?? existing['lastModifiedByDeviceId'],
+    };
+    await store.putRecord(WebStoreNames.workoutLogs, logRecord.logId, doc);
+    await _enqueueSync(
+      entityType: SyncEntityTypes.workoutLog,
+      entityId: logRecord.logId,
       ownerUserId: resolvedOwnerUserId,
       operationType: SyncOperationTypes.upsert,
       syncStatus: resolvedSyncStatus,
@@ -675,6 +780,10 @@ class WebDatabaseRepository extends DatabaseRepository {
       'stringValue': value,
       'updatedAt': serializeStoredDateTime(DateTime.now()),
     });
+  }
+
+  Future<void> _clearStateByKey(String stateKey) async {
+    await store.deleteRecord(WebStoreNames.appState, stateKey);
   }
 
   Future<int> _instanceCountForTemplate(

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
@@ -6,6 +8,7 @@ import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
+import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 
@@ -18,6 +21,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   AppLocale _appLocale = AppLocale.en;
   OneRepMaxFormula _analyticsFormula = OneRepMaxFormula.epley;
   final List<WorkoutLog> _workoutLogs = [];
+  final Map<String, WorkoutSessionState> _sessionDraftsByScope = {};
   String? _deviceId;
   double _glassOpacity = 0.3;
 
@@ -225,6 +229,33 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<WorkoutSessionState?> fetchActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    return _sessionDraftsByScope['${_ownerScope(ownerUserId)}:$instanceId'];
+  }
+
+  @override
+  Future<void> saveActiveSessionDraft(
+    WorkoutSessionState draft, {
+    String? ownerUserId,
+  }) async {
+    _sessionDraftsByScope['${_ownerScope(ownerUserId)}:${draft.instanceId}'] =
+        WorkoutSessionState.fromJson(
+          jsonDecode(jsonEncode(draft.toJson())) as Map<String, dynamic>,
+        );
+  }
+
+  @override
+  Future<void> clearActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    _sessionDraftsByScope.remove('${_ownerScope(ownerUserId)}:$instanceId');
+  }
+
+  @override
   Future<String> fetchOrCreateDeviceId() async {
     _deviceId ??= 'web-in-memory-device-id';
     return _deviceId!;
@@ -380,7 +411,42 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     String? syncStatus,
     String? deviceId,
   }) async {
-    _workoutLogs.add(logRecord);
+    final resolvedLog = logRecord.logId.isEmpty
+        ? logRecord.copyWith(
+            logId:
+                '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}',
+          )
+        : logRecord;
+    _workoutLogs.add(resolvedLog);
+  }
+
+  @override
+  Future<WorkoutLog?> fetchWorkoutLogById(
+    String logId, {
+    String? ownerUserId,
+  }) async {
+    for (final log in _workoutLogs) {
+      if (log.logId == logId) {
+        return log;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> updateWorkoutLog(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    final index = _workoutLogs.indexWhere(
+      (log) => log.logId == logRecord.logId,
+    );
+    if (index == -1) {
+      throw StateError('Workout log not found: ${logRecord.logId}');
+    }
+    _workoutLogs[index] = logRecord;
   }
 
   @override

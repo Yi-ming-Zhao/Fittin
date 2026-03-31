@@ -80,25 +80,29 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
           stateByExerciseId: context.stateByExerciseId,
         );
 
+    final postInstance = context.instance.copyWith(
+      currentWorkoutIndex: result.nextWorkoutIndex,
+      engineState: result.updatedEngineState,
+      states: result.updatedStates,
+    );
+
     await _repository.logWorkout(
       WorkoutLog(
         instanceId: context.instance.instanceId,
         workoutId: session.workoutId,
+        logId:
+            '${context.instance.instanceId}_${session.workoutId}_${DateTime.now().millisecondsSinceEpoch}',
         workoutName: session.workoutName,
         dayLabel: session.dayLabel,
         completedAt: DateTime.now(),
         exercises: result.logs,
+        preConclusionSnapshot: _snapshotFromInstance(context.instance),
+        postConclusionSnapshot: _snapshotFromInstance(postInstance),
       ),
       ownerUserId: ownerUserId,
     );
 
-    await _repository.saveInstance(
-      context.instance.copyWith(
-        currentWorkoutIndex: result.nextWorkoutIndex,
-        engineState: result.updatedEngineState,
-        states: result.updatedStates,
-      ),
-    );
+    await _repository.saveInstance(postInstance);
   }
 
   @override
@@ -131,6 +135,18 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       stateByExerciseId: stateByExerciseId,
     );
   }
+}
+
+WorkoutProgressionSnapshot _snapshotFromInstance(
+  StoredTrainingInstance instance,
+) {
+  return WorkoutProgressionSnapshot(
+    templateId: instance.templateId,
+    currentWorkoutIndex: instance.currentWorkoutIndex,
+    trainingMaxProfile: instance.trainingMaxProfile,
+    engineState: instance.engineState,
+    states: instance.states,
+  );
 }
 
 class _ProgramContext {

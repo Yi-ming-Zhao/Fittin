@@ -8,6 +8,7 @@ part of 'workout_log.dart';
 
 _$WorkoutLogImpl _$$WorkoutLogImplFromJson(Map<String, dynamic> json) =>
     _$WorkoutLogImpl(
+      logId: json['logId'] as String? ?? '',
       instanceId: json['instanceId'] as String,
       workoutId: json['workoutId'] as String,
       workoutName: json['workoutName'] as String,
@@ -16,16 +17,50 @@ _$WorkoutLogImpl _$$WorkoutLogImplFromJson(Map<String, dynamic> json) =>
       exercises: (json['exercises'] as List<dynamic>)
           .map((e) => ExerciseLog.fromJson(e as Map<String, dynamic>))
           .toList(),
+      preConclusionSnapshot: json['preConclusionSnapshot'] == null
+          ? null
+          : WorkoutProgressionSnapshot.fromJson(
+              json['preConclusionSnapshot'] as Map<String, dynamic>),
+      postConclusionSnapshot: json['postConclusionSnapshot'] == null
+          ? null
+          : WorkoutProgressionSnapshot.fromJson(
+              json['postConclusionSnapshot'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$$WorkoutLogImplToJson(_$WorkoutLogImpl instance) =>
     <String, dynamic>{
+      'logId': instance.logId,
       'instanceId': instance.instanceId,
       'workoutId': instance.workoutId,
       'workoutName': instance.workoutName,
       'dayLabel': instance.dayLabel,
       'completedAt': instance.completedAt.toIso8601String(),
       'exercises': instance.exercises,
+      'preConclusionSnapshot': instance.preConclusionSnapshot,
+      'postConclusionSnapshot': instance.postConclusionSnapshot,
+    };
+
+_$WorkoutProgressionSnapshotImpl _$$WorkoutProgressionSnapshotImplFromJson(
+        Map<String, dynamic> json) =>
+    _$WorkoutProgressionSnapshotImpl(
+      templateId: json['templateId'] as String,
+      currentWorkoutIndex: (json['currentWorkoutIndex'] as num).toInt(),
+      trainingMaxProfile: TrainingMaxProfile.fromJson(
+          json['trainingMaxProfile'] as Map<String, dynamic>),
+      engineState: json['engineState'] as Map<String, dynamic>,
+      states: (json['states'] as List<dynamic>)
+          .map((e) => TrainingState.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+
+Map<String, dynamic> _$$WorkoutProgressionSnapshotImplToJson(
+        _$WorkoutProgressionSnapshotImpl instance) =>
+    <String, dynamic>{
+      'templateId': instance.templateId,
+      'currentWorkoutIndex': instance.currentWorkoutIndex,
+      'trainingMaxProfile': instance.trainingMaxProfile,
+      'engineState': instance.engineState,
+      'states': instance.states,
     };
 
 _$ExerciseLogImpl _$$ExerciseLogImplFromJson(Map<String, dynamic> json) =>

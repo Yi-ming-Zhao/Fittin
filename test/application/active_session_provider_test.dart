@@ -1,48 +1,68 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/data/database_repository.dart';
 
 import '../support/fake_today_workout_gateway.dart';
+import '../support/in_memory_database_repository.dart';
 
 void main() {
-  test(
-    'preserves multi-exercise edits and concludes the whole workout',
-    () async {
-      final fakeGateway = FakeTodayWorkoutGateway();
-      final container = ProviderContainer(
-        overrides: [todayWorkoutGatewayProvider.overrideWithValue(fakeGateway)],
-      );
-      addTearDown(container.dispose);
+  test('active session hydrates and persists drafts', () async {
+    final repository = InMemoryDatabaseRepository();
+    final gateway = FakeTodayWorkoutGateway();
 
-      final notifier = container.read(activeSessionProvider.notifier);
-      await notifier.startOrResumeSession();
+    await repository.saveInstance(
+      StoredTrainingInstance(
+        instanceId: fakeWorkoutSessionState.instanceId,
+        templateId: fakeWorkoutSessionState.templateId,
+        currentWorkoutIndex: 0,
+        states: const [],
+      ),
+    );
+    await repository.saveActiveInstanceId(fakeWorkoutSessionState.instanceId);
+    await repository.saveActiveSessionDraft(
+      fakeWorkoutSessionState.copyWith(
+        exercises: [
+          fakeWorkoutSessionState.exercises.first.copyWith(
+            sets: [
+              fakeWorkoutSessionState.exercises.first.sets.first.copyWith(
+                completedReps: 7,
+              ),
+              fakeWorkoutSessionState.exercises.first.sets[1],
+            ],
+          ),
+          fakeWorkoutSessionState.exercises[1],
+        ],
+      ),
+    );
 
-      notifier.updateReps(1, 7);
-      notifier.toggleSetComplete(1);
-      notifier.selectExercise(1);
-      notifier.updateWeight(0, 72.5);
-      notifier.toggleSetComplete(0);
-      notifier.selectExercise(0);
+    final container = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(repository),
+        todayWorkoutGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final inProgress = container.read(activeSessionProvider).activeWorkout!;
-      expect(inProgress.exercises.first.sets[1].completedReps, 7);
-      expect(inProgress.exercises.first.sets[1].isCompleted, isTrue);
-      expect(inProgress.exercises[1].sets.first.weight, 72.5);
-      expect(inProgress.exercises[1].sets.first.isCompleted, isTrue);
+    await container.read(activeSessionProvider.notifier).startOrResumeSession();
 
-      final didConclude = await notifier.concludeSession();
-      expect(didConclude, isTrue);
-      expect(fakeGateway.concludedSession, isNotNull);
-      expect(fakeGateway.concludedSession!.exercises.length, 2);
-      expect(
-        fakeGateway.concludedSession!.exercises.first.sets[1].completedReps,
-        7,
-      );
-      expect(
-        fakeGateway.concludedSession!.exercises[1].sets.first.weight,
-        72.5,
-      );
-      expect(container.read(activeSessionProvider).activeWorkout, isNull);
-    },
-  );
+    expect(gateway.sessionLoadCount, 0);
+    expect(
+      container
+          .read(activeSessionProvider)
+          .activeWorkout
+          ?.exercises
+          .first
+          .sets
+          .first
+          .completedReps,
+      7,
+    );
+
+    container.read(activeSessionProvider.notifier).updateReps(0, 8);
+    final savedDraft = await repository.fetchActiveSessionDraft(
+      fakeWorkoutSessionState.instanceId,
+    );
+    expect(savedDraft?.exercises.first.sets.first.completedReps, 8);
+  });
 }

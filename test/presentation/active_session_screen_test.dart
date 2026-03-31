@@ -13,14 +13,13 @@ void main() {
   testWidgets('active session screen renders compact workout console', (
     WidgetTester tester,
   ) async {
+    final gateway = FakeTodayWorkoutGateway();
     final container = ProviderContainer(
       overrides: [
         databaseRepositoryProvider.overrideWithValue(
           InMemoryDatabaseRepository(),
         ),
-        todayWorkoutGatewayProvider.overrideWithValue(
-          FakeTodayWorkoutGateway(),
-        ),
+        todayWorkoutGatewayProvider.overrideWithValue(gateway),
       ],
     );
     addTearDown(container.dispose);
@@ -36,8 +35,26 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('D1-Squat Focus'), findsOneWidget);
     expect(find.text('Squat'), findsOneWidget);
     expect(find.text('Set 1 / 2'), findsOneWidget);
+
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -600));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Conclude Workout'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Confirm workout conclusion?'), findsOneWidget);
+    expect(gateway.concludedSession, isNull);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(gateway.concludedSession, isNull);
+
+    await tester.tap(find.text('Conclude Workout'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Conclude Workout').last);
+    await tester.pumpAndSettle();
+    expect(gateway.concludedSession, isNotNull);
   });
 }

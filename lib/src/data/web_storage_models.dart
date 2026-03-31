@@ -74,9 +74,10 @@ StoredTrainingInstance storedTrainingInstanceFromDoc(Map<String, dynamic> doc) {
 }
 
 WorkoutLog workoutLogFromDoc(Map<String, dynamic> doc) {
-  return WorkoutLog.fromJson(
+  final log = WorkoutLog.fromJson(
     jsonDecode(doc['rawJsonPayload'] as String) as Map<String, dynamic>,
   );
+  return log.logId.isEmpty ? log.copyWith(logId: doc['logId'] as String) : log;
 }
 
 BodyMetric bodyMetricFromDoc(Map<String, dynamic> doc) {

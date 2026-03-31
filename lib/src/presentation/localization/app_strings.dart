@@ -396,8 +396,23 @@ class AppStrings {
       isChinese ? '当前没有进行中的训练。' : 'No active workout session.';
   String get workoutSaved =>
       isChinese ? '训练已保存，已载入下一次训练。' : 'Workout saved. Next day loaded.';
+  String get workoutUpdated =>
+      isChinese ? '训练记录已更新。' : 'Workout record updated.';
+  String get workoutUpdatedNoProgressionRewrite => isChinese
+      ? '训练记录已更新，当前下次训练计划保持不变。'
+      : 'Workout record updated. Current next-session plan was not changed.';
   String get saving => isChinese ? '保存中...' : 'Saving...';
   String get concludeWorkout => isChinese ? '完成本次训练' : 'Conclude Workout';
+  String get confirmConcludeWorkoutTitle =>
+      isChinese ? '确认结束训练？' : 'Confirm workout conclusion?';
+  String get confirmConcludeWorkoutMessage => isChinese
+      ? '确认后会保存本次训练并推进下一次训练计划。'
+      : 'Confirming will save this workout and advance the next workout plan.';
+  String get saveChanges => isChinese ? '保存修改' : 'Save Changes';
+  String get recordedTime => isChinese ? '记录时间' : 'Recorded Time';
+  String get recordedDate => isChinese ? '记录日期' : 'Recorded Date';
+  String get invalidDateTime =>
+      isChinese ? '请输入有效的日期和时间。' : 'Enter a valid date and time.';
   String get noActivePlan => isChinese
       ? '当前没有激活的训练计划，请先去计划库开始。'
       : 'No active training plan instance. Open Plan Library to start one.';

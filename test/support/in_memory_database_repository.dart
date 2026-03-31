@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
@@ -8,18 +10,22 @@ import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/models/training_state.dart';
 
 class InMemoryDatabaseRepository extends DatabaseRepository {
   final Map<String, StoredTemplateRecord> _templates = {};
   final Map<String, StoredTrainingInstance> _instances = {};
-  String? _activeInstanceId;
+  final Map<String, String?> _activeInstanceIdsByOwner = {};
   AppLocale _appLocale = AppLocale.en;
   OneRepMaxFormula _analyticsFormula = OneRepMaxFormula.epley;
   final List<WorkoutLog> _workoutLogs = [];
+  final Map<String, WorkoutSessionState> _sessionDrafts = {};
   String? _deviceId;
   double _glassOpacity = 0.3;
   String? _homeDisplayName;
   DateTime? _homeMilestonesLastSeenAt;
+
+  String _ownerScope(String? ownerUserId) => ownerUserId ?? '__local__';
 
   @override
   Future<void> ensureDefaultProgramSeeded() async {
@@ -130,11 +136,36 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
-  Future<String?> fetchActiveInstanceId() async => _activeInstanceId;
+  Future<String?> fetchActiveInstanceId() async {
+    return fetchActiveInstanceIdForUser(null);
+  }
 
   @override
   Future<void> saveActiveInstanceId(String instanceId) async {
-    _activeInstanceId = instanceId;
+    return saveActiveInstanceIdForUser(instanceId, null);
+  }
+
+  @override
+  Future<String?> fetchActiveInstanceIdForUser(String? ownerUserId) async {
+    return _activeInstanceIdsByOwner[_ownerScope(ownerUserId)];
+  }
+
+  @override
+  Future<void> saveActiveInstanceIdForUser(
+    String instanceId,
+    String? ownerUserId,
+  ) async {
+    _activeInstanceIdsByOwner[_ownerScope(ownerUserId)] = instanceId;
+  }
+
+  @override
+  Future<void> clearActiveInstanceId() async {
+    return clearActiveInstanceIdForUser(null);
+  }
+
+  @override
+  Future<void> clearActiveInstanceIdForUser(String? ownerUserId) async {
+    _activeInstanceIdsByOwner.remove(_ownerScope(ownerUserId));
   }
 
   @override
@@ -190,6 +221,32 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<WorkoutSessionState?> fetchActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    return _sessionDrafts[instanceId];
+  }
+
+  @override
+  Future<void> saveActiveSessionDraft(
+    WorkoutSessionState draft, {
+    String? ownerUserId,
+  }) async {
+    _sessionDrafts[draft.instanceId] = WorkoutSessionState.fromJson(
+      jsonDecode(jsonEncode(draft.toJson())) as Map<String, dynamic>,
+    );
+  }
+
+  @override
+  Future<void> clearActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    _sessionDrafts.remove(instanceId);
+  }
+
+  @override
   Future<String> fetchOrCreateDeviceId() async {
     _deviceId ??= 'test-device-id';
     return _deviceId!;
@@ -235,7 +292,14 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
 
   @override
   Future<StoredTrainingInstance?> fetchActiveInstance() async {
-    final activeInstanceId = _activeInstanceId;
+    return fetchActiveInstanceForUser(null);
+  }
+
+  @override
+  Future<StoredTrainingInstance?> fetchActiveInstanceForUser(
+    String? ownerUserId,
+  ) async {
+    final activeInstanceId = await fetchActiveInstanceIdForUser(ownerUserId);
     if (activeInstanceId == null) {
       return null;
     }
@@ -296,7 +360,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       ownerUserId: ownerUserId,
     );
     if (existing != null) {
-      _activeInstanceId = existing.instanceId;
+      await saveActiveInstanceIdForUser(existing.instanceId, ownerUserId);
       return existing;
     }
 
@@ -327,7 +391,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       ),
     );
     await saveInstance(instance);
-    _activeInstanceId = instance.instanceId;
+    await saveActiveInstanceIdForUser(instance.instanceId, ownerUserId);
     return instance;
   }
 
@@ -338,7 +402,42 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     String? syncStatus,
     String? deviceId,
   }) async {
-    _workoutLogs.add(logRecord);
+    final resolvedLog = logRecord.logId.isEmpty
+        ? logRecord.copyWith(
+            logId:
+                '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}',
+          )
+        : logRecord;
+    _workoutLogs.add(resolvedLog);
+  }
+
+  @override
+  Future<WorkoutLog?> fetchWorkoutLogById(
+    String logId, {
+    String? ownerUserId,
+  }) async {
+    for (final log in _workoutLogs) {
+      if (log.logId == logId) {
+        return log;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<void> updateWorkoutLog(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    final index = _workoutLogs.indexWhere(
+      (log) => log.logId == logRecord.logId,
+    );
+    if (index == -1) {
+      throw StateError('Workout log not found: ${logRecord.logId}');
+    }
+    _workoutLogs[index] = logRecord;
   }
 
   @override

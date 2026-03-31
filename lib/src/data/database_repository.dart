@@ -27,6 +27,7 @@ class DatabaseRepository {
   static const _deviceIdStateKey = 'device-id';
   static const _homeDisplayNameKey = 'home-display-name';
   static const _homeMilestonesLastSeenAtKey = 'home-milestones-last-seen-at';
+  static const _activeSessionDraftKey = 'active-session-draft';
   final Isar? _isar;
 
   Isar? get isar => _isar;
@@ -389,6 +390,43 @@ class DatabaseRepository {
     );
   }
 
+  Future<WorkoutSessionState?> fetchActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    final raw = await _fetchStringState(
+      _scopedStateKey('$_activeSessionDraftKey:$instanceId', ownerUserId),
+    );
+    if (raw == null) {
+      return null;
+    }
+    return WorkoutSessionState.fromJson(
+      jsonDecode(raw) as Map<String, dynamic>,
+    );
+  }
+
+  Future<void> saveActiveSessionDraft(
+    WorkoutSessionState draft, {
+    String? ownerUserId,
+  }) async {
+    await _saveStringState(
+      _scopedStateKey(
+        '$_activeSessionDraftKey:${draft.instanceId}',
+        ownerUserId,
+      ),
+      jsonEncode(draft.toJson()),
+    );
+  }
+
+  Future<void> clearActiveSessionDraft(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    await _clearStateByKey(
+      _scopedStateKey('$_activeSessionDraftKey:$instanceId', ownerUserId),
+    );
+  }
+
   Future<StoredTrainingInstance?> fetchActiveInstance() async {
     return fetchActiveInstanceForUser(null);
   }
@@ -587,19 +625,19 @@ class DatabaseRepository {
     String? syncStatus,
     String? deviceId,
   }) async {
-    final encodedLog = jsonEncode(logRecord.toJson());
-    final logId =
-        '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}';
+    final resolvedLog = _withResolvedLogId(logRecord);
+    final encodedLog = jsonEncode(resolvedLog.toJson());
+    final logId = resolvedLog.logId;
     final existing = await _database.workoutLogCollections.getByLogId(logId);
 
     final collection = WorkoutLogCollection()
       ..logId = logId
-      ..instanceId = logRecord.instanceId
-      ..workoutId = logRecord.workoutId
-      ..workoutName = logRecord.workoutName
+      ..instanceId = resolvedLog.instanceId
+      ..workoutId = resolvedLog.workoutId
+      ..workoutName = resolvedLog.workoutName
       ..ownerUserId = ownerUserId ?? existing?.ownerUserId
       ..rawJsonPayload = encodedLog
-      ..completedAt = logRecord.completedAt
+      ..completedAt = resolvedLog.completedAt
       ..deletedAt = null
       ..lastSyncedAt = existing?.lastSyncedAt
       ..version = (existing?.version ?? 0) + 1
@@ -619,6 +657,61 @@ class DatabaseRepository {
     );
   }
 
+  Future<WorkoutLog?> fetchWorkoutLogById(
+    String logId, {
+    String? ownerUserId,
+  }) async {
+    final collection = await _database.workoutLogCollections.getByLogId(logId);
+    if (collection == null ||
+        collection.deletedAt != null ||
+        !_ownerMatches(collection.ownerUserId, ownerUserId)) {
+      return null;
+    }
+    return _logFromCollection(collection);
+  }
+
+  Future<void> updateWorkoutLog(
+    WorkoutLog logRecord, {
+    String? ownerUserId,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    final existing = await _database.workoutLogCollections.getByLogId(
+      logRecord.logId,
+    );
+    if (existing == null) {
+      throw StateError('Workout log not found: ${logRecord.logId}');
+    }
+
+    final encodedLog = jsonEncode(logRecord.toJson());
+    final collection = WorkoutLogCollection()
+      ..id = existing.id
+      ..logId = logRecord.logId
+      ..instanceId = logRecord.instanceId
+      ..workoutId = logRecord.workoutId
+      ..workoutName = logRecord.workoutName
+      ..ownerUserId = ownerUserId ?? existing.ownerUserId
+      ..rawJsonPayload = encodedLog
+      ..completedAt = logRecord.completedAt
+      ..deletedAt = existing.deletedAt
+      ..lastSyncedAt = existing.lastSyncedAt
+      ..version = existing.version + 1
+      ..syncStatusKey =
+          syncStatus ?? _defaultSyncStatus(ownerUserId ?? existing.ownerUserId)
+      ..lastModifiedByDeviceId = deviceId ?? existing.lastModifiedByDeviceId;
+
+    await _database.writeTxn(() async {
+      await _database.workoutLogCollections.putByLogId(collection);
+    });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.workoutLog,
+      entityId: collection.logId,
+      ownerUserId: collection.ownerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: collection.syncStatusKey,
+    );
+  }
+
   Future<List<WorkoutLog>> fetchWorkoutLogs(
     String instanceId, {
     String? ownerUserId,
@@ -631,10 +724,7 @@ class DatabaseRepository {
               collection.deletedAt == null &&
               _ownerMatches(collection.ownerUserId, ownerUserId),
         )
-        .map(
-          (collection) =>
-              WorkoutLog.fromJson(jsonDecode(collection.rawJsonPayload)),
-        )
+        .map(_logFromCollection)
         .toList();
     logs.sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return logs;
@@ -648,10 +738,7 @@ class DatabaseRepository {
               collection.deletedAt == null &&
               _ownerMatches(collection.ownerUserId, ownerUserId),
         )
-        .map(
-          (collection) =>
-              WorkoutLog.fromJson(jsonDecode(collection.rawJsonPayload)),
-        )
+        .map(_logFromCollection)
         .toList();
     logs.sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return logs;
@@ -846,6 +933,23 @@ class DatabaseRepository {
     await _database.writeTxn(() async {
       await _database.syncQueueCollections.putByQueueKey(queueItem);
     });
+  }
+
+  WorkoutLog _withResolvedLogId(WorkoutLog logRecord) {
+    if (logRecord.logId.isNotEmpty) {
+      return logRecord;
+    }
+    return logRecord.copyWith(
+      logId:
+          '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}',
+    );
+  }
+
+  WorkoutLog _logFromCollection(WorkoutLogCollection collection) {
+    final log = WorkoutLog.fromJson(
+      jsonDecode(collection.rawJsonPayload) as Map<String, dynamic>,
+    );
+    return log.logId.isEmpty ? log.copyWith(logId: collection.logId) : log;
   }
 
   String _slugifyTemplateId(String value) {

@@ -20,12 +20,17 @@ WorkoutLog _$WorkoutLogFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$WorkoutLog {
+  String get logId => throw _privateConstructorUsedError;
   String get instanceId => throw _privateConstructorUsedError;
   String get workoutId => throw _privateConstructorUsedError;
   String get workoutName => throw _privateConstructorUsedError;
   String get dayLabel => throw _privateConstructorUsedError;
   DateTime get completedAt => throw _privateConstructorUsedError;
   List<ExerciseLog> get exercises => throw _privateConstructorUsedError;
+  WorkoutProgressionSnapshot? get preConclusionSnapshot =>
+      throw _privateConstructorUsedError;
+  WorkoutProgressionSnapshot? get postConclusionSnapshot =>
+      throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -40,12 +45,18 @@ abstract class $WorkoutLogCopyWith<$Res> {
       _$WorkoutLogCopyWithImpl<$Res, WorkoutLog>;
   @useResult
   $Res call(
-      {String instanceId,
+      {String logId,
+      String instanceId,
       String workoutId,
       String workoutName,
       String dayLabel,
       DateTime completedAt,
-      List<ExerciseLog> exercises});
+      List<ExerciseLog> exercises,
+      WorkoutProgressionSnapshot? preConclusionSnapshot,
+      WorkoutProgressionSnapshot? postConclusionSnapshot});
+
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get preConclusionSnapshot;
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get postConclusionSnapshot;
 }
 
 /// @nodoc
@@ -61,14 +72,21 @@ class _$WorkoutLogCopyWithImpl<$Res, $Val extends WorkoutLog>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? logId = null,
     Object? instanceId = null,
     Object? workoutId = null,
     Object? workoutName = null,
     Object? dayLabel = null,
     Object? completedAt = null,
     Object? exercises = null,
+    Object? preConclusionSnapshot = freezed,
+    Object? postConclusionSnapshot = freezed,
   }) {
     return _then(_value.copyWith(
+      logId: null == logId
+          ? _value.logId
+          : logId // ignore: cast_nullable_to_non_nullable
+              as String,
       instanceId: null == instanceId
           ? _value.instanceId
           : instanceId // ignore: cast_nullable_to_non_nullable
@@ -93,7 +111,41 @@ class _$WorkoutLogCopyWithImpl<$Res, $Val extends WorkoutLog>
           ? _value.exercises
           : exercises // ignore: cast_nullable_to_non_nullable
               as List<ExerciseLog>,
+      preConclusionSnapshot: freezed == preConclusionSnapshot
+          ? _value.preConclusionSnapshot
+          : preConclusionSnapshot // ignore: cast_nullable_to_non_nullable
+              as WorkoutProgressionSnapshot?,
+      postConclusionSnapshot: freezed == postConclusionSnapshot
+          ? _value.postConclusionSnapshot
+          : postConclusionSnapshot // ignore: cast_nullable_to_non_nullable
+              as WorkoutProgressionSnapshot?,
     ) as $Val);
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get preConclusionSnapshot {
+    if (_value.preConclusionSnapshot == null) {
+      return null;
+    }
+
+    return $WorkoutProgressionSnapshotCopyWith<$Res>(
+        _value.preConclusionSnapshot!, (value) {
+      return _then(_value.copyWith(preConclusionSnapshot: value) as $Val);
+    });
+  }
+
+  @override
+  @pragma('vm:prefer-inline')
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get postConclusionSnapshot {
+    if (_value.postConclusionSnapshot == null) {
+      return null;
+    }
+
+    return $WorkoutProgressionSnapshotCopyWith<$Res>(
+        _value.postConclusionSnapshot!, (value) {
+      return _then(_value.copyWith(postConclusionSnapshot: value) as $Val);
+    });
   }
 }
 
@@ -106,12 +158,20 @@ abstract class _$$WorkoutLogImplCopyWith<$Res>
   @override
   @useResult
   $Res call(
-      {String instanceId,
+      {String logId,
+      String instanceId,
       String workoutId,
       String workoutName,
       String dayLabel,
       DateTime completedAt,
-      List<ExerciseLog> exercises});
+      List<ExerciseLog> exercises,
+      WorkoutProgressionSnapshot? preConclusionSnapshot,
+      WorkoutProgressionSnapshot? postConclusionSnapshot});
+
+  @override
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get preConclusionSnapshot;
+  @override
+  $WorkoutProgressionSnapshotCopyWith<$Res>? get postConclusionSnapshot;
 }
 
 /// @nodoc
@@ -125,14 +185,21 @@ class __$$WorkoutLogImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
+    Object? logId = null,
     Object? instanceId = null,
     Object? workoutId = null,
     Object? workoutName = null,
     Object? dayLabel = null,
     Object? completedAt = null,
     Object? exercises = null,
+    Object? preConclusionSnapshot = freezed,
+    Object? postConclusionSnapshot = freezed,
   }) {
     return _then(_$WorkoutLogImpl(
+      logId: null == logId
+          ? _value.logId
+          : logId // ignore: cast_nullable_to_non_nullable
+              as String,
       instanceId: null == instanceId
           ? _value.instanceId
           : instanceId // ignore: cast_nullable_to_non_nullable
@@ -157,6 +224,14 @@ class __$$WorkoutLogImplCopyWithImpl<$Res>
           ? _value._exercises
           : exercises // ignore: cast_nullable_to_non_nullable
               as List<ExerciseLog>,
+      preConclusionSnapshot: freezed == preConclusionSnapshot
+          ? _value.preConclusionSnapshot
+          : preConclusionSnapshot // ignore: cast_nullable_to_non_nullable
+              as WorkoutProgressionSnapshot?,
+      postConclusionSnapshot: freezed == postConclusionSnapshot
+          ? _value.postConclusionSnapshot
+          : postConclusionSnapshot // ignore: cast_nullable_to_non_nullable
+              as WorkoutProgressionSnapshot?,
     ));
   }
 }
@@ -165,17 +240,23 @@ class __$$WorkoutLogImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$WorkoutLogImpl implements _WorkoutLog {
   const _$WorkoutLogImpl(
-      {required this.instanceId,
+      {this.logId = '',
+      required this.instanceId,
       required this.workoutId,
       required this.workoutName,
       required this.dayLabel,
       required this.completedAt,
-      required final List<ExerciseLog> exercises})
+      required final List<ExerciseLog> exercises,
+      this.preConclusionSnapshot,
+      this.postConclusionSnapshot})
       : _exercises = exercises;
 
   factory _$WorkoutLogImpl.fromJson(Map<String, dynamic> json) =>
       _$$WorkoutLogImplFromJson(json);
 
+  @override
+  @JsonKey()
+  final String logId;
   @override
   final String instanceId;
   @override
@@ -195,8 +276,13 @@ class _$WorkoutLogImpl implements _WorkoutLog {
   }
 
   @override
+  final WorkoutProgressionSnapshot? preConclusionSnapshot;
+  @override
+  final WorkoutProgressionSnapshot? postConclusionSnapshot;
+
+  @override
   String toString() {
-    return 'WorkoutLog(instanceId: $instanceId, workoutId: $workoutId, workoutName: $workoutName, dayLabel: $dayLabel, completedAt: $completedAt, exercises: $exercises)';
+    return 'WorkoutLog(logId: $logId, instanceId: $instanceId, workoutId: $workoutId, workoutName: $workoutName, dayLabel: $dayLabel, completedAt: $completedAt, exercises: $exercises, preConclusionSnapshot: $preConclusionSnapshot, postConclusionSnapshot: $postConclusionSnapshot)';
   }
 
   @override
@@ -204,6 +290,7 @@ class _$WorkoutLogImpl implements _WorkoutLog {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$WorkoutLogImpl &&
+            (identical(other.logId, logId) || other.logId == logId) &&
             (identical(other.instanceId, instanceId) ||
                 other.instanceId == instanceId) &&
             (identical(other.workoutId, workoutId) ||
@@ -215,19 +302,26 @@ class _$WorkoutLogImpl implements _WorkoutLog {
             (identical(other.completedAt, completedAt) ||
                 other.completedAt == completedAt) &&
             const DeepCollectionEquality()
-                .equals(other._exercises, _exercises));
+                .equals(other._exercises, _exercises) &&
+            (identical(other.preConclusionSnapshot, preConclusionSnapshot) ||
+                other.preConclusionSnapshot == preConclusionSnapshot) &&
+            (identical(other.postConclusionSnapshot, postConclusionSnapshot) ||
+                other.postConclusionSnapshot == postConclusionSnapshot));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
       runtimeType,
+      logId,
       instanceId,
       workoutId,
       workoutName,
       dayLabel,
       completedAt,
-      const DeepCollectionEquality().hash(_exercises));
+      const DeepCollectionEquality().hash(_exercises),
+      preConclusionSnapshot,
+      postConclusionSnapshot);
 
   @JsonKey(ignore: true)
   @override
@@ -245,16 +339,22 @@ class _$WorkoutLogImpl implements _WorkoutLog {
 
 abstract class _WorkoutLog implements WorkoutLog {
   const factory _WorkoutLog(
-      {required final String instanceId,
-      required final String workoutId,
-      required final String workoutName,
-      required final String dayLabel,
-      required final DateTime completedAt,
-      required final List<ExerciseLog> exercises}) = _$WorkoutLogImpl;
+          {final String logId,
+          required final String instanceId,
+          required final String workoutId,
+          required final String workoutName,
+          required final String dayLabel,
+          required final DateTime completedAt,
+          required final List<ExerciseLog> exercises,
+          final WorkoutProgressionSnapshot? preConclusionSnapshot,
+          final WorkoutProgressionSnapshot? postConclusionSnapshot}) =
+      _$WorkoutLogImpl;
 
   factory _WorkoutLog.fromJson(Map<String, dynamic> json) =
       _$WorkoutLogImpl.fromJson;
 
+  @override
+  String get logId;
   @override
   String get instanceId;
   @override
@@ -268,9 +368,267 @@ abstract class _WorkoutLog implements WorkoutLog {
   @override
   List<ExerciseLog> get exercises;
   @override
+  WorkoutProgressionSnapshot? get preConclusionSnapshot;
+  @override
+  WorkoutProgressionSnapshot? get postConclusionSnapshot;
+  @override
   @JsonKey(ignore: true)
   _$$WorkoutLogImplCopyWith<_$WorkoutLogImpl> get copyWith =>
       throw _privateConstructorUsedError;
+}
+
+WorkoutProgressionSnapshot _$WorkoutProgressionSnapshotFromJson(
+    Map<String, dynamic> json) {
+  return _WorkoutProgressionSnapshot.fromJson(json);
+}
+
+/// @nodoc
+mixin _$WorkoutProgressionSnapshot {
+  String get templateId => throw _privateConstructorUsedError;
+  int get currentWorkoutIndex => throw _privateConstructorUsedError;
+  TrainingMaxProfile get trainingMaxProfile =>
+      throw _privateConstructorUsedError;
+  Map<String, dynamic> get engineState => throw _privateConstructorUsedError;
+  List<TrainingState> get states => throw _privateConstructorUsedError;
+
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  @JsonKey(ignore: true)
+  $WorkoutProgressionSnapshotCopyWith<WorkoutProgressionSnapshot>
+      get copyWith => throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $WorkoutProgressionSnapshotCopyWith<$Res> {
+  factory $WorkoutProgressionSnapshotCopyWith(WorkoutProgressionSnapshot value,
+          $Res Function(WorkoutProgressionSnapshot) then) =
+      _$WorkoutProgressionSnapshotCopyWithImpl<$Res,
+          WorkoutProgressionSnapshot>;
+  @useResult
+  $Res call(
+      {String templateId,
+      int currentWorkoutIndex,
+      TrainingMaxProfile trainingMaxProfile,
+      Map<String, dynamic> engineState,
+      List<TrainingState> states});
+}
+
+/// @nodoc
+class _$WorkoutProgressionSnapshotCopyWithImpl<$Res,
+        $Val extends WorkoutProgressionSnapshot>
+    implements $WorkoutProgressionSnapshotCopyWith<$Res> {
+  _$WorkoutProgressionSnapshotCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? templateId = null,
+    Object? currentWorkoutIndex = null,
+    Object? trainingMaxProfile = null,
+    Object? engineState = null,
+    Object? states = null,
+  }) {
+    return _then(_value.copyWith(
+      templateId: null == templateId
+          ? _value.templateId
+          : templateId // ignore: cast_nullable_to_non_nullable
+              as String,
+      currentWorkoutIndex: null == currentWorkoutIndex
+          ? _value.currentWorkoutIndex
+          : currentWorkoutIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      trainingMaxProfile: null == trainingMaxProfile
+          ? _value.trainingMaxProfile
+          : trainingMaxProfile // ignore: cast_nullable_to_non_nullable
+              as TrainingMaxProfile,
+      engineState: null == engineState
+          ? _value.engineState
+          : engineState // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
+      states: null == states
+          ? _value.states
+          : states // ignore: cast_nullable_to_non_nullable
+              as List<TrainingState>,
+    ) as $Val);
+  }
+}
+
+/// @nodoc
+abstract class _$$WorkoutProgressionSnapshotImplCopyWith<$Res>
+    implements $WorkoutProgressionSnapshotCopyWith<$Res> {
+  factory _$$WorkoutProgressionSnapshotImplCopyWith(
+          _$WorkoutProgressionSnapshotImpl value,
+          $Res Function(_$WorkoutProgressionSnapshotImpl) then) =
+      __$$WorkoutProgressionSnapshotImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call(
+      {String templateId,
+      int currentWorkoutIndex,
+      TrainingMaxProfile trainingMaxProfile,
+      Map<String, dynamic> engineState,
+      List<TrainingState> states});
+}
+
+/// @nodoc
+class __$$WorkoutProgressionSnapshotImplCopyWithImpl<$Res>
+    extends _$WorkoutProgressionSnapshotCopyWithImpl<$Res,
+        _$WorkoutProgressionSnapshotImpl>
+    implements _$$WorkoutProgressionSnapshotImplCopyWith<$Res> {
+  __$$WorkoutProgressionSnapshotImplCopyWithImpl(
+      _$WorkoutProgressionSnapshotImpl _value,
+      $Res Function(_$WorkoutProgressionSnapshotImpl) _then)
+      : super(_value, _then);
+
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? templateId = null,
+    Object? currentWorkoutIndex = null,
+    Object? trainingMaxProfile = null,
+    Object? engineState = null,
+    Object? states = null,
+  }) {
+    return _then(_$WorkoutProgressionSnapshotImpl(
+      templateId: null == templateId
+          ? _value.templateId
+          : templateId // ignore: cast_nullable_to_non_nullable
+              as String,
+      currentWorkoutIndex: null == currentWorkoutIndex
+          ? _value.currentWorkoutIndex
+          : currentWorkoutIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      trainingMaxProfile: null == trainingMaxProfile
+          ? _value.trainingMaxProfile
+          : trainingMaxProfile // ignore: cast_nullable_to_non_nullable
+              as TrainingMaxProfile,
+      engineState: null == engineState
+          ? _value._engineState
+          : engineState // ignore: cast_nullable_to_non_nullable
+              as Map<String, dynamic>,
+      states: null == states
+          ? _value._states
+          : states // ignore: cast_nullable_to_non_nullable
+              as List<TrainingState>,
+    ));
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$WorkoutProgressionSnapshotImpl implements _WorkoutProgressionSnapshot {
+  const _$WorkoutProgressionSnapshotImpl(
+      {required this.templateId,
+      required this.currentWorkoutIndex,
+      required this.trainingMaxProfile,
+      required final Map<String, dynamic> engineState,
+      required final List<TrainingState> states})
+      : _engineState = engineState,
+        _states = states;
+
+  factory _$WorkoutProgressionSnapshotImpl.fromJson(
+          Map<String, dynamic> json) =>
+      _$$WorkoutProgressionSnapshotImplFromJson(json);
+
+  @override
+  final String templateId;
+  @override
+  final int currentWorkoutIndex;
+  @override
+  final TrainingMaxProfile trainingMaxProfile;
+  final Map<String, dynamic> _engineState;
+  @override
+  Map<String, dynamic> get engineState {
+    if (_engineState is EqualUnmodifiableMapView) return _engineState;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(_engineState);
+  }
+
+  final List<TrainingState> _states;
+  @override
+  List<TrainingState> get states {
+    if (_states is EqualUnmodifiableListView) return _states;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_states);
+  }
+
+  @override
+  String toString() {
+    return 'WorkoutProgressionSnapshot(templateId: $templateId, currentWorkoutIndex: $currentWorkoutIndex, trainingMaxProfile: $trainingMaxProfile, engineState: $engineState, states: $states)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$WorkoutProgressionSnapshotImpl &&
+            (identical(other.templateId, templateId) ||
+                other.templateId == templateId) &&
+            (identical(other.currentWorkoutIndex, currentWorkoutIndex) ||
+                other.currentWorkoutIndex == currentWorkoutIndex) &&
+            (identical(other.trainingMaxProfile, trainingMaxProfile) ||
+                other.trainingMaxProfile == trainingMaxProfile) &&
+            const DeepCollectionEquality()
+                .equals(other._engineState, _engineState) &&
+            const DeepCollectionEquality().equals(other._states, _states));
+  }
+
+  @JsonKey(ignore: true)
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      templateId,
+      currentWorkoutIndex,
+      trainingMaxProfile,
+      const DeepCollectionEquality().hash(_engineState),
+      const DeepCollectionEquality().hash(_states));
+
+  @JsonKey(ignore: true)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$WorkoutProgressionSnapshotImplCopyWith<_$WorkoutProgressionSnapshotImpl>
+      get copyWith => __$$WorkoutProgressionSnapshotImplCopyWithImpl<
+          _$WorkoutProgressionSnapshotImpl>(this, _$identity);
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$WorkoutProgressionSnapshotImplToJson(
+      this,
+    );
+  }
+}
+
+abstract class _WorkoutProgressionSnapshot
+    implements WorkoutProgressionSnapshot {
+  const factory _WorkoutProgressionSnapshot(
+          {required final String templateId,
+          required final int currentWorkoutIndex,
+          required final TrainingMaxProfile trainingMaxProfile,
+          required final Map<String, dynamic> engineState,
+          required final List<TrainingState> states}) =
+      _$WorkoutProgressionSnapshotImpl;
+
+  factory _WorkoutProgressionSnapshot.fromJson(Map<String, dynamic> json) =
+      _$WorkoutProgressionSnapshotImpl.fromJson;
+
+  @override
+  String get templateId;
+  @override
+  int get currentWorkoutIndex;
+  @override
+  TrainingMaxProfile get trainingMaxProfile;
+  @override
+  Map<String, dynamic> get engineState;
+  @override
+  List<TrainingState> get states;
+  @override
+  @JsonKey(ignore: true)
+  _$$WorkoutProgressionSnapshotImplCopyWith<_$WorkoutProgressionSnapshotImpl>
+      get copyWith => throw _privateConstructorUsedError;
 }
 
 ExerciseLog _$ExerciseLogFromJson(Map<String, dynamic> json) {
