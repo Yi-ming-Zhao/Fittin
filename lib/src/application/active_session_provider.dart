@@ -59,11 +59,15 @@ class SessionState {
 }
 
 class ActiveSessionNotifier extends StateNotifier<SessionState> {
-  ActiveSessionNotifier(this._ref) : super(SessionState());
+  ActiveSessionNotifier(this._ref) : super(SessionState()) {
+    _restoreInFlight = _restorePersistedSession(background: true);
+  }
 
   final Ref _ref;
+  Future<void>? _restoreInFlight;
 
   Future<void> startOrResumeSession() async {
+    await _restoreInFlight;
     if (state.activeWorkout != null) {
       return;
     }
@@ -73,25 +77,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     try {
       final repository = _ref.read(databaseRepositoryProvider);
       final ownerUserId = _ref.read(currentUserIdProvider);
-      final activeInstance = await repository.fetchActiveInstanceForUser(
-        ownerUserId,
-      );
-      WorkoutSessionState? session;
-      if (activeInstance != null) {
-        final persistedDraft = await repository.fetchActiveSessionDraft(
-          activeInstance.instanceId,
-          ownerUserId: ownerUserId,
-        );
-        if (persistedDraft != null &&
-            persistedDraft.instanceId == activeInstance.instanceId) {
-          session = persistedDraft;
-        } else if (persistedDraft != null) {
-          await repository.clearActiveSessionDraft(
-            activeInstance.instanceId,
-            ownerUserId: ownerUserId,
-          );
-        }
-      }
+      var session = state.activeWorkout;
       session ??= await _ref
           .read(todayWorkoutGatewayProvider)
           .loadTodayWorkoutSession();
@@ -102,6 +88,59 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     } catch (error) {
       state = SessionState(errorMessage: error.toString());
     }
+  }
+
+  Future<void> _restorePersistedSession({required bool background}) async {
+    if (state.activeWorkout != null) {
+      return;
+    }
+    if (!background) {
+      state = state.copyWith(isLoading: true, clearError: true);
+    }
+
+    try {
+      final session = await _loadPersistedSession();
+      if (session == null || !mounted) {
+        if (!background) {
+          state = state.copyWith(isLoading: false);
+        }
+        return;
+      }
+      state = SessionState(activeWorkout: session);
+    } catch (error) {
+      if (!mounted || background) {
+        return;
+      }
+      state = SessionState(errorMessage: error.toString());
+    }
+  }
+
+  Future<WorkoutSessionState?> _loadPersistedSession() async {
+    final repository = _ref.read(databaseRepositoryProvider);
+    final ownerUserId = _ref.read(currentUserIdProvider);
+    final activeInstance = await repository.fetchActiveInstanceForUser(
+      ownerUserId,
+    );
+    if (activeInstance == null) {
+      return null;
+    }
+
+    final persistedDraft = await repository.fetchActiveSessionDraft(
+      activeInstance.instanceId,
+      ownerUserId: ownerUserId,
+    );
+    if (persistedDraft == null) {
+      return null;
+    }
+    if (persistedDraft.instanceId == activeInstance.instanceId) {
+      return persistedDraft;
+    }
+
+    await repository.clearActiveSessionDraft(
+      activeInstance.instanceId,
+      ownerUserId: ownerUserId,
+    );
+    return null;
   }
 
   void selectExercise(int index) {

@@ -59,3 +59,12 @@ The advanced analytics surface MUST present its labels, range controls, helper c
 - **WHEN** the app language is set to Chinese
 - **THEN** the advanced analytics screen renders its titles, range selectors, empty states, and consistency guidance in Chinese
 - **AND** switching back to English restores the corresponding English copy without changing the underlying analytics data.
+## Requirements
+### Requirement: Editable Day Drilldown Records
+The system MUST let the user open a recorded day from the analytics drilldown, choose a single workout log from that day, and edit it without breaking the date-based navigation flow.
+
+#### Scenario: User corrects a workout from consistency drilldown
+- **WHEN** the user opens a recorded day from analytics and edits one workout log from that day
+- **THEN** returning to the day detail shows the corrected workout values
+- **AND** the analytics surfaces that derive from the edited log use the updated data on refresh.
+

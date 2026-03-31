@@ -7,6 +7,75 @@ import '../support/fake_today_workout_gateway.dart';
 import '../support/in_memory_database_repository.dart';
 
 void main() {
+  test(
+    'active session auto-restores persisted drafts on provider init',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      final gateway = FakeTodayWorkoutGateway();
+      final persistedDraft = fakeWorkoutSessionState.copyWith(
+        exercises: [
+          fakeWorkoutSessionState.exercises.first.copyWith(
+            sets: [
+              fakeWorkoutSessionState.exercises.first.sets.first.copyWith(
+                completedReps: 6,
+                isCompleted: true,
+              ),
+              fakeWorkoutSessionState.exercises.first.sets[1],
+            ],
+          ),
+          fakeWorkoutSessionState.exercises[1],
+        ],
+      );
+
+      await repository.saveInstance(
+        StoredTrainingInstance(
+          instanceId: fakeWorkoutSessionState.instanceId,
+          templateId: fakeWorkoutSessionState.templateId,
+          currentWorkoutIndex: 0,
+          states: const [],
+        ),
+      );
+      await repository.saveActiveInstanceId(fakeWorkoutSessionState.instanceId);
+      await repository.saveActiveSessionDraft(persistedDraft);
+
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(gateway),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(activeSessionProvider.notifier);
+      await Future<void>.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
+
+      expect(gateway.sessionLoadCount, 0);
+      expect(
+        container
+            .read(activeSessionProvider)
+            .activeWorkout
+            ?.exercises
+            .first
+            .sets
+            .first
+            .completedReps,
+        6,
+      );
+      expect(
+        container
+            .read(activeSessionProvider)
+            .activeWorkout
+            ?.exercises
+            .first
+            .sets
+            .first
+            .isCompleted,
+        true,
+      );
+    },
+  );
+
   test('active session hydrates and persists drafts', () async {
     final repository = InMemoryDatabaseRepository();
     final gateway = FakeTodayWorkoutGateway();
