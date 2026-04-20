@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/plan_library_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class PlanLibraryScreen extends ConsumerWidget {
   const PlanLibraryScreen({super.key});
@@ -20,7 +23,7 @@ class PlanLibraryScreen extends ConsumerWidget {
     final actionNotifier = ref.read(planLibraryActionProvider.notifier);
     final locale = ref.watch(appLocaleProvider);
     final strings = AppStrings.of(context, ref);
-    final theme = Theme.of(context);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
     if (actionState.infoMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -41,56 +44,52 @@ class PlanLibraryScreen extends ConsumerWidget {
     return templatesAsync.when(
       data: (templates) => DashboardPageScaffold(
         bottomPadding: 170,
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'plan-library-fab',
-          onPressed: () async {
-            await Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const PlanEditorScreen()));
-            ref.invalidate(planLibraryItemsProvider);
-          },
-          icon: const Icon(Icons.add_rounded),
-          label: Text(strings.newPlan),
+        floatingActionButton: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 22,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: FittinBtn(
+            fittinTheme,
+            strings.newPlan,
+            icon: Icons.add_rounded,
+            onPressed: () async {
+              await Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const PlanEditorScreen()));
+              ref.invalidate(planLibraryItemsProvider);
+            },
+          ),
         ),
         children: [
           DashboardScreenHeader(
             eyebrow: strings.planLibrary,
-            title: strings.planLibrary,
+            title: strings.isChinese ? 'Training plans' : 'Training plans',
             subtitle: strings.isChinese
-                ? '内置计划、自定义模板与切换入口都应该像设计对象，而不是一组暗色表单。'
-                : 'Built-in plans, custom templates, and switching flows should feel like premium objects.',
+                ? 'Built-in templates, custom copies, and switching live side-by-side as editable objects.'
+                : 'Built-in templates, custom copies, and switching live side-by-side as editable objects.',
           ),
           const SizedBox(height: 24),
-          DashboardSurfaceCard(
-            radius: 34,
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.isChinese ? '模板收藏' : 'Template Objects',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  strings.isChinese
-                      ? '把计划看作可切换、可编辑、可分享的训练对象。激活状态、内置属性和操作层级都应该一眼可见。'
-                      : 'Treat every plan as a switchable, editable, shareable training object with visible hierarchy.',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.66),
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
+          // Filter chips — Fittin style
+          Row(
+            children: [
+              FittinChip(fittinTheme, 'All', active: true),
+              const SizedBox(width: 8),
+              FittinChip(fittinTheme, strings.builtIn),
+              const SizedBox(width: 8),
+              FittinChip(fittinTheme, strings.custom),
+              const SizedBox(width: 8),
+              const Spacer(),
+              FittinChip(fittinTheme, '+ New'),
+            ],
           ),
-          const SizedBox(height: 28),
-          DashboardSectionLabel(
-            label: strings.isChinese ? '全部计划' : 'All Plans',
-          ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           ListView.separated(
             physics: const NeverScrollableScrollPhysics(),
             shrinkWrap: true,
@@ -104,10 +103,26 @@ class PlanLibraryScreen extends ConsumerWidget {
                   .take(3)
                   .map((workout) => localizedWorkoutName(workout, locale))
                   .join(' · ');
+              final workoutCount = record.template.workouts.length;
+              final exerciseCount = record.template.workouts.fold<int>(
+                0,
+                (sum, workout) => sum + workout.exercises.length,
+              );
               return DashboardSurfaceCard(
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _PlanDetailScreen(
+                        record: record,
+                        isActive: item.isActive,
+                      ),
+                    ),
+                  );
+                  ref.invalidate(planLibraryItemsProvider);
+                },
                 padding: const EdgeInsets.all(22),
                 radius: 32,
-                highlight: item.isActive,
+                highlight: false,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -117,101 +132,87 @@ class PlanLibraryScreen extends ConsumerWidget {
                         Expanded(
                           child: Text(
                             localizedTemplateName(record.template, locale),
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1.2,
-                              height: 1.05,
+                            style: fittinTheme.displayStyle(22, fittinTheme.fg).copyWith(
+                              height: 1.15,
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (record.isBuiltIn)
-                              _MetaPill(
-                                label: strings.builtIn,
-                                color: theme.colorScheme.primary,
-                              )
-                            else
-                              _MetaPill(
-                                label: strings.custom,
-                                color: theme.colorScheme.secondary,
-                              ),
-                            if (item.isActive) ...[
-                              const SizedBox(height: 8),
-                              _MetaPill(
-                                label: strings.active,
-                                color: theme.colorScheme.tertiary,
-                              ),
-                            ],
-                          ],
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: fittinTheme.fgMuted,
+                          size: 18,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        FittinEyebrow(
+                          fittinTheme,
+                          record.isBuiltIn ? strings.builtIn : strings.custom,
+                        ),
+                        if (item.isActive) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: fittinTheme.accent,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'Active',
+                            style: fittinTheme.uiStyle(10, fittinTheme.accent).copyWith(
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
                       localizedTemplateDescription(record.template, locale),
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        height: 1.45,
-                      ),
+                      style: fittinTheme.uiStyle(13, fittinTheme.fgDim).copyWith(height: 1.45),
                     ),
                     const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(22),
-                        color: Colors.white.withValues(alpha: 0.04),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.06),
-                        ),
-                      ),
-                      child: Text(
-                        preview,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.56),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
                     Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
-                        _StatChip(
-                          icon: Icons.calendar_view_week_rounded,
-                          label: strings.workoutsCount(
-                            record.template.workouts.length,
-                          ),
-                        ),
-                        _StatChip(
-                          icon: Icons.fitness_center_rounded,
-                          label: strings.exercisesCount(
-                            record.template.workouts.fold<int>(
-                              0,
-                              (sum, workout) => sum + workout.exercises.length,
+                        for (final tag in preview.split(' · '))
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: fittinTheme.border, width: 0.5),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              tag,
+                              style: fittinTheme.uiStyle(11, fittinTheme.fgDim),
                             ),
                           ),
-                        ),
-                        _StatChip(
-                          icon: Icons.play_circle_outline_rounded,
-                          label: strings.activeInstancesCount(
-                            record.instanceCount,
-                          ),
-                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _Stat(theme: fittinTheme, label: 'Workouts', value: '$workoutCount'),
+                        _Stat(theme: fittinTheme, label: 'Exercises', value: '$exerciseCount'),
+                        _Stat(theme: fittinTheme, label: 'Running', value: '${record.instanceCount}'),
                       ],
                     ),
                     const SizedBox(height: 18),
                     Row(
                       children: [
                         Expanded(
-                          child: PremiumPrimaryButton(
+                          child: FittinBtn(
+                            fittinTheme,
+                            item.isActive ? strings.current : strings.switchPlan,
+                            size: 'sm',
                             onPressed:
                                 item.isActive ||
                                     (actionState.isSwitching &&
@@ -233,35 +234,15 @@ class PlanLibraryScreen extends ConsumerWidget {
                                       trainingMaxProfile: trainingMaxProfile,
                                     );
                                   },
-                            loading:
-                                actionState.isSwitching &&
-                                actionState.switchingTemplateId ==
-                                    record.template.id,
-                            icon: item.isActive
-                                ? Icons.check_circle_rounded
-                                : Icons.play_circle_fill_rounded,
-                            label: item.isActive
-                                ? strings.current
-                                : strings.switchPlan,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(62),
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.18),
-                              ),
-                              shape: const StadiumBorder(),
-                              foregroundColor: Colors.white,
-                              backgroundColor: Colors.white.withValues(
-                                alpha: 0.02,
-                              ),
-                              textStyle: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
+                          child: FittinBtn(
+                            fittinTheme,
+                            strings.edit,
+                            size: 'sm',
+                            variant: 'secondary',
                             onPressed: () async {
                               await Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -272,8 +253,6 @@ class PlanLibraryScreen extends ConsumerWidget {
                               );
                               ref.invalidate(planLibraryItemsProvider);
                             },
-                            icon: const Icon(Icons.edit_outlined),
-                            label: Text(strings.edit),
                           ),
                         ),
                       ],
@@ -308,57 +287,260 @@ Future<TrainingMaxProfile?> _resolveTrainingMaxProfile(
   );
 }
 
-class _MetaPill extends StatelessWidget {
-  const _MetaPill({required this.label, required this.color});
+class _Stat extends StatelessWidget {
+  const _Stat({required this.theme, required this.label, required this.value});
 
+  final dynamic theme;
   final String label;
-  final Color color;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittinEyebrow(theme, label),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.numStyle(16.0, theme.fg),
         ),
-      ),
+      ],
     );
   }
 }
 
-class _StatChip extends StatelessWidget {
-  const _StatChip({required this.icon, required this.label});
+class _PlanDetailScreen extends ConsumerWidget {
+  const _PlanDetailScreen({required this.record, required this.isActive});
 
-  final IconData icon;
-  final String label;
+  final StoredTemplateRecord record;
+  final bool isActive;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: Colors.white.withValues(alpha: 0.06),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(label, style: theme.textTheme.labelMedium),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(appLocaleProvider);
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    final template = record.template;
+    final workouts = template.workouts;
+    final exerciseCount = workouts.fold<int>(
+      0,
+      (sum, workout) => sum + workout.exercises.length,
+    );
+    final progressionValues = _buildProgressionSeries(template);
+
+    return DashboardPageScaffold(
+      bottomPadding: 150,
+      children: [
+        Row(
+          children: [
+            FittinBtn(
+              theme,
+              'Library',
+              variant: 'ghost',
+              size: 'sm',
+              icon: Icons.chevron_left_rounded,
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            const Spacer(),
+            FittinBtn(
+              theme,
+              strings.edit,
+              variant: 'secondary',
+              size: 'sm',
+              icon: Icons.edit_rounded,
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => PlanEditorScreen(templateId: template.id),
+                  ),
+                );
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            const SizedBox(width: 8),
+            FittinBtn(
+              theme,
+              strings.switchPlan,
+              size: 'sm',
+              icon: Icons.play_arrow_rounded,
+              onPressed: () async {
+                final trainingMaxProfile = await _resolveTrainingMaxProfile(
+                  context,
+                  record,
+                );
+                if (!context.mounted || trainingMaxProfile == null) {
+                  return;
+                }
+                await ref
+                    .read(planLibraryActionProvider.notifier)
+                    .activateTemplate(
+                      record,
+                      trainingMaxProfile: trainingMaxProfile,
+                    );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        FittinEyebrow(theme, record.isBuiltIn ? strings.builtIn : strings.custom),
+        const SizedBox(height: 10),
+        Text(
+          localizedTemplateName(template, locale),
+          style: theme.displayStyle(32, theme.fg).copyWith(height: 1.1),
+        ),
+        if (isActive) ...[
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: theme.accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'CURRENTLY ACTIVE',
+                style: theme.uiStyle(11, theme.accent).copyWith(
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ],
-      ),
+        const SizedBox(height: 16),
+        Text(
+          '${localizedTemplateDescription(template, locale)} '
+          '${strings.isChinese ? '根据训练最大值与既定周期结构组织主要动作训练。' : 'Derived from training maxes, with fixed weekly loading across the main training block.'}',
+          style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
+        ),
+        const SizedBox(height: 20),
+        DashboardSurfaceCard(
+          radius: 30,
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _Stat(theme: theme, label: 'Workouts', value: '${workouts.length}'),
+              _Stat(theme: theme, label: 'Exercises', value: '$exerciseCount'),
+              _Stat(theme: theme, label: 'Running', value: '${record.instanceCount}'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        FittinEyebrow(theme, 'Weekly structure'),
+        const SizedBox(height: 10),
+        ...workouts.asMap().entries.map((entry) {
+          final index = entry.key;
+          final workout = entry.value;
+          final exerciseTotal = workout.exercises.length;
+          final duration = workout.estimatedDurationMinutes;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: DashboardSurfaceCard(
+              radius: 24,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 34,
+                    child: Text(
+                      'D${index + 1}',
+                      style: theme.numStyle(20, theme.fgDim),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          localizedWorkoutName(workout, locale),
+                          style: theme.uiStyle(14, theme.fg).copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$exerciseTotal ${strings.isChinese ? '个动作' : 'exercises'}'
+                          ' · $duration ${strings.isChinese ? '分钟' : 'min'}',
+                          style: theme.uiStyle(12, theme.fgMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: theme.fgMuted,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+        const SizedBox(height: 12),
+        FittinEyebrow(theme, strings.progression),
+        const SizedBox(height: 10),
+        DashboardSurfaceCard(
+          radius: 30,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Weeks 1-${progressionValues.length}',
+                    style: theme.uiStyle(13, theme.fg),
+                  ),
+                  Text(
+                    'Intensity ${progressionValues.first.toStringAsFixed(0)}% -> ${progressionValues.last.toStringAsFixed(0)}%',
+                    style: theme.numStyle(12, theme.fgDim),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              StepChart(
+                theme,
+                progressionValues,
+                height: 120,
+                showDots: false,
+                yLabels: const ['95', '78', '60'],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
+
+List<double> _buildProgressionSeries(PlanTemplate template) {
+  final maxStages = template.workouts.fold<int>(
+    1,
+    (max, workout) => workout.exercises.fold<int>(
+      max,
+      (inner, exercise) => exercise.stages.length > inner ? exercise.stages.length : inner,
+    ),
+  );
+  if (maxStages <= 1) {
+    return const [60, 70, 80, 90];
+  }
+
+  final start = 60.0;
+  final end = 92.0;
+  return List<double>.generate(maxStages, (index) {
+    final progress = maxStages == 1 ? 1.0 : index / (maxStages - 1);
+    return start + (end - start) * progress;
+  });
 }
 
 class _TrainingMaxSetupDialog extends StatefulWidget {

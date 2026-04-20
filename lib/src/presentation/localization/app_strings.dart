@@ -243,8 +243,8 @@ class AppStrings {
   String get supabaseUnavailable =>
       isChinese ? 'Supabase 尚未配置' : 'Supabase Not Configured';
   String get supabaseUnavailableHint => isChinese
-      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY；Debug 模式下会优先尝试连接本地 Supabase 开发环境。'
-      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first; debug builds will also try the local Supabase dev stack.';
+      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY；未提供时，应用只会在本地 Supabase 开发栈实际可达时自动回退。'
+      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first; without them, the app only falls back when the local Supabase dev stack is actually reachable.';
   String get workingState => isChinese ? '处理中...' : 'Working...';
   String get language => isChinese ? '语言' : 'Language';
   String get languageSubtitle =>

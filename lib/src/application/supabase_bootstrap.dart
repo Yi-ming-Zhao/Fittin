@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:fittin_v2/src/application/local_supabase_probe.dart';
+
 enum SupabaseBootstrapStatus { configured, unavailable }
 
 class SupabaseBootstrapState {
@@ -38,30 +40,74 @@ final supabaseClientProvider = Provider<SupabaseClient?>((ref) {
   return Supabase.instance.client;
 });
 
-Future<SupabaseBootstrapState> initializeSupabase() async {
-  const url = String.fromEnvironment('SUPABASE_URL');
-  const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
-  const localDevUrl = 'http://127.0.0.1:55321';
-  const localDevPublishableKey =
-      'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+typedef SupabaseClientInitializer =
+    Future<void> Function({required String url, required String anonKey});
 
-  final resolvedUrl = url.isNotEmpty ? url : (kDebugMode ? localDevUrl : '');
-  final resolvedAnonKey = anonKey.isNotEmpty
-      ? anonKey
-      : (kDebugMode ? localDevPublishableKey : '');
+const localSupabaseDevUrl = 'http://127.0.0.1:55321';
+const localSupabaseDevPublishableKey =
+    'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 
-  if (resolvedUrl.isEmpty || resolvedAnonKey.isEmpty) {
-    return const SupabaseBootstrapState.unavailable(
-      'Missing SUPABASE_URL or SUPABASE_ANON_KEY dart define. Debug builds fall back to the local Supabase dev stack when available.',
+Future<SupabaseBootstrapState> initializeSupabase({
+  String? configuredUrl,
+  String? configuredAnonKey,
+  LocalSupabaseProbe? localDevStackProbe,
+  SupabaseClientInitializer? initializeClient,
+  TargetPlatform? targetPlatformOverride,
+  bool? isWebOverride,
+}) async {
+  final url = configuredUrl ?? const String.fromEnvironment('SUPABASE_URL');
+  final anonKey =
+      configuredAnonKey ?? const String.fromEnvironment('SUPABASE_ANON_KEY');
+  final probe = localDevStackProbe ?? defaultLocalSupabaseProbe;
+  final initializer =
+      initializeClient ??
+      ({required String url, required String anonKey}) =>
+          Supabase.initialize(url: url, anonKey: anonKey);
+  final targetPlatform = targetPlatformOverride ?? defaultTargetPlatform;
+  final isWebRuntime = isWebOverride ?? kIsWeb;
+
+  if (url.isNotEmpty || anonKey.isNotEmpty) {
+    if (url.isEmpty || anonKey.isEmpty) {
+      return const SupabaseBootstrapState.unavailable(
+        'Both SUPABASE_URL and SUPABASE_ANON_KEY must be provided together.',
+      );
+    }
+    return _initializeSupabaseClient(
+      url: url,
+      anonKey: anonKey,
+      initializer: initializer,
     );
   }
 
-  try {
-    await Supabase.initialize(url: resolvedUrl, anonKey: resolvedAnonKey);
-    return SupabaseBootstrapState.configured(
-      url: resolvedUrl,
-      anonKey: resolvedAnonKey,
+  if (!isWebRuntime && targetPlatform == TargetPlatform.android) {
+    return const SupabaseBootstrapState.unavailable(
+      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Android APK builds cannot auto-connect to the repo-local Supabase stack via 127.0.0.1; provide explicit Supabase config for devices.',
     );
+  }
+
+  final localDevUri = Uri.parse(localSupabaseDevUrl);
+  final localDevAvailable = await probe(localDevUri);
+  if (!localDevAvailable) {
+    return const SupabaseBootstrapState.unavailable(
+      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Local Supabase dev stack at http://127.0.0.1:55321 is not reachable.',
+    );
+  }
+
+  return _initializeSupabaseClient(
+    url: localSupabaseDevUrl,
+    anonKey: localSupabaseDevPublishableKey,
+    initializer: initializer,
+  );
+}
+
+Future<SupabaseBootstrapState> _initializeSupabaseClient({
+  required String url,
+  required String anonKey,
+  required SupabaseClientInitializer initializer,
+}) async {
+  try {
+    await initializer(url: url, anonKey: anonKey);
+    return SupabaseBootstrapState.configured(url: url, anonKey: anonKey);
   } catch (error) {
     return SupabaseBootstrapState.unavailable(error.toString());
   }

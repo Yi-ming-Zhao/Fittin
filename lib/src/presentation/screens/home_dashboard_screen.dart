@@ -2,16 +2,23 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:fittin_v2/src/application/home_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/exercise_deep_dive_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/plan_library_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/pr_dashboard_screen.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/line_chart_painter.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_ring.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -35,40 +42,34 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
     final homeDataAsync = ref.watch(homeDashboardDataProvider);
+    final theme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
+      backgroundColor: theme.bg,
       body: SafeArea(
         bottom: false,
         child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: EdgeInsets.symmetric(horizontal: theme.pad, vertical: 16.0),
           children: [
             homeDataAsync.when(
-              data: (data) => _GreetingHeader(
+              data: (data) => _FittinTopMetaRow(
+                theme: theme,
                 data: data,
-                strings: strings,
                 onNotificationTap: () => _openMilestonesPanel(context, data),
               ),
-              loading: () => _GreetingHeaderSkeleton(strings: strings),
-              error: (_, __) => _GreetingHeaderSkeleton(strings: strings),
+              loading: () => _FittinTopMetaRowSkeleton(theme: theme),
+              error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
             ),
             const SizedBox(height: 32),
             const TodayWorkoutHeroCard(),
             const SizedBox(height: 32),
-            Text(
-              strings.atAGlance,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
+            FittinEyebrow(theme, strings.atAGlance),
             const SizedBox(height: 16),
             homeDataAsync.when(
               data: (data) => _AtAGlanceSection(
                 data: data,
                 strings: strings,
+                theme: theme,
                 selectedLiftPage: _selectedLiftPage,
                 pageController: _pageController,
                 onLiftPageChanged: (value) {
@@ -98,7 +99,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     await ref
         .read(homeDashboardControllerProvider)
         .markMilestonesSeen(latestMilestoneAt);
-    if (!mounted) {
+    if (!context.mounted) {
       return;
     }
 
@@ -203,104 +204,64 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   }
 }
 
-class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({
+class _FittinTopMetaRow extends StatelessWidget {
+  const _FittinTopMetaRow({
+    required this.theme,
     required this.data,
-    required this.strings,
     required this.onNotificationTap,
   });
 
+  final FittinTheme theme;
   final HomeDashboardData data;
-  final AppStrings strings;
   final VoidCallback onNotificationTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final dateStr = DateFormat('EEEE, MMM d', 'en_US').format(now);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.greetingForPeriod(data.greetingPeriod.name),
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              data.displayName,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
-          ],
+        FittinEyebrow(
+          theme,
+          dateStr,
         ),
-        IconButton(
-          key: const ValueKey('home-notification-button'),
-          onPressed: onNotificationTap,
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const Icon(Icons.notifications_none_rounded, size: 28),
-              if (data.hasUnreadMilestones)
-                Positioned(
-                  right: 2,
-                  top: 2,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          ),
+        FittinEyebrow(
+          theme,
+          'Week ${data.todayWorkout.currentWeekNumber} · Day ${data.todayWorkout.currentDayNumber}',
         ),
       ],
     );
   }
 }
 
-class _GreetingHeaderSkeleton extends StatelessWidget {
-  const _GreetingHeaderSkeleton({required this.strings});
+class _FittinTopMetaRowSkeleton extends StatelessWidget {
+  const _FittinTopMetaRowSkeleton({required this.theme});
 
-  final AppStrings strings;
+  final FittinTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              strings.goodMorning,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              width: 110,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ],
+        Container(
+          width: 80,
+          height: 12,
+          decoration: BoxDecoration(
+            color: theme.fgFaint,
+            borderRadius: BorderRadius.circular(6),
+          ),
         ),
-        const Icon(Icons.notifications_none_rounded, size: 28),
+        Container(
+          width: 100,
+          height: 12,
+          decoration: BoxDecoration(
+            color: theme.fgFaint,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
       ],
     );
   }
@@ -310,6 +271,7 @@ class _AtAGlanceSection extends StatelessWidget {
   const _AtAGlanceSection({
     required this.data,
     required this.strings,
+    required this.theme,
     required this.selectedLiftPage,
     required this.pageController,
     required this.onLiftPageChanged,
@@ -317,99 +279,170 @@ class _AtAGlanceSection extends StatelessWidget {
 
   final HomeDashboardData data;
   final AppStrings strings;
+  final FittinTheme theme;
   final int selectedLiftPage;
   final PageController pageController;
   final ValueChanged<int> onLiftPageChanged;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cards = [
-          _ProgressRingsCard(data: data, strings: strings),
-          _LiftSparklineCard(
-            data: data,
-            strings: strings,
-            selectedLiftPage: selectedLiftPage,
-            pageController: pageController,
-            onLiftPageChanged: onLiftPageChanged,
-          ),
-        ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cards = [
+              _CycleProgressCard(
+                data: data,
+                strings: strings,
+                theme: theme,
+              ),
+              _HighlightLiftCard(
+                data: data,
+                strings: strings,
+                theme: theme,
+              ),
+            ];
 
-        if (constraints.maxWidth < 380) {
-          return Column(
-            children: [cards[0], const SizedBox(height: 16), cards[1]],
-          );
-        }
+            if (constraints.maxWidth < 420) {
+              return Column(
+                children: [
+                  cards[0],
+                  const SizedBox(height: 16),
+                  cards[1],
+                ],
+              );
+            }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 4, child: cards[0]),
-            const SizedBox(width: 16),
-            Expanded(flex: 5, child: cards[1]),
-          ],
-        );
-      },
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: cards[0]),
+                const SizedBox(width: 16),
+                Expanded(child: cards[1]),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _ActivityCard(
+          data: data,
+          strings: strings,
+          theme: theme,
+          selectedLiftPage: selectedLiftPage,
+          pageController: pageController,
+          onLiftPageChanged: onLiftPageChanged,
+        ),
+        const SizedBox(height: 16),
+        _QuickActionsCard(
+          theme: theme,
+          strings: strings,
+          onOpenPlans: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PlanLibraryScreen()),
+            );
+          },
+          onOpenPr: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PRDashboardScreen()),
+            );
+          },
+        ),
+      ],
     );
   }
 }
 
-class _ProgressRingsCard extends StatelessWidget {
-  const _ProgressRingsCard({required this.data, required this.strings});
+class _CycleProgressCard extends StatelessWidget {
+  const _CycleProgressCard({
+    required this.data,
+    required this.strings,
+    required this.theme,
+  });
 
   final HomeDashboardData data;
   final AppStrings strings;
+  final FittinTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    return DashboardSurfaceCard(
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.glass,
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const AdvancedAnalyticsScreen()),
         );
       },
-      radius: 24,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 14),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          NestedProgressRings(
-            outerProgress: data.cycleProgress,
-            innerProgress: data.weekProgress,
-            size: 126,
-            centerLabel: strings.compactWeekDayLabel(
-              data.todayWorkout.currentWeekNumber,
-              data.todayWorkout.currentDayNumber,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            strings.weekProgress,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.55),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            strings.weekDayProgressLabel(
-              data.todayWorkout.currentWeekNumber,
-              data.todayWorkout.cycleWeekCount,
-              data.todayWorkout.currentDayNumber,
-              data.todayWorkout.workoutsPerWeek,
-            ),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            '${strings.cycleProgress} ${(data.cycleProgress * 100).round()}%',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.58),
-            ),
+          FittinEyebrow(theme, strings.cycleProgress),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittinRing(
+                theme,
+                value: data.cycleProgress,
+                max: 1,
+                size: 94,
+                strokeWidth: 3,
+                child: Center(
+                  child: Text(
+                    '${(data.cycleProgress * 100).round()}',
+                    style: theme.numStyle(20, theme.fg),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittinBigNum(
+                      theme,
+                      '${(data.cycleProgress * 100).round()}',
+                      size: 36,
+                      unit: '%',
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      strings.weekDayProgressLabel(
+                        data.todayWorkout.currentWeekNumber,
+                        data.todayWorkout.cycleWeekCount,
+                        data.todayWorkout.currentDayNumber,
+                        data.todayWorkout.workoutsPerWeek,
+                      ),
+                      style: theme.uiStyle(13, theme.fgDim).copyWith(height: 1.4),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: theme.fgFaint,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: FractionallySizedBox(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: data.weekProgress.clamp(0.0, 1.0),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: theme.accent,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      strings.weekProgress,
+                      style: theme.uiStyle(12, theme.fgMuted),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -417,10 +450,99 @@ class _ProgressRingsCard extends StatelessWidget {
   }
 }
 
-class _LiftSparklineCard extends StatelessWidget {
-  const _LiftSparklineCard({
+class _HighlightLiftCard extends StatelessWidget {
+  const _HighlightLiftCard({
     required this.data,
     required this.strings,
+    required this.theme,
+  });
+
+  final HomeDashboardData data;
+  final AppStrings strings;
+  final FittinTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = _resolveHighlightSummary(data);
+    final points = summary?.estimatedHistory.map((point) => point.value).toList() ?? [];
+
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.glass,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PRDashboardScreen()),
+        );
+      },
+      child: summary == null
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text(
+                  strings.noStrengthTrendYet,
+                  style: theme.uiStyle(14, theme.fgDim),
+                ),
+              ),
+            )
+          : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  FittinEyebrow(theme, strings.estimatedOneRepMax),
+                  const SizedBox(height: 10),
+                  FittinSectionTitle(theme, summary.exerciseName, fontSize: 18),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: FittinBigNum(
+                          theme,
+                          (summary.currentEstimatedOneRepMax ?? 0).toStringAsFixed(1),
+                          size: 28,
+                          unit: strings.isChinese ? '公斤' : 'kg',
+                        ),
+                      ),
+                      if (summary.recentChange != null)
+                        FittinDelta(theme, summary.recentChange!, unit: 'kg'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (points.length > 1)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Sparkline(theme, points, width: 120, height: 40),
+                    )
+                  else
+                    Text(
+                      strings.noStrengthTrendYet,
+                      style: theme.uiStyle(13, theme.fgDim),
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    strings.sessionsLogged(summary.estimatedHistory.length),
+                    style: theme.uiStyle(12, theme.fgMuted),
+                  ),
+                ],
+              ),
+    );
+  }
+
+  ExerciseProgressSummary? _resolveHighlightSummary(HomeDashboardData data) {
+    for (final summary in data.sparklineLifts) {
+      if (summary.exerciseName.toLowerCase().contains('squat')) {
+        return summary;
+      }
+    }
+    return data.sparklineLifts.isEmpty ? null : data.sparklineLifts.first;
+  }
+}
+
+class _ActivityCard extends StatelessWidget {
+  const _ActivityCard({
+    required this.data,
+    required this.strings,
+    required this.theme,
     required this.selectedLiftPage,
     required this.pageController,
     required this.onLiftPageChanged,
@@ -428,6 +550,7 @@ class _LiftSparklineCard extends StatelessWidget {
 
   final HomeDashboardData data;
   final AppStrings strings;
+  final FittinTheme theme;
   final int selectedLiftPage;
   final PageController pageController;
   final ValueChanged<int> onLiftPageChanged;
@@ -437,21 +560,22 @@ class _LiftSparklineCard extends StatelessWidget {
     final safeIndex = data.sparklineLifts.isEmpty
         ? 0
         : selectedLiftPage.clamp(0, data.sparklineLifts.length - 1);
-    return DashboardSurfaceCard(
+
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.glass,
       onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PRDashboardScreen()),
+        );
       },
-      radius: 24,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: SizedBox(
-        height: 256,
+        height: 228,
         child: data.sparklineLifts.isEmpty
             ? Center(
                 child: Text(
                   strings.noStrengthTrendYet,
-                  textAlign: TextAlign.center,
+                  style: theme.uiStyle(14, theme.fgDim),
                 ),
               )
             : Column(
@@ -460,28 +584,20 @@ class _LiftSparklineCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        strings.activity,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
+                      FittinEyebrow(theme, strings.activity),
+                      FittinBigNum(
+                        theme,
                         data.sparklineLifts[safeIndex].currentEstimatedOneRepMax
                                 ?.toStringAsFixed(1) ??
                             '—',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                        size: 18,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Text(
                     data.sparklineLifts[safeIndex].exerciseName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme.uiStyle(18, theme.fg, FontWeight.w600),
                   ),
                   const SizedBox(height: 14),
                   Expanded(
@@ -490,26 +606,39 @@ class _LiftSparklineCard extends StatelessWidget {
                       onPageChanged: onLiftPageChanged,
                       itemCount: data.sparklineLifts.length,
                       itemBuilder: (context, index) {
-                        return _SparklinePane(
-                          summary: data.sparklineLifts[index],
+                        final values = data.sparklineLifts[index]
+                            .estimatedHistory
+                            .map((point) => point.value)
+                            .toList();
+                        return StepChart(
+                          theme,
+                          values,
+                          width: double.infinity,
+                          height: 132,
+                          showDots: true,
+                          showGrid: true,
                         );
                       },
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      Text(
+                        strings.sessionsLogged(
+                          data.sparklineLifts[safeIndex].estimatedHistory.length,
+                        ),
+                        style: theme.uiStyle(12, theme.fgMuted),
+                      ),
+                      const Spacer(),
                       for (var i = 0; i < data.sparklineLifts.length; i++) ...[
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 180),
-                          width: i == safeIndex ? 18 : 6,
-                          height: 6,
+                          width: i == safeIndex ? 16 : 5,
+                          height: 5,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
-                            color: Colors.white.withValues(
-                              alpha: i == safeIndex ? 0.95 : 0.25,
-                            ),
+                            color: i == safeIndex ? theme.accent : theme.fgFaint,
                           ),
                         ),
                         if (i < data.sparklineLifts.length - 1)
@@ -524,57 +653,77 @@ class _LiftSparklineCard extends StatelessWidget {
   }
 }
 
-class _SparklinePane extends StatelessWidget {
-  const _SparklinePane({required this.summary});
+class _QuickActionsCard extends StatelessWidget {
+  const _QuickActionsCard({
+    required this.theme,
+    required this.strings,
+    required this.onOpenPlans,
+    required this.onOpenPr,
+  });
 
-  final ExerciseProgressSummary summary;
+  final FittinTheme theme;
+  final AppStrings strings;
+  final VoidCallback onOpenPlans;
+  final VoidCallback onOpenPr;
 
   @override
   Widget build(BuildContext context) {
-    final history = summary.estimatedHistory.length > 8
-        ? summary.estimatedHistory.sublist(summary.estimatedHistory.length - 8)
-        : summary.estimatedHistory;
-    if (history.isEmpty) {
-      return const Center(child: Text('—'));
-    }
-    final minValue = history.map((point) => point.value).reduce(math.min);
-    final maxValue = history.map((point) => point.value).reduce(math.max);
-    final range = (maxValue - minValue).abs() < 0.001
-        ? 1.0
-        : maxValue - minValue;
-    final points = [
-      for (var index = 0; index < history.length; index++)
-        Offset(
-          history.length == 1 ? 0.5 : index / (history.length - 1),
-          (history[index].value - minValue) / range,
-        ),
+    final actions = [
+      (
+        label: strings.isChinese ? 'Switch plan' : 'Switch plan',
+        subtitle: null,
+        icon: Icons.swap_horiz_rounded,
+        onTap: onOpenPlans,
+      ),
+      (
+        label: strings.isChinese ? 'See all PRs' : 'See all PRs',
+        subtitle: null,
+        icon: Icons.arrow_forward_rounded,
+        onTap: onOpenPr,
+      ),
     ];
 
-    return CustomPaint(
-      painter: LineChartPainter(
-        datasets: [
-          LineChartDataset(
-            points: points,
-            color: _sparklineColor(summary.exerciseName),
-            label: summary.exerciseName,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        FittinEyebrow(
+          theme,
+          strings.isChinese ? '快捷入口' : 'Quick Actions',
+        ),
+        const SizedBox(height: 12),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: actions.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 3.1,
           ),
-        ],
-        horizontalGridLines: 3,
-        verticalGridLines: points.length > 1 ? points.length - 1 : 1,
-      ),
-      child: const SizedBox.expand(),
+          itemBuilder: (context, index) {
+            final action = actions[index];
+            return FittinCard(
+              theme: theme,
+              style: FittinCardStyle.glass,
+              onTap: action.onTap,
+              child: Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      action.label,
+                      style: theme.uiStyle(13, theme.fg, FontWeight.w500),
+                    ),
+                    Icon(action.icon, color: theme.fgDim, size: 16),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
-  }
-
-  Color _sparklineColor(String exerciseName) {
-    final lower = exerciseName.toLowerCase();
-    if (lower.contains('bench')) {
-      return Colors.blueAccent;
-    }
-    if (lower.contains('deadlift')) {
-      return Colors.greenAccent;
-    }
-    return Colors.redAccent;
   }
 }
 

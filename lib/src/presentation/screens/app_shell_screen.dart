@@ -7,6 +7,7 @@ import 'plan_library_screen.dart';
 import 'pr_dashboard_screen.dart';
 import 'body_metrics_screen.dart';
 import 'profile_settings_screen.dart';
+import '../../application/fittin_theme_provider.dart';
 
 class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
@@ -19,31 +20,32 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   int _currentIndex = 0;
 
   void _handleTap(int index) {
-    if (_currentIndex == index) {
-      return;
-    }
-    setState(() {
-      _currentIndex = index;
-    });
+    if (_currentIndex == index) return;
+    setState(() => _currentIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = ref.watch(resolvedFittinThemeProvider);
+
     return Scaffold(
       extendBody: true,
       body: IndexedStack(
         index: _currentIndex,
-        children: [
-          const HomeDashboardScreen(),
-          const PlanLibraryScreen(),
-          const PRDashboardScreen(),
-          const BodyMetricsScreen(),
-          const ProfileSettingsScreen(),
+        children: const [
+          HomeDashboardScreen(),
+          PlanLibraryScreen(),
+          PRDashboardScreen(),
+          BodyMetricsScreen(),
+          ProfileSettingsScreen(),
         ],
       ),
-      bottomNavigationBar: GlassBottomNav(
-        currentIndex: _currentIndex,
-        onTap: _handleTap,
+      bottomNavigationBar: FittinTabBar(
+        theme: theme,
+        active: ['home', 'plans', 'progress', 'body', 'profile'][_currentIndex],
+        onChange: (id) => _handleTap(
+          ['home', 'plans', 'progress', 'body', 'profile'].indexOf(id),
+        ),
       ),
     );
   }

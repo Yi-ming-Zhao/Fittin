@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 
-class WeeklyProgressBarChart extends StatelessWidget {
+class WeeklyProgressBarChart extends ConsumerWidget {
   /// The maximum value across the week to determine 100% height
   final double maxValue;
 
@@ -23,10 +25,10 @@ class WeeklyProgressBarChart extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (weeklyData.length != 7) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final days = const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return Row(
@@ -47,7 +49,7 @@ class WeeklyProgressBarChart extends StatelessWidget {
               width: barWidth,
               alignment: Alignment.bottomCenter,
               decoration: BoxDecoration(
-                color: theme.colorScheme.onSurface.withOpacity(0.05),
+                color: fittinTheme.fg.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(barWidth / 2),
               ),
               child: AnimatedContainer(
@@ -57,13 +59,13 @@ class WeeklyProgressBarChart extends StatelessWidget {
                 width: barWidth,
                 decoration: BoxDecoration(
                   color: isToday
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.primary.withOpacity(0.4),
+                      ? fittinTheme.accent
+                      : fittinTheme.accent.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(barWidth / 2),
                   boxShadow: isToday
                       ? [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.6),
+                            color: fittinTheme.accent.withValues(alpha: 0.6),
                             blurRadius: 8.0,
                             spreadRadius: -2.0,
                           ),
@@ -75,10 +77,7 @@ class WeeklyProgressBarChart extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               days[index],
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: isToday
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface.withOpacity(0.4),
+              style: fittinTheme.uiStyle(11, isToday ? fittinTheme.accent : fittinTheme.fgMuted).copyWith(
                 fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
               ),
             ),

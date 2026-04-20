@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class WeightToolsSheet extends ConsumerStatefulWidget {
   const WeightToolsSheet({
@@ -47,6 +50,7 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final kgBarWeight = ref.watch(kgBarWeightProvider);
     final lbBarWeight = ref.watch(lbBarWeightProvider);
     final rawInput = double.tryParse(_controller.text.trim()) ?? 0;
@@ -64,10 +68,10 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + MediaQuery.of(context).viewInsets.bottom,
+          fittinTheme.pad,
+          fittinTheme.pad,
+          fittinTheme.pad,
+          fittinTheme.pad + MediaQuery.of(context).viewInsets.bottom,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -76,7 +80,7 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
             children: [
               Text(
                 strings.isChinese ? '重量工具' : 'Weight Tools',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                style: fittinTheme.uiStyle(22, fittinTheme.fg).copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -89,36 +93,29 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                     : (strings.isChinese
                           ? '基于当前动作快速换算重量并查看上片。'
                           : 'Use the current exercise context to convert load and preview plate loading.'),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.7),
-                ),
+                style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
               ),
               if (widget.exerciseName != null) ...[
                 const SizedBox(height: 8),
                 Text(
                   widget.exerciseName!,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.72),
+                  style: fittinTheme.uiStyle(14, fittinTheme.fg).copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
               const SizedBox(height: 20),
-              SegmentedButton<String>(
-                segments: [
-                  ButtonSegment(
-                    value: LoadUnits.kg,
-                    label: Text(strings.isChinese ? '公斤' : 'kg'),
-                  ),
-                  ButtonSegment(
-                    value: LoadUnits.lbs,
-                    label: Text(strings.isChinese ? '磅' : 'lb'),
-                  ),
-                ],
-                selected: {_unit},
-                onSelectionChanged: (selection) {
+              FittinSegmented(
+                theme: fittinTheme,
+                options: [strings.isChinese ? '公斤' : 'kg', strings.isChinese ? '磅' : 'lb'],
+                value: _unit == LoadUnits.kg
+                    ? (strings.isChinese ? '公斤' : 'kg')
+                    : (strings.isChinese ? '磅' : 'lb'),
+                onChange: (value) {
                   setState(() {
-                    _unit = selection.first;
+                    _unit = value == (strings.isChinese ? '公斤' : 'kg')
+                        ? LoadUnits.kg
+                        : LoadUnits.lbs;
                   });
                 },
               ),
@@ -136,18 +133,21 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
               ),
               const SizedBox(height: 14),
               _ResultCard(
+                theme: fittinTheme,
                 label: strings.isChinese ? '换算结果' : 'Converted Value',
                 value:
                     '${_formatNumber(convertedValue)} ${_unit == LoadUnits.kg ? 'lb' : 'kg'}',
               ),
               const SizedBox(height: 12),
               _ResultCard(
+                theme: fittinTheme,
                 label: strings.isChinese ? '默认杠重' : 'Default Bar Weight',
                 value:
                     '${_formatNumber(_unit == LoadUnits.kg ? kgBarWeight : lbBarWeight)} ${_unit == LoadUnits.kg ? 'kg' : 'lb'}',
               ),
               const SizedBox(height: 12),
               _ResultCard(
+                theme: fittinTheme,
                 label: strings.isChinese ? '上片方案' : 'Plate Loading',
                 value: _plateBreakdownLabel(strings, breakdown),
                 dimmed: !breakdown.exact,
@@ -230,6 +230,7 @@ class _WeightToolsSettingsCardState
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final kgBarWeight = ref.watch(kgBarWeightProvider);
     final lbBarWeight = ref.watch(lbBarWeightProvider);
     _kgController.value = TextEditingValue(text: _formatNumber(kgBarWeight));
@@ -240,7 +241,7 @@ class _WeightToolsSettingsCardState
       children: [
         Text(
           strings.isChinese ? '重量工具' : 'Weight Tools',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -249,9 +250,7 @@ class _WeightToolsSettingsCardState
           strings.isChinese
               ? '在设置里维护常用换算和默认杠重，训练记录页会直接复用。'
               : 'Maintain your preferred converter defaults and bar weights here for the workout logger.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.7),
-          ),
+          style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
         ),
         const SizedBox(height: 18),
         Row(
@@ -296,7 +295,10 @@ class _WeightToolsSettingsCardState
           ],
         ),
         const SizedBox(height: 14),
-        FilledButton.tonalIcon(
+        FittinBtn(
+          fittinTheme,
+          strings.isChinese ? '打开换算器' : 'Open Converter',
+          icon: Icons.calculate_rounded,
           onPressed: () {
             showModalBottomSheet<void>(
               context: context,
@@ -305,8 +307,6 @@ class _WeightToolsSettingsCardState
               builder: (_) => const WeightToolsSheet(),
             );
           },
-          icon: const Icon(Icons.calculate_rounded),
-          label: Text(strings.isChinese ? '打开换算器' : 'Open Converter'),
         ),
       ],
     );
@@ -315,18 +315,19 @@ class _WeightToolsSettingsCardState
 
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
+    required this.theme,
     required this.label,
     required this.value,
     this.dimmed = false,
   });
 
+  final FittinTheme theme;
   final String label;
   final String value;
   final bool dimmed;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -340,17 +341,16 @@ class _ResultCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.56),
+            style: theme.uiStyle(12, theme.fgMuted).copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.uiStyle(16, theme.fg).copyWith(
               fontWeight: FontWeight.w800,
-              color: Colors.white.withValues(alpha: dimmed ? 0.72 : 0.94),
+              color: theme.fg.withValues(alpha: dimmed ? 0.72 : 0.94),
             ),
           ),
         ],

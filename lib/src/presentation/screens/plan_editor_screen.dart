@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/share_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class PlanEditorScreen extends ConsumerStatefulWidget {
   const PlanEditorScreen({super.key, this.templateId});
@@ -44,6 +47,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     final state = ref.watch(templateEditorProvider);
     final notifier = ref.read(templateEditorProvider.notifier);
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final draft = state.draft;
 
     if (state.isLoading || draft == null) {
@@ -67,27 +71,47 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     return DashboardPageScaffold(
       bottomPadding: 140,
       children: [
-        DashboardScreenHeader(
-          eyebrow: strings.templateEditor,
-          title: draft.name,
-          showBackButton: true,
-          subtitle: draft.isPeriodized
+        Row(
+          children: [
+            FittinBtn(
+              fittinTheme,
+              'Back',
+              variant: 'ghost',
+              size: 'sm',
+              icon: Icons.chevron_left_rounded,
+              onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            const Spacer(),
+            _HeaderActions(
+              theme: fittinTheme,
+              strings: strings,
+              isSaving: state.isSaving,
+              onShare: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ShareScreen(planTemplate: draft)),
+                );
+              },
+              onSave: () async => notifier.saveTemplate(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        FittinEyebrow(fittinTheme, strings.templateEditor),
+        const SizedBox(height: 10),
+        Text(
+          draft.name,
+          style: fittinTheme.displayStyle(28, fittinTheme.fg).copyWith(height: 1.15),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          draft.isPeriodized
               ? (strings.isChinese
-                    ? '按周/天槽位精细修改周期计划，不再一次看完整个周期。'
-                    : 'Edit periodized plans by week/day slot instead of scrolling the whole cycle.')
+                    ? '按周/天槽位编辑周期计划。'
+                    : 'Edit periodized plans by week/day slot.')
               : (strings.isChinese
                     ? '线性计划按可复用训练日整体编辑。'
                     : 'Linear plans are edited as reusable workout structures.'),
-          trailing: _HeaderActions(
-            strings: strings,
-            isSaving: state.isSaving,
-            onShare: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => ShareScreen(planTemplate: draft)),
-              );
-            },
-            onSave: () async => notifier.saveTemplate(),
-          ),
+          style: fittinTheme.uiStyle(13, fittinTheme.fgDim).copyWith(height: 1.45),
         ),
         const SizedBox(height: 20),
         if (state.sourceTemplate != null)
@@ -126,6 +150,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         const SizedBox(height: 16),
         if (isPeriodized) ...[
           _PeriodizedSlotCard(
+            theme: fittinTheme,
             strings: strings,
             workouts: workouts,
             selectedWorkoutIndex: _selectedWorkoutIndex,
@@ -168,10 +193,13 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: FittinBtn(
+              fittinTheme,
+              strings.addWorkout,
+              variant: 'secondary',
+              size: 'sm',
+              icon: Icons.add_rounded,
               onPressed: notifier.addWorkout,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(strings.addWorkout),
             ),
           ),
         ],
@@ -215,12 +243,14 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
 
 class _HeaderActions extends StatelessWidget {
   const _HeaderActions({
+    required this.theme,
     required this.strings,
     required this.isSaving,
     required this.onShare,
     required this.onSave,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final bool isSaving;
   final VoidCallback onShare;
@@ -231,21 +261,21 @@ class _HeaderActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
+        FittinBtn(
+          theme,
+          strings.share,
+          variant: 'secondary',
+          size: 'sm',
+          icon: Icons.qr_code_2_rounded,
           onPressed: onShare,
-          icon: const Icon(Icons.qr_code_2_rounded),
-          tooltip: strings.share,
         ),
-        TextButton.icon(
+        const SizedBox(width: 8),
+        FittinBtn(
+          theme,
+          isSaving ? strings.isChinese ? '保存中' : 'Saving' : strings.save,
+          size: 'sm',
+          icon: isSaving ? null : Icons.save_outlined,
           onPressed: isSaving ? null : () => onSave(),
-          icon: isSaving
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.save_outlined),
-          label: Text(strings.save),
         ),
       ],
     );
@@ -266,7 +296,7 @@ class _TemplateMetaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _EditorCard(
-      title: strings.templateEditor,
+      title: strings.isChinese ? '模板' : 'Template',
       child: Column(
         children: [
           _DraftTextField(
@@ -302,9 +332,12 @@ class _ModeSelectorCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return _EditorCard(
       title: strings.scheduleMode,
-      child: Row(
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
         children: [
-          Expanded(
+          SizedBox(
+            width: 220,
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.linear,
               title: strings.linearPlan,
@@ -312,8 +345,8 @@ class _ModeSelectorCard extends StatelessWidget {
               onTap: () => notifier.updateScheduleMode(PlanScheduleModes.linear),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          SizedBox(
+            width: 220,
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.periodized,
               title: strings.periodizedPlan,
@@ -330,6 +363,7 @@ class _ModeSelectorCard extends StatelessWidget {
 
 class _PeriodizedSlotCard extends StatelessWidget {
   const _PeriodizedSlotCard({
+    required this.theme,
     required this.strings,
     required this.workouts,
     required this.selectedWorkoutIndex,
@@ -338,6 +372,7 @@ class _PeriodizedSlotCard extends StatelessWidget {
     required this.onWeekSelected,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final List<Workout> workouts;
   final int selectedWorkoutIndex;
@@ -367,6 +402,7 @@ class _PeriodizedSlotCard extends StatelessWidget {
             children: [
               for (var i = 0; i < workouts.length; i++)
                 _SlotChip(
+                  theme: theme,
                   label: 'D${i + 1}',
                   selected: i == selectedWorkoutIndex,
                   onTap: () => onWorkoutSelected(i),
@@ -380,6 +416,7 @@ class _PeriodizedSlotCard extends StatelessWidget {
             children: [
               for (var i = 0; i < weekCount; i++)
                 _SlotChip(
+                  theme: theme,
                   label: 'W${i + 1}',
                   selected: i == selectedWeekIndex,
                   onTap: () => onWeekSelected(i),
@@ -450,9 +487,12 @@ class _WorkoutEditorCard extends StatelessWidget {
               onChanged: (value) => notifier.updateWorkoutName(workoutIndex, value),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                Expanded(
+                SizedBox(
+                  width: 160,
                   child: _DraftTextField(
                     label: strings.dayLabel,
                     value: workout.dayLabel,
@@ -460,8 +500,8 @@ class _WorkoutEditorCard extends StatelessWidget {
                         notifier.updateWorkoutDayLabel(workoutIndex, value),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                SizedBox(
+                  width: 120,
                   child: _DraftIntField(
                     label: strings.minutes,
                     value: workout.estimatedDurationMinutes,
@@ -488,10 +528,13 @@ class _WorkoutEditorCard extends StatelessWidget {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: FittinBtn(
+              refTheme(context),
+              strings.addExercise,
+              variant: 'secondary',
+              size: 'sm',
+              icon: Icons.add_rounded,
               onPressed: () => notifier.addExercise(workoutIndex),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(strings.addExercise),
             ),
           ),
         ],
@@ -581,9 +624,12 @@ class _ExerciseEditorCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              Expanded(
+              SizedBox(
+                width: 120,
                 child: DropdownButtonFormField<String>(
                   initialValue: tierOptions.contains(exercise.tier)
                       ? exercise.tier
@@ -600,8 +646,8 @@ class _ExerciseEditorCard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: 120,
                 child: _DraftIntField(
                   label: strings.restSeconds,
                   value: exercise.restSeconds,
@@ -612,9 +658,12 @@ class _ExerciseEditorCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              Expanded(
+              SizedBox(
+                width: 140,
                 child: _DraftDoubleField(
                   label: strings.startWeight,
                   value: exercise.initialBaseWeight,
@@ -622,8 +671,8 @@ class _ExerciseEditorCard extends StatelessWidget {
                       notifier.updateExerciseBaseWeight(workoutIndex, exerciseIndex, value),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: 160,
                 child: DropdownButtonFormField<String>(
                   initialValue: exercise.loadUnit,
                   decoration: InputDecoration(labelText: strings.loadUnit),
@@ -653,9 +702,12 @@ class _ExerciseEditorCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              Expanded(
+              SizedBox(
+                width: 160,
                 child: DropdownButtonFormField<String>(
                   initialValue: exercise.equipmentType,
                   decoration: InputDecoration(
@@ -698,8 +750,8 @@ class _ExerciseEditorCard extends StatelessWidget {
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: 180,
                 child: DropdownButtonFormField<String?>(
                   initialValue: exercise.trainingMaxLift,
                   decoration: InputDecoration(
@@ -763,10 +815,13 @@ class _ExerciseEditorCard extends StatelessWidget {
           if (visibleStageIndex == null)
             Align(
               alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
+              child: FittinBtn(
+                refTheme(context),
+                strings.addStage,
+                variant: 'secondary',
+                size: 'sm',
+                icon: Icons.add_rounded,
                 onPressed: () => notifier.addStage(workoutIndex, exerciseIndex),
-                icon: const Icon(Icons.add_rounded),
-                label: Text(strings.addStage),
               ),
             ),
         ],
@@ -861,10 +916,13 @@ class _StageEditorCard extends StatelessWidget {
             ),
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: FittinBtn(
+              refTheme(context),
+              strings.addSet,
+              variant: 'secondary',
+              size: 'sm',
+              icon: Icons.add_rounded,
               onPressed: () => notifier.addSet(workoutIndex, exerciseIndex, stageIndex),
-              icon: const Icon(Icons.add_rounded),
-              label: Text(strings.addSet),
             ),
           ),
           if (showRules) ...[
@@ -1039,9 +1097,12 @@ class _SetEditorRow extends StatelessWidget {
             },
           ),
           const SizedBox(height: 10),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              Expanded(
+              SizedBox(
+                width: 100,
                 child: _DraftIntField(
                   label: strings.reps,
                   value: setDefinition.targetReps,
@@ -1054,8 +1115,8 @@ class _SetEditorRow extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
+              SizedBox(
+                width: 120,
                 child: _DraftDoubleField(
                   label: strings.intensity,
                   value: setDefinition.intensity,
@@ -1276,6 +1337,7 @@ class _EditorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = refTheme(context);
     return DashboardSurfaceCard(
       radius: 32,
       padding: const EdgeInsets.all(20),
@@ -1285,11 +1347,18 @@ class _EditorCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittinEyebrow(theme, title),
+                    const SizedBox(height: 6),
+                    Text(
+                      title,
+                      style: theme.uiStyle(18, theme.fg).copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (actions != null) ...actions!,
@@ -1318,7 +1387,7 @@ class _ModeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = refTheme(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(24),
@@ -1328,35 +1397,26 @@ class _ModeTile extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
           color: selected
-              ? theme.colorScheme.primary.withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.04),
+              ? theme.accentDim
+              : theme.surfaceHi,
           border: Border.all(
             color: selected
-                ? theme.colorScheme.primary.withValues(alpha: 0.8)
-                : Colors.white.withValues(alpha: 0.08),
+                ? theme.accent.withValues(alpha: 0.8)
+                : theme.border,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.18),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
-              : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.uiStyle(15, theme.fg).copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.66),
+              style: theme.uiStyle(12, theme.fgDim).copyWith(
+                height: 1.4,
               ),
             ),
           ],
@@ -1371,38 +1431,29 @@ class _SlotChip extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    required this.theme,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final dynamic theme; // FittinTheme
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
+          color: selected ? theme.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(18),
-          color: selected
-              ? theme.colorScheme.primary.withValues(alpha: 0.16)
-              : Colors.white.withValues(alpha: 0.05),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary.withValues(alpha: 0.85)
-                : Colors.white.withValues(alpha: 0.08),
-          ),
+          border: selected ? null : Border.all(color: theme.border, width: 0.5),
         ),
         child: Text(
           label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: selected ? theme.colorScheme.primary : Colors.white,
-          ),
+          style: theme.uiStyle(13, selected ? theme.accentInk : theme.fgDim)
+              ?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -1429,7 +1480,7 @@ class _DraftTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       maxLines: maxLines,
-      decoration: InputDecoration(labelText: label),
+      decoration: _inputDecoration(context, label),
       onChanged: onChanged,
     );
   }
@@ -1453,7 +1504,7 @@ class _DraftIntField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
-      decoration: InputDecoration(labelText: label),
+      decoration: _inputDecoration(context, label),
       onChanged: (value) => onChanged(int.tryParse(value) ?? 0),
     );
   }
@@ -1477,10 +1528,34 @@ class _DraftDoubleField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label),
+      decoration: _inputDecoration(context, label),
       onChanged: (value) => onChanged(double.tryParse(value) ?? 0),
     );
   }
+}
+
+FittinTheme refTheme(BuildContext context) =>
+    ProviderScope.containerOf(context).read(resolvedFittinThemeProvider);
+
+InputDecoration _inputDecoration(BuildContext context, String label) {
+  final theme = refTheme(context);
+  return InputDecoration(
+    labelText: label,
+    filled: true,
+    fillColor: theme.surfaceHi,
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: BorderSide(color: theme.border, width: 0.5),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: BorderSide(color: theme.border, width: 0.5),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(18),
+      borderSide: BorderSide(color: theme.accent.withValues(alpha: 0.8)),
+    ),
+  );
 }
 
 class _InfoBanner extends StatelessWidget {

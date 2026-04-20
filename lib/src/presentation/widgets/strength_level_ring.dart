@@ -78,48 +78,27 @@ class _StrengthRingPainter extends CustomPainter {
       ..color = baseColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.butt;
 
     canvas.drawCircle(center, radius, trackPaint);
 
     if (percentage <= 0.0) return;
 
-    // The gradient and arc drawing
-    final startAngle = -pi / 2; // start from 12 o'clock
-    final sweepAngle = 2 * pi * percentage;
-
-    // Generate neon glow effect by drawing a blurred shadow arc first
-    final glowPaint = Paint()
-      ..color = activeColor.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth * 2
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8.0);
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      startAngle,
-      sweepAngle,
-      false,
-      glowPaint,
-    );
-
-    // Set up a sweep gradient for the active arc
+    // Clean arc — no glow, thin accent stroke
     final rect = Rect.fromCircle(center: center, radius: radius);
-    final gradient = SweepGradient(
-      startAngle: startAngle,
-      endAngle: startAngle + sweepAngle,
-      colors: [activeColor.withOpacity(0.5), activeColor],
-      tileMode: TileMode.clamp,
-    );
-
     final activePaint = Paint()
-      ..shader = gradient.createShader(rect)
+      ..color = activeColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.butt;
 
-    canvas.drawArc(rect, startAngle, sweepAngle, false, activePaint);
+    canvas.drawArc(
+      rect,
+      -pi / 2,
+      2 * pi * percentage,
+      false,
+      activePaint,
+    );
   }
 
   @override

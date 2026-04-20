@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class ProfileSettingsScreen extends ConsumerWidget {
   const ProfileSettingsScreen({super.key});
@@ -16,6 +19,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final locale = ref.watch(appLocaleProvider);
     final notifier = ref.read(appLocaleProvider.notifier);
     final authUser = ref.watch(authStateProvider).valueOrNull;
@@ -32,24 +36,21 @@ class ProfileSettingsScreen extends ConsumerWidget {
         DashboardSurfaceCard(
           highlight: true,
           radius: 32,
+          padding: EdgeInsets.all(fittinTheme.pad),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 strings.profile,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: fittinTheme.uiStyle(22, fittinTheme.fg).copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(
                 strings.isChinese
                     ? '统一管理语言与后续个人偏好设置。'
                     : 'Manage language and future profile preferences in one place.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.66),
+                style: fittinTheme.uiStyle(14, fittinTheme.fgDim).copyWith(
+                  height: 1.45,
                 ),
               ),
             ],
@@ -60,6 +61,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
         const SizedBox(height: 14),
         DashboardSurfaceCard(
           radius: 32,
+          padding: EdgeInsets.all(fittinTheme.pad),
           child: Row(
             children: [
               Expanded(
@@ -68,38 +70,33 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   children: [
                     Text(
                       strings.account,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       authUser?.email ?? strings.signedOut,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       strings.accountSubtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                      style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
-              FilledButton.tonal(
-                key: const ValueKey('open-account-screen'),
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AccountScreen()),
-                  );
-                },
-                child: Text(strings.manageAccount),
+              FittinBtn(
+                fittinTheme,
+                strings.manageAccount,
+                size: 'sm',
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AccountScreen()),
+                ),
               ),
             ],
           ),
@@ -123,32 +120,25 @@ class ProfileSettingsScreen extends ConsumerWidget {
                         children: [
                           Text(
                             strings.profilePreferences,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                            style: fittinTheme.uiStyle(14, fittinTheme.fg)
+                                .copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             strings.profilePreferencesSubtitle,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.72),
-                                ),
+                            style: fittinTheme.uiStyle(12, fittinTheme.fgDim),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
-                    FilledButton.tonal(
-                      key: const ValueKey('open-profile-preferences'),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProfilePreferencesScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(strings.edit),
+                    FittinBtn(
+                      fittinTheme,
+                      strings.edit,
+                      size: 'sm',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const ProfilePreferencesScreen()),
+                      ),
                     ),
                   ],
                 ),
@@ -156,21 +146,16 @@ class ProfileSettingsScreen extends ConsumerWidget {
               const SizedBox(height: 20),
               Text(
                 strings.language,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 strings.languageSubtitle,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
+                style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
               ),
               const SizedBox(height: 18),
               _LocaleTile(
+                theme: fittinTheme,
                 key: const ValueKey('locale-en'),
                 title: strings.english,
                 subtitle: 'English',
@@ -179,6 +164,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               _LocaleTile(
+                theme: fittinTheme,
                 key: const ValueKey('locale-zh'),
                 title: strings.chinese,
                 subtitle: 'Chinese',
@@ -197,32 +183,25 @@ class ProfileSettingsScreen extends ConsumerWidget {
                         children: [
                           Text(
                             strings.trainingSetGuide,
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.w700),
+                            style: fittinTheme.uiStyle(14, fittinTheme.fg)
+                                .copyWith(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             strings.trainingSetGuideSubtitle,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface
-                                      .withValues(alpha: 0.72),
-                                ),
+                            style: fittinTheme.uiStyle(12, fittinTheme.fgDim),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(width: 12),
-                    FilledButton.tonal(
-                      key: const ValueKey('open-set-type-guide'),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const SetTypeGuideScreen(),
-                          ),
-                        );
-                      },
-                      child: Text(strings.openGuide),
+                    FittinBtn(
+                      fittinTheme,
+                      strings.openGuide,
+                      size: 'sm',
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SetTypeGuideScreen()),
+                      ),
                     ),
                   ],
                 ),
@@ -239,25 +218,20 @@ class ProfileSettingsScreen extends ConsumerWidget {
         const SizedBox(height: 14),
         DashboardSurfaceCard(
           radius: 32,
+          padding: EdgeInsets.all(fittinTheme.pad),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 strings.isChinese ? '磨砂玻璃透明度' : 'Glassmorphism Opacity',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
                 strings.isChinese
                     ? '调节全局界面卡片的透明强度。'
                     : 'Adjust the global transparency intensity for interface cards.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
+                style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
               ),
               const SizedBox(height: 24),
               Consumer(
@@ -270,19 +244,17 @@ class ProfileSettingsScreen extends ConsumerWidget {
                         children: [
                           Text(
                             '0.1',
-                            style: Theme.of(context).textTheme.labelSmall,
+                            style: fittinTheme.uiStyle(11, fittinTheme.fgMuted),
                           ),
                           Text(
                             '${(opacity * 100).toInt()}%',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            style: fittinTheme.uiStyle(14, fittinTheme.accent).copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           Text(
                             '1.0',
-                            style: Theme.of(context).textTheme.labelSmall,
+                            style: fittinTheme.uiStyle(11, fittinTheme.fgMuted),
                           ),
                         ],
                       ),
@@ -320,12 +292,14 @@ class ProfileSettingsScreen extends ConsumerWidget {
 class _LocaleTile extends StatelessWidget {
   const _LocaleTile({
     super.key,
+    required this.theme,
     required this.title,
     required this.subtitle,
     required this.selected,
     required this.onTap,
   });
 
+  final FittinTheme theme;
   final String title;
   final String subtitle;
   final bool selected;
@@ -333,7 +307,6 @@ class _LocaleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
@@ -344,16 +317,16 @@ class _LocaleTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: selected
-                ? theme.colorScheme.primary.withValues(alpha: 0.92)
+                ? theme.accent.withValues(alpha: 0.92)
                 : Colors.white.withValues(alpha: 0.08),
           ),
           color: selected
-              ? theme.colorScheme.primary.withValues(alpha: 0.12)
+              ? theme.accent.withValues(alpha: 0.12)
               : Colors.white.withValues(alpha: 0.04),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.16),
+                    color: theme.accent.withValues(alpha: 0.16),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
@@ -368,16 +341,14 @@ class _LocaleTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.textTheme.titleSmall?.copyWith(
+                    style: theme.uiStyle(14, theme.fg).copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                    style: theme.uiStyle(12, theme.fgDim),
                   ),
                 ],
               ),
@@ -385,8 +356,8 @@ class _LocaleTile extends StatelessWidget {
             Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: selected
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurface.withValues(alpha: 0.45),
+                  ? theme.accent
+                  : theme.fgMuted,
             ),
           ],
         ),

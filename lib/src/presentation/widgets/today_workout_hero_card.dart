@@ -9,12 +9,17 @@ import '../localization/app_strings.dart';
 import '../localization/plan_text.dart';
 import '../screens/active_session_screen.dart';
 import '../screens/share_screen.dart';
+import 'fittin_card.dart';
+import 'fittin_primitives.dart';
+import '../theme/fittin_theme.dart' show FittinTheme, FittinCardStyle;
+import '../../application/fittin_theme_provider.dart';
 
 class TodayWorkoutHeroCard extends ConsumerWidget {
   const TodayWorkoutHeroCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(resolvedFittinThemeProvider);
     final sessionState = ref.watch(activeSessionProvider);
     final summaryAsync = ref.watch(todayWorkoutSummaryProvider);
     final templateAsync = ref.watch(activeTemplateProvider);
@@ -22,15 +27,15 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
 
     return summaryAsync.when(
       data: (summary) => templateAsync.when(
-        data: (template) => GestureDetector(
+        data: (template) => _FittinWorkoutCard(
+          theme: theme,
+          strings: strings,
+          summary: _localizedSummary(summary, template, ref),
+          isResuming: sessionState.activeWorkout != null,
+          isLoading: sessionState.isLoading,
           onTap: () async {
-            await ref
-                .read(activeSessionProvider.notifier)
-                .startOrResumeSession();
-            if (!context.mounted) {
-              return;
-            }
-
+            await ref.read(activeSessionProvider.notifier).startOrResumeSession();
+            if (!context.mounted) return;
             final latestState = ref.read(activeSessionProvider);
             if (latestState.errorMessage != null) {
               ScaffoldMessenger.of(context).showSnackBar(
@@ -38,7 +43,6 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
               );
               return;
             }
-
             Navigator.of(context).push(
               PageRouteBuilder(
                 transitionDuration: const Duration(milliseconds: 450),
@@ -46,58 +50,45 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
                     const ActiveSessionScreen(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                      final slideAnimation =
-                          Tween<Offset>(
-                            begin: const Offset(0.15, 0.0),
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutQuart,
-                            ),
-                          );
-
-                      return SlideTransition(
-                        position: slideAnimation,
-                        child: FadeTransition(opacity: animation, child: child),
+                  final slideAnimation =
+                      Tween<Offset>(
+                        begin: const Offset(0.15, 0.0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutQuart,
+                        ),
                       );
-                    },
+                  return SlideTransition(
+                    position: slideAnimation,
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
               ),
             );
           },
-          child: _WorkoutCard(
-            summary: _localizedSummary(summary, template, ref),
-            strings: strings,
-            isResuming: sessionState.activeWorkout != null,
-            isLoading: sessionState.isLoading,
-            onShareTap: () async {
-              try {
-                final template = await ref.read(activeTemplateProvider.future);
-                if (!context.mounted) {
-                  return;
-                }
-
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ShareScreen(planTemplate: template),
-                  ),
-                );
-              } catch (error) {
-                if (!context.mounted) {
-                  return;
-                }
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(error.toString())));
-              }
-            },
-          ),
+          onShareTap: () async {
+            try {
+              final template = await ref.read(activeTemplateProvider.future);
+              if (!context.mounted) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ShareScreen(planTemplate: template),
+                ),
+              );
+            } catch (error) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context)
+                  .showSnackBar(SnackBar(content: Text(error.toString())));
+            }
+          },
         ),
-        loading: () => const _LoadingCard(),
-        error: (error, _) => _ErrorCard(message: error.toString()),
+        loading: () => _LoadingCard(theme: theme),
+        error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
       ),
-      loading: () => const _LoadingCard(),
-      error: (error, _) => _ErrorCard(message: error.toString()),
+      loading: () => _LoadingCard(theme: theme),
+      error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
     );
   }
 }
@@ -117,289 +108,261 @@ TodayWorkoutSummary _localizedSummary(
   );
 }
 
-class _WorkoutCard extends StatelessWidget {
-  const _WorkoutCard({
-    required this.summary,
+/// Redesigned workout card in Fittin style
+class _FittinWorkoutCard extends StatelessWidget {
+  const _FittinWorkoutCard({
+    required this.theme,
     required this.strings,
+    required this.summary,
     required this.isResuming,
     required this.isLoading,
+    required this.onTap,
     required this.onShareTap,
   });
 
-  final TodayWorkoutSummary summary;
+  final FittinTheme theme;
   final AppStrings strings;
+  final TodayWorkoutSummary summary;
   final bool isResuming;
   final bool isLoading;
+  final VoidCallback onTap;
   final Future<void> Function() onShareTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final progressLabel = strings.exercisesCount(summary.exerciseCount);
+    final statusLabel = strings.isChinese ? 'In progress' : 'In progress';
+    final upNextLabel = strings.isChinese ? 'Up next' : 'Up next';
+    final weekDayLabel =
+        'W${summary.currentWeekNumber} D${summary.currentDayNumber}';
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primary.withOpacity(0.24),
-            theme.colorScheme.primaryContainer.withOpacity(0.4),
-          ],
-        ),
-        border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.16),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: theme.colorScheme.primary.withOpacity(0.12),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  strings.todayWorkout,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: onShareTap,
-                  icon: const Icon(Icons.qr_code_2_rounded),
-                  color: Colors.white.withValues(alpha: 0.82),
-                  tooltip: strings.sharePlan,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              summary.primaryExerciseName,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                height: 1.05,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              summary.workoutName,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white.withOpacity(0.82),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              strings.compactWeekDayLabel(
-                summary.currentWeekNumber,
-                summary.currentDayNumber,
-              ),
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withOpacity(0.72),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              strings.exercisesLabel(summary.exerciseCount),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withOpacity(0.58),
-              ),
-            ),
-            const SizedBox(height: 24),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final action = isLoading
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            isResuming ? strings.resume : strings.start,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: Colors.white.withOpacity(0.75),
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            color: Colors.white.withOpacity(0.6),
-                            size: 16,
-                          ),
-                        ],
-                      );
-
-                final pills = <Widget>[
-                  Expanded(
-                    child: _InfoPill(
-                      icon: Icons.event_repeat_rounded,
-                      label: strings.rotation,
-                      value: strings.weekDayProgressLabel(
-                        summary.currentWeekNumber,
-                        summary.cycleWeekCount,
-                        summary.currentDayNumber,
-                        summary.workoutsPerWeek,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _InfoPill(
-                      icon: Icons.fitness_center_rounded,
-                      label: strings.leadLift,
-                      value: summary.primaryExerciseName,
-                    ),
-                  ),
-                ];
-
-                if (constraints.maxWidth < 320) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: pills,
-                      ),
-                      const SizedBox(height: 16),
-                      Align(alignment: Alignment.centerRight, child: action),
-                    ],
-                  );
-                }
-
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.glass,
+      padding: theme.pad,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: eyebrow + in-progress dot
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              FittinEyebrow(theme, 'Next session'),
+              if (isResuming)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    ...pills,
-                    const SizedBox(width: 12),
-                    Flexible(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: action,
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: theme.accent,
+                        shape: BoxShape.circle,
                       ),
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      statusLabel,
+                      style: theme.uiStyle(11, theme.fgMuted),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Session title
+          FittinSectionTitle(
+            theme,
+            summary.workoutName,
+            fontSize: 30,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'TSA Intermediate Approach 2.0 · $weekDayLabel',
+            style: theme.uiStyle(13, theme.fgDim),
+          ),
+          const SizedBox(height: 20),
+
+          // Progress strip — 2px, not glowing
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: theme.fgFaint,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: 0.6,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.accent,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Text(
+                  progressLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.uiStyle(12, theme.fgDim).copyWith(
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Up next + Resume
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittinEyebrow(
+                    theme,
+                    upNextLabel,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    summary.primaryExerciseName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.uiStyle(15, theme.fg, FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Week ${summary.currentWeekNumber} · 3×6+ @ 0.6',
+                    style: theme.uiStyle(13, theme.fgDim),
+                  ),
+                ],
+              );
+              final button = _ResumeButton(
+                theme: theme,
+                isLoading: isLoading,
+                isResuming: isResuming,
+                strings: strings,
+              );
+
+              if (constraints.maxWidth < 420) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    details,
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: button,
                     ),
                   ],
                 );
-              },
-            ),
-          ],
-        ),
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: details),
+                  const SizedBox(width: 16),
+                  button,
+                ],
+              );
+            },
+          ),
+        ],
       ),
+    );
+  }
+}
+
+class _ResumeButton extends StatelessWidget {
+  const _ResumeButton({
+    required this.theme,
+    required this.isLoading,
+    required this.isResuming,
+    required this.strings,
+  });
+
+  final FittinTheme theme;
+  final bool isLoading;
+  final bool isResuming;
+  final AppStrings strings;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: theme.accent,
+        ),
+      );
+    }
+    return FittinBtn(
+      theme,
+      isResuming ? strings.resume : strings.start,
+      size: 'sm',
+      icon: Icons.play_arrow_rounded,
+      onPressed: null, // tap handled by parent card
     );
   }
 }
 
 class _LoadingCard extends StatelessWidget {
-  const _LoadingCard();
+  const _LoadingCard({required this.theme});
+
+  final FittinTheme theme;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.glass,
+      child: SizedBox(
+        height: 220,
+        child: Center(
+          child: CircularProgressIndicator(strokeWidth: 2, color: theme.fgDim),
+        ),
       ),
-      child: const Center(child: CircularProgressIndicator()),
     );
   }
 }
 
 class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.message});
+  const _ErrorCard({required this.theme, required this.message});
 
+  final FittinTheme theme;
   final String message;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        color: theme.colorScheme.errorContainer.withOpacity(0.72),
-      ),
+    return FittinCard(
+      theme: theme,
+      style: FittinCardStyle.flat,
+      padding: 24,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Unable to load workout',
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.uiStyle(16, theme.fg).copyWith(
               fontWeight: FontWeight.w700,
-              color: theme.colorScheme.onErrorContainer,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            message,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onErrorContainer.withOpacity(0.8),
-            ),
-          ),
+          Text(message, style: theme.uiStyle(14, theme.fgDim)),
         ],
       ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.white.withOpacity(0.55),
-          ),
-        ),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 4),
-            Expanded(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white.withOpacity(0.92),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }

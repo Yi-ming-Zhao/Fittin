@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
  
 class ChartContainer extends StatelessWidget {
@@ -17,39 +19,34 @@ class ChartContainer extends StatelessWidget {
  
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
- 
-    return DashboardSurfaceCard(
-      padding: const EdgeInsets.all(20),
-      radius: 24,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (title != null) ...[
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title!.toUpperCase(),
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurface.withValues(alpha: 0.6),
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w700,
-                  ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final theme = ref.watch(resolvedFittinThemeProvider);
+        return DashboardSurfaceCard(
+          padding: EdgeInsets.all(theme.pad),
+          radius: 24,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (title != null) ...[
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DashboardSectionLabel(label: title!),
+                    if (headerAction != null) ...[
+                      const SizedBox(height: 12),
+                      headerAction!,
+                    ],
+                  ],
                 ),
-                if (headerAction != null) ...[
-                  const SizedBox(height: 12),
-                  headerAction!,
-                ],
+                const SizedBox(height: 18),
               ],
-            ),
-            const SizedBox(height: 20),
-          ],
-          SizedBox(height: height, width: double.infinity, child: child),
-        ],
-      ),
+              SizedBox(height: height, width: double.infinity, child: child),
+            ],
+          ),
+        );
+      },
     );
   }
 }

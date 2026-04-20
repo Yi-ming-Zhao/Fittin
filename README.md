@@ -129,7 +129,7 @@ supabase status
 - 本地数据库连接串
 - Publishable key / Secret key
 
-当前项目在 Debug 模式下已经支持自动回退连接本地 Supabase 开发环境；如果你显式传入 `SUPABASE_URL` / `SUPABASE_ANON_KEY`，则优先使用你提供的配置。
+当前项目会优先使用显式传入的 `SUPABASE_URL` / `SUPABASE_ANON_KEY`；如果未提供，则仅会在本地 Supabase 开发环境实际可达时自动回退连接。Android APK 构建不再尝试自动连接仓库本机的 `127.0.0.1` Supabase；请为 APK 显式传入这两个 `dart-define`。
 
 ### 4. 运行应用
 

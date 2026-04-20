@@ -2,7 +2,9 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class DashboardPageScaffold extends StatelessWidget {
   const DashboardPageScaffold({
@@ -20,55 +22,60 @@ class DashboardPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: floatingActionButton,
-      extendBody: extendBody,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF050608),
-              Color.lerp(
-                const Color(0xFF050608),
-                theme.colorScheme.surface,
-                0.2,
-              )!,
-              const Color(0xFF020304),
-            ],
+    return Consumer(
+      builder: (context, ref, _) {
+        final fittinTheme = ref.watch(resolvedFittinThemeProvider);
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          floatingActionButton: floatingActionButton,
+          extendBody: extendBody,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  fittinTheme.bgDeep,
+                  fittinTheme.bg,
+                  Color.lerp(fittinTheme.bg, Colors.black, 0.25)!,
+                ],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Positioned(
+                  top: -140,
+                  right: -30,
+                  child: _AmbientGlow(
+                    size: 260,
+                    color: fittinTheme.accent.withValues(alpha: 0.08),
+                  ),
+                ),
+                Positioned(
+                  top: 220,
+                  left: -100,
+                  child: _AmbientGlow(
+                    size: 220,
+                    color: Colors.white.withValues(alpha: 0.025),
+                  ),
+                ),
+                SafeArea(
+                  bottom: false,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      fittinTheme.pad,
+                      16,
+                      fittinTheme.pad,
+                      bottomPadding,
+                    ),
+                    children: children,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            Positioned(
-              top: -120,
-              right: -40,
-              child: _AmbientGlow(
-                size: 260,
-                color: theme.colorScheme.primary.withValues(alpha: 0.14),
-              ),
-            ),
-            Positioned(
-              top: 180,
-              left: -80,
-              child: _AmbientGlow(
-                size: 220,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-            SafeArea(
-              bottom: false,
-              child: ListView(
-                padding: EdgeInsets.fromLTRB(24, 16, 24, bottomPadding),
-                children: children,
-              ),
-            ),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -91,53 +98,52 @@ class DashboardScreenHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showBackButton) ...[
-          IconButton.filledTonal(
-            key: const ValueKey('dashboard-header-back'),
-            onPressed: () => Navigator.of(context).maybePop(),
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.arrow_back_rounded),
-          ),
-          const SizedBox(width: 16),
-        ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DashboardSectionLabel(label: eyebrow),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1.4,
+    return Consumer(
+      builder: (context, ref, _) {
+        final theme = ref.watch(resolvedFittinThemeProvider);
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showBackButton) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: theme.surfaceHi,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: theme.border, width: 0.5),
+                ),
+                child: IconButton(
+                  key: const ValueKey('dashboard-header-back'),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  icon: Icon(Icons.arrow_back_rounded, color: theme.fg),
                 ),
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  subtitle!,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.68),
-                    fontWeight: FontWeight.w500,
-                    height: 1.45,
-                  ),
-                ),
-              ],
+              const SizedBox(width: 16),
             ],
-          ),
-        ),
-        if (trailing != null) ...[const SizedBox(width: 16), trailing!],
-      ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittinEyebrow(theme, eyebrow),
+                  const SizedBox(height: 10),
+                  Text(
+                    title,
+                    style: theme.displayStyle(32, theme.fg).copyWith(height: 0.98),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      subtitle!,
+                      style: theme.uiStyle(15, theme.fgDim).copyWith(height: 1.45),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+          ],
+        );
+      },
     );
   }
 }
@@ -149,14 +155,11 @@ class DashboardSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      label.toUpperCase(),
-      style: theme.textTheme.labelSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.8,
-        color: Colors.white.withValues(alpha: 0.44),
-      ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final theme = ref.watch(resolvedFittinThemeProvider);
+        return FittinEyebrow(theme, label);
+      },
     );
   }
 }
@@ -179,56 +182,37 @@ class DashboardSurfaceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final content = Consumer(
-      builder: (context, ref, child) {
+      builder: (context, ref, _) {
+        final theme = ref.watch(resolvedFittinThemeProvider);
         final glassOpacity = ref.watch(uiSettingsProvider);
         return ClipRRect(
           borderRadius: BorderRadius.circular(radius),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius),
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withValues(
-                      alpha: highlight
-                          ? (glassOpacity * 0.47)
-                          : (glassOpacity * 0.3),
-                    ),
-                    Colors.white.withValues(alpha: glassOpacity * 0.12),
-                  ],
+                color: theme.surface.withValues(
+                  alpha: (highlight ? 0.92 : 0.82) * glassOpacity.clamp(0.35, 1.0),
                 ),
                 border: Border.all(
-                  color: Colors.white.withValues(
-                    alpha: highlight
-                        ? (glassOpacity * 0.6)
-                        : (glassOpacity * 0.27),
-                  ),
+                  color: highlight ? theme.borderHi : theme.border,
+                  width: 0.6,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.24),
-                    blurRadius: 28,
-                    offset: const Offset(0, 14),
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 30,
+                    offset: const Offset(0, 16),
                   ),
-                  if (highlight)
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                      blurRadius: 40,
-                      offset: const Offset(0, 0),
-                    ),
                 ],
               ),
-              child: Padding(padding: padding, child: child!),
+              child: Padding(padding: padding, child: child),
             ),
           ),
         );
       },
-      child: child,
     );
 
     if (onTap == null) return content;
@@ -259,48 +243,41 @@ class DashboardStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DashboardSurfaceCard(
-      radius: 24,
-      highlight: highlight,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
+    return Consumer(
+      builder: (context, ref, _) {
+        final theme = ref.watch(resolvedFittinThemeProvider);
+        return DashboardSurfaceCard(
+          radius: 24,
+          highlight: highlight,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittinEyebrow(theme, label),
+              const SizedBox(height: 12),
+              Text(
+                value,
+                style: theme.numStyle(28, theme.fg).copyWith(height: 1),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 18,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: caption != null
+                      ? Text(
+                          caption!,
+                          style: theme.uiStyle(12, theme.fgDim),
+                        )
+                      : (reserveCaptionSpace
+                          ? const SizedBox.shrink()
+                          : const SizedBox.shrink()),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: (theme.textTheme.bodySmall?.fontSize ?? 12) * 1.3,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: caption != null
-                  ? Text(
-                      caption!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.58),
-                      ),
-                    )
-                  : (reserveCaptionSpace
-                        ? const SizedBox.shrink()
-                        : const SizedBox.shrink()),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

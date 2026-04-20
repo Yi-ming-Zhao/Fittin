@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/progress_service.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/line_chart_painter.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class ExerciseDeepDiveScreen extends ConsumerWidget {
   const ExerciseDeepDiveScreen({super.key, required this.summary});
@@ -13,170 +16,143 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final progressService = ref.watch(progressServiceProvider);
     final strings = AppStrings.of(context, ref);
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: CustomScrollView(
-        slivers: [
-          _buildHeroAppBar(context, theme, strings),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 24),
-                  // Quick stats row
-                  _buildQuickStats(theme, strings),
-                  const SizedBox(height: 24),
-                  _buildTrendChart(context, progressService, strings),
-                  const SizedBox(height: 32),
-                  DashboardSectionLabel(label: strings.sessionHistory),
-                  const SizedBox(height: 16),
-                  _buildHistoryList(context, strings),
-                  const SizedBox(height: 40),
-                ],
+      body: DashboardPageScaffold(
+        children: [
+          Row(
+            children: [
+              FittinBtn(
+                fittinTheme,
+                'Progress',
+                variant: 'ghost',
+                size: 'sm',
+                icon: Icons.chevron_left_rounded,
+                onPressed: () => Navigator.of(context).pop(),
               ),
-            ),
+            ],
           ),
+          const SizedBox(height: 18),
+          FittinEyebrow(fittinTheme, strings.exerciseDetails),
+          const SizedBox(height: 10),
+          Text(
+            summary.exerciseName,
+            style: fittinTheme.displayStyle(40, fittinTheme.fg),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FittinBigNum(
+                fittinTheme,
+                summary.currentEstimatedOneRepMax?.toStringAsFixed(1) ?? '—',
+                size: 26,
+              ),
+              const SizedBox(width: 8),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  strings.isChinese ? 'kg · 预估 1RM' : 'kg · estimated 1RM',
+                  style: fittinTheme.uiStyle(13, fittinTheme.fgDim),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          _buildQuickStats(fittinTheme, strings),
+          const SizedBox(height: 24),
+          _buildTrendChart(context, fittinTheme, progressService, strings),
+          const SizedBox(height: 32),
+          DashboardSectionLabel(label: strings.sessionHistory),
+          const SizedBox(height: 16),
+          _buildHistoryList(context, strings, fittinTheme),
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  // Task 4.3: ExerciseHeroHeader with high-contrast gradient
-  Widget _buildHeroAppBar(
-    BuildContext context,
-    ThemeData theme,
-    AppStrings strings,
-  ) {
-    return SliverAppBar(
-      expandedHeight: 260,
-      pinned: true,
-      backgroundColor: Colors.black,
-      leading: IconButton(
-        icon: Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.black.withValues(alpha: 0.4),
-          ),
-          child: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-        ),
-        onPressed: () => Navigator.pop(context),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 20, bottom: 16),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              summary.exerciseName.toUpperCase(),
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
-                fontSize: 16,
-              ),
-            ),
-            if (summary.currentEstimatedOneRepMax != null)
-              Text(
-                strings.e1rmLabel(summary.currentEstimatedOneRepMax!),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-          ],
-        ),
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            // B&W gradient hero background
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primary.withValues(alpha: 0.15),
-                    Colors.black,
-                  ],
-                ),
-              ),
-            ),
-            // Subtle radial glow at top
-            Positioned(
-              top: -60,
-              right: -30,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.12),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Bottom fade
-            const Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black],
-                  ),
-                ),
-                child: SizedBox(height: 120),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickStats(ThemeData theme, AppStrings strings) {
+  Widget _buildQuickStats(FittinTheme theme, AppStrings strings) {
     final current = summary.currentEstimatedOneRepMax;
     final change = summary.recentChange;
 
     return Row(
       children: [
         Expanded(
-          child: DashboardStatCard(
-            label: 'E1RM',
-            value: current?.toStringAsFixed(1) ?? '—',
-            highlight: true,
+          child: DashboardSurfaceCard(
+            radius: 22,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'E1RM',
+                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FittinBigNum(
+                  theme,
+                  current?.toStringAsFixed(1) ?? '—',
+                  size: 32,
+                  color: theme.fg,
+                ),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: DashboardStatCard(
-            label: strings.change30d,
-            value: change != null
-                ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}'
-                : '—',
-            caption: change != null && change > 0 ? strings.gaining : null,
+          child: DashboardSurfaceCard(
+            radius: 22,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.change30d,
+                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (change != null)
+                  FittinDelta(theme, change)
+                else
+                  Text('—', style: theme.uiStyle(24, theme.fgDim)),
+              ],
+            ),
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: DashboardStatCard(
-            label: strings.encounterCount,
-            value: '${summary.estimatedHistory.length}',
-            caption: strings.totalLogged,
+          child: DashboardSurfaceCard(
+            radius: 22,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.encounterCount,
+                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${summary.estimatedHistory.length}',
+                  style: theme.numStyle(32, theme.fg),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -186,6 +162,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
   // Task 4.2: StrengthTrendsOverlayChart showing 1/3/5RM lines
   Widget _buildTrendChart(
     BuildContext context,
+    FittinTheme theme,
     ProgressService service,
     AppStrings strings,
   ) {
@@ -195,30 +172,20 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
         ? summary.estimatedHistory.sublist(summary.estimatedHistory.length - 10)
         : summary.estimatedHistory;
 
-    final e1rmPoints = <Offset>[];
-    final e3rmPoints = <Offset>[];
-    final e5rmPoints = <Offset>[];
+    // Extract e1rm, e3rm, e5rm data series
+    final e1rmData = recent.map((e) => e.value).toList();
+    final e3rmData = recent.map((e) => service.calculateNRM(e.value, 3) ?? 0.0).toList();
+    final e5rmData = recent.map((e) => service.calculateNRM(e.value, 5) ?? 0.0).toList();
 
-    final minVal =
-        recent.map((e) => e.value).reduce((a, b) => a < b ? a : b) * 0.8;
-    final maxVal =
-        recent.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.1;
-    final range = maxVal - minVal;
-
-    for (int i = 0; i < recent.length; i++) {
-      final dx = recent.length > 1 ? i / (recent.length - 1) : 0.5;
-      final e1rm = recent[i].value;
-      final e3rm = service.calculateNRM(e1rm, 3) ?? 0;
-      final e5rm = service.calculateNRM(e1rm, 5) ?? 0;
-
-      final normalizedE1 = range == 0 ? 0.5 : (e1rm - minVal) / range;
-      final normalizedE3 = range == 0 ? 0.5 : (e3rm - minVal) / range;
-      final normalizedE5 = range == 0 ? 0.5 : (e5rm - minVal) / range;
-
-      e1rmPoints.add(Offset(dx, normalizedE1));
-      e3rmPoints.add(Offset(dx, normalizedE3));
-      e5rmPoints.add(Offset(dx, normalizedE5));
-    }
+    // Compute y-axis labels
+    final allValues = [...e1rmData, ...e3rmData, ...e5rmData];
+    final minVal = allValues.reduce((a, b) => a < b ? a : b) * 0.9;
+    final maxVal = allValues.reduce((a, b) => a > b ? a : b) * 1.05;
+    final yLabels = [
+      strings.chartAxisWeight(minVal.toStringAsFixed(0)),
+      strings.chartAxisWeight(((minVal + maxVal) / 2).toStringAsFixed(0)),
+      strings.chartAxisWeight(maxVal.toStringAsFixed(0)),
+    ];
 
     return ChartContainer(
       title: strings.strengthTrendsOverlay,
@@ -226,39 +193,58 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
       headerAction: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _LegendDot(color: Colors.cyanAccent, label: '1RM'),
+          _LegendDot(color: theme.accent, label: '1RM'),
           const SizedBox(width: 10),
-          _LegendDot(color: Colors.purpleAccent, label: '3RM'),
+          _LegendDot(color: theme.fgMuted, label: '3RM'),
           const SizedBox(width: 10),
-          _LegendDot(color: Colors.pinkAccent, label: '5RM'),
+          _LegendDot(color: theme.fgDim, label: '5RM'),
         ],
       ),
-      child: CustomPaint(
-        painter: LineChartPainter(
-          datasets: [
-            LineChartDataset(
-              points: e1rmPoints,
-              color: Colors.cyanAccent,
-              label: '1RM',
+      child: Stack(
+        children: [
+          // 5RM - most transparent
+          Opacity(
+            opacity: 0.5,
+            child: StepChart(
+              theme,
+              e5rmData,
+              height: 180,
+              showDots: false,
+              showGrid: false,
+              yLabels: [],
             ),
-            LineChartDataset(
-              points: e3rmPoints,
-              color: Colors.purpleAccent,
-              label: '3RM',
+          ),
+          // 3RM - medium opacity
+          Opacity(
+            opacity: 0.7,
+            child: StepChart(
+              theme,
+              e3rmData,
+              height: 180,
+              showDots: false,
+              showGrid: false,
+              yLabels: [],
             ),
-            LineChartDataset(
-              points: e5rmPoints,
-              color: Colors.pinkAccent,
-              label: '5RM',
-            ),
-          ],
-        ),
-        size: Size.infinite,
+          ),
+          // 1RM - full opacity with grid
+          StepChart(
+            theme,
+            e1rmData,
+            height: 180,
+            showDots: true,
+            showGrid: true,
+            yLabels: yLabels,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHistoryList(BuildContext context, AppStrings strings) {
+  Widget _buildHistoryList(
+    BuildContext context,
+    AppStrings strings,
+    FittinTheme theme,
+  ) {
     return Column(
       children: summary.estimatedHistory.reversed.map((point) {
         return Padding(
@@ -274,15 +260,14 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                     children: [
                       Text(
                         strings.longDate(point.completedAt),
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                        style: theme.uiStyle(14, theme.fg).copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         '${strings.kilograms(point.weight)} × ${point.reps}',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
-                          fontSize: 13,
-                        ),
+                        style: theme.uiStyle(13, theme.fgMuted),
                       ),
                     ],
                   ),
@@ -292,18 +277,15 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                   children: [
                     Text(
                       point.value.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18,
+                      style: theme.numStyle(18, theme.fg).copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     Text(
                       'E1RM',
-                      style: TextStyle(
-                        fontSize: 10,
+                      style: theme.uiStyle(10, theme.fgMuted).copyWith(
+                        letterSpacing: 0.8,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                        color: Colors.cyanAccent.withValues(alpha: 0.7),
                       ),
                     ),
                   ],

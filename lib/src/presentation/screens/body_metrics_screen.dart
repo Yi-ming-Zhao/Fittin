@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/body_metrics_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/line_chart_painter.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class BodyMetricsScreen extends ConsumerWidget {
   const BodyMetricsScreen({super.key});
@@ -14,14 +18,28 @@ class BodyMetricsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final metricsAsync = ref.watch(bodyMetricsProvider);
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
       backgroundColor: Colors.black,
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'body-metrics-fab',
-        onPressed: () => _showAddMetricDialog(context, ref),
-        backgroundColor: Colors.white,
-        child: const Icon(Icons.add, color: Colors.black),
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 22,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: FittinBtn(
+          fittinTheme,
+          strings.addMeasurement,
+          icon: Icons.add_rounded,
+          size: 'sm',
+          onPressed: () => _showAddMetricDialog(context),
+        ),
       ),
       body: metricsAsync.when(
         data: (metrics) {
@@ -37,17 +55,17 @@ class BodyMetricsScreen extends ConsumerWidget {
                 subtitle: strings.bodyMetricsSubtitle,
               ),
               const SizedBox(height: 24),
-              _buildHeroCard(context, ref, metrics, screenState),
+              _buildHeroCard(context, fittinTheme, metrics, screenState, strings),
               const SizedBox(height: 24),
-              _buildStateCallout(context, ref, screenState, latest),
+              _buildStateCallout(context, fittinTheme, screenState, latest, strings),
               const SizedBox(height: 24),
               DashboardSectionLabel(label: strings.currentSnapshot),
               const SizedBox(height: 16),
-              _buildMetricGrid(context, metrics, strings),
+              _buildMetricGrid(context, fittinTheme, metrics, strings),
               const SizedBox(height: 32),
               DashboardSectionLabel(label: strings.measurementLog),
               const SizedBox(height: 16),
-              _buildHistoryList(context, metrics, ref, strings),
+              _buildHistoryList(context, fittinTheme, metrics, strings),
             ],
           );
         },
@@ -59,19 +77,20 @@ class BodyMetricsScreen extends ConsumerWidget {
 
   Widget _buildHeroCard(
     BuildContext context,
-    WidgetRef ref,
+    FittinTheme theme,
     List<BodyMetric> metrics,
     _BodyMetricsScreenState screenState,
+    AppStrings strings,
   ) {
     final weightedMetrics = metrics
         .where((metric) => metric.weightKg != null)
         .toList();
-    final strings = AppStrings.of(context, ref);
     if (weightedMetrics.isNotEmpty) {
-      return _buildWeightChart(context, weightedMetrics, screenState, strings);
+      return _buildWeightHero(context, theme, weightedMetrics, screenState, strings);
     }
 
     return _BodyMetricsHeroEmptyState(
+      theme: theme,
       strings: strings,
       title: screenState == _BodyMetricsScreenState.empty
           ? strings.recordFirstCheckIn
@@ -82,12 +101,13 @@ class BodyMetricsScreen extends ConsumerWidget {
       actionLabel: screenState == _BodyMetricsScreenState.empty
           ? strings.addFirstMeasurement
           : strings.addCompleteMeasurement,
-      onPressed: () => _showAddMetricDialog(context, ref),
+      onPressed: () => _showAddMetricDialog(context),
     );
   }
 
-  Widget _buildWeightChart(
+  Widget _buildWeightHero(
     BuildContext context,
+    FittinTheme theme,
     List<BodyMetric> weightedMetrics,
     _BodyMetricsScreenState screenState,
     AppStrings strings,
@@ -95,73 +115,74 @@ class BodyMetricsScreen extends ConsumerWidget {
     final recent = weightedMetrics.length > 10
         ? weightedMetrics.sublist(0, 10).reversed.toList()
         : weightedMetrics.reversed.toList();
-    final weightPoints = <Offset>[];
-
-    final weights = recent.map((m) => m.weightKg!).toList();
-    final minVal = weights.reduce((a, b) => a < b ? a : b) * 0.95;
-    final maxVal = weights.reduce((a, b) => a > b ? a : b) * 1.05;
-    final range = maxVal - minVal;
-
-    for (int i = 0; i < recent.length; i++) {
-      final dx = recent.length == 1 ? 0.5 : i / (recent.length - 1);
-      final dy = range == 0 ? 0.5 : (recent[i].weightKg! - minVal) / range;
-      weightPoints.add(Offset(dx, dy));
-    }
 
     final latestWeight = weightedMetrics.first.weightKg!;
     final previousWeight = weightedMetrics.length > 1
         ? weightedMetrics[1].weightKg
         : null;
     final delta = _calculateDelta(latestWeight, previousWeight);
-    final date = strings.shortMonthDay(weightedMetrics.first.timestamp);
-    final headline = delta == null
-        ? strings.latestWeightOn(latestWeight, date)
-        : strings.latestWeightDelta(latestWeight, _formatDelta(delta, 'kg'));
-    final supportLine = screenState == _BodyMetricsScreenState.partial
-        ? strings.completeMetricsHint
-        : strings.weightTrendAnchorHint;
 
-    return ChartContainer(
-      title: strings.weightProgression,
-      height: 180,
-      headerAction: Column(
+    // Build sparkline data
+    final sparklineData = recent.map((m) => m.weightKg!).toList();
+
+    return DashboardSurfaceCard(
+      radius: 34,
+      padding: EdgeInsets.all(theme.pad),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            headline,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              FittinEyebrow(theme, strings.weightKgLabel),
+              // Unit segmented control
+              FittinSegmented(
+                theme: theme,
+                options: const ['kg', 'lbs'],
+                value: 'kg',
+                onChange: (_) {},
+              ),
+            ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            supportLine,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.64),
-              height: 1.35,
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: FittinBigNum(
+                  theme,
+                  latestWeight.toStringAsFixed(1),
+                  size: 52,
+                  color: theme.fg,
+                  unit: 'kg',
+                ),
+              ),
+              if (sparklineData.length > 1) ...[
+                const SizedBox(width: 16),
+                Sparkline(theme, sparklineData, width: 80, height: 36),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (delta != null)
+            FittinDelta(theme, delta, unit: 'kg')
+          else
+            Text(
+              strings.shortMonthDay(weightedMetrics.first.timestamp),
+              style: theme.uiStyle(12, theme.fgDim),
             ),
-          ),
         ],
       ),
-      child: LineChartPainter(
-        datasets: [
-          LineChartDataset(
-            points: weightPoints,
-            color: Colors.orangeAccent,
-            label: 'Weight',
-          ),
-        ],
-      ).toWidget(),
     );
   }
 
   Widget _buildStateCallout(
     BuildContext context,
-    WidgetRef ref,
+    FittinTheme theme,
     _BodyMetricsScreenState screenState,
     BodyMetric? latest,
+    AppStrings strings,
   ) {
-    final strings = AppStrings.of(context, ref);
     if (screenState == _BodyMetricsScreenState.populated) {
       return const SizedBox.shrink();
     }
@@ -198,7 +219,7 @@ class BodyMetricsScreen extends ConsumerWidget {
               screenState == _BodyMetricsScreenState.empty
                   ? Icons.insights_outlined
                   : Icons.edit_note_rounded,
-              color: Colors.white,
+              color: theme.accent,
             ),
           ),
           const SizedBox(width: 14),
@@ -208,15 +229,14 @@ class BodyMetricsScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  style: theme.uiStyle(16, theme.fg).copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   body,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
+                  style: theme.uiStyle(14, theme.fgDim).copyWith(
                     height: 1.4,
                   ),
                 ),
@@ -226,16 +246,16 @@ class BodyMetricsScreen extends ConsumerWidget {
                   runSpacing: 12,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    FilledButton.tonalIcon(
-                      onPressed: () => _showAddMetricDialog(context, ref),
-                      icon: const Icon(Icons.add_rounded),
-                      label: Text(actionLabel),
+                    FittinBtn(
+                      theme,
+                      actionLabel,
+                      icon: Icons.add_rounded,
+                      size: 'sm',
+                      variant: 'secondary',
                     ),
                     Text(
                       footer,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.52),
-                      ),
+                      style: theme.uiStyle(12, theme.fgDim),
                     ),
                   ],
                 ),
@@ -249,6 +269,7 @@ class BodyMetricsScreen extends ConsumerWidget {
 
   Widget _buildMetricGrid(
     BuildContext context,
+    FittinTheme theme,
     List<BodyMetric> metrics,
     AppStrings strings,
   ) {
@@ -266,6 +287,7 @@ class BodyMetricsScreen extends ConsumerWidget {
           childAspectRatio: isWide ? 1.7 : 2.6,
           children: [
             _MetricCard(
+              theme: theme,
               strings: strings,
               label: strings.bodyFat,
               latestValue: latest?.bodyFatPercent,
@@ -274,9 +296,9 @@ class BodyMetricsScreen extends ConsumerWidget {
                 (metric) => metric.bodyFatPercent,
               ),
               unit: '%',
-              color: Colors.cyanAccent,
             ),
             _MetricCard(
+              theme: theme,
               strings: strings,
               label: strings.waist,
               latestValue: latest?.waistCm,
@@ -285,7 +307,6 @@ class BodyMetricsScreen extends ConsumerWidget {
                 (metric) => metric.waistCm,
               ),
               unit: 'cm',
-              color: Colors.purpleAccent,
             ),
           ],
         );
@@ -317,15 +338,10 @@ class BodyMetricsScreen extends ConsumerWidget {
     return current - previous;
   }
 
-  String _formatDelta(double delta, String unit) {
-    final sign = delta > 0 ? '+' : '';
-    return '$sign${delta.toStringAsFixed(1)} $unit';
-  }
-
   Widget _buildHistoryList(
     BuildContext context,
+    FittinTheme theme,
     List<BodyMetric> metrics,
-    WidgetRef ref,
     AppStrings strings,
   ) {
     if (metrics.isEmpty) {
@@ -334,9 +350,7 @@ class BodyMetricsScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(18),
         child: Text(
           strings.bodyMeasurementLogEmpty,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.64),
-          ),
+          style: theme.uiStyle(14, theme.fgDim),
         ),
       );
     }
@@ -345,13 +359,14 @@ class BodyMetricsScreen extends ConsumerWidget {
       children: metrics
           .map(
             (metric) =>
-                _HistoryEntry(metric: metric, ref: ref, strings: strings),
+                _HistoryEntry(theme: theme, metric: metric, strings: strings),
           )
           .toList(),
     );
   }
 
-  void _showAddMetricDialog(BuildContext context, WidgetRef ref) {
+  void _showAddMetricDialog(BuildContext context) {
+    final container = ProviderScope.containerOf(context);
     final weightController = TextEditingController();
     final bodyFatController = TextEditingController();
     final waistController = TextEditingController();
@@ -359,8 +374,8 @@ class BodyMetricsScreen extends ConsumerWidget {
 
     showDialog<void>(
       context: context,
-      builder: (context) {
-        final strings = AppStrings.of(context, ref);
+      builder: (dialogContext) {
+        final strings = AppStrings.fromLocale(container.read(appLocaleProvider));
         return AlertDialog(
           backgroundColor: const Color(0xFF111111),
           title: Text(strings.addMeasurementTitle),
@@ -413,7 +428,7 @@ class BodyMetricsScreen extends ConsumerWidget {
                   return;
                 }
 
-                ref
+                container
                     .read(bodyMetricsProvider.notifier)
                     .addMetric(
                       weight: weight,
@@ -465,6 +480,7 @@ enum _BodyMetricsScreenState {
 
 class _BodyMetricsHeroEmptyState extends StatelessWidget {
   const _BodyMetricsHeroEmptyState({
+    required this.theme,
     required this.strings,
     required this.title,
     required this.body,
@@ -472,6 +488,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
     required this.onPressed,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final String title;
   final String body;
@@ -485,8 +502,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
       height: 180,
       headerAction: Text(
         strings.heroAreaIntentionalHint,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white.withValues(alpha: 0.62),
+        style: theme.uiStyle(11, theme.fgDim).copyWith(
           height: 1.35,
         ),
       ),
@@ -498,41 +514,46 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
-              child: const Icon(Icons.timeline_rounded, color: Colors.white),
+              child: Icon(Icons.timeline_rounded, color: theme.accent, size: 20),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: theme.uiStyle(16, theme.fg).copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     body,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.68),
+                    style: theme.uiStyle(12, theme.fgDim).copyWith(
                       height: 1.4,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 14),
-                  FilledButton.tonalIcon(
+                  const SizedBox(height: 8),
+                  FittinBtn(
+                    theme,
+                    actionLabel,
+                    icon: Icons.add_rounded,
+                    size: 'sm',
+                    variant: 'secondary',
                     onPressed: onPressed,
-                    icon: const Icon(Icons.add_rounded),
-                    label: Text(actionLabel),
                   ),
                 ],
               ),
@@ -546,20 +567,20 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
+    required this.theme,
     required this.strings,
     required this.label,
     required this.latestValue,
     required this.previousValue,
     required this.unit,
-    required this.color,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final String label;
   final double? latestValue;
   final double? previousValue;
   final String unit;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -587,14 +608,13 @@ class _MetricCard extends StatelessWidget {
               Container(
                 width: 10,
                 height: 10,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: theme.accent),
               ),
               const SizedBox(width: 8),
               Text(
                 label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                style: theme.uiStyle(11, theme.fgDim).copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Colors.white.withValues(alpha: 0.58),
                 ),
               ),
             ],
@@ -602,19 +622,16 @@ class _MetricCard extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              height: 1,
-            ),
+            style: theme.numStyle(28, theme.fg),
           ),
           const SizedBox(height: 10),
-          Text(
-            caption,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.64),
-              height: 1.35,
+          if (delta != null)
+            FittinDelta(theme, delta, unit: unit)
+          else
+            Text(
+              caption,
+              style: theme.uiStyle(11, theme.fgDim),
             ),
-          ),
         ],
       ),
     );
@@ -623,13 +640,13 @@ class _MetricCard extends StatelessWidget {
 
 class _HistoryEntry extends StatelessWidget {
   const _HistoryEntry({
+    required this.theme,
     required this.metric,
-    required this.ref,
     required this.strings,
   });
 
+  final FittinTheme theme;
   final BodyMetric metric;
-  final WidgetRef ref;
   final AppStrings strings;
 
   @override
@@ -656,16 +673,14 @@ class _HistoryEntry extends StatelessWidget {
                 children: [
                   Text(
                     strings.longDate(metric.timestamp),
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    style: theme.uiStyle(14, theme.fg).copyWith(
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     strings.weekdayName(metric.timestamp),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.46),
-                    ),
+                    style: theme.uiStyle(11, theme.fgDim),
                   ),
                   if (recordedItems.isNotEmpty) ...[
                     const SizedBox(height: 12),
@@ -682,8 +697,7 @@ class _HistoryEntry extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       metric.note!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.68),
+                      style: theme.uiStyle(12, theme.fgDim).copyWith(
                         height: 1.4,
                       ),
                     ),
@@ -695,7 +709,7 @@ class _HistoryEntry extends StatelessWidget {
             IconButton(
               tooltip: strings.deleteMeasurement,
               icon: const Icon(Icons.delete_outline, size: 20),
-              onPressed: () => ref
+              onPressed: () => ProviderScope.containerOf(context)
                   .read(bodyMetricsProvider.notifier)
                   .deleteMetric(metric.metricId),
             ),
@@ -746,8 +760,4 @@ class _MetricTextField extends StatelessWidget {
       style: const TextStyle(color: Colors.white),
     );
   }
-}
-
-extension on LineChartPainter {
-  Widget toWidget() => CustomPaint(painter: this, size: Size.infinite);
 }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class ProgressAnalyticsScreen extends ConsumerWidget {
   const ProgressAnalyticsScreen({super.key});
@@ -11,6 +14,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final overviewAsync = ref.watch(progressAnalyticsOverviewProvider);
     final formula = ref.watch(analyticsFormulaProvider);
 
@@ -20,12 +24,12 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
           return DashboardPageScaffold(
             children: [
               DashboardScreenHeader(
-                eyebrow: strings.insights,
-                title: strings.progressAnalytics,
-                subtitle: strings.analyticsEmptySubtitle,
+                eyebrow: 'Insights',
+                title: 'Trends & analytics',
+                subtitle: 'Long-term rhythm through consistency and training load.',
               ),
               const SizedBox(height: 28),
-              _EmptyState(strings: strings),
+              _EmptyState(theme: fittinTheme, strings: strings),
             ],
           );
         }
@@ -33,31 +37,24 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
         return DashboardPageScaffold(
           children: [
             DashboardScreenHeader(
-              eyebrow: strings.insights,
-              title: strings.progressAnalytics,
-              subtitle: strings.progressAnalyticsSubtitle,
+              eyebrow: 'Insights',
+              title: 'Trends & analytics',
+              subtitle: 'Long-term rhythm through consistency and training load.',
             ),
             const SizedBox(height: 20),
             DashboardSurfaceCard(
               radius: 34,
-              highlight: true,
               padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  FittinEyebrow(fittinTheme, 'Training consistency'),
+                  const SizedBox(height: 10),
                   Text(
-                    strings.strengthTrajectory,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    strings.strengthTrajectorySubtitle,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.68),
-                      height: 1.45,
-                    ),
+                    strings.isChinese
+                        ? '把训练频率、总量与主要动作变化放到一张更长周期的视图里。'
+                        : 'View consistency, workload, and lift momentum in one long-range surface.',
+                    style: fittinTheme.uiStyle(14, fittinTheme.fgDim).copyWith(height: 1.45),
                   ),
                 ],
               ),
@@ -73,12 +70,13 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _OverviewCards(overview: overview, strings: strings),
+            _OverviewCards(theme: fittinTheme, overview: overview, strings: strings),
             const SizedBox(height: 32),
             DashboardSectionLabel(label: strings.allExercises),
             const SizedBox(height: 14),
             for (final summary in overview.exerciseSummaries) ...[
               _ExerciseSummaryCard(
+                theme: fittinTheme,
                 summary: summary,
                 strings: strings,
                 onTap: () => showModalBottomSheet<void>(
@@ -86,6 +84,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
                   isScrollControlled: true,
                   backgroundColor: Colors.transparent,
                   builder: (context) => _ExerciseDetailSheet(
+                    theme: fittinTheme,
                     summary: summary,
                     strings: strings,
                     formula: formula,
@@ -112,13 +111,13 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.strings});
+  const _EmptyState({required this.theme, required this.strings});
 
+  final FittinTheme theme;
   final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return DashboardSurfaceCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -128,12 +127,12 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.insights_rounded,
               size: 56,
-              color: theme.colorScheme.primary,
+              color: theme.accent,
             ),
             const SizedBox(height: 16),
             Text(
               strings.analyticsEmptyTitle,
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: theme.uiStyle(20, theme.fg).copyWith(
                 fontWeight: FontWeight.w700,
               ),
               textAlign: TextAlign.center,
@@ -141,8 +140,8 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               strings.analyticsEmptySubtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.66),
+              style: theme.uiStyle(14, theme.fgDim).copyWith(
+                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
@@ -215,8 +214,13 @@ class _FormulaPicker extends StatelessWidget {
 }
 
 class _OverviewCards extends StatelessWidget {
-  const _OverviewCards({required this.overview, required this.strings});
+  const _OverviewCards({
+    required this.theme,
+    required this.overview,
+    required this.strings,
+  });
 
+  final FittinTheme theme;
   final ProgressAnalyticsOverview overview;
   final AppStrings strings;
 
@@ -232,19 +236,23 @@ class _OverviewCards extends StatelessWidget {
       runSpacing: 12,
       children: [
         _OverviewStatCard(
+          theme: theme,
           title: strings.workoutsCompleted,
           value: '${overview.completedWorkoutCount}',
           highlight: true,
         ),
         _OverviewStatCard(
+          theme: theme,
           title: strings.trainingDays,
           value: '${overview.recentTrainingDays}',
         ),
         _OverviewStatCard(
+          theme: theme,
           title: strings.recentVolume,
           value: strings.kilograms(overview.recentVolume),
         ),
         _OverviewStatCard(
+          theme: theme,
           title: strings.highlightLift,
           value: highlight?.exerciseName ?? '—',
         ),
@@ -255,11 +263,13 @@ class _OverviewCards extends StatelessWidget {
 
 class _OverviewStatCard extends StatelessWidget {
   const _OverviewStatCard({
+    required this.theme,
     required this.title,
     required this.value,
     this.highlight = false,
   });
 
+  final FittinTheme theme;
   final String title;
   final String value;
   final bool highlight;
@@ -268,10 +278,26 @@ class _OverviewStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 160,
-      child: DashboardStatCard(
-        label: title,
-        value: value,
-        highlight: highlight,
+      child: DashboardSurfaceCard(
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: theme.uiStyle(10, theme.fgMuted).copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: theme.numStyle(24, highlight ? theme.accent : theme.fg),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -279,18 +305,19 @@ class _OverviewStatCard extends StatelessWidget {
 
 class _ExerciseSummaryCard extends StatelessWidget {
   const _ExerciseSummaryCard({
+    required this.theme,
     required this.summary,
     required this.strings,
     required this.onTap,
   });
 
+  final FittinTheme theme;
   final ExerciseProgressSummary summary;
   final AppStrings strings;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return DashboardSurfaceCard(
       onTap: onTap,
       radius: 30,
@@ -304,7 +331,7 @@ class _ExerciseSummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   summary.exerciseName,
-                  style: theme.textTheme.headlineSmall?.copyWith(
+                  style: theme.uiStyle(22, theme.fg).copyWith(
                     fontWeight: FontWeight.w800,
                     height: 1.05,
                   ),
@@ -312,8 +339,9 @@ class _ExerciseSummaryCard extends StatelessWidget {
               ),
               if (summary.isStagnating)
                 _Pill(
+                  theme: theme,
                   label: strings.stagnating,
-                  color: theme.colorScheme.errorContainer,
+                  color: theme.accent,
                 ),
             ],
           ),
@@ -323,18 +351,21 @@ class _ExerciseSummaryCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               _MetricPill(
+                theme: theme,
                 label: strings.estimatedOneRepMax,
                 value: summary.currentEstimatedOneRepMax == null
                     ? '—'
                     : strings.kilograms(summary.currentEstimatedOneRepMax!),
               ),
               _MetricPill(
+                theme: theme,
                 label: strings.actualOneRepMax,
                 value: summary.currentActualOneRepMax == null
                     ? strings.noActualOneRepMax
                     : strings.kilograms(summary.currentActualOneRepMax!),
               ),
               _MetricPill(
+                theme: theme,
                 label: strings.recentChange,
                 value: summary.recentChange == null
                     ? strings.noRecentChangeLabel()
@@ -345,10 +376,7 @@ class _ExerciseSummaryCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             strings.sessionsLogged(summary.encounterCount),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.52),
-              fontWeight: FontWeight.w600,
-            ),
+            style: theme.uiStyle(12, theme.fgDim),
           ),
         ],
       ),
@@ -358,18 +386,19 @@ class _ExerciseSummaryCard extends StatelessWidget {
 
 class _ExerciseDetailSheet extends StatelessWidget {
   const _ExerciseDetailSheet({
+    required this.theme,
     required this.summary,
     required this.strings,
     required this.formula,
   });
 
+  final FittinTheme theme;
   final ExerciseProgressSummary summary;
   final AppStrings strings;
   final OneRepMaxFormula formula;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final estimatedBestSet = summary.estimatedHistory.isEmpty
         ? null
         : summary.estimatedHistory.reduce((a, b) => a.value > b.value ? a : b);
@@ -397,18 +426,21 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     _MetricPill(
+                      theme: theme,
                       label: strings.bestEstimatedOneRepMax,
                       value: summary.bestEstimatedOneRepMax == null
                           ? '—'
                           : strings.kilograms(summary.bestEstimatedOneRepMax!),
                     ),
                     _MetricPill(
+                      theme: theme,
                       label: strings.bestActualOneRepMax,
                       value: summary.bestActualOneRepMax == null
                           ? strings.noActualOneRepMax
                           : strings.kilograms(summary.bestActualOneRepMax!),
                     ),
                     _MetricPill(
+                      theme: theme,
                       label: strings.bestSet,
                       value: estimatedBestSet == null
                           ? '—'
@@ -476,8 +508,9 @@ class _ExerciseDetailSheet extends StatelessWidget {
                   children: [
                     for (final pr in summary.personalRecords)
                       _Pill(
+                        theme: theme,
                         label: pr,
-                        color: theme.colorScheme.secondaryContainer,
+                        color: theme.accentDim,
                       ),
                   ],
                 ),
@@ -491,14 +524,18 @@ class _ExerciseDetailSheet extends StatelessWidget {
 }
 
 class _MetricPill extends StatelessWidget {
-  const _MetricPill({required this.label, required this.value});
+  const _MetricPill({
+    required this.theme,
+    required this.label,
+    required this.value,
+  });
 
+  final FittinTheme theme;
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return DashboardSurfaceCard(
       radius: 18,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -508,14 +545,12 @@ class _MetricPill extends StatelessWidget {
         children: [
           Text(
             label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.52),
-            ),
+            style: theme.uiStyle(10, theme.fgMuted),
           ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: theme.textTheme.bodyMedium?.copyWith(
+              style: theme.uiStyle(13, theme.fg).copyWith(
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -526,8 +561,13 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.color});
+  const _Pill({
+    required this.theme,
+    required this.label,
+    required this.color,
+  });
 
+  final FittinTheme theme;
   final String label;
   final Color color;
 
@@ -542,9 +582,9 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: Theme.of(
-          context,
-        ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        style: theme.uiStyle(11, theme.fg).copyWith(
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
