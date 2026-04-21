@@ -2,21 +2,23 @@
 
 set -euo pipefail
 
-if [[ $# -ne 2 ]]; then
+export PATH="$HOME/.local/bin:$HOME/.local/lib/flutter/bin:$PATH"
+
+if [[ $# -lt 1 || $# -gt 2 ]]; then
   cat <<'EOF'
 Usage:
-  tool/build_web_release.sh <SUPABASE_URL> <SUPABASE_ANON_KEY>
+  tool/build_web_release.sh <BACKEND_URL> [BACKEND_API_KEY]
 
 Example:
-  tool/build_web_release.sh https://your-project.supabase.co your-anon-key
+  tool/build_web_release.sh https://api.your-domain.com optional-api-key
 
 See docs/web-public-deployment.md for the full deployment flow.
 EOF
   exit 1
 fi
 
-SUPABASE_URL="$1"
-SUPABASE_ANON_KEY="$2"
+BACKEND_URL="$1"
+BACKEND_API_KEY="${2:-}"
 SCHEMA_BACKUP_DIR="$(mktemp -d)"
 
 restore_isar_schema_ids() {
@@ -32,10 +34,13 @@ trap restore_isar_schema_ids EXIT
 echo "==> Normalizing Isar web schema ids"
 dart run tool/fix_isar_web_schema_ids.dart --web-safe
 
+echo "==> Resolving Flutter dependencies"
+flutter pub get
+
 echo "==> Building Flutter web release"
 flutter build web --release \
-  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+  --dart-define=BACKEND_URL="$BACKEND_URL" \
+  --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
 
 BUILD_VERSION="$(date +%s)"
 python3 - <<'PY' "$BUILD_VERSION"

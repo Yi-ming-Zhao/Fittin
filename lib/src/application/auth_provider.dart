@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+
+import 'package:fittin_v2/src/application/auth_session_store.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthUser {
   const AuthUser({
@@ -23,6 +26,8 @@ abstract class AuthRepository {
 
   Future<AuthUser?> currentUser();
 
+  Future<String?> currentAccessToken();
+
   Future<AuthUser> signIn({required String email, required String password});
 
   Future<AuthUser> signUp({required String email, required String password});
@@ -30,35 +35,56 @@ abstract class AuthRepository {
   Future<void> signOut();
 }
 
-class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this._client);
+class BackendAuthRepository implements AuthRepository {
+  BackendAuthRepository({
+    required String baseUrl,
+    required AuthSessionStore sessionStore,
+    http.Client? httpClient,
+  }) : _baseUrl = baseUrl,
+       _sessionStore = sessionStore,
+       _httpClient = httpClient ?? http.Client() {
+    unawaited(_restoreSession());
+  }
 
-  final SupabaseClient _client;
+  final String _baseUrl;
+  final AuthSessionStore _sessionStore;
+  final http.Client _httpClient;
+  final _controller = StreamController<AuthUser?>.broadcast();
+
+  AuthUser? _currentUser;
+  String? _accessToken;
 
   @override
-  Stream<AuthUser?> authStateChanges() {
-    return _client.auth.onAuthStateChange.map(
-      (state) => _mapUser(state.session?.user),
-    );
+  Stream<AuthUser?> authStateChanges() async* {
+    yield await currentUser();
+    yield* _controller.stream;
   }
 
   @override
-  Future<AuthUser?> currentUser() async => _mapUser(_client.auth.currentUser);
+  Future<String?> currentAccessToken() async {
+    _accessToken ??= await _sessionStore.loadAccessToken();
+    return _accessToken;
+  }
+
+  @override
+  Future<AuthUser?> currentUser() async {
+    if (_currentUser != null) {
+      return _currentUser;
+    }
+    await _restoreSession();
+    return _currentUser;
+  }
 
   @override
   Future<AuthUser> signIn({
     required String email,
     required String password,
   }) async {
-    final response = await _client.auth.signInWithPassword(
+    return _authenticate(
+      path: '/v1/auth/sign-in',
       email: email,
       password: password,
     );
-    final user = _mapUser(response.user);
-    if (user == null) {
-      throw StateError('Supabase did not return a signed-in user.');
-    }
-    return user;
   }
 
   @override
@@ -66,41 +92,134 @@ class SupabaseAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final response = await _client.auth.signUp(
+    return _authenticate(
+      path: '/v1/auth/sign-up',
       email: email,
       password: password,
     );
-    final user = _mapUser(response.user);
-    if (user == null) {
-      throw StateError('Supabase did not return a created user.');
-    }
-    return user;
   }
 
   @override
-  Future<void> signOut() => _client.auth.signOut();
-
-  AuthUser? _mapUser(User? user) {
-    if (user == null) {
-      return null;
+  Future<void> signOut() async {
+    final token = await currentAccessToken();
+    try {
+      await _httpClient.post(
+        Uri.parse('$_baseUrl/v1/auth/sign-out'),
+        headers: _headers(token: token),
+      );
+    } finally {
+      _currentUser = null;
+      _accessToken = null;
+      await _sessionStore.clear();
+      _controller.add(null);
     }
-    return AuthUser(
-      id: user.id,
-      email: user.email,
-      displayName:
-          (user.userMetadata?['display_name'] as String?) ?? user.email,
-      isAnonymous: user.isAnonymous,
+  }
+
+  Future<AuthUser> _authenticate({
+    required String path,
+    required String email,
+    required String password,
+  }) async {
+    final response = await _httpClient.post(
+      Uri.parse('$_baseUrl$path'),
+      headers: _headers(),
+      body: jsonEncode({'email': email, 'password': password}),
     );
+    final payload = _decodeJson(response);
+    _ensureSuccess(response, payload);
+    final user = _persistSession(payload);
+    return user;
+  }
+
+  Future<void> _restoreSession() async {
+    final storedToken = _accessToken ?? await _sessionStore.loadAccessToken();
+    if (storedToken == null || storedToken.isEmpty) {
+      return;
+    }
+
+    final response = await _httpClient.get(
+      Uri.parse('$_baseUrl/v1/auth/session'),
+      headers: _headers(token: storedToken),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      _currentUser = null;
+      _accessToken = null;
+      await _sessionStore.clear();
+      _controller.add(null);
+      return;
+    }
+
+    final payload = _decodeJson(response);
+    _persistSession(payload, fallbackToken: storedToken);
+  }
+
+  AuthUser _persistSession(
+    Map<String, dynamic> payload, {
+    String? fallbackToken,
+  }) {
+    final token =
+        payload['accessToken'] as String? ??
+        payload['access_token'] as String? ??
+        fallbackToken;
+    final userJson = payload['user'] as Map<String, dynamic>?;
+    if (token == null || userJson == null) {
+      throw StateError('Backend auth response is missing session data.');
+    }
+
+    final user = AuthUser(
+      id: userJson['id'] as String,
+      email: userJson['email'] as String?,
+      displayName: userJson['displayName'] as String? ?? userJson['email'] as String?,
+      isAnonymous: userJson['isAnonymous'] as bool? ?? false,
+    );
+
+    _accessToken = token;
+    _currentUser = user;
+    unawaited(_sessionStore.saveAccessToken(token));
+    _controller.add(user);
+    return user;
+  }
+
+  Map<String, String> _headers({String? token}) {
+    return {
+      'Content-Type': 'application/json',
+      if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  Map<String, dynamic> _decodeJson(http.Response response) {
+    if (response.body.isEmpty) {
+      return const {};
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is Map<String, dynamic>) {
+      return decoded;
+    }
+    throw StateError('Backend auth response must be a JSON object.');
+  }
+
+  void _ensureSuccess(http.Response response, Map<String, dynamic> payload) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+    final message =
+        payload['error'] as String? ??
+        payload['message'] as String? ??
+        'Auth request failed with status ${response.statusCode}.';
+    throw StateError(message);
   }
 }
 
 class UnavailableAuthRepository implements AuthRepository {
-  UnavailableAuthRepository([this.message = 'Supabase Auth is unavailable.']);
+  UnavailableAuthRepository([this.message = 'Backend Auth is unavailable.']);
 
   final String message;
 
   @override
   Stream<AuthUser?> authStateChanges() => Stream<AuthUser?>.value(null);
+
+  @override
+  Future<String?> currentAccessToken() async => null;
 
   @override
   Future<AuthUser?> currentUser() async => null;
@@ -129,13 +248,16 @@ class UnavailableAuthRepository implements AuthRepository {
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final bootstrap = ref.watch(supabaseBootstrapProvider);
-  final client = ref.watch(supabaseClientProvider);
-  if (!bootstrap.isConfigured || client == null) {
+  final sessionStore = ref.watch(authSessionStoreProvider);
+  if (!bootstrap.isConfigured) {
     return UnavailableAuthRepository(
-      bootstrap.errorMessage ?? 'Supabase Auth is unavailable.',
+      bootstrap.errorMessage ?? 'Backend Auth is unavailable.',
     );
   }
-  return SupabaseAuthRepository(client);
+  return BackendAuthRepository(
+    baseUrl: bootstrap.url,
+    sessionStore: sessionStore,
+  );
 });
 
 final authStateProvider = StreamProvider<AuthUser?>((ref) {
@@ -262,10 +384,14 @@ class AuthController extends StateNotifier<AuthControllerState> {
   }
 
   String _friendlyError(Object error) {
-    if (error is AuthException) {
-      return error.message;
+    final message = error.toString();
+    if (message.startsWith('StateError: ')) {
+      return message.substring('StateError: '.length);
     }
-    return error.toString();
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length);
+    }
+    return message;
   }
 }
 

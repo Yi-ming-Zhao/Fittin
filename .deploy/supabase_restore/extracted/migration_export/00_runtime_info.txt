@@ -1,0 +1,77 @@
+Current time:
+Tue Apr 21 00:19:26 CST 2026
+
+Current machine name:
+yzxbbdeMacBook-Pro.local
+
+Current directory:
+/Users/yzxbb/Desktop/Fittin
+
+supabase --version:
+2.75.0
+
+supabase status:
+╭──────────────────────────────────────╮
+│ 🔧 Development Tools                 │
+├─────────┬────────────────────────────┤
+│ Studio  │ http://127.0.0.1:55323     │
+│ Mailpit │ http://127.0.0.1:55324     │
+│ MCP     │ http://127.0.0.1:55321/mcp │
+╰─────────┴────────────────────────────╯
+
+╭─────────────────────────────────────────────────╮
+│ 🌐 APIs                                         │
+├─────────────┬───────────────────────────────────┤
+│ Project URL │ http://127.0.0.1:55321            │
+│ REST        │ http://127.0.0.1:55321/rest/v1    │
+│ GraphQL     │ http://127.0.0.1:55321/graphql/v1 │
+╰─────────────┴───────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:postgres@127.0.0.1:55322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────╮
+│ 🔑 Authentication Keys                                       │
+├─────────────┬────────────────────────────────────────────────┤
+│ Publishable │ <redacted-publishable-key>                    │
+│ Secret      │ <redacted-secret-key>                         │
+╰─────────────┴────────────────────────────────────────────────╯
+
+╭───────────────────────────────────────────────────────────────────────────────╮
+│ 📦 Storage (S3)                                                               │
+├────────────┬──────────────────────────────────────────────────────────────────┤
+│ URL        │ http://127.0.0.1:55321/storage/v1/s3                             │
+│ Access Key │ <redacted-storage-access-key>                                   │
+│ Secret Key │ <redacted-storage-secret-key>                                   │
+│ Region     │ local                                                            │
+╰────────────┴──────────────────────────────────────────────────────────────────╯
+
+docker ps:
+37100590e352 supabase_studio_Fittin public.ecr.aws/supabase/studio:2026.01.27-sha-2a37755 Up About a minute (healthy) 0.0.0.0:55323->3000/tcp, [::]:55323->3000/tcp
+312bc3e35e95 supabase_pg_meta_Fittin public.ecr.aws/supabase/postgres-meta:v0.95.2 Up About a minute (healthy) 8080/tcp
+42d7c1c7013b supabase_storage_Fittin public.ecr.aws/supabase/storage-api:v1.35.3 Up About a minute (healthy) 5000/tcp
+ef887fdf5155 supabase_rest_Fittin public.ecr.aws/supabase/postgrest:v14.3 Up About a minute 3000/tcp
+9b23f2285090 supabase_realtime_Fittin public.ecr.aws/supabase/realtime:v2.73.2 Up About a minute (healthy) 4000/tcp
+ea2da1c05795 supabase_inbucket_Fittin public.ecr.aws/supabase/mailpit:v1.22.3 Up About a minute (healthy) 0.0.0.0:55324->8025/tcp, [::]:55324->8025/tcp
+2dceb0ea92af supabase_auth_Fittin public.ecr.aws/supabase/gotrue:v2.186.0 Up About a minute (healthy) 9999/tcp
+3e7d62b89a27 supabase_kong_Fittin public.ecr.aws/supabase/kong:2.8.1 Up About a minute (healthy) 0.0.0.0:55321->8000/tcp, [::]:55321->8000/tcp
+8b6223212c2c supabase_vector_Fittin public.ecr.aws/supabase/vector:0.28.1-alpine Up About a minute (healthy) 
+67ac5dab4d32 supabase_analytics_Fittin public.ecr.aws/supabase/logflare:1.30.5 Up About a minute (healthy) 0.0.0.0:55327->4000/tcp, [::]:55327->4000/tcp
+af1163af09cd supabase_db_Fittin public.ecr.aws/supabase/postgres:17.6.1.075 Up About a minute (healthy) 0.0.0.0:55322->5432/tcp, [::]:55322->5432/tcp
+f1c8d004d4a7 supabase_studio_supabase-local public.ecr.aws/supabase/studio:2026.01.27-sha-2a37755 Up About a minute (healthy) 0.0.0.0:54323->3000/tcp, [::]:54323->3000/tcp
+e3adf7372a7d supabase_pg_meta_supabase-local public.ecr.aws/supabase/postgres-meta:v0.95.2 Up About a minute (healthy) 8080/tcp
+e56bf6dadafa supabase_storage_supabase-local public.ecr.aws/supabase/storage-api:v1.35.3 Up About a minute (healthy) 5000/tcp
+849b4523d886 supabase_rest_supabase-local public.ecr.aws/supabase/postgrest:v14.3 Up About a minute 3000/tcp
+926903ce082a supabase_realtime_supabase-local public.ecr.aws/supabase/realtime:v2.73.2 Up About a minute (healthy) 4000/tcp
+04fc5da686d6 supabase_inbucket_supabase-local public.ecr.aws/supabase/mailpit:v1.22.3 Up About a minute (healthy) 0.0.0.0:54324->8025/tcp, [::]:54324->8025/tcp
+4f83b02e199a supabase_auth_supabase-local public.ecr.aws/supabase/gotrue:v2.186.0 Up About a minute (healthy) 9999/tcp
+160badb2837f supabase_kong_supabase-local public.ecr.aws/supabase/kong:2.8.1 Up About a minute (healthy) 0.0.0.0:54321->8000/tcp, [::]:54321->8000/tcp
+76923894296d supabase_vector_supabase-local public.ecr.aws/supabase/vector:0.28.1-alpine Up About a minute (healthy) 
+5df890cf9c2b supabase_analytics_supabase-local public.ecr.aws/supabase/logflare:1.30.5 Up About a minute (healthy) 0.0.0.0:54327->4000/tcp, [::]:54327->4000/tcp
+7825db08154f supabase_db_supabase-local public.ecr.aws/supabase/postgres:17.6.1.075 Up About a minute (healthy) 0.0.0.0:54322->5432/tcp, [::]:54322->5432/tcp
+db05c07e66e2 nextcloud-redis redis:7-alpine Up About a minute 6379/tcp
+ed436c0d24e1 nextcloud-app nextcloud:31-apache Up About a minute 0.0.0.0:8080->80/tcp, [::]:8080->80/tcp
+227bc4d7d92a nextcloud-db mariadb:11.4 Up About a minute 3306/tcp

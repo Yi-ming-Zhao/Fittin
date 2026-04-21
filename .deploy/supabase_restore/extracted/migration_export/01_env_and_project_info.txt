@@ -1,0 +1,82 @@
+=== env grep ===
+
+=== repo grep ===
+./tool/update_public_web.sh:8:SUPABASE_URL="${SUPABASE_URL:-https://supabase.yimelo.cc}"
+./tool/update_public_web.sh:9:SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-<redacted-publishable-key>}"
+./tool/update_public_web.sh:21:  SUPABASE_URL=https://supabase.yimelo.cc
+./tool/update_public_web.sh:22:  SUPABASE_ANON_KEY=<current publishable key>
+./tool/update_public_web.sh:27:  SUPABASE_URL
+./tool/update_public_web.sh:28:  SUPABASE_ANON_KEY
+./tool/update_public_web.sh:68:"$REPO_ROOT/tool/build_web_release.sh" "$SUPABASE_URL" "$SUPABASE_ANON_KEY"
+./tool/deploy_server_stack.sh:16:  PUBLIC_SUPABASE_URL=https://supabase.example.com \
+./tool/deploy_server_stack.sh:17:  SUPABASE_ANON_KEY=your-anon-key \
+./tool/deploy_server_stack.sh:21:  PUBLIC_SUPABASE_URL   Public URL that browsers should use to reach Supabase
+./tool/deploy_server_stack.sh:22:  SUPABASE_ANON_KEY     Publishable/anon key for that Supabase instance
+./tool/deploy_server_stack.sh:56:if [[ -z "${PUBLIC_SUPABASE_URL:-}" ]]; then
+./tool/deploy_server_stack.sh:57:  echo "PUBLIC_SUPABASE_URL is required." >&2
+./tool/deploy_server_stack.sh:61:if [[ -z "${SUPABASE_ANON_KEY:-}" ]]; then
+./tool/deploy_server_stack.sh:62:  echo "SUPABASE_ANON_KEY is required." >&2
+./tool/deploy_server_stack.sh:88:  --build-arg SUPABASE_URL="$PUBLIC_SUPABASE_URL" \
+./tool/deploy_server_stack.sh:89:  --build-arg SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+./tool/deploy_server_stack.sh:123:  $PUBLIC_SUPABASE_URL
+./README.md:132:当前项目会优先使用显式传入的 `SUPABASE_URL` / `SUPABASE_ANON_KEY`；如果未提供，则仅会在本地 Supabase 开发环境实际可达时自动回退连接。Android APK 构建不再尝试自动连接仓库本机的 `127.0.0.1` Supabase；请为 APK 显式传入这两个 `dart-define`。
+./README.md:173:- `SUPABASE_URL` / `SUPABASE_ANON_KEY` 注入方式
+./README.md:200:  --build-arg SUPABASE_URL=https://your-supabase-host.example.com \
+./README.md:201:  --build-arg SUPABASE_ANON_KEY=your-anon-key \
+./tool/build_web_release.sh:8:  tool/build_web_release.sh <SUPABASE_URL> <SUPABASE_ANON_KEY>
+./tool/build_web_release.sh:18:SUPABASE_URL="$1"
+./tool/build_web_release.sh:19:SUPABASE_ANON_KEY="$2"
+./tool/build_web_release.sh:37:  --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+./tool/build_web_release.sh:38:  --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+./openspec/changes/fix-supabase-bootstrap-fallback/proposal.md:8:- Update bootstrap logic so explicit `SUPABASE_URL` / `SUPABASE_ANON_KEY` values take precedence, and the repo-local dev stack is only used after a reachability check succeeds.
+./openspec/changes/fix-supabase-bootstrap-fallback/specs/user-account-authentication/spec.md:12:- **WHEN** the account surface opens on an Android APK build without explicit `SUPABASE_URL` and `SUPABASE_ANON_KEY`
+./docs/docker-deployment.md:26:  --build-arg SUPABASE_URL=https://your-supabase-host.example.com \
+./docs/docker-deployment.md:27:  --build-arg SUPABASE_ANON_KEY=your-anon-key \
+./docs/docker-deployment.md:33:- `SUPABASE_URL` and `SUPABASE_ANON_KEY` are compiled into the Flutter Web bundle
+./docs/docker-deployment.md:76:  --build-arg SUPABASE_URL=https://your-supabase-host.example.com \
+./docs/docker-deployment.md:77:  --build-arg SUPABASE_ANON_KEY=your-anon-key \
+./openspec/changes/fix-supabase-bootstrap-fallback/specs/supabase-bootstrap-configuration/spec.md:4:The system MUST resolve Supabase runtime configuration by preferring explicit `SUPABASE_URL` and `SUPABASE_ANON_KEY` values first, and it MUST only fall back to the repository's local Supabase development stack after confirming that the local endpoint is reachable.
+./openspec/changes/fix-supabase-bootstrap-fallback/specs/supabase-bootstrap-configuration/spec.md:7:- **WHEN** both `SUPABASE_URL` and `SUPABASE_ANON_KEY` are supplied to the app
+./docs/web-public-deployment.md:18:This repository does not deploy a separate custom backend. The web app is a static bundle and still talks directly to Supabase with `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+./docs/web-public-deployment.md:42:  --dart-define=SUPABASE_URL=https://supabase.yimelo.cc \
+./docs/web-public-deployment.md:43:  --dart-define=SUPABASE_ANON_KEY=<your-anon-key>
+./docs/web-public-deployment.md:200:- `Missing SUPABASE_URL or SUPABASE_ANON_KEY`: rebuild with explicit `--dart-define` values.
+./docs/supabase-remote-setup-guide.md:9:- Provide the `SUPABASE_URL` and `SUPABASE_ANON_KEY` values needed by the app
+./docs/supabase-remote-setup-guide.md:42:- `SUPABASE_URL`
+./docs/supabase-remote-setup-guide.md:43:- `SUPABASE_ANON_KEY`
+./docs/supabase-remote-setup-guide.md:297:  --dart-define=SUPABASE_URL=http://<HOST_OR_LAN_IP>:8000 \
+./docs/supabase-remote-setup-guide.md:298:  --dart-define=SUPABASE_ANON_KEY=<YOUR_ANON_KEY>
+./docs/supabase-remote-setup-guide.md:359:Read docs/supabase-remote-setup-guide.md in this repo, then help me configure and start the Supabase backend on this machine for the Fittin app. After setup, verify auth, tables, storage bucket, and give me the SUPABASE_URL and SUPABASE_ANON_KEY values I should use to run the Flutter app.
+./docs/server-self-hosted-deployment.md:83:  --build-arg SUPABASE_URL=https://supabase.example.com \
+./docs/server-self-hosted-deployment.md:84:  --build-arg SUPABASE_ANON_KEY=<anon-key-from-supabase-status> \
+./docs/server-self-hosted-deployment.md:107:PUBLIC_SUPABASE_URL=https://supabase.example.com \
+./docs/server-self-hosted-deployment.md:108:SUPABASE_ANON_KEY=<anon-key-from-supabase-status> \
+./lib/src/presentation/localization/app_strings.dart:246:      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY；未提供时，应用只会在本地 Supabase 开发栈实际可达时自动回退。'
+./lib/src/presentation/localization/app_strings.dart:247:      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first; without them, the app only falls back when the local Supabase dev stack is actually reachable.';
+./Dockerfile:10:ARG SUPABASE_URL
+./Dockerfile:11:ARG SUPABASE_ANON_KEY
+./Dockerfile:13:RUN test -n "$SUPABASE_URL"
+./Dockerfile:14:RUN test -n "$SUPABASE_ANON_KEY"
+./Dockerfile:18:    --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+./Dockerfile:19:    --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+./lib/src/application/supabase_bootstrap.dart:58:  final url = configuredUrl ?? const String.fromEnvironment('SUPABASE_URL');
+./lib/src/application/supabase_bootstrap.dart:60:      configuredAnonKey ?? const String.fromEnvironment('SUPABASE_ANON_KEY');
+./lib/src/application/supabase_bootstrap.dart:72:        'Both SUPABASE_URL and SUPABASE_ANON_KEY must be provided together.',
+./lib/src/application/supabase_bootstrap.dart:84:      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Android APK builds cannot auto-connect to the repo-local Supabase stack via 127.0.0.1; provide explicit Supabase config for devices.',
+./lib/src/application/supabase_bootstrap.dart:92:      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Local Supabase dev stack at http://127.0.0.1:55321 is not reachable.',
+./test/application/supabase_bootstrap_test.dart:75:      'Both SUPABASE_URL and SUPABASE_ANON_KEY must be provided together.',
+./test/application/supabase_bootstrap_test.dart:117:      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Android APK builds cannot auto-connect to the repo-local Supabase stack via 127.0.0.1; provide explicit Supabase config for devices.',
+./openspec/specs/web-public-deployment/spec.md:13:- **AND** the build flow uses explicit `SUPABASE_URL` and `SUPABASE_ANON_KEY` `dart-define` values instead of relying on debug-only local fallback behavior
+./openspec/changes/archive/2026-03-30-publish-web-to-fittin-subdomain/design.md:5:The app has no separate backend to deploy. The runtime shape is a static Flutter Web bundle that talks directly to Supabase using `SUPABASE_URL` and `SUPABASE_ANON_KEY` passed via `dart-define`. Because the user already exposes `yimelo.cc` through Cloudflare Tunnel, the narrowest viable solution is to add a project-owned static hosting configuration and deployment guide rather than introducing containers, a custom API, or CI/CD in the same change.
+./openspec/changes/archive/2026-03-30-publish-web-to-fittin-subdomain/design.md:23:Public deployment will use `flutter build web --release` with explicit `SUPABASE_URL` and `SUPABASE_ANON_KEY` values. This keeps production behavior independent from the debug-only local Supabase fallback and matches how the app already reads configuration in `supabase_bootstrap.dart`.
+./openspec/changes/archive/2026-03-30-publish-web-to-fittin-subdomain/specs/web-public-deployment/spec.md:9:- **AND** the build flow uses explicit `SUPABASE_URL` and `SUPABASE_ANON_KEY` `dart-define` values instead of relying on debug-only local fallback behavior
+./migration_export/supabase-remote-setup-guide.md:9:- Provide the `SUPABASE_URL` and `SUPABASE_ANON_KEY` values needed by the app
+./migration_export/supabase-remote-setup-guide.md:42:- `SUPABASE_URL`
+./migration_export/supabase-remote-setup-guide.md:43:- `SUPABASE_ANON_KEY`
+./migration_export/supabase-remote-setup-guide.md:297:  --dart-define=SUPABASE_URL=http://<HOST_OR_LAN_IP>:8000 \
+./migration_export/supabase-remote-setup-guide.md:298:  --dart-define=SUPABASE_ANON_KEY=<YOUR_ANON_KEY>
+./migration_export/supabase-remote-setup-guide.md:359:Read docs/supabase-remote-setup-guide.md in this repo, then help me configure and start the Supabase backend on this machine for the Fittin app. After setup, verify auth, tables, storage bucket, and give me the SUPABASE_URL and SUPABASE_ANON_KEY values I should use to run the Flutter app.
+./migration_export/README.md:132:当前项目会优先使用显式传入的 `SUPABASE_URL` / `SUPABASE_ANON_KEY`；如果未提供，则仅会在本地 Supabase 开发环境实际可达时自动回退连接。Android APK 构建不再尝试自动连接仓库本机的 `127.0.0.1` Supabase；请为 APK 显式传入这两个 `dart-define`。
+./migration_export/README.md:173:- `SUPABASE_URL` / `SUPABASE_ANON_KEY` 注入方式
+./migration_export/README.md:200:  --build-arg SUPABASE_URL=https://your-supabase-host.example.com \
+./migration_export/README.md:201:  --build-arg SUPABASE_ANON_KEY=your-anon-key \

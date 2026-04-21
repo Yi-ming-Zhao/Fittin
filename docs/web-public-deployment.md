@@ -15,13 +15,13 @@ Flutter Web release build
   -> https://fittin.yimelo.cc/
 ```
 
-This repository does not deploy a separate custom backend. The web app is a static bundle and still talks directly to Supabase with `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+This repository now publishes a Flutter Web client that talks to the project-owned backend with `BACKEND_URL` (and optional `BACKEND_API_KEY`) passed via `dart-define`.
 
 Current public host split:
 
 ```text
 https://fittin.yimelo.cc/     -> Flutter Web frontend
-https://supabase.yimelo.cc/   -> local Supabase API exposed through Cloudflare Tunnel
+https://api.yimelo.cc/        -> project-owned backend API exposed through Cloudflare Tunnel
 ```
 
 ## Prerequisites
@@ -29,9 +29,9 @@ https://supabase.yimelo.cc/   -> local Supabase API exposed through Cloudflare T
 - Flutter SDK installed and available in `PATH`
 - Caddy installed on the host machine
 - An existing Cloudflare Tunnel that can route `fittin.yimelo.cc`
-- A reachable Supabase project URL and anon key for the public web client
+- A reachable project backend URL for the public web client
 
-Do not rely on the app's debug-only local Supabase fallback for public deployment. Release builds must pass explicit `dart-define` values.
+Do not rely on the app's local backend fallback for public deployment. Release builds should pass explicit `dart-define` values.
 
 ## 1. Build The Web App
 
@@ -39,8 +39,7 @@ From the repository root:
 
 ```bash
 flutter build web --release \
-  --dart-define=SUPABASE_URL=https://supabase.yimelo.cc \
-  --dart-define=SUPABASE_ANON_KEY=<your-anon-key>
+  --dart-define=BACKEND_URL=https://api.yimelo.cc
 ```
 
 Or use the repo wrapper that pulls, rebuilds, and restarts the public web service:
@@ -67,6 +66,7 @@ This repo includes a Caddy config template at:
 
 - `deploy/caddy/fittin.Caddyfile`
 - `deploy/launchd/com.yimelo.fittin-web.plist`
+- `deploy/systemd-user/fittin-web.service`
 - `tool/run_fittin_caddy.sh`
 
 Run Caddy from the repo root:
@@ -124,9 +124,38 @@ Logs:
 .deploy/fittin-web.err.log
 ```
 
+### Optional: Keep Caddy Resident With `systemd --user` On Linux
+
+On this Ubuntu host, the recommended long-running setup is a user service.
+
+Prepare the log directory and install the templated units:
+
+```bash
+mkdir -p .deploy
+tool/install_linux_user_services.sh
+```
+
+Enable the web service:
+
+```bash
+systemctl --user enable --now fittin-web.service
+systemctl --user status fittin-web.service --no-pager
+curl -I http://127.0.0.1:4173
+```
+
+If you want the user services to survive logout/reboot, enable lingering once at the system level:
+
+```bash
+sudo loginctl enable-linger "$USER"
+```
+
 ## 3. Route `fittin.yimelo.cc` Through Cloudflare Tunnel
 
-Update the existing tunnel ingress so the frontend and Supabase hostnames point to the correct local origins.
+Update the existing tunnel ingress so the frontend and backend hostnames point to the correct local origins.
+
+This repo includes an example config at:
+
+- `deploy/cloudflared/config.yml.example`
 
 Example ingress shape:
 
@@ -134,8 +163,8 @@ Example ingress shape:
 ingress:
   - hostname: fittin.yimelo.cc
     service: http://127.0.0.1:4173
-  - hostname: supabase.yimelo.cc
-    service: http://127.0.0.1:55321
+  - hostname: api.yimelo.cc
+    service: http://127.0.0.1:8081
   - service: http_status:404
 ```
 
@@ -143,11 +172,19 @@ Important:
 
 - The hostname must be `fittin.yimelo.cc`
 - The frontend origin must match the Caddy listener exactly: `127.0.0.1:4173`
-- The Supabase hostname must be `supabase.yimelo.cc`
-- The Supabase origin must match the local API gateway exactly: `127.0.0.1:55321`
+- The backend hostname must be `api.yimelo.cc`
+- The backend origin must match the local API gateway exactly
 - Keep the fallback `http_status:404` rule last
 
 After changing the tunnel config, reload or restart the tunnel using your normal Cloudflare Tunnel operational command.
+
+On Linux with the included user service:
+
+```bash
+systemctl --user enable --now fittin-cloudflared.service
+systemctl --user restart fittin-cloudflared.service
+systemctl --user status fittin-cloudflared.service --no-pager
+```
 
 If the host already runs `cloudflared` through `launchd`, reload it after updating `~/.cloudflared/config.yml`:
 
@@ -168,17 +205,17 @@ After the build, Caddy, and Tunnel are active, verify:
 1. Open `https://fittin.yimelo.cc/` and confirm the first frame renders.
 2. Refresh the page and confirm it does not fail with a blank screen or 404.
 3. Open browser dev tools and confirm core assets such as `flutter_bootstrap.js`, `main.dart.js`, icons, and manifest load successfully.
-4. Confirm the app reaches the intended Supabase environment rather than the local debug fallback.
+4. Confirm the app reaches the intended backend environment rather than the local debug fallback.
 5. If account features are expected to be live, sign in and confirm auth/bootstrap succeeds.
 6. Create or edit a small piece of browser-local data and refresh to confirm IndexedDB-backed local persistence still restores state.
-7. Confirm `https://supabase.yimelo.cc/auth/v1/settings` responds publicly and allows requests from `https://fittin.yimelo.cc`.
+7. Confirm the configured backend health/auth endpoint responds publicly and allows requests from `https://fittin.yimelo.cc`.
 
 ## 5. Update Procedure
 
 For every new public release:
 
 1. Pull the latest repository changes.
-2. Rebuild the web app with the correct public Supabase `dart-define` values.
+2. Rebuild the web app with the correct public backend `dart-define` values.
 3. Restart Caddy if needed so it serves the newly generated `build/web`.
 4. Confirm the tunnel is still routing to `127.0.0.1:4173`.
 5. Re-run the public smoke checks.
@@ -197,7 +234,7 @@ If the issue is Tunnel-related rather than app-related, first verify the local o
 
 ## 7. Common Failure Checks
 
-- `Missing SUPABASE_URL or SUPABASE_ANON_KEY`: rebuild with explicit `--dart-define` values.
+- `Missing BACKEND_URL`: rebuild with explicit `--dart-define` values.
 - Local origin does not respond: confirm Caddy is running and `build/web` exists.
 - Public URL fails but local origin works: inspect Cloudflare Tunnel ingress and tunnel process status.
-- App boots but auth/sync is unavailable: confirm the configured Supabase URL and anon key belong to the intended public project.
+- App boots but auth/sync is unavailable: confirm `BACKEND_URL` points at the intended public backend and that the backend is healthy behind Cloudflare Tunnel.

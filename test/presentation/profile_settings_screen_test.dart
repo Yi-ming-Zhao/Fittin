@@ -76,7 +76,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ProfileSettingsScreen), findsNothing);
-    expect(find.text('Supabase Not Configured'), findsOneWidget);
+    expect(find.text('Cloud Sync Not Available'), findsOneWidget);
     expect(find.byType(BackButton), findsOneWidget);
   });
 

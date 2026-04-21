@@ -1,0 +1,15 @@
+Auth config from supabase/config.toml:
+150:site_url = "https://fittin.yimelo.cc"
+152:additional_redirect_urls = ["http://127.0.0.1:3000", "https://127.0.0.1:3000", "https://fittin.yimelo.cc"]
+165:enable_signup = true
+167:enable_anonymous_sign_ins = false
+171:minimum_password_length = 6
+200:enable_signup = true
+203:double_confirm_changes = true
+205:enable_confirmations = false
+207:secure_password_change = false
+238:enable_signup = false
+240:enable_confirmations = false
+
+Live auth settings from http://127.0.0.1:55321/auth/v1/settings:
+{"external":{"anonymous_users":false,"apple":false,"azure":false,"bitbucket":false,"discord":false,"facebook":false,"snapchat":false,"figma":false,"fly":false,"github":false,"gitlab":false,"google":false,"keycloak":false,"kakao":false,"linkedin":false,"linkedin_oidc":false,"notion":false,"spotify":false,"slack":false,"slack_oidc":false,"workos":false,"twitch":false,"twitter":false,"email":true,"phone":false,"zoom":false},"disable_signup":false,"mailer_autoconfirm":true,"phone_autoconfirm":true,"sms_provider":"","saml_enabled":false}

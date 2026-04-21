@@ -4,7 +4,7 @@ import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';
 
 class FakeSupabaseRemoteRepository extends SupabaseRemoteRepository {
-  FakeSupabaseRemoteRepository() : super(null);
+  FakeSupabaseRemoteRepository() : super.unavailable();
 
   final List<Map<String, Object?>> upserts = [];
   final List<Map<String, String>> deletes = [];

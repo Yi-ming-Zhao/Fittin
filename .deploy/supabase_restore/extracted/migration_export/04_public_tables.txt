@@ -1,0 +1,10 @@
+              List of relations
+ Schema |      Name       | Type  |  Owner   
+--------+-----------------+-------+----------
+ public | body_metrics    | table | postgres
+ public | plan_instances  | table | postgres
+ public | plans           | table | postgres
+ public | progress_photos | table | postgres
+ public | workout_logs    | table | postgres
+(5 rows)
+

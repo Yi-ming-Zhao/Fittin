@@ -1,0 +1,9 @@
+      table      | count 
+-----------------+-------
+ plans           |     0
+ plan_instances  |     3
+ workout_logs    |    44
+ body_metrics    |     2
+ progress_photos |     0
+(5 rows)
+

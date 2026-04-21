@@ -12,7 +12,7 @@ The system MUST persist the engine-family-specific runtime state needed to repro
 ### Requirement: Database Instance Separation
 The system MUST persist training templates separately from instances, linking instances to templates by a template ID, and it MUST support seeded templates plus user-authored editable template documents without mutating an existing instance's source template unexpectedly. Training instances for TM-driven programs MUST also persist the training-max profile that was used to generate their prescriptions.
 
-The local datastore MUST additionally preserve enough metadata to support user ownership, versioned synchronization, first-login claiming, conflict detection, and soft-delete propagation with Supabase.
+The local datastore MUST additionally preserve enough metadata to support user ownership, versioned synchronization, first-login claiming, conflict detection, and soft-delete propagation with the backend.
 
 Editable template documents MUST preserve schedule mode, slot-specific periodized content, supported set types, and per-exercise load-unit metadata without stripping those fields on save.
 
@@ -44,7 +44,7 @@ Editable template documents MUST preserve schedule mode, slot-specific periodize
 - **THEN** those fields are preserved in the stored editable template document and survive app restart and reload.
 
 ### Requirement: Local Sync Metadata
-The local datastore MUST track per-record sync metadata for every entity that can round-trip with Supabase. That metadata MUST be sufficient to identify pending uploads, pending deletes, synchronized records, conflicts, last-write timing, and the source device or sync attempt needed for reconciliation.
+The local datastore MUST track per-record sync metadata for every entity that can round-trip with the backend. That metadata MUST be sufficient to identify pending uploads, pending deletes, synchronized records, conflicts, last-write timing, and the source device or sync attempt needed for reconciliation.
 
 #### Scenario: User updates a plan while offline
 - **WHEN** a sync-eligible record is created or edited locally without a successful cloud write yet
@@ -54,7 +54,7 @@ The local datastore MUST track per-record sync metadata for every entity that ca
 #### Scenario: User deletes a workout log on one device
 - **WHEN** a synchronized record is removed by the user
 - **THEN** the local datastore marks it as soft-deleted rather than immediately destroying all trace of it
-- **AND** the deletion can be propagated safely to Supabase and other devices.
+- **AND** the deletion can be propagated safely to the backend and other devices.
 
 #### Scenario: Sync engine detects overlapping local and remote edits
 - **WHEN** a local pending change and a newer remote change target the same sync-eligible record

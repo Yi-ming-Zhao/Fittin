@@ -1,15 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import 'package:fittin_v2/src/application/local_supabase_probe.dart';
 
 enum SupabaseBootstrapStatus { configured, unavailable }
 
 class SupabaseBootstrapState {
   const SupabaseBootstrapState.configured({
     required this.url,
-    required this.anonKey,
+    this.anonKey = '',
   }) : status = SupabaseBootstrapStatus.configured,
        errorMessage = null;
 
@@ -28,86 +25,62 @@ class SupabaseBootstrapState {
 
 final supabaseBootstrapProvider = Provider<SupabaseBootstrapState>((ref) {
   return const SupabaseBootstrapState.unavailable(
-    'Supabase bootstrap was not overridden.',
+    'Backend bootstrap was not overridden.',
   );
 });
 
-final supabaseClientProvider = Provider<SupabaseClient?>((ref) {
-  final bootstrap = ref.watch(supabaseBootstrapProvider);
-  if (!bootstrap.isConfigured) {
-    return null;
-  }
-  return Supabase.instance.client;
-});
-
-typedef SupabaseClientInitializer =
-    Future<void> Function({required String url, required String anonKey});
-
-const localSupabaseDevUrl = 'http://127.0.0.1:55321';
-const localSupabaseDevPublishableKey =
-    'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
+const localBackendDevUrl = 'http://127.0.0.1:8081';
 
 Future<SupabaseBootstrapState> initializeSupabase({
   String? configuredUrl,
   String? configuredAnonKey,
-  LocalSupabaseProbe? localDevStackProbe,
-  SupabaseClientInitializer? initializeClient,
+  Future<bool> Function(Uri baseUri)? localDevStackProbe,
+  Future<void> Function({required String url, required String anonKey})?
+  initializeClient,
   TargetPlatform? targetPlatformOverride,
   bool? isWebOverride,
 }) async {
-  final url = configuredUrl ?? const String.fromEnvironment('SUPABASE_URL');
-  final anonKey =
-      configuredAnonKey ?? const String.fromEnvironment('SUPABASE_ANON_KEY');
-  final probe = localDevStackProbe ?? defaultLocalSupabaseProbe;
-  final initializer =
-      initializeClient ??
-      ({required String url, required String anonKey}) =>
-          Supabase.initialize(url: url, anonKey: anonKey);
+  final url = configuredUrl ?? const String.fromEnvironment('BACKEND_URL');
+  final apiKey =
+      configuredAnonKey ?? const String.fromEnvironment('BACKEND_API_KEY');
   final targetPlatform = targetPlatformOverride ?? defaultTargetPlatform;
   final isWebRuntime = isWebOverride ?? kIsWeb;
 
-  if (url.isNotEmpty || anonKey.isNotEmpty) {
-    if (url.isEmpty || anonKey.isEmpty) {
-      return const SupabaseBootstrapState.unavailable(
-        'Both SUPABASE_URL and SUPABASE_ANON_KEY must be provided together.',
-      );
+  if (url.isNotEmpty) {
+    try {
+      if (initializeClient != null) {
+        await initializeClient(url: url, anonKey: apiKey);
+      }
+      return SupabaseBootstrapState.configured(url: url, anonKey: apiKey);
+    } catch (error) {
+      return SupabaseBootstrapState.unavailable(error.toString());
     }
-    return _initializeSupabaseClient(
-      url: url,
-      anonKey: anonKey,
-      initializer: initializer,
-    );
   }
 
   if (!isWebRuntime && targetPlatform == TargetPlatform.android) {
     return const SupabaseBootstrapState.unavailable(
-      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Android APK builds cannot auto-connect to the repo-local Supabase stack via 127.0.0.1; provide explicit Supabase config for devices.',
+      'Missing BACKEND_URL. Android APK builds cannot auto-connect to the repo-local backend via 127.0.0.1; provide explicit backend config for devices.',
     );
   }
 
-  final localDevUri = Uri.parse(localSupabaseDevUrl);
-  final localDevAvailable = await probe(localDevUri);
-  if (!localDevAvailable) {
-    return const SupabaseBootstrapState.unavailable(
-      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Local Supabase dev stack at http://127.0.0.1:55321 is not reachable.',
-    );
+  final localDevUri = Uri.parse(localBackendDevUrl);
+  if (localDevStackProbe != null) {
+    final localDevAvailable = await localDevStackProbe(localDevUri);
+    if (!localDevAvailable) {
+      return const SupabaseBootstrapState.unavailable(
+        'Missing BACKEND_URL. Local backend dev server at http://127.0.0.1:8081 is not reachable.',
+      );
+    }
   }
 
-  return _initializeSupabaseClient(
-    url: localSupabaseDevUrl,
-    anonKey: localSupabaseDevPublishableKey,
-    initializer: initializer,
-  );
-}
-
-Future<SupabaseBootstrapState> _initializeSupabaseClient({
-  required String url,
-  required String anonKey,
-  required SupabaseClientInitializer initializer,
-}) async {
   try {
-    await initializer(url: url, anonKey: anonKey);
-    return SupabaseBootstrapState.configured(url: url, anonKey: anonKey);
+    if (initializeClient != null) {
+      await initializeClient(url: localBackendDevUrl, anonKey: apiKey);
+    }
+    return SupabaseBootstrapState.configured(
+      url: localBackendDevUrl,
+      anonKey: apiKey,
+    );
   } catch (error) {
     return SupabaseBootstrapState.unavailable(error.toString());
   }

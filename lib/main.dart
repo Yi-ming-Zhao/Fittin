@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/auth_session_store.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
@@ -21,6 +23,7 @@ import 'package:fittin_v2/src/presentation/theme/app_styles.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final supabaseBootstrap = await initializeSupabase();
+  final preferences = await SharedPreferences.getInstance();
   final persistence = await createLocalPersistence();
   await persistence.databaseRepository.ensureDefaultProgramSeeded();
 
@@ -45,6 +48,9 @@ void main() async {
               ownerUserId: ref.watch(currentUserIdProvider),
             );
           }),
+        authSessionStoreProvider.overrideWithValue(
+          SharedPreferencesAuthSessionStore(preferences),
+        ),
         supabaseBootstrapProvider.overrideWithValue(supabaseBootstrap),
       ],
       child: const FittinApp(),

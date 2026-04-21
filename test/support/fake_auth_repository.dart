@@ -5,10 +5,12 @@ import 'package:fittin_v2/src/application/auth_provider.dart';
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthUser? initialUser}) {
     _currentUser = initialUser;
+    _accessToken = initialUser == null ? null : 'fake-token';
   }
 
   final _controller = StreamController<AuthUser?>.broadcast();
   AuthUser? _currentUser;
+  String? _accessToken;
   bool signedOut = false;
   int signInCalls = 0;
   int signUpCalls = 0;
@@ -20,6 +22,9 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<String?> currentAccessToken() async => _accessToken;
+
+  @override
   Future<AuthUser?> currentUser() async => _currentUser;
 
   @override
@@ -29,6 +34,7 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     signInCalls += 1;
     _currentUser = AuthUser(id: 'user-1', email: email);
+    _accessToken = 'fake-token';
     _controller.add(_currentUser);
     return _currentUser!;
   }
@@ -40,6 +46,7 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     signUpCalls += 1;
     _currentUser = AuthUser(id: 'user-2', email: email);
+    _accessToken = 'fake-token';
     _controller.add(_currentUser);
     return _currentUser!;
   }
@@ -48,6 +55,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> signOut() async {
     signedOut = true;
     _currentUser = null;
+    _accessToken = null;
     _controller.add(null);
   }
 }

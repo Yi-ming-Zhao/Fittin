@@ -1,0 +1,65 @@
+                                                List of schemas
+        Name         |       Owner       |             Access privileges              |      Description       
+---------------------+-------------------+--------------------------------------------+------------------------
+ _realtime           | postgres          |                                            | 
+ auth                | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin             +| 
+                     |                   | supabase_auth_admin=UC/supabase_admin     +| 
+                     |                   | dashboard_user=UC/supabase_admin          +| 
+                     |                   | postgres=U/supabase_admin                  | 
+ extensions          | postgres          | postgres=UC/postgres                      +| 
+                     |                   | anon=U/postgres                           +| 
+                     |                   | authenticated=U/postgres                  +| 
+                     |                   | service_role=U/postgres                   +| 
+                     |                   | dashboard_user=UC/postgres                 | 
+ graphql             | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U*/supabase_admin                +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin              | 
+ graphql_public      | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U*/supabase_admin                +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin              | 
+ net                 | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | =U/supabase_admin                         +| 
+                     |                   | supabase_functions_admin=U/supabase_admin +| 
+                     |                   | postgres=U/supabase_admin                 +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin              | 
+ pgbouncer           | pgbouncer         |                                            | 
+ public              | pg_database_owner | pg_database_owner=UC/pg_database_owner    +| standard public schema
+                     |                   | =U/pg_database_owner                      +| 
+                     |                   | postgres=U/pg_database_owner              +| 
+                     |                   | anon=U/pg_database_owner                  +| 
+                     |                   | authenticated=U/pg_database_owner         +| 
+                     |                   | service_role=U/pg_database_owner           | 
+ realtime            | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U/supabase_admin                 +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin             +| 
+                     |                   | supabase_realtime_admin=UC/supabase_admin  | 
+ storage             | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U*/supabase_admin                +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin             +| 
+                     |                   | supabase_storage_admin=U*C*/supabase_admin+| 
+                     |                   | dashboard_user=UC/supabase_admin           | 
+ supabase_functions  | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U/supabase_admin                 +| 
+                     |                   | anon=U/supabase_admin                     +| 
+                     |                   | authenticated=U/supabase_admin            +| 
+                     |                   | service_role=U/supabase_admin             +| 
+                     |                   | supabase_functions_admin=UC/supabase_admin | 
+ supabase_migrations | postgres          |                                            | 
+ vault               | supabase_admin    | supabase_admin=UC/supabase_admin          +| 
+                     |                   | postgres=U*/supabase_admin                +| 
+                     |                   | service_role=U/supabase_admin              | 
+(13 rows)
+

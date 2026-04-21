@@ -11,8 +11,8 @@ void main() {
       String? initializedAnonKey;
 
       final state = await initializeSupabase(
-        configuredUrl: 'https://example.supabase.co',
-        configuredAnonKey: 'explicit-anon-key',
+        configuredUrl: 'https://api.example.com',
+        configuredAnonKey: 'dev-api-key',
         localDevStackProbe: (baseUri) async {
           probeCalls += 1;
           return true;
@@ -26,10 +26,10 @@ void main() {
       );
 
       expect(state.isConfigured, isTrue);
-      expect(state.url, 'https://example.supabase.co');
-      expect(state.anonKey, 'explicit-anon-key');
-      expect(initializedUrl, 'https://example.supabase.co');
-      expect(initializedAnonKey, 'explicit-anon-key');
+      expect(state.url, 'https://api.example.com');
+      expect(state.anonKey, 'dev-api-key');
+      expect(initializedUrl, 'https://api.example.com');
+      expect(initializedAnonKey, 'dev-api-key');
       expect(probeCalls, 0);
     },
   );
@@ -53,15 +53,15 @@ void main() {
       );
 
       expect(state.isConfigured, isTrue);
-      expect(state.url, 'http://127.0.0.1:55321');
-      expect(initializedUrl, 'http://127.0.0.1:55321');
-      expect(initializedAnonKey, isNotEmpty);
+      expect(state.url, 'http://127.0.0.1:8081');
+      expect(initializedUrl, 'http://127.0.0.1:8081');
+      expect(initializedAnonKey, isEmpty);
     },
   );
 
-  test('initializeSupabase reports incomplete explicit config', () async {
+  test('initializeSupabase allows explicit config without api key', () async {
     final state = await initializeSupabase(
-      configuredUrl: 'https://example.supabase.co',
+      configuredUrl: 'https://api.example.com',
       configuredAnonKey: '',
       localDevStackProbe: (baseUri) async => true,
       initializeClient: ({required url, required anonKey}) async {},
@@ -69,11 +69,8 @@ void main() {
       isWebOverride: false,
     );
 
-    expect(state.isConfigured, isFalse);
-    expect(
-      state.errorMessage,
-      'Both SUPABASE_URL and SUPABASE_ANON_KEY must be provided together.',
-    );
+    expect(state.isConfigured, isTrue);
+    expect(state.url, 'https://api.example.com');
   });
 
   test('initializeSupabase reports unreachable local fallback', () async {
@@ -89,9 +86,7 @@ void main() {
     expect(state.isConfigured, isFalse);
     expect(
       state.errorMessage,
-      contains(
-        'Local Supabase dev stack at http://127.0.0.1:55321 is not reachable',
-      ),
+      contains('Local backend dev server at http://127.0.0.1:8081 is not reachable'),
     );
   });
 
@@ -114,7 +109,7 @@ void main() {
     expect(probeCalls, 0);
     expect(
       state.errorMessage,
-      'Missing SUPABASE_URL and SUPABASE_ANON_KEY. Android APK builds cannot auto-connect to the repo-local Supabase stack via 127.0.0.1; provide explicit Supabase config for devices.',
+      'Missing BACKEND_URL. Android APK builds cannot auto-connect to the repo-local backend via 127.0.0.1; provide explicit backend config for devices.',
     );
   });
 }

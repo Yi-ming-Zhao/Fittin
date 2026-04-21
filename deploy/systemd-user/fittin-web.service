@@ -1,0 +1,17 @@
+[Unit]
+Description=Fittin public web static server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=__REPO_ROOT__
+Environment=PATH=%h/.local/bin:%h/.local/lib/flutter/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/bin/bash __REPO_ROOT__/tool/run_fittin_caddy.sh
+Restart=always
+RestartSec=5
+StandardOutput=append:__REPO_ROOT__/.deploy/fittin-web.out.log
+StandardError=append:__REPO_ROOT__/.deploy/fittin-web.err.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,1 @@
+supabase/migrations/20260319160000_fittin_remote_setup.sql

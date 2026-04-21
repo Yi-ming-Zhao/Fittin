@@ -241,10 +241,10 @@ class AppStrings {
   String get syncNow => isChinese ? '立即同步' : 'Sync Now';
   String get retrySync => isChinese ? '重试同步' : 'Retry Sync';
   String get supabaseUnavailable =>
-      isChinese ? 'Supabase 尚未配置' : 'Supabase Not Configured';
+      isChinese ? '后端尚未配置' : 'Backend Not Configured';
   String get supabaseUnavailableHint => isChinese
-      ? '请先通过 dart-define 提供 SUPABASE_URL 和 SUPABASE_ANON_KEY；未提供时，应用只会在本地 Supabase 开发栈实际可达时自动回退。'
-      : 'Provide SUPABASE_URL and SUPABASE_ANON_KEY via dart-define first; without them, the app only falls back when the local Supabase dev stack is actually reachable.';
+      ? '请先通过 dart-define 提供 BACKEND_URL；未提供时，应用只会在本地后端开发服务实际可达时自动回退。'
+      : 'Provide BACKEND_URL via dart-define first; without it, the app only falls back when the local backend dev server is actually reachable.';
   String get workingState => isChinese ? '处理中...' : 'Working...';
   String get language => isChinese ? '语言' : 'Language';
   String get languageSubtitle =>

@@ -1,0 +1,2 @@
+No extra machine-local SQL editor history was discovered automatically.
+Only repository-tracked SQL and documentation clues were collected in this export.

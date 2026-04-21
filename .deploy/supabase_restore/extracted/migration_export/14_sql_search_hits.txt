@@ -1,0 +1,52 @@
+docs/supabase-remote-setup-guide.md:101:create table if not exists public.plans (
+docs/supabase-remote-setup-guide.md:116:create table if not exists public.plan_instances (
+docs/supabase-remote-setup-guide.md:131:create table if not exists public.workout_logs (
+docs/supabase-remote-setup-guide.md:146:create table if not exists public.body_metrics (
+docs/supabase-remote-setup-guide.md:161:create table if not exists public.progress_photos (
+docs/supabase-remote-setup-guide.md:181:alter table public.plans enable row level security;
+docs/supabase-remote-setup-guide.md:182:alter table public.plan_instances enable row level security;
+docs/supabase-remote-setup-guide.md:183:alter table public.workout_logs enable row level security;
+docs/supabase-remote-setup-guide.md:184:alter table public.body_metrics enable row level security;
+docs/supabase-remote-setup-guide.md:185:alter table public.progress_photos enable row level security;
+docs/supabase-remote-setup-guide.md:193:create policy "plans own rows" on public.plans
+docs/supabase-remote-setup-guide.md:198:create policy "plan_instances own rows" on public.plan_instances
+docs/supabase-remote-setup-guide.md:203:create policy "workout_logs own rows" on public.workout_logs
+docs/supabase-remote-setup-guide.md:208:create policy "body_metrics own rows" on public.body_metrics
+docs/supabase-remote-setup-guide.md:213:create policy "progress_photos own rows" on public.progress_photos
+docs/supabase-remote-setup-guide.md:245:create policy "authenticated users can read own progress photos"
+docs/supabase-remote-setup-guide.md:246:on storage.objects
+docs/supabase-remote-setup-guide.md:255:create policy "authenticated users can upload own progress photos"
+docs/supabase-remote-setup-guide.md:256:on storage.objects
+docs/supabase-remote-setup-guide.md:265:create policy "authenticated users can update own progress photos"
+docs/supabase-remote-setup-guide.md:266:on storage.objects
+docs/supabase-remote-setup-guide.md:280:create policy "authenticated users can delete own progress photos"
+docs/supabase-remote-setup-guide.md:281:on storage.objects
+supabase/config.toml:111:# [storage.buckets.images]
+supabase/migrations/20260319160000_fittin_remote_setup.sql:1:create table if not exists public.plans (
+supabase/migrations/20260319160000_fittin_remote_setup.sql:16:create table if not exists public.plan_instances (
+supabase/migrations/20260319160000_fittin_remote_setup.sql:31:create table if not exists public.workout_logs (
+supabase/migrations/20260319160000_fittin_remote_setup.sql:46:create table if not exists public.body_metrics (
+supabase/migrations/20260319160000_fittin_remote_setup.sql:61:create table if not exists public.progress_photos (
+supabase/migrations/20260319160000_fittin_remote_setup.sql:75:alter table public.plans enable row level security;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:76:alter table public.plan_instances enable row level security;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:77:alter table public.workout_logs enable row level security;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:78:alter table public.body_metrics enable row level security;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:79:alter table public.progress_photos enable row level security;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:82:create policy "plans own rows" on public.plans
+supabase/migrations/20260319160000_fittin_remote_setup.sql:88:create policy "plan_instances own rows" on public.plan_instances
+supabase/migrations/20260319160000_fittin_remote_setup.sql:94:create policy "workout_logs own rows" on public.workout_logs
+supabase/migrations/20260319160000_fittin_remote_setup.sql:100:create policy "body_metrics own rows" on public.body_metrics
+supabase/migrations/20260319160000_fittin_remote_setup.sql:106:create policy "progress_photos own rows" on public.progress_photos
+supabase/migrations/20260319160000_fittin_remote_setup.sql:111:insert into storage.buckets (id, name, public)
+supabase/migrations/20260319160000_fittin_remote_setup.sql:115:drop policy if exists "authenticated users can read own progress photos" on storage.objects;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:116:create policy "authenticated users can read own progress photos"
+supabase/migrations/20260319160000_fittin_remote_setup.sql:117:on storage.objects
+supabase/migrations/20260319160000_fittin_remote_setup.sql:126:drop policy if exists "authenticated users can upload own progress photos" on storage.objects;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:127:create policy "authenticated users can upload own progress photos"
+supabase/migrations/20260319160000_fittin_remote_setup.sql:128:on storage.objects
+supabase/migrations/20260319160000_fittin_remote_setup.sql:137:drop policy if exists "authenticated users can update own progress photos" on storage.objects;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:138:create policy "authenticated users can update own progress photos"
+supabase/migrations/20260319160000_fittin_remote_setup.sql:139:on storage.objects
+supabase/migrations/20260319160000_fittin_remote_setup.sql:153:drop policy if exists "authenticated users can delete own progress photos" on storage.objects;
+supabase/migrations/20260319160000_fittin_remote_setup.sql:154:create policy "authenticated users can delete own progress photos"
+supabase/migrations/20260319160000_fittin_remote_setup.sql:155:on storage.objects

@@ -1,0 +1,5 @@
+       id        |      name       | public 
+-----------------+-----------------+--------
+ progress-photos | progress-photos | f
+(1 row)
+

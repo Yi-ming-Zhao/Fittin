@@ -1,0 +1,9 @@
+Storage volume: supabase_storage_Fittin
+Mounted path inside helper container: /data
+
+Storage total size:
+8.0K	/data
+
+Top-level storage files:
+/data
+/data/stub

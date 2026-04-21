@@ -1,0 +1,9 @@
+tunnel: <your-tunnel-uuid>
+credentials-file: /home/<user>/.cloudflared/<your-tunnel-uuid>.json
+
+ingress:
+  - hostname: fittin.yimelo.cc
+    service: http://127.0.0.1:4173
+  - hostname: supabase.yimelo.cc
+    service: http://127.0.0.1:55321
+  - service: http_status:404

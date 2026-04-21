@@ -32,6 +32,9 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+.local/
+cert.pem
+.deploy/*.log
 
 # Symbolication related
 app.*.symbols
