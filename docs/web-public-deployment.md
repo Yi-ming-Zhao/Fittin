@@ -50,6 +50,8 @@ tool/update_public_web.sh
 
 The build wrapper automatically normalizes checked-in Isar generated schema ids before running the web release build, so it can recover from the JavaScript integer literal issue without a separate manual step.
 
+The same repository-owned build entrypoint is also used by the GitHub release workflow so a tagged GitHub Release packages the same `build/web` output shape without relying on the public host machine. See [docs/github-release-automation.md](/data/zhaoyiming/Fittin/docs/github-release-automation.md).
+
 Expected output:
 
 - Generated files under `build/web/`

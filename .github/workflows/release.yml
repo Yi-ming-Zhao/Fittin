@@ -1,0 +1,134 @@
+name: Publish Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_BACKEND_URL: ${{ vars.RELEASE_BACKEND_URL }}
+      BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.7"
+          channel: stable
+          cache: true
+
+      - name: Resolve release metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          version_name="${RELEASE_TAG#v}"
+          build_number="${GITHUB_RUN_NUMBER}"
+          release_dir="$RUNNER_TEMP/release-assets"
+          backend_url="${RELEASE_BACKEND_URL:-https://api.yimelo.cc}"
+          mkdir -p "$release_dir"
+
+          {
+            echo "version_name=$version_name"
+            echo "build_number=$build_number"
+            echo "release_dir=$release_dir"
+            echo "backend_url=$backend_url"
+            echo "apk_name=fittin-${RELEASE_TAG}-android.apk"
+            echo "aab_name=fittin-${RELEASE_TAG}-android.aab"
+            echo "web_name=fittin-${RELEASE_TAG}-web.zip"
+            echo "sha_name=fittin-${RELEASE_TAG}-sha256.txt"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Materialize Android signing config
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        working-directory: android
+        run: |
+          set -euo pipefail
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > release-keystore.jks
+          cat > key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=release-keystore.jks
+          EOF
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build Android APK
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --build-name "${{ steps.meta.outputs.version_name }}" \
+            --build-number "${{ steps.meta.outputs.build_number }}" \
+            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
+            --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
+
+      - name: Build Android App Bundle
+        run: |
+          set -euo pipefail
+          flutter build appbundle --release \
+            --build-name "${{ steps.meta.outputs.version_name }}" \
+            --build-number "${{ steps.meta.outputs.build_number }}" \
+            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
+            --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+          cp build/app/outputs/bundle/release/app-release.aab \
+            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
+
+      - name: Build Flutter Web release bundle
+        run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}" "$BACKEND_API_KEY"
+
+      - name: Package web artifact
+        run: |
+          set -euo pipefail
+          cd build
+          zip -qr "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.web_name }}" web
+
+      - name: Generate checksums and release notes
+        run: |
+          set -euo pipefail
+          cd "${{ steps.meta.outputs.release_dir }}"
+          sha256sum "${{ steps.meta.outputs.apk_name }}" "${{ steps.meta.outputs.aab_name }}" "${{ steps.meta.outputs.web_name }}" \
+            > "${{ steps.meta.outputs.sha_name }}"
+          cat > release-notes.md <<EOF
+          Release ${RELEASE_TAG}
+
+          Included assets:
+          - ${{ steps.meta.outputs.apk_name }}
+          - ${{ steps.meta.outputs.aab_name }}
+          - ${{ steps.meta.outputs.web_name }}
+          - ${{ steps.meta.outputs.sha_name }}
+
+          Web build backend URL:
+          - ${{ steps.meta.outputs.backend_url }}
+
+          Android signing mode:
+          - $(if [[ -f "${GITHUB_WORKSPACE}/android/key.properties" ]]; then echo "repository-provided signing"; else echo "fallback debug signing"; fi)
+          EOF
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          body_path: ${{ steps.meta.outputs.release_dir }}/release-notes.md
+          files: |
+            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}
+            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}
+            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.web_name }}
+            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.sha_name }}
