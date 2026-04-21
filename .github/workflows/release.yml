@@ -77,6 +77,8 @@ jobs:
         run: flutter pub get
 
       - name: Build Android APK
+        id: build_apk
+        continue-on-error: true
         run: |
           set -euo pipefail
           flutter build apk --release \
@@ -84,10 +86,14 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          cp build/app/outputs/flutter-apk/app-release.apk \
-            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
+          if [[ -f build/app/outputs/flutter-apk/app-release.apk ]]; then
+            cp build/app/outputs/flutter-apk/app-release.apk \
+              "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
+          fi
 
       - name: Build Android App Bundle
+        id: build_aab
+        continue-on-error: true
         run: |
           set -euo pipefail
           flutter build appbundle --release \
@@ -95,8 +101,10 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          cp build/app/outputs/bundle/release/app-release.aab \
-            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
+          if [[ -f build/app/outputs/bundle/release/app-release.aab ]]; then
+            cp build/app/outputs/bundle/release/app-release.aab \
+              "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
+          fi
 
       - name: Build Flutter Web release bundle
         run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}" "$BACKEND_API_KEY"
@@ -111,19 +119,28 @@ jobs:
         run: |
           set -euo pipefail
           cd "${{ steps.meta.outputs.release_dir }}"
-          sha256sum "${{ steps.meta.outputs.apk_name }}" "${{ steps.meta.outputs.aab_name }}" "${{ steps.meta.outputs.web_name }}" \
-            > "${{ steps.meta.outputs.sha_name }}"
+          shopt -s nullglob
+          assets=( *.apk *.aab *.zip )
+          if [[ "${#assets[@]}" -gt 0 ]]; then
+            sha256sum "${assets[@]}" > "${{ steps.meta.outputs.sha_name }}"
+          else
+            : > "${{ steps.meta.outputs.sha_name }}"
+          fi
           cat > release-notes.md <<EOF
           Release ${RELEASE_TAG}
 
           Included assets:
-          - ${{ steps.meta.outputs.apk_name }}
-          - ${{ steps.meta.outputs.aab_name }}
+          - $(if [[ -f "${{ steps.meta.outputs.apk_name }}" ]]; then echo "${{ steps.meta.outputs.apk_name }}"; else echo "${{ steps.meta.outputs.apk_name }} (missing)"; fi)
+          - $(if [[ -f "${{ steps.meta.outputs.aab_name }}" ]]; then echo "${{ steps.meta.outputs.aab_name }}"; else echo "${{ steps.meta.outputs.aab_name }} (missing)"; fi)
           - ${{ steps.meta.outputs.web_name }}
           - ${{ steps.meta.outputs.sha_name }}
 
           Web build backend URL:
           - ${{ steps.meta.outputs.backend_url }}
+
+          Android build result:
+          - APK step: ${{ steps.build_apk.conclusion }}
+          - AAB step: ${{ steps.build_aab.conclusion }}
 
           Android signing mode:
           - $(if [[ -f "${GITHUB_WORKSPACE}/android/key.properties" ]]; then echo "repository-provided signing"; else echo "fallback debug signing"; fi)
@@ -134,8 +151,4 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           body_path: ${{ steps.meta.outputs.release_dir }}/release-notes.md
-          files: |
-            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}
-            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}
-            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.web_name }}
-            ${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.sha_name }}
+          files: ${{ steps.meta.outputs.release_dir }}/*
