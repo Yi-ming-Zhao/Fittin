@@ -43,6 +43,7 @@ class WebSyncService extends SyncService {
       return;
     }
 
+    await _pullRemote(ownerUserId);
     await _databaseRepository.claimLocalDataForUser(ownerUserId);
     await _progressRepository.claimLocalDataForUser(ownerUserId);
     await _pushPending(ownerUserId);
@@ -257,6 +258,7 @@ class WebSyncService extends SyncService {
     List<Map<String, dynamic>> rows,
     String ownerUserId,
   ) async {
+    final remoteInstances = <StoredTrainingInstance>[];
     for (final row in rows) {
       final existing = await _databaseRepository.fetchInstance(
         row['id'] as String,
@@ -300,6 +302,19 @@ class WebSyncService extends SyncService {
       await _databaseRepository.saveInstance(
         instance,
         syncStatus: SyncStatusKeys.synced,
+      );
+      if (instance.deletedAt == null) {
+        remoteInstances.add(instance);
+      }
+    }
+
+    final activeInstanceId = await _databaseRepository
+        .fetchActiveInstanceIdForUser(ownerUserId);
+    if (activeInstanceId == null && remoteInstances.isNotEmpty) {
+      remoteInstances.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      await _databaseRepository.saveActiveInstanceIdForUser(
+        remoteInstances.first.instanceId,
+        ownerUserId,
       );
     }
   }

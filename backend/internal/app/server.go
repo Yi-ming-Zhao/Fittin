@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -328,7 +329,11 @@ func (s *Server) handleSyncUpsert(w http.ResponseWriter, r *http.Request) {
 
 	savedRow, err := s.upsertSyncRow(r.Context(), spec, normalized)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		status := http.StatusInternalServerError
+		if errors.Is(err, errSyncOwnershipConflict) {
+			status = http.StatusConflict
+		}
+		writeError(w, status, err.Error())
 		return
 	}
 
@@ -498,6 +503,7 @@ type authUserRecord struct {
 }
 
 var errNotFound = errors.New("record not found")
+var errSyncOwnershipConflict = errors.New("sync record id belongs to another user")
 
 func authUserPayload(user authUserRecord) map[string]any {
 	return map[string]any{
@@ -668,6 +674,9 @@ func (s *Server) upsertSyncRow(ctx context.Context, spec tableSpec, row map[stri
 
 	var encoded []byte
 	if err := s.db.QueryRow(ctx, query, args...).Scan(&encoded); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errSyncOwnershipConflict
+		}
 		return nil, err
 	}
 	return decodeJSONRow(encoded)

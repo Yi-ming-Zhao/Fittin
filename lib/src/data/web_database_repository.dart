@@ -479,7 +479,10 @@ class WebDatabaseRepository extends DatabaseRepository {
     }
 
     final instance = StoredTrainingInstance(
-      instanceId: _defaultInstanceIdForTemplate(templateId),
+      instanceId: _defaultInstanceIdForTemplate(
+        templateId,
+        ownerUserId: ownerUserId,
+      ),
       templateId: templateId,
       currentWorkoutIndex: 0,
       ownerUserId: ownerUserId,
@@ -701,6 +704,11 @@ class WebDatabaseRepository extends DatabaseRepository {
   @override
   Future<void> claimLocalDataForUser(String ownerUserId) async {
     final now = serializeStoredDateTime(DateTime.now());
+    final localActiveInstanceId = await fetchActiveInstanceIdForUser(null);
+    final userActiveInstanceId = await fetchActiveInstanceIdForUser(
+      ownerUserId,
+    );
+    final remappedInstanceIds = <String, String>{};
     final templateDocs = await store.getAllRecords(WebStoreNames.templates);
     for (final doc in templateDocs) {
       if (doc['isBuiltIn'] == true || doc['ownerUserId'] != null) {
@@ -728,6 +736,19 @@ class WebDatabaseRepository extends DatabaseRepository {
       if (doc['ownerUserId'] != null) {
         continue;
       }
+      final oldInstanceId = doc['instanceId'] as String;
+      final scopedInstanceId = _scopedInstanceIdForUser(
+        oldInstanceId,
+        ownerUserId,
+      );
+      if (scopedInstanceId != oldInstanceId) {
+        doc['instanceId'] = scopedInstanceId;
+        remappedInstanceIds[oldInstanceId] = scopedInstanceId;
+        await store.deleteRecord(
+          WebStoreNames.syncQueue,
+          '${SyncEntityTypes.instance}:$oldInstanceId',
+        );
+      }
       doc['ownerUserId'] = ownerUserId;
       doc['syncStatusKey'] = SyncStatusKeys.pendingUpload;
       doc['lastModifiedAt'] = now;
@@ -736,6 +757,9 @@ class WebDatabaseRepository extends DatabaseRepository {
         doc['instanceId'] as String,
         doc,
       );
+      if (scopedInstanceId != oldInstanceId) {
+        await store.deleteRecord(WebStoreNames.instances, oldInstanceId);
+      }
       await _enqueueSync(
         entityType: SyncEntityTypes.instance,
         entityId: doc['instanceId'] as String,
@@ -749,6 +773,15 @@ class WebDatabaseRepository extends DatabaseRepository {
     for (final doc in logDocs) {
       if (doc['ownerUserId'] != null) {
         continue;
+      }
+      final remappedInstanceId =
+          remappedInstanceIds[doc['instanceId'] as String?];
+      if (remappedInstanceId != null) {
+        doc['instanceId'] = remappedInstanceId;
+        doc['rawJsonPayload'] = _remapWorkoutLogInstanceId(
+          doc['rawJsonPayload'] as String,
+          remappedInstanceId,
+        );
       }
       doc['ownerUserId'] = ownerUserId;
       doc['syncStatusKey'] = SyncStatusKeys.pendingUpload;
@@ -764,6 +797,11 @@ class WebDatabaseRepository extends DatabaseRepository {
         operationType: SyncOperationTypes.upsert,
         syncStatus: SyncStatusKeys.pendingUpload,
       );
+    }
+
+    final remappedActiveInstanceId = remappedInstanceIds[localActiveInstanceId];
+    if (userActiveInstanceId == null && remappedActiveInstanceId != null) {
+      await saveActiveInstanceIdForUser(remappedActiveInstanceId, ownerUserId);
     }
   }
 
@@ -792,6 +830,19 @@ class WebDatabaseRepository extends DatabaseRepository {
       return baseKey;
     }
     return '$baseKey:$ownerUserId';
+  }
+
+  String _remapWorkoutLogInstanceId(String rawJsonPayload, String instanceId) {
+    final payload = jsonDecode(rawJsonPayload) as Map<String, dynamic>;
+    payload['instanceId'] = instanceId;
+    return jsonEncode(payload);
+  }
+
+  String _scopedInstanceIdForUser(String instanceId, String ownerUserId) {
+    if (instanceId.startsWith('$ownerUserId-')) {
+      return instanceId;
+    }
+    return '$ownerUserId-$instanceId';
   }
 
   Future<String?> _fetchStringState(String stateKey) async {
@@ -852,7 +903,18 @@ class WebDatabaseRepository extends DatabaseRepository {
     await store.putRecord(WebStoreNames.syncQueue, queueKey, queueDoc);
   }
 
-  String _defaultInstanceIdForTemplate(String templateId) {
+  String _defaultInstanceIdForTemplate(
+    String templateId, {
+    String? ownerUserId,
+  }) {
+    final baseId = _baseDefaultInstanceIdForTemplate(templateId);
+    if (ownerUserId == null || ownerUserId.isEmpty) {
+      return baseId;
+    }
+    return '$ownerUserId-$baseId';
+  }
+
+  String _baseDefaultInstanceIdForTemplate(String templateId) {
     if (templateId == GzclpSeed.templateId) {
       return GzclpSeed.instanceId;
     }
