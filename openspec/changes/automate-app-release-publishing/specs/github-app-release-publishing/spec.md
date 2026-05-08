@@ -16,6 +16,11 @@ The system MUST build versioned release artifacts for the app and upload them to
 - **THEN** it produces an Android APK artifact, an Android app bundle artifact, and a packaged Flutter Web artifact from the tagged source
 - **AND** the workflow uploads those build outputs to the GitHub Release as downloadable assets
 
+#### Scenario: Android artifacts are missing after build
+- **WHEN** the tagged release workflow cannot find exactly one APK output or exactly one AAB output after the corresponding Android build step
+- **THEN** the workflow fails before publishing a successful release summary
+- **AND** the GitHub Release does not report missing Android assets as successful build results
+
 ### Requirement: Release Builds Use Explicit Runtime Configuration
 The system MUST build release artifacts with explicit repository-owned runtime configuration instead of depending on ad hoc local machine state.
 

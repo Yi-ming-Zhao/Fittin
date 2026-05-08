@@ -78,7 +78,6 @@ jobs:
 
       - name: Build Android APK
         id: build_apk
-        continue-on-error: true
         run: |
           set -euo pipefail
           flutter build apk --release \
@@ -86,14 +85,17 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          if [[ -f build/app/outputs/flutter-apk/app-release.apk ]]; then
-            cp build/app/outputs/flutter-apk/app-release.apk \
-              "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
+          mapfile -t apk_outputs < <(find build/app/outputs -type f -name "*.apk" | sort)
+          if [[ "${#apk_outputs[@]}" -ne 1 ]]; then
+            printf 'Expected exactly one APK output, found %s:\n' "${#apk_outputs[@]}"
+            printf '%s\n' "${apk_outputs[@]}"
+            exit 1
           fi
+          cp "${apk_outputs[0]}" \
+            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
 
       - name: Build Android App Bundle
         id: build_aab
-        continue-on-error: true
         run: |
           set -euo pipefail
           flutter build appbundle --release \
@@ -101,10 +103,14 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          if [[ -f build/app/outputs/bundle/release/app-release.aab ]]; then
-            cp build/app/outputs/bundle/release/app-release.aab \
-              "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
+          mapfile -t aab_outputs < <(find build/app/outputs -type f -name "*.aab" | sort)
+          if [[ "${#aab_outputs[@]}" -ne 1 ]]; then
+            printf 'Expected exactly one AAB output, found %s:\n' "${#aab_outputs[@]}"
+            printf '%s\n' "${aab_outputs[@]}"
+            exit 1
           fi
+          cp "${aab_outputs[0]}" \
+            "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
 
       - name: Build Flutter Web release bundle
         run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}" "$BACKEND_API_KEY"
@@ -152,3 +158,4 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           body_path: ${{ steps.meta.outputs.release_dir }}/release-notes.md
           files: ${{ steps.meta.outputs.release_dir }}/*
+          overwrite_files: true
