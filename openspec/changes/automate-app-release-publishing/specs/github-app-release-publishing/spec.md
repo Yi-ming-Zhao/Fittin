@@ -24,6 +24,11 @@ The system MUST build release artifacts with explicit repository-owned runtime c
 - **THEN** it uses explicit `BACKEND_URL` configuration for the build
 - **AND** the release summary records which backend URL was baked into the web artifact
 
+#### Scenario: Build Android artifacts with backend config
+- **WHEN** the release workflow or repository-owned Android release helper builds APK/AAB artifacts
+- **THEN** it passes explicit `BACKEND_URL` configuration into the Flutter build
+- **AND** the Android app does not depend on repo-local `127.0.0.1` fallback behavior for login or sync
+
 ### Requirement: Android Release Signing Contract Is Documented
 The system MUST define how Android release signing is resolved during automated publication so maintainers can understand whether the resulting artifacts use fallback signing or repository-provided signing material.
 

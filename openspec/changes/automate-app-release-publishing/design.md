@@ -45,7 +45,7 @@ Alternative considered:
 
 ### Reuse repository-owned build entrypoints where that preserves runtime parity
 
-The web artifact will be built through `tool/build_web_release.sh` so CI and manual public deployment share the same `BACKEND_URL` contract and Isar web-safe normalization. Android artifacts will be built in CI with explicit version metadata derived from the Git tag.
+The web artifact will be built through `tool/build_web_release.sh` so CI and manual public deployment share the same `BACKEND_URL` contract and Isar web-safe normalization. Android artifacts will be built in CI with explicit version metadata derived from the Git tag and explicit `BACKEND_URL` configuration so installed device builds can reach the public backend instead of attempting repo-local localhost fallback. Manual Android releases should use the repository-owned Android build helper for the same runtime contract.
 
 Alternative considered:
 - Re-implement the web build inline inside the workflow: rejected because it would duplicate repo logic and increase drift risk.
@@ -74,7 +74,7 @@ Alternative considered:
 - [Debug-signed Android release fallback is not store-ready] → Document the current signing behavior clearly and make secret-backed signing easy to enable later.
 - [GitHub-hosted runner upgrades can break Flutter/Android builds] → Pin major action versions, set the Flutter channel/version explicitly, and reuse repo scripts where possible.
 - [Release tags could point at broken code] → Keep ordinary test/verification workflows separate and document that release tags should be created only after validation.
-- [Wrong backend URL baked into web artifact] → Require `BACKEND_URL` from repository variables or secrets and print the chosen value in the release summary.
+- [Wrong backend URL baked into release artifacts] → Require `BACKEND_URL` from repository variables or secrets, pass it to web and Android builds, and print the chosen value in the release summary.
 
 ## Migration Plan
 

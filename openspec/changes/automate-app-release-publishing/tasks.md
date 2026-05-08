@@ -13,12 +13,14 @@
 
 - [x] 3.1 Update Android Gradle signing configuration to support optional `android/key.properties`
 - [x] 3.2 Keep fallback release builds working when production signing secrets are not configured
+- [x] 3.3 Add a repository-owned Android release helper that injects explicit `BACKEND_URL` config
 
 ## 4. Documentation
 
 - [x] 4.1 Document the standard CI workflow and how it relates to tagged release publication
 - [x] 4.2 Document the tagging flow, required GitHub variables/secrets, and release asset outputs
 - [x] 4.3 Document the current Android signing behavior and how to switch to secret-backed signing
+- [x] 4.4 Document that Android APK/AAB builds cannot use repo-local backend fallback for authentication
 
 ## 5. Verification
 
