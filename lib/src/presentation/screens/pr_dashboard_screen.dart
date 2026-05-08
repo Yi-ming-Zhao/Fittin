@@ -12,7 +12,8 @@ import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class PRDashboardScreen extends ConsumerStatefulWidget {
   const PRDashboardScreen({super.key});
@@ -39,9 +40,9 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
           return DashboardPageScaffold(
             children: [
               DashboardScreenHeader(
-                eyebrow: 'Performance',
-                title: 'PR dashboard',
-                subtitle: 'Peak strength benchmarks, derived and actual.',
+                eyebrow: strings.performance,
+                title: strings.prDashboard,
+                subtitle: strings.prDashboardSubtitle,
               ),
               const SizedBox(height: 24),
               _buildMetricToggle(fittinTheme, strings),
@@ -68,7 +69,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
                         ),
                       );
                     },
-                    child: Text('View all'),
+                    child: Text(strings.viewAllMilestones),
                   ),
                 ],
               ),
@@ -131,6 +132,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
       value: _metricMode == PRMetricMode.estimated
           ? strings.estimated1rmShort
           : strings.actualPrShort,
+      expand: true,
       onChange: (selected) {
         setState(() {
           _metricMode = selected == strings.estimated1rmShort
@@ -239,12 +241,17 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
               width: double.infinity,
               child: FittinSegmented(
                 theme: theme,
-                options: [strings.squatShort, strings.benchShort, strings.deadliftShort],
+                options: [
+                  strings.squatShort,
+                  strings.benchShort,
+                  strings.deadliftShort,
+                ],
                 value: _selectedLiftKey == 'bench'
                     ? strings.benchShort
                     : _selectedLiftKey == 'deadlift'
-                        ? strings.deadliftShort
-                        : strings.squatShort,
+                    ? strings.deadliftShort
+                    : strings.squatShort,
+                expand: true,
                 onChange: (selected) {
                   setState(() {
                     if (selected == strings.benchShort) {
@@ -336,18 +343,17 @@ class _StrengthCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: SizedBox(
         width: double.infinity,
-        height: 144,
+        height: 188,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              label,
+              label.toUpperCase(),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: theme.uiStyle(11, theme.fgMuted).copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.0,
-              ),
+              style: theme
+                  .uiStyle(11, theme.fgMuted)
+                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0),
             ),
             const Spacer(),
             Row(
@@ -366,12 +372,7 @@ class _StrengthCard extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Sparkline(
-                        theme,
-                        sparklineData,
-                        width: 110,
-                        height: 44,
-                      ),
+                      Sparkline(theme, sparklineData, width: 110, height: 44),
                       const SizedBox(height: 4),
                       Text(
                         '${sparklineData.length} sessions',
@@ -386,10 +387,7 @@ class _StrengthCard extends StatelessWidget {
             if (change != null)
               FittinDelta(theme, change, unit: ' kg')
             else
-              Text(
-                '—',
-                style: theme.uiStyle(12, theme.fgDim),
-              ),
+              Text('—', style: theme.uiStyle(12, theme.fgDim)),
           ],
         ),
       ),
@@ -520,11 +518,7 @@ class _MilestoneTile extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.check_rounded,
-                color: theme.accent,
-                size: 20,
-              ),
+              child: Icon(Icons.check_rounded, color: theme.accent, size: 20),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -652,26 +646,27 @@ class _MilestoneHistoryScreenState
             },
           ),
           const SizedBox(height: 16),
-          SegmentedButton<MilestoneTypeFilter>(
+          FittinSegmented(
             key: const ValueKey('milestone-type-filter'),
-            segments: [
-              ButtonSegment<MilestoneTypeFilter>(
-                value: MilestoneTypeFilter.all,
-                label: Text(strings.allTypes),
-              ),
-              ButtonSegment<MilestoneTypeFilter>(
-                value: MilestoneTypeFilter.estimated,
-                label: Text(strings.estimatedType),
-              ),
-              ButtonSegment<MilestoneTypeFilter>(
-                value: MilestoneTypeFilter.actual,
-                label: Text(strings.actualType),
-              ),
+            theme: fittinTheme,
+            options: [
+              strings.allTypes,
+              strings.estimatedType,
+              strings.actualType,
             ],
-            selected: {_typeFilter},
-            onSelectionChanged: (selection) {
+            value: switch (_typeFilter) {
+              MilestoneTypeFilter.estimated => strings.estimatedType,
+              MilestoneTypeFilter.actual => strings.actualType,
+              MilestoneTypeFilter.all => strings.allTypes,
+            },
+            expand: true,
+            onChange: (selection) {
               setState(() {
-                _typeFilter = selection.first;
+                _typeFilter = selection == strings.estimatedType
+                    ? MilestoneTypeFilter.estimated
+                    : selection == strings.actualType
+                    ? MilestoneTypeFilter.actual
+                    : MilestoneTypeFilter.all;
               });
             },
           ),

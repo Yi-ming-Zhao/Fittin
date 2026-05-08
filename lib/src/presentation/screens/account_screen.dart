@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
@@ -32,6 +34,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final controllerState = ref.watch(authControllerProvider);
     final syncState = ref.watch(syncControllerProvider);
     final supabaseState = ref.watch(supabaseBootstrapProvider);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final currentUser = authState.valueOrNull;
     final canPop = Navigator.of(context).canPop();
 
@@ -103,21 +106,14 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SegmentedButton<bool>(
-                    segments: [
-                      ButtonSegment<bool>(
-                        value: false,
-                        label: Text(strings.signIn),
-                      ),
-                      ButtonSegment<bool>(
-                        value: true,
-                        label: Text(strings.createAccount),
-                      ),
-                    ],
-                    selected: {_isSignUp},
-                    onSelectionChanged: (selection) {
+                  FittinSegmented(
+                    theme: fittinTheme,
+                    options: [strings.signIn, strings.createAccount],
+                    value: _isSignUp ? strings.createAccount : strings.signIn,
+                    expand: true,
+                    onChange: (selection) {
                       setState(() {
-                        _isSignUp = selection.first;
+                        _isSignUp = selection == strings.createAccount;
                       });
                       ref.read(authControllerProvider.notifier).clearMessages();
                     },
@@ -213,9 +209,10 @@ class _SignedInCard extends StatelessWidget {
       SyncStage.hydrating => strings.syncHydrating,
       SyncStage.syncing => strings.syncInProgress,
       SyncStage.synced => strings.syncComplete,
-      SyncStage.retryNeeded => syncState.errorMessage == null
-          ? strings.syncRetryNeeded
-          : '${strings.syncRetryNeeded} ${syncState.errorMessage!}',
+      SyncStage.retryNeeded =>
+        syncState.errorMessage == null
+            ? strings.syncRetryNeeded
+            : '${strings.syncRetryNeeded} ${syncState.errorMessage!}',
       SyncStage.idle => strings.syncReady,
     };
     final syncButtonLabel = syncState.stage == SyncStage.retryNeeded

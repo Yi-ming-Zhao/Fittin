@@ -11,10 +11,7 @@ class FittinEyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text.toUpperCase(),
-      style: theme.eyebrowStyle().merge(style),
-    );
+    return Text(text.toUpperCase(), style: theme.eyebrowStyle().merge(style));
   }
 }
 
@@ -72,9 +69,7 @@ class FittinBigNum extends StatelessWidget {
             text: value,
             style: theme
                 .numStyle(size, color)
-                .copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                )
+                .copyWith(fontFeatures: const [FontFeature.tabularFigures()])
                 .merge(style),
           ),
           if (unit != null)
@@ -90,12 +85,7 @@ class FittinBigNum extends StatelessWidget {
 
 /// Delta chip — ▲/▼ with sign and unit
 class FittinDelta extends StatelessWidget {
-  const FittinDelta(
-    this.theme,
-    this.value, {
-    super.key,
-    this.unit = '',
-  });
+  const FittinDelta(this.theme, this.value, {super.key, this.unit = ''});
 
   final FittinTheme theme;
   final double value;
@@ -119,11 +109,13 @@ class FittinDelta extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           '$_sign$formattedValue$unit',
-          style: theme.uiStyle(11, color).copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.2,
-          ),
+          style: theme
+              .uiStyle(11, color)
+              .copyWith(
+                fontFeatures: const [FontFeature.tabularFigures()],
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
+              ),
         ),
       ],
     );
@@ -158,7 +150,8 @@ class FittinChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: theme.uiStyle(12, active ? theme.accentInk : theme.fgDim)
+          style: theme
+              .uiStyle(12, active ? theme.accentInk : theme.fgDim)
               .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1),
         ),
       ),
@@ -174,15 +167,42 @@ class FittinSegmented extends StatelessWidget {
     required this.options,
     required this.value,
     required this.onChange,
+    this.expand = false,
   });
 
   final FittinTheme theme;
   final List<String> options;
   final String value;
   final ValueChanged<String> onChange;
+  final bool expand;
 
   @override
   Widget build(BuildContext context) {
+    Widget buildOption(String o) {
+      final active = o == value;
+      return GestureDetector(
+        onTap: () => onChange(o),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 42),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? theme.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            o,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: theme
+                .uiStyle(12, active ? theme.accentInk : theme.fgDim)
+                .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.1),
+          ),
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -191,26 +211,12 @@ class FittinSegmented extends StatelessWidget {
         border: Border.all(color: theme.border, width: 0.5),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: options.map((o) {
-          final active = o == value;
-          return GestureDetector(
-            onTap: () => onChange(o),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              decoration: BoxDecoration(
-                color: active ? theme.accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                o,
-                style: theme
-                    .uiStyle(12, active ? theme.accentInk : theme.fgDim)
-                    .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.2),
-              ),
-            ),
-          );
-        }).toList(),
+        mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+        children: options
+            .map(
+              (o) => expand ? Expanded(child: buildOption(o)) : buildOption(o),
+            )
+            .toList(),
       ),
     );
   }
@@ -237,8 +243,9 @@ class FittinBtn extends StatelessWidget {
   final IconData? icon;
   final bool block;
 
-  EdgeInsets get _pad =>
-      size == 'sm' ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8) : const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
+  EdgeInsets get _pad => size == 'sm'
+      ? const EdgeInsets.symmetric(horizontal: 14, vertical: 8)
+      : const EdgeInsets.symmetric(horizontal: 20, vertical: 12);
 
   @override
   Widget build(BuildContext context) {
@@ -304,9 +311,6 @@ class FittinDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 0.5,
-      color: theme.border,
-    );
+    return Container(height: 0.5, color: theme.border);
   }
 }

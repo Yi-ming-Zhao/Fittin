@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/workout_record_detail_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/muscle_distribution_painter.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class AdvancedAnalyticsScreen extends ConsumerStatefulWidget {
   const AdvancedAnalyticsScreen({super.key});
@@ -141,10 +143,7 @@ class _ConsistencyExplorer extends ConsumerWidget {
     return ChartContainer(
       title: strings.trainingConsistency,
       height: sections.isEmpty ? 140 : contentHeight,
-      headerAction: _RangeSelector(
-        selected: range,
-        onChanged: onRangeChanged,
-      ),
+      headerAction: _RangeSelector(selected: range, onChanged: onRangeChanged),
       child: sections.isEmpty
           ? Center(
               child: Text(
@@ -175,10 +174,7 @@ class _ConsistencyExplorer extends ConsumerWidget {
 }
 
 class _RangeSelector extends ConsumerWidget {
-  const _RangeSelector({
-    required this.selected,
-    required this.onChanged,
-  });
+  const _RangeSelector({required this.selected, required this.onChanged});
 
   final ConsistencyRange selected;
   final ValueChanged<ConsistencyRange> onChanged;
@@ -186,32 +182,27 @@ class _RangeSelector extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
-    return SegmentedButton<ConsistencyRange>(
-      style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? Colors.white.withValues(alpha: 0.16)
-              : Colors.white.withValues(alpha: 0.04),
-        ),
-        foregroundColor: WidgetStateProperty.all(Colors.white),
-      ),
-      showSelectedIcon: false,
-      segments: [
-        ButtonSegment(
-          value: ConsistencyRange.week,
-          label: Text(strings.consistencyByWeek),
-        ),
-        ButtonSegment(
-          value: ConsistencyRange.month,
-          label: Text(strings.consistencyByMonth),
-        ),
-        ButtonSegment(
-          value: ConsistencyRange.plan,
-          label: Text(strings.consistencyByPlan),
-        ),
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    return FittinSegmented(
+      theme: theme,
+      options: [
+        strings.consistencyByWeek,
+        strings.consistencyByMonth,
+        strings.consistencyByPlan,
       ],
-      selected: {selected},
-      onSelectionChanged: (values) => onChanged(values.first),
+      value: switch (selected) {
+        ConsistencyRange.month => strings.consistencyByMonth,
+        ConsistencyRange.plan => strings.consistencyByPlan,
+        ConsistencyRange.week => strings.consistencyByWeek,
+      },
+      expand: true,
+      onChange: (value) => onChanged(
+        value == strings.consistencyByMonth
+            ? ConsistencyRange.month
+            : value == strings.consistencyByPlan
+            ? ConsistencyRange.plan
+            : ConsistencyRange.week,
+      ),
     );
   }
 }
@@ -270,11 +261,7 @@ class _WeekRow extends ConsumerWidget {
         ),
         const SizedBox(width: 6),
         for (var index = 0; index < section.days.length; index++) ...[
-          Expanded(
-            child: _DayCell(
-              record: section.days[index],
-            ),
-          ),
+          Expanded(child: _DayCell(record: section.days[index])),
           if (index < section.days.length - 1) const SizedBox(width: 6),
         ],
       ],
@@ -295,11 +282,7 @@ class _DayCell extends ConsumerWidget {
     final background = !record.isInRange
         ? Colors.white.withValues(alpha: 0.02)
         : record.hasActivity
-        ? Color.lerp(
-            Colors.greenAccent,
-            Colors.white,
-            1 - record.intensity,
-          )!
+        ? Color.lerp(Colors.greenAccent, Colors.white, 1 - record.intensity)!
         : Colors.white.withValues(alpha: 0.06);
 
     return Material(
