@@ -85,13 +85,17 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          mapfile -t apk_outputs < <(find build/app/outputs -type f -name "*.apk" | sort)
-          if [[ "${#apk_outputs[@]}" -ne 1 ]]; then
-            printf 'Expected exactly one APK output, found %s:\n' "${#apk_outputs[@]}"
-            printf '%s\n' "${apk_outputs[@]}"
-            exit 1
+          apk_output="build/app/outputs/flutter-apk/app-release.apk"
+          if [[ ! -f "$apk_output" ]]; then
+            mapfile -t apk_outputs < <(find build/app/outputs -type f -name "*.apk" | sort)
+            if [[ "${#apk_outputs[@]}" -lt 1 ]]; then
+              echo "No APK outputs found under build/app/outputs."
+              exit 1
+            fi
+            apk_output="${apk_outputs[0]}"
           fi
-          cp "${apk_outputs[0]}" \
+          echo "Using APK output: $apk_output"
+          cp "$apk_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
 
       - name: Build Android App Bundle
@@ -103,13 +107,17 @@ jobs:
             --build-number "${{ steps.meta.outputs.build_number }}" \
             --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
             --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
-          mapfile -t aab_outputs < <(find build/app/outputs -type f -name "*.aab" | sort)
-          if [[ "${#aab_outputs[@]}" -ne 1 ]]; then
-            printf 'Expected exactly one AAB output, found %s:\n' "${#aab_outputs[@]}"
-            printf '%s\n' "${aab_outputs[@]}"
-            exit 1
+          aab_output="build/app/outputs/bundle/release/app-release.aab"
+          if [[ ! -f "$aab_output" ]]; then
+            mapfile -t aab_outputs < <(find build/app/outputs -type f -name "*.aab" | sort)
+            if [[ "${#aab_outputs[@]}" -lt 1 ]]; then
+              echo "No AAB outputs found under build/app/outputs."
+              exit 1
+            fi
+            aab_output="${aab_outputs[0]}"
           fi
-          cp "${aab_outputs[0]}" \
+          echo "Using AAB output: $aab_output"
+          cp "$aab_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
 
       - name: Build Flutter Web release bundle
