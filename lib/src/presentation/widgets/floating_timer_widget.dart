@@ -39,10 +39,10 @@ class FloatingTimerWidgetState extends State<FloatingTimerWidget> {
         decoration: BoxDecoration(
           color: colorScheme.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+          border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),

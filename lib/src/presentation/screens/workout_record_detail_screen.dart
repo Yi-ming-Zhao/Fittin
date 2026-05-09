@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class WorkoutRecordDetailScreen extends ConsumerStatefulWidget {
   const WorkoutRecordDetailScreen({
@@ -166,6 +169,7 @@ class _WorkoutRecordDetailScreenState
       builder: (context) => _WorkoutLogEditorSheet(
         log: log,
         strings: AppStrings.of(context, ref),
+        fittinTheme: ref.read(resolvedFittinThemeProvider),
       ),
     );
     if (updated == null || !mounted) {
@@ -202,10 +206,15 @@ class _WorkoutRecordDetailScreenState
 }
 
 class _WorkoutLogEditorSheet extends StatefulWidget {
-  const _WorkoutLogEditorSheet({required this.log, required this.strings});
+  const _WorkoutLogEditorSheet({
+    required this.log,
+    required this.strings,
+    required this.fittinTheme,
+  });
 
   final WorkoutLog log;
   final AppStrings strings;
+  final FittinTheme fittinTheme;
 
   @override
   State<_WorkoutLogEditorSheet> createState() => _WorkoutLogEditorSheetState();
@@ -279,26 +288,30 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final fittinTheme = widget.fittinTheme;
     final strings = widget.strings;
 
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.fromLTRB(
-          16,
-          16,
-          16,
-          16 + MediaQuery.of(context).viewInsets.bottom,
+          fittinTheme.pad,
+          fittinTheme.pad,
+          fittinTheme.pad,
+          fittinTheme.pad + MediaQuery.of(context).viewInsets.bottom,
         ),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              DashboardBackButton(
+                theme: fittinTheme,
+                label: strings.recordedWorkoutDetails,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: 10),
               Text(
                 widget.log.workoutName,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: fittinTheme.displayStyle(24, fittinTheme.fg),
               ),
               const SizedBox(height: 16),
               Row(
@@ -326,24 +339,22 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
               for (final exercise in _exercises) ...[
                 Text(
                   exercise.exerciseName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: fittinTheme
+                      .uiStyle(16, fittinTheme.fg)
+                      .copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 6),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: LoadUnits.kg, label: Text('kg')),
-                    ButtonSegment(value: LoadUnits.lbs, label: Text('lb')),
-                  ],
-                  selected: {
-                    exercise.displayLoadUnit == LoadUnits.lbs
-                        ? LoadUnits.lbs
-                        : LoadUnits.kg,
-                  },
-                  onSelectionChanged: (selection) {
+                FittinSegmented(
+                  theme: fittinTheme,
+                  options: const ['kg', 'lb'],
+                  value: exercise.displayLoadUnit == LoadUnits.lbs
+                      ? 'lb'
+                      : 'kg',
+                  onChange: (selection) {
                     setState(() {
-                      exercise.displayLoadUnit = selection.first;
+                      exercise.displayLoadUnit = selection == 'lb'
+                          ? LoadUnits.lbs
+                          : LoadUnits.kg;
                     });
                   },
                 ),
@@ -367,7 +378,8 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: TextField(
-                                controller: exercise.sets[index].weightController,
+                                controller:
+                                    exercise.sets[index].weightController,
                                 keyboardType:
                                     const TextInputType.numberWithOptions(
                                       decimal: true,
@@ -396,7 +408,8 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                               value: exercise.sets[index].completed,
                               onChanged: (value) {
                                 setState(() {
-                                  exercise.sets[index].completed = value ?? false;
+                                  exercise.sets[index].completed =
+                                      value ?? false;
                                 });
                               },
                             ),
@@ -409,8 +422,9 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                               alignment: Alignment.centerLeft,
                               child: Text(
                                 'Target RPE ${_formatOptionalRpe(exercise.sets[index].targetRpe)}',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.68),
+                                style: fittinTheme.uiStyle(
+                                  12,
+                                  fittinTheme.fgDim,
                                 ),
                               ),
                             ),
@@ -424,16 +438,19 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton(
+                    child: FittinBtn(
+                      fittinTheme,
+                      strings.cancel,
+                      variant: 'secondary',
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Text(strings.cancel),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: FilledButton(
+                    child: FittinBtn(
+                      fittinTheme,
+                      strings.saveChanges,
                       onPressed: () => _save(context, strings),
-                      child: Text(strings.saveChanges),
                     ),
                   ),
                 ],

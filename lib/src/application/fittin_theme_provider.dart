@@ -14,11 +14,11 @@ class FittinThemeState {
   const FittinThemeState({
     this.direction = FittinDirection.editorial,
     this.accent = FittinAccent.bone,
-    this.bg = FittinBg.warmBlack,
-    this.typeFamily = FittinTypeFamily.editorial,
-    this.chartStyle = FittinChartStyle.step,
-    this.cardStyle = FittinCardStyle.glass,
-    this.density = FittinDensity.comfortable,
+    this.bg = FittinBg.trueBlack,
+    this.typeFamily = FittinTypeFamily.neutral,
+    this.chartStyle = FittinChartStyle.smooth,
+    this.cardStyle = FittinCardStyle.bordered,
+    this.density = FittinDensity.compact,
   });
 
   FittinThemeState copyWith({
@@ -44,8 +44,8 @@ class FittinThemeState {
 
 final fittinThemeProvider =
     StateNotifierProvider<FittinThemeNotifier, FittinThemeState>((ref) {
-  return FittinThemeNotifier();
-});
+      return FittinThemeNotifier();
+    });
 
 class FittinThemeNotifier extends StateNotifier<FittinThemeState> {
   FittinThemeNotifier() : super(const FittinThemeState());

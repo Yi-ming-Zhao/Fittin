@@ -51,8 +51,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+    await tester.pumpAndSettle();
     final guideButton = find.byKey(const ValueKey('open-set-type-guide'));
-    await tester.scrollUntilVisible(guideButton, 120);
     expect(guideButton, findsOneWidget);
     expect(find.text('Training Set Guide'), findsOneWidget);
   });
@@ -71,13 +72,12 @@ void main() {
     await tester.pumpAndSettle();
 
     final accountButton = find.byKey(const ValueKey('open-account-screen'));
-    await tester.scrollUntilVisible(accountButton, 120);
     await tester.tap(accountButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(find.byType(ProfileSettingsScreen), findsNothing);
-    expect(find.text('Cloud Sync Not Available'), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
+    expect(find.text('Backend Not Configured'), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-header-back')), findsOneWidget);
   });
 
   testWidgets(
@@ -113,8 +113,9 @@ void main() {
       final profileButton = find.byKey(
         const ValueKey('open-profile-preferences'),
       );
-      await tester.scrollUntilVisible(profileButton, 120);
-      tester.widget<FilledButton>(profileButton).onPressed!.call();
+      await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await tester.tap(profileButton.first, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('Profile Preferences'), findsOneWidget);

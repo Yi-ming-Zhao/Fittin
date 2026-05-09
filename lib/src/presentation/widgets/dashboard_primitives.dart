@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class DashboardPageScaffold extends StatelessWidget {
@@ -41,37 +42,17 @@ class DashboardPageScaffold extends StatelessWidget {
                 ],
               ),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: -140,
-                  right: -30,
-                  child: _AmbientGlow(
-                    size: 260,
-                    color: fittinTheme.accent.withValues(alpha: 0.08),
-                  ),
-                ),
-                Positioned(
-                  top: 220,
-                  left: -100,
-                  child: _AmbientGlow(
-                    size: 220,
-                    color: Colors.white.withValues(alpha: 0.025),
-                  ),
-                ),
-                SafeArea(
-                  bottom: false,
+            child: SafeArea(
+              bottom: false,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
                   child: ListView(
-                    padding: EdgeInsets.fromLTRB(
-                      fittinTheme.pad,
-                      16,
-                      fittinTheme.pad,
-                      bottomPadding,
-                    ),
+                    padding: EdgeInsets.fromLTRB(20, 54, 20, bottomPadding),
                     children: children,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         );
@@ -105,20 +86,8 @@ class DashboardScreenHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (showBackButton) ...[
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.surfaceHi,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: theme.border, width: 0.5),
-                ),
-                child: IconButton(
-                  key: const ValueKey('dashboard-header-back'),
-                  onPressed: () => Navigator.of(context).maybePop(),
-                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-                  icon: Icon(Icons.arrow_back_rounded, color: theme.fg),
-                ),
-              ),
-              const SizedBox(width: 16),
+              DashboardBackButton(theme: theme),
+              const SizedBox(width: 14),
             ],
             Expanded(
               child: Column(
@@ -128,13 +97,17 @@ class DashboardScreenHeader extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(
                     title,
-                    style: theme.displayStyle(32, theme.fg).copyWith(height: 0.98),
+                    style: theme
+                        .displayStyle(32, theme.fg)
+                        .copyWith(height: 0.98),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 10),
                     Text(
                       subtitle!,
-                      style: theme.uiStyle(15, theme.fgDim).copyWith(height: 1.45),
+                      style: theme
+                          .uiStyle(15, theme.fgDim)
+                          .copyWith(height: 1.45),
                     ),
                   ],
                 ],
@@ -144,6 +117,44 @@ class DashboardScreenHeader extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class DashboardBackButton extends StatelessWidget {
+  const DashboardBackButton({
+    super.key,
+    required this.theme,
+    this.label,
+    this.onPressed,
+  });
+
+  final FittinTheme theme;
+  final String? label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton.icon(
+      key: const ValueKey('dashboard-header-back'),
+      onPressed: onPressed ?? () => Navigator.of(context).maybePop(),
+      style: TextButton.styleFrom(
+        foregroundColor: theme.fgDim,
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(40, 40),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        alignment: Alignment.centerLeft,
+      ),
+      icon: Icon(Icons.chevron_left_rounded, size: 18, color: theme.fgDim),
+      label: label == null
+          ? const SizedBox.shrink()
+          : Text(
+              label!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.uiStyle(13, theme.fgDim, FontWeight.w500),
+            ),
     );
   }
 }
@@ -169,14 +180,14 @@ class DashboardSurfaceCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(20),
-    this.radius = 28,
+    this.radius,
     this.onTap,
     this.highlight = false,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final double radius;
+  final double? radius;
   final VoidCallback? onTap;
   final bool highlight;
 
@@ -186,27 +197,24 @@ class DashboardSurfaceCard extends StatelessWidget {
       builder: (context, ref, _) {
         final theme = ref.watch(resolvedFittinThemeProvider);
         final glassOpacity = ref.watch(uiSettingsProvider);
+        final cardRadius = radius ?? theme.radius;
         return ClipRRect(
-          borderRadius: BorderRadius.circular(radius),
+          borderRadius: BorderRadius.circular(cardRadius),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(radius),
-                color: theme.surface.withValues(
-                  alpha: (highlight ? 0.92 : 0.82) * glassOpacity.clamp(0.35, 1.0),
-                ),
+                borderRadius: BorderRadius.circular(cardRadius),
+                color: highlight
+                    ? theme.surface.withValues(
+                        alpha: 0.6 * glassOpacity.clamp(0.35, 1.0),
+                      )
+                    : Colors.transparent,
                 border: Border.all(
-                  color: highlight ? theme.borderHi : theme.border,
-                  width: 0.6,
+                  color: highlight ? theme.borderHi : theme.borderHi,
+                  width: 0.75,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 30,
-                    offset: const Offset(0, 16),
-                  ),
-                ],
+                boxShadow: const [],
               ),
               child: Padding(padding: padding, child: child),
             ),
@@ -219,7 +227,7 @@ class DashboardSurfaceCard extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(radius),
+      borderRadius: BorderRadius.circular(radius ?? 20),
       child: content,
     );
   }
@@ -265,13 +273,10 @@ class DashboardStatCard extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: caption != null
-                      ? Text(
-                          caption!,
-                          style: theme.uiStyle(12, theme.fgDim),
-                        )
+                      ? Text(caption!, style: theme.uiStyle(12, theme.fgDim))
                       : (reserveCaptionSpace
-                          ? const SizedBox.shrink()
-                          : const SizedBox.shrink()),
+                            ? const SizedBox.shrink()
+                            : const SizedBox.shrink()),
                 ),
               ),
             ],
@@ -443,27 +448,6 @@ class GlassActionButton extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AmbientGlow extends StatelessWidget {
-  const _AmbientGlow({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
       ),
     );

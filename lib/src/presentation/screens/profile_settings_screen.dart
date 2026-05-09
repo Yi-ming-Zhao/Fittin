@@ -9,9 +9,11 @@ import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class ProfileSettingsScreen extends ConsumerWidget {
   const ProfileSettingsScreen({super.key});
@@ -30,37 +32,15 @@ class ProfileSettingsScreen extends ConsumerWidget {
         DashboardScreenHeader(
           eyebrow: strings.profile,
           title: strings.settings,
-          subtitle: strings.languageSubtitle,
+          subtitle: strings.isChinese
+              ? '账号、语言、重量工具与界面偏好。'
+              : 'Account, language, weight tools, and interface preferences.',
         ),
         const SizedBox(height: 24),
-        DashboardSurfaceCard(
-          highlight: true,
-          radius: 32,
-          padding: EdgeInsets.all(fittinTheme.pad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                strings.profile,
-                style: fittinTheme.uiStyle(22, fittinTheme.fg).copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                strings.isChinese
-                    ? '统一管理语言与后续个人偏好设置。'
-                    : 'Manage language and future profile preferences in one place.',
-                style: fittinTheme.uiStyle(14, fittinTheme.fgDim).copyWith(
-                  height: 1.45,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 32),
         DashboardSectionLabel(label: strings.account),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         DashboardSurfaceCard(
-          radius: 32,
+          radius: fittinTheme.radius,
           padding: EdgeInsets.all(fittinTheme.pad),
           child: Row(
             children: [
@@ -69,17 +49,10 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      strings.account,
-                      style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
                       authUser?.email ?? strings.signedOut,
-                      style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: fittinTheme
+                          .displayStyle(18, fittinTheme.fg)
+                          .copyWith(height: 1.1),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -92,7 +65,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               FittinBtn(
                 fittinTheme,
-                strings.manageAccount,
+                strings.isChinese ? strings.manageAccount : 'Manage',
+                key: const ValueKey('open-account-screen'),
                 size: 'sm',
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AccountScreen()),
@@ -101,59 +75,14 @@ class ProfileSettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 32),
-        DashboardSectionLabel(label: strings.settings),
-        const SizedBox(height: 14),
-        DashboardSurfaceCard(
-          radius: 32,
+        const SizedBox(height: 24),
+        DashboardSectionLabel(label: strings.language),
+        const SizedBox(height: 10),
+        FittinCard(
+          theme: fittinTheme,
+          noPad: true,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              DashboardSurfaceCard(
-                radius: 24,
-                highlight: true,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.profilePreferences,
-                            style: fittinTheme.uiStyle(14, fittinTheme.fg)
-                                .copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            strings.profilePreferencesSubtitle,
-                            style: fittinTheme.uiStyle(12, fittinTheme.fgDim),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FittinBtn(
-                      fittinTheme,
-                      strings.edit,
-                      size: 'sm',
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ProfilePreferencesScreen()),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                strings.language,
-                style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                strings.languageSubtitle,
-                style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
-              ),
-              const SizedBox(height: 18),
               _LocaleTile(
                 theme: fittinTheme,
                 key: const ValueKey('locale-en'),
@@ -161,8 +90,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 subtitle: 'English',
                 selected: locale == AppLocale.en,
                 onTap: () => notifier.setLocale(AppLocale.en),
+                showDivider: true,
               ),
-              const SizedBox(height: 12),
               _LocaleTile(
                 theme: fittinTheme,
                 key: const ValueKey('locale-zh'),
@@ -171,60 +100,63 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 selected: locale == AppLocale.zh,
                 onTap: () => notifier.setLocale(AppLocale.zh),
               ),
-              const SizedBox(height: 20),
-              DashboardSurfaceCard(
-                radius: 24,
-                highlight: true,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            strings.trainingSetGuide,
-                            style: fittinTheme.uiStyle(14, fittinTheme.fg)
-                                .copyWith(fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            strings.trainingSetGuideSubtitle,
-                            style: fittinTheme.uiStyle(12, fittinTheme.fgDim),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FittinBtn(
-                      fittinTheme,
-                      strings.openGuide,
-                      size: 'sm',
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SetTypeGuideScreen()),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const WeightToolsSettingsCard(),
             ],
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(
+          label: strings.isChinese ? '重量工具' : 'WEIGHT TOOLS',
+        ),
+        const SizedBox(height: 10),
+        const WeightToolsSettingsCard(),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(label: strings.isChinese ? '参考' : 'REFERENCE'),
+        const SizedBox(height: 10),
+        FittinCard(
+          theme: fittinTheme,
+          noPad: true,
+          child: Column(
+            children: [
+              _SettingsLinkRow(
+                key: const ValueKey('open-set-type-guide'),
+                theme: fittinTheme,
+                title: strings.trainingSetGuide,
+                subtitle: strings.trainingSetGuideSubtitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SetTypeGuideScreen()),
+                ),
+                showDivider: true,
+              ),
+              _SettingsLinkRow(
+                key: const ValueKey('open-profile-preferences'),
+                theme: fittinTheme,
+                title: strings.profilePreferences,
+                subtitle: strings.profilePreferencesSubtitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ProfilePreferencesScreen(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
         DashboardSectionLabel(
           label: strings.isChinese ? '视觉设置' : 'VISUAL SETTINGS',
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
         DashboardSurfaceCard(
-          radius: 32,
+          radius: fittinTheme.radius,
           padding: EdgeInsets.all(fittinTheme.pad),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 strings.isChinese ? '磨砂玻璃透明度' : 'Glassmorphism Opacity',
-                style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(fontWeight: FontWeight.w700),
+                style: fittinTheme
+                    .uiStyle(16, fittinTheme.fg)
+                    .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
@@ -248,9 +180,9 @@ class ProfileSettingsScreen extends ConsumerWidget {
                           ),
                           Text(
                             '${(opacity * 100).toInt()}%',
-                            style: fittinTheme.uiStyle(14, fittinTheme.accent).copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: fittinTheme
+                                .uiStyle(14, fittinTheme.accent)
+                                .copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             '1.0',
@@ -297,6 +229,7 @@ class _LocaleTile extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+    this.showDivider = false,
   });
 
   final FittinTheme theme;
@@ -304,33 +237,18 @@ class _LocaleTile extends StatelessWidget {
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: selected
-                ? theme.accent.withValues(alpha: 0.92)
-                : Colors.white.withValues(alpha: 0.08),
-          ),
-          color: selected
-              ? theme.accent.withValues(alpha: 0.12)
-              : Colors.white.withValues(alpha: 0.04),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: theme.accent.withValues(alpha: 0.16),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
-                  ),
-                ]
+          border: showDivider
+              ? Border(bottom: BorderSide(color: theme.border, width: 0.5))
               : null,
         ),
         child: Row(
@@ -341,24 +259,89 @@ class _LocaleTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.uiStyle(14, theme.fg).copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: theme
+                        .uiStyle(14, theme.fg)
+                        .copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: theme.uiStyle(12, theme.fgDim),
-                  ),
+                  Text(subtitle, style: theme.uiStyle(12, theme.fgDim)),
                 ],
               ),
             ),
-            Icon(
-              selected ? Icons.radio_button_checked : Icons.radio_button_off,
-              color: selected
-                  ? theme.accent
-                  : theme.fgMuted,
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: selected ? theme.accent : theme.borderHi,
+                  width: 1,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: selected
+                  ? Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: theme.accent,
+                      ),
+                    )
+                  : null,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsLinkRow extends StatelessWidget {
+  const _SettingsLinkRow({
+    super.key,
+    required this.theme,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.showDivider = false,
+  });
+
+  final FittinTheme theme;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool showDivider;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: theme.border, width: 0.5))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: theme
+                        .uiStyle(14, theme.fg)
+                        .copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: theme.uiStyle(11, theme.fgMuted)),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: theme.fgMuted),
           ],
         ),
       ),

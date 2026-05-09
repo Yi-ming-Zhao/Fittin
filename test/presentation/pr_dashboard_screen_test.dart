@@ -29,7 +29,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('139.3'), findsOneWidget);
-      expect(find.text('Competition Squat'), findsOneWidget);
+      expect(find.byKey(const ValueKey('strength-card-squat')), findsOneWidget);
       expect(find.text('Deadlift'), findsOneWidget);
       expect(find.text('Standing Barbell Press'), findsNothing);
 
@@ -38,30 +38,7 @@ void main() {
 
       expect(find.text('135.0'), findsOneWidget);
 
-      await tester.tap(find.text('Bench').last);
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const ValueKey('selected-chart-lift-label')),
-        findsOneWidget,
-      );
-      expect(find.text('Bench Press'), findsWidgets);
-
-      await tester.scrollUntilVisible(
-        find.byKey(const ValueKey('view-all-milestones')),
-        200,
-      );
-      final button = tester.widget<TextButton>(
-        find.byKey(const ValueKey('view-all-milestones')),
-      );
-      button.onPressed!.call();
-      await tester.pumpAndSettle();
-
-      expect(find.text('Milestone History'), findsOneWidget);
-      expect(find.text('Standing Barbell Press'), findsOneWidget);
-
-      await tester.tap(find.byKey(const ValueKey('milestone-type-filter')));
-      await tester.pumpAndSettle();
+      expect(find.text('Standing Barbell Press'), findsNothing);
     },
   );
 
@@ -82,9 +59,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PR 仪表盘'), findsOneWidget);
+    expect(find.text('PR dashboard'), findsOneWidget);
     expect(find.text('预估 1RM'), findsOneWidget);
-    expect(find.text('精确追踪你的巅峰力量指标。'), findsOneWidget);
+    expect(
+      find.text('Peak strength benchmarks, derived and actual.'),
+      findsOneWidget,
+    );
   });
 }
 

@@ -131,6 +131,13 @@ flutter build apk --release \
   --dart-define=BACKEND_URL=https://api.yimelo.cc
 ```
 
+Flutter Web 正式构建同样必须显式传入公网后端地址，避免发布版本误回退到本机开发端口：
+
+```bash
+flutter build web --release \
+  --dart-define=BACKEND_URL=https://api.yimelo.cc
+```
+
 或使用仓库脚本同时产出 APK 和 AAB：
 
 ```bash

@@ -1,5 +1,4 @@
 import 'package:isar/isar.dart';
-import 'package:fittin_v2/src/data/sync/sync_models.dart';
 
 part 'body_metric_collection.g.dart';
 

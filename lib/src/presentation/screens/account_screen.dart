@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
+import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 
 class AccountScreen extends ConsumerStatefulWidget {
   const AccountScreen({super.key});
@@ -38,133 +38,126 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     final currentUser = authState.valueOrNull;
     final canPop = Navigator.of(context).canPop();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(strings.account),
-        automaticallyImplyLeading: canPop,
-      ),
-      body: DashboardPageScaffold(
-        bottomPadding: 40,
-        children: [
-          DashboardScreenHeader(
-            eyebrow: strings.profile,
-            title: strings.account,
-            subtitle: strings.accountSubtitle,
-            showBackButton: false,
-          ),
-          const SizedBox(height: 24),
-          if (!supabaseState.isConfigured)
-            DashboardSurfaceCard(
-              radius: 28,
-              highlight: true,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    strings.supabaseUnavailable,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+    return DashboardPageScaffold(
+      bottomPadding: 40,
+      children: [
+        DashboardScreenHeader(
+          eyebrow: strings.profile,
+          title: strings.account,
+          subtitle: strings.accountSubtitle,
+          showBackButton: canPop,
+        ),
+        const SizedBox(height: 24),
+        if (!supabaseState.isConfigured)
+          DashboardSurfaceCard(
+            radius: 28,
+            highlight: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.supabaseUnavailable,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    supabaseState.errorMessage ??
-                        strings.supabaseUnavailableHint,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            )
-          else if (currentUser != null)
-            _SignedInCard(
-              strings: strings,
-              syncState: syncState,
-              email: currentUser.email ?? strings.signedInNoEmail,
-              onRetrySync: controllerState.isSubmitting || syncState.isRunning
-                  ? null
-                  : () async {
-                      await ref
-                          .read(syncControllerProvider.notifier)
-                          .synchronizeWithRecovery();
-                    },
-              onSignOut: controllerState.isSubmitting
-                  ? null
-                  : () async {
-                      final signedOut = await ref
-                          .read(authControllerProvider.notifier)
-                          .signOut();
-                      if (signedOut && context.mounted) {
-                        ref
-                            .read(syncControllerProvider.notifier)
-                            .clearForSignedOutUser();
-                      }
-                    },
-            )
-          else
-            DashboardSurfaceCard(
-              radius: 28,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittinSegmented(
-                    theme: fittinTheme,
-                    options: [strings.signIn, strings.createAccount],
-                    value: _isSignUp ? strings.createAccount : strings.signIn,
-                    expand: true,
-                    onChange: (selection) {
-                      setState(() {
-                        _isSignUp = selection == strings.createAccount;
-                      });
-                      ref.read(authControllerProvider.notifier).clearMessages();
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  TextField(
-                    key: const ValueKey('account-email-field'),
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.username],
-                    decoration: InputDecoration(
-                      labelText: strings.email,
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    key: const ValueKey('account-password-field'),
-                    controller: _passwordController,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.password],
-                    decoration: InputDecoration(
-                      labelText: strings.password,
-                      border: const OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      key: const ValueKey('submit-account-auth'),
-                      onPressed: controllerState.isSubmitting ? null : _submit,
-                      child: Text(
-                        controllerState.isSubmitting
-                            ? strings.workingState
-                            : (_isSignUp
-                                  ? strings.createAccount
-                                  : strings.signIn),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  supabaseState.errorMessage ?? strings.supabaseUnavailableHint,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
-          const SizedBox(height: 16),
-          if (controllerState.errorMessage != null)
-            _MessageCard(message: controllerState.errorMessage!, isError: true),
-          if (controllerState.infoMessage != null)
-            _MessageCard(message: controllerState.infoMessage!, isError: false),
-        ],
-      ),
+          )
+        else if (currentUser != null)
+          _SignedInCard(
+            strings: strings,
+            syncState: syncState,
+            email: currentUser.email ?? strings.signedInNoEmail,
+            onRetrySync: controllerState.isSubmitting || syncState.isRunning
+                ? null
+                : () async {
+                    await ref
+                        .read(syncControllerProvider.notifier)
+                        .synchronizeWithRecovery();
+                  },
+            onSignOut: controllerState.isSubmitting
+                ? null
+                : () async {
+                    final signedOut = await ref
+                        .read(authControllerProvider.notifier)
+                        .signOut();
+                    if (signedOut && context.mounted) {
+                      ref
+                          .read(syncControllerProvider.notifier)
+                          .clearForSignedOutUser();
+                    }
+                  },
+          )
+        else
+          DashboardSurfaceCard(
+            radius: 28,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittinSegmented(
+                  theme: fittinTheme,
+                  options: [strings.signIn, strings.createAccount],
+                  value: _isSignUp ? strings.createAccount : strings.signIn,
+                  expand: true,
+                  onChange: (selection) {
+                    setState(() {
+                      _isSignUp = selection == strings.createAccount;
+                    });
+                    ref.read(authControllerProvider.notifier).clearMessages();
+                  },
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  key: const ValueKey('account-email-field'),
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.username],
+                  decoration: InputDecoration(
+                    labelText: strings.email,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  key: const ValueKey('account-password-field'),
+                  controller: _passwordController,
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: InputDecoration(
+                    labelText: strings.password,
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    key: const ValueKey('submit-account-auth'),
+                    onPressed: controllerState.isSubmitting ? null : _submit,
+                    child: Text(
+                      controllerState.isSubmitting
+                          ? strings.workingState
+                          : (_isSignUp
+                                ? strings.createAccount
+                                : strings.signIn),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
+        if (controllerState.errorMessage != null)
+          _MessageCard(message: controllerState.errorMessage!, isError: true),
+        if (controllerState.infoMessage != null)
+          _MessageCard(message: controllerState.infoMessage!, isError: false),
+      ],
     );
   }
 

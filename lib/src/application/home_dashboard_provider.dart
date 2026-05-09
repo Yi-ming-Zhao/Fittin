@@ -4,7 +4,6 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
-import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 
 enum HomeGreetingPeriod { morning, afternoon, evening, night }

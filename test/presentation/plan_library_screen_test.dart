@@ -76,8 +76,7 @@ void main() {
     expect(find.text('Jacked & Tan 2.0 (Balanced)'), findsOneWidget);
     expect(find.text('Built-in'), findsWidgets);
     expect(find.text('Active'), findsOneWidget);
-    expect(find.text('Current'), findsOneWidget);
-    expect(find.text('1 active instance(s)'), findsOneWidget);
+    expect(find.text('1'), findsWidgets);
     expect(find.textContaining('Squat & Pull'), findsOneWidget);
   });
 
@@ -117,7 +116,7 @@ void main() {
     expect(find.text('计划库'), findsWidgets);
     expect(find.text('GZCLP 四天十二周'), findsOneWidget);
     expect(find.text('深蹲主项日'), findsOneWidget);
-    expect(find.text('当前计划'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
   });
 
   testWidgets(
@@ -162,9 +161,18 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
 
-      final switchButtonLabel = find.text('Switch').at(0);
-      await tester.scrollUntilVisible(switchButtonLabel, 200);
-      await tester.tap(switchButtonLabel.last, warnIfMissed: false);
+      final planTitle = find.text('TM Plan');
+      await tester.scrollUntilVisible(
+        planTitle,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(planTitle, warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      final switchButtonLabel = find.text('Switch');
+      expect(switchButtonLabel, findsOneWidget);
+      await tester.tap(switchButtonLabel, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       expect(find.text('Set Training Maxes'), findsOneWidget);

@@ -34,7 +34,9 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
           isResuming: sessionState.activeWorkout != null,
           isLoading: sessionState.isLoading,
           onTap: () async {
-            await ref.read(activeSessionProvider.notifier).startOrResumeSession();
+            await ref
+                .read(activeSessionProvider.notifier)
+                .startOrResumeSession();
             if (!context.mounted) return;
             final latestState = ref.read(activeSessionProvider);
             if (latestState.errorMessage != null) {
@@ -50,21 +52,21 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
                     const ActiveSessionScreen(),
                 transitionsBuilder:
                     (context, animation, secondaryAnimation, child) {
-                  final slideAnimation =
-                      Tween<Offset>(
-                        begin: const Offset(0.15, 0.0),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutQuart,
-                        ),
+                      final slideAnimation =
+                          Tween<Offset>(
+                            begin: const Offset(0.15, 0.0),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutQuart,
+                            ),
+                          );
+                      return SlideTransition(
+                        position: slideAnimation,
+                        child: FadeTransition(opacity: animation, child: child),
                       );
-                  return SlideTransition(
-                    position: slideAnimation,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
+                    },
               ),
             );
           },
@@ -79,13 +81,15 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
               );
             } catch (error) {
               if (!context.mounted) return;
-              ScaffoldMessenger.of(context)
-                  .showSnackBar(SnackBar(content: Text(error.toString())));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(error.toString())));
             }
           },
         ),
         loading: () => _LoadingCard(theme: theme),
-        error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
+        error: (error, _) =>
+            _ErrorCard(theme: theme, message: error.toString()),
       ),
       loading: () => _LoadingCard(theme: theme),
       error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
@@ -162,10 +166,7 @@ class _FittinWorkoutCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Text(
-                      statusLabel,
-                      style: theme.uiStyle(11, theme.fgMuted),
-                    ),
+                    Text(statusLabel, style: theme.uiStyle(11, theme.fgMuted)),
                   ],
                 ),
             ],
@@ -173,11 +174,7 @@ class _FittinWorkoutCard extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Session title
-          FittinSectionTitle(
-            theme,
-            summary.workoutName,
-            fontSize: 30,
-          ),
+          FittinSectionTitle(theme, summary.workoutName, fontSize: 30),
           const SizedBox(height: 6),
           Text(
             'TSA Intermediate Approach 2.0 · $weekDayLabel',
@@ -213,9 +210,11 @@ class _FittinWorkoutCard extends StatelessWidget {
                   progressLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.uiStyle(12, theme.fgDim).copyWith(
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+                  style: theme
+                      .uiStyle(12, theme.fgDim)
+                      .copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                 ),
               ),
             ],
@@ -228,10 +227,7 @@ class _FittinWorkoutCard extends StatelessWidget {
               final details = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FittinEyebrow(
-                    theme,
-                    upNextLabel,
-                  ),
+                  FittinEyebrow(theme, upNextLabel),
                   const SizedBox(height: 4),
                   Text(
                     summary.primaryExerciseName,
@@ -253,16 +249,13 @@ class _FittinWorkoutCard extends StatelessWidget {
                 strings: strings,
               );
 
-              if (constraints.maxWidth < 420) {
+              if (constraints.maxWidth < 300) {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     details,
                     const SizedBox(height: 16),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: button,
-                    ),
+                    Align(alignment: Alignment.centerLeft, child: button),
                   ],
                 );
               }
@@ -302,10 +295,7 @@ class _ResumeButton extends StatelessWidget {
       return SizedBox(
         width: 24,
         height: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: theme.accent,
-        ),
+        child: CircularProgressIndicator(strokeWidth: 2, color: theme.accent),
       );
     }
     return FittinBtn(
@@ -355,9 +345,9 @@ class _ErrorCard extends StatelessWidget {
         children: [
           Text(
             'Unable to load workout',
-            style: theme.uiStyle(16, theme.fg).copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: theme
+                .uiStyle(16, theme.fg)
+                .copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(message, style: theme.uiStyle(14, theme.fgDim)),

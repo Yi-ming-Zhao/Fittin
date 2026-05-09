@@ -7,7 +7,8 @@ import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/share_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class PlanEditorScreen extends ConsumerStatefulWidget {
   const PlanEditorScreen({super.key, this.templateId});
@@ -73,14 +74,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       children: [
         Row(
           children: [
-            FittinBtn(
-              fittinTheme,
-              'Back',
-              variant: 'ghost',
-              size: 'sm',
-              icon: Icons.chevron_left_rounded,
-              onPressed: () => Navigator.of(context).maybePop(),
-            ),
+            DashboardBackButton(theme: fittinTheme),
             const Spacer(),
             _HeaderActions(
               theme: fittinTheme,
@@ -88,7 +82,9 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               isSaving: state.isSaving,
               onShare: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => ShareScreen(planTemplate: draft)),
+                  MaterialPageRoute(
+                    builder: (_) => ShareScreen(planTemplate: draft),
+                  ),
                 );
               },
               onSave: () async => notifier.saveTemplate(),
@@ -100,7 +96,9 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         const SizedBox(height: 10),
         Text(
           draft.name,
-          style: fittinTheme.displayStyle(28, fittinTheme.fg).copyWith(height: 1.15),
+          style: fittinTheme
+              .displayStyle(28, fittinTheme.fg)
+              .copyWith(height: 1.15),
         ),
         const SizedBox(height: 8),
         Text(
@@ -111,7 +109,9 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
               : (strings.isChinese
                     ? '线性计划按可复用训练日整体编辑。'
                     : 'Linear plans are edited as reusable workout structures.'),
-          style: fittinTheme.uiStyle(13, fittinTheme.fgDim).copyWith(height: 1.45),
+          style: fittinTheme
+              .uiStyle(13, fittinTheme.fgDim)
+              .copyWith(height: 1.45),
         ),
         const SizedBox(height: 20),
         if (state.sourceTemplate != null)
@@ -136,11 +136,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             padding: const EdgeInsets.only(bottom: 12),
             child: _ValidationBanner(errors: state.validationErrors),
           ),
-        _TemplateMetaCard(
-          draft: draft,
-          notifier: notifier,
-          strings: strings,
-        ),
+        _TemplateMetaCard(draft: draft, notifier: notifier, strings: strings),
         const SizedBox(height: 16),
         _ModeSelectorCard(
           scheduleMode: draft.resolvedScheduleMode,
@@ -180,7 +176,11 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
                 'W${_selectedPeriodizedWeek + 1}D${_selectedWorkoutIndex + 1}',
           ),
         ] else ...[
-          for (var workoutIndex = 0; workoutIndex < workouts.length; workoutIndex++)
+          for (
+            var workoutIndex = 0;
+            workoutIndex < workouts.length;
+            workoutIndex++
+          )
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _WorkoutEditorCard(
@@ -272,7 +272,11 @@ class _HeaderActions extends StatelessWidget {
         const SizedBox(width: 8),
         FittinBtn(
           theme,
-          isSaving ? strings.isChinese ? '保存中' : 'Saving' : strings.save,
+          isSaving
+              ? strings.isChinese
+                    ? '保存中'
+                    : 'Saving'
+              : strings.save,
           size: 'sm',
           icon: isSaving ? null : Icons.save_outlined,
           onPressed: isSaving ? null : () => onSave(),
@@ -341,8 +345,11 @@ class _ModeSelectorCard extends StatelessWidget {
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.linear,
               title: strings.linearPlan,
-              subtitle: strings.isChinese ? '整套训练日复用' : 'Reusable workout structure',
-              onTap: () => notifier.updateScheduleMode(PlanScheduleModes.linear),
+              subtitle: strings.isChinese
+                  ? '整套训练日复用'
+                  : 'Reusable workout structure',
+              onTap: () =>
+                  notifier.updateScheduleMode(PlanScheduleModes.linear),
             ),
           ),
           SizedBox(
@@ -350,7 +357,9 @@ class _ModeSelectorCard extends StatelessWidget {
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.periodized,
               title: strings.periodizedPlan,
-              subtitle: strings.isChinese ? '按周/天槽位编辑' : 'Edit by week/day slots',
+              subtitle: strings.isChinese
+                  ? '按周/天槽位编辑'
+                  : 'Edit by week/day slots',
               onTap: () =>
                   notifier.updateScheduleMode(PlanScheduleModes.periodized),
             ),
@@ -386,8 +395,9 @@ class _PeriodizedSlotCard extends StatelessWidget {
       1,
       (max, workout) => workout.exercises.fold<int>(
         max,
-        (innerMax, exercise) =>
-            exercise.stages.length > innerMax ? exercise.stages.length : innerMax,
+        (innerMax, exercise) => exercise.stages.length > innerMax
+            ? exercise.stages.length
+            : innerMax,
       ),
     );
 
@@ -484,7 +494,8 @@ class _WorkoutEditorCard extends StatelessWidget {
             _DraftTextField(
               label: strings.workoutName,
               value: workout.name,
-              onChanged: (value) => notifier.updateWorkoutName(workoutIndex, value),
+              onChanged: (value) =>
+                  notifier.updateWorkoutName(workoutIndex, value),
             ),
             const SizedBox(height: 12),
             Wrap(
@@ -513,7 +524,11 @@ class _WorkoutEditorCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          for (var exerciseIndex = 0; exerciseIndex < workout.exercises.length; exerciseIndex++)
+          for (
+            var exerciseIndex = 0;
+            exerciseIndex < workout.exercises.length;
+            exerciseIndex++
+          )
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _ExerciseEditorCard(
@@ -589,11 +604,13 @@ class _ExerciseEditorCard extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () => notifier.moveExercise(workoutIndex, exerciseIndex, -1),
+                onPressed: () =>
+                    notifier.moveExercise(workoutIndex, exerciseIndex, -1),
                 icon: const Icon(Icons.arrow_upward_rounded),
               ),
               IconButton(
-                onPressed: () => notifier.moveExercise(workoutIndex, exerciseIndex, 1),
+                onPressed: () =>
+                    notifier.moveExercise(workoutIndex, exerciseIndex, 1),
                 icon: const Icon(Icons.arrow_downward_rounded),
               ),
               IconButton(
@@ -602,7 +619,8 @@ class _ExerciseEditorCard extends StatelessWidget {
                 icon: const Icon(Icons.copy_rounded),
               ),
               IconButton(
-                onPressed: () => notifier.removeExercise(workoutIndex, exerciseIndex),
+                onPressed: () =>
+                    notifier.removeExercise(workoutIndex, exerciseIndex),
                 icon: const Icon(Icons.delete_outline_rounded),
               ),
             ],
@@ -641,7 +659,11 @@ class _ExerciseEditorCard extends StatelessWidget {
                   ],
                   onChanged: (value) {
                     if (value != null) {
-                      notifier.updateExerciseTier(workoutIndex, exerciseIndex, value);
+                      notifier.updateExerciseTier(
+                        workoutIndex,
+                        exerciseIndex,
+                        value,
+                      );
                     }
                   },
                 ),
@@ -651,8 +673,11 @@ class _ExerciseEditorCard extends StatelessWidget {
                 child: _DraftIntField(
                   label: strings.restSeconds,
                   value: exercise.restSeconds,
-                  onChanged: (value) =>
-                      notifier.updateExerciseRestSeconds(workoutIndex, exerciseIndex, value),
+                  onChanged: (value) => notifier.updateExerciseRestSeconds(
+                    workoutIndex,
+                    exerciseIndex,
+                    value,
+                  ),
                 ),
               ),
             ],
@@ -667,18 +692,28 @@ class _ExerciseEditorCard extends StatelessWidget {
                 child: _DraftDoubleField(
                   label: strings.startWeight,
                   value: exercise.initialBaseWeight,
-                  onChanged: (value) =>
-                      notifier.updateExerciseBaseWeight(workoutIndex, exerciseIndex, value),
+                  onChanged: (value) => notifier.updateExerciseBaseWeight(
+                    workoutIndex,
+                    exerciseIndex,
+                    value,
+                  ),
                 ),
               ),
               SizedBox(
                 width: 160,
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: exercise.loadUnit,
                   decoration: InputDecoration(labelText: strings.loadUnit),
                   items: [
-                    DropdownMenuItem(value: LoadUnits.kg, child: const Text('kg')),
-                    DropdownMenuItem(value: LoadUnits.lbs, child: const Text('lbs')),
+                    DropdownMenuItem(
+                      value: LoadUnits.kg,
+                      child: const Text('kg'),
+                    ),
+                    DropdownMenuItem(
+                      value: LoadUnits.lbs,
+                      child: const Text('lbs'),
+                    ),
                     DropdownMenuItem(
                       value: LoadUnits.bodyweight,
                       child: Text(strings.isChinese ? '自身体重' : 'Bodyweight'),
@@ -694,7 +729,11 @@ class _ExerciseEditorCard extends StatelessWidget {
                   ],
                   onChanged: (value) {
                     if (value != null) {
-                      notifier.updateExerciseLoadUnit(workoutIndex, exerciseIndex, value);
+                      notifier.updateExerciseLoadUnit(
+                        workoutIndex,
+                        exerciseIndex,
+                        value,
+                      );
                     }
                   },
                 ),
@@ -709,6 +748,7 @@ class _ExerciseEditorCard extends StatelessWidget {
               SizedBox(
                 width: 160,
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: exercise.equipmentType,
                   decoration: InputDecoration(
                     labelText: strings.isChinese ? '器械类型' : 'Equipment',
@@ -753,6 +793,7 @@ class _ExerciseEditorCard extends StatelessWidget {
               SizedBox(
                 width: 180,
                 child: DropdownButtonFormField<String?>(
+                  isExpanded: true,
                   initialValue: exercise.trainingMaxLift,
                   decoration: InputDecoration(
                     labelText: strings.isChinese ? '训练最大值映射' : 'TM Mapping',
@@ -760,7 +801,9 @@ class _ExerciseEditorCard extends StatelessWidget {
                   items: [
                     DropdownMenuItem<String?>(
                       value: null,
-                      child: Text(strings.isChinese ? '无 / 后续补充' : 'None / Later'),
+                      child: Text(
+                        strings.isChinese ? '无 / 后续补充' : 'None / Later',
+                      ),
                     ),
                     const DropdownMenuItem<String?>(
                       value: 'squat',
@@ -864,25 +907,43 @@ class _StageEditorCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   stage.name,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
               IconButton(
-                onPressed: () => notifier.moveStage(workoutIndex, exerciseIndex, stageIndex, -1),
+                onPressed: () => notifier.moveStage(
+                  workoutIndex,
+                  exerciseIndex,
+                  stageIndex,
+                  -1,
+                ),
                 icon: const Icon(Icons.arrow_upward_rounded),
               ),
               IconButton(
-                onPressed: () => notifier.moveStage(workoutIndex, exerciseIndex, stageIndex, 1),
+                onPressed: () => notifier.moveStage(
+                  workoutIndex,
+                  exerciseIndex,
+                  stageIndex,
+                  1,
+                ),
                 icon: const Icon(Icons.arrow_downward_rounded),
               ),
               IconButton(
-                onPressed: () => notifier.duplicateStage(workoutIndex, exerciseIndex, stageIndex),
+                onPressed: () => notifier.duplicateStage(
+                  workoutIndex,
+                  exerciseIndex,
+                  stageIndex,
+                ),
                 icon: const Icon(Icons.copy_rounded),
               ),
               IconButton(
-                onPressed: () => notifier.removeStage(workoutIndex, exerciseIndex, stageIndex),
+                onPressed: () => notifier.removeStage(
+                  workoutIndex,
+                  exerciseIndex,
+                  stageIndex,
+                ),
                 icon: const Icon(Icons.delete_outline_rounded),
               ),
             ],
@@ -890,15 +951,19 @@ class _StageEditorCard extends StatelessWidget {
           _DraftTextField(
             label: strings.stageName,
             value: stage.name,
-            onChanged: (value) =>
-                notifier.updateStageName(workoutIndex, exerciseIndex, stageIndex, value),
+            onChanged: (value) => notifier.updateStageName(
+              workoutIndex,
+              exerciseIndex,
+              stageIndex,
+              value,
+            ),
           ),
           const SizedBox(height: 12),
           Text(
             strings.sets,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           for (var setIndex = 0; setIndex < stage.sets.length; setIndex++)
@@ -922,16 +987,17 @@ class _StageEditorCard extends StatelessWidget {
               variant: 'secondary',
               size: 'sm',
               icon: Icons.add_rounded,
-              onPressed: () => notifier.addSet(workoutIndex, exerciseIndex, stageIndex),
+              onPressed: () =>
+                  notifier.addSet(workoutIndex, exerciseIndex, stageIndex),
             ),
           ),
           if (showRules) ...[
             const SizedBox(height: 16),
             Text(
               strings.progression,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             _RuleEditor(
@@ -995,8 +1061,14 @@ class _SetEditorRow extends StatelessWidget {
                   initialValue: setDefinition.kind,
                   decoration: InputDecoration(labelText: strings.role),
                   items: [
-                    DropdownMenuItem(value: SetKinds.warmup, child: Text(strings.warmup)),
-                    DropdownMenuItem(value: SetKinds.working, child: Text(strings.working)),
+                    DropdownMenuItem(
+                      value: SetKinds.warmup,
+                      child: Text(strings.warmup),
+                    ),
+                    DropdownMenuItem(
+                      value: SetKinds.working,
+                      child: Text(strings.working),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) {
@@ -1024,16 +1096,38 @@ class _SetEditorRow extends StatelessWidget {
                 onSelected: (value) {
                   switch (value) {
                     case 'up':
-                      notifier.moveSet(workoutIndex, exerciseIndex, stageIndex, setIndex, -1);
+                      notifier.moveSet(
+                        workoutIndex,
+                        exerciseIndex,
+                        stageIndex,
+                        setIndex,
+                        -1,
+                      );
                       break;
                     case 'down':
-                      notifier.moveSet(workoutIndex, exerciseIndex, stageIndex, setIndex, 1);
+                      notifier.moveSet(
+                        workoutIndex,
+                        exerciseIndex,
+                        stageIndex,
+                        setIndex,
+                        1,
+                      );
                       break;
                     case 'duplicate':
-                      notifier.duplicateSet(workoutIndex, exerciseIndex, stageIndex, setIndex);
+                      notifier.duplicateSet(
+                        workoutIndex,
+                        exerciseIndex,
+                        stageIndex,
+                        setIndex,
+                      );
                       break;
                     case 'delete':
-                      notifier.removeSet(workoutIndex, exerciseIndex, stageIndex, setIndex);
+                      notifier.removeSet(
+                        workoutIndex,
+                        exerciseIndex,
+                        stageIndex,
+                        setIndex,
+                      );
                       break;
                   }
                 },
@@ -1187,8 +1281,12 @@ class _RuleEditor extends StatelessWidget {
             children: [
               Expanded(child: Text(title)),
               IconButton(
-                onPressed: () =>
-                    notifier.addRuleAction(workoutIndex, exerciseIndex, stageIndex, condition),
+                onPressed: () => notifier.addRuleAction(
+                  workoutIndex,
+                  exerciseIndex,
+                  stageIndex,
+                  condition,
+                ),
                 icon: const Icon(Icons.add_rounded),
               ),
             ],
@@ -1217,22 +1315,22 @@ class _RuleEditor extends StatelessWidget {
                 ),
                 onMultiplierChanged: (value) =>
                     notifier.updateRuleActionMultiplier(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                  condition,
-                  actionIndex,
-                  value,
-                ),
+                      workoutIndex,
+                      exerciseIndex,
+                      stageIndex,
+                      condition,
+                      actionIndex,
+                      value,
+                    ),
                 onTargetStageChanged: (value) =>
                     notifier.updateRuleActionTargetStage(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                  condition,
-                  actionIndex,
-                  value,
-                ),
+                      workoutIndex,
+                      exerciseIndex,
+                      stageIndex,
+                      condition,
+                      actionIndex,
+                      value,
+                    ),
                 onDelete: () => notifier.removeRuleAction(
                   workoutIndex,
                   exerciseIndex,
@@ -1279,8 +1377,14 @@ class _RuleActionEditorRow extends StatelessWidget {
             items: const [
               DropdownMenuItem(value: 'STAY_STAGE', child: Text('Stay')),
               DropdownMenuItem(value: 'ADD_WEIGHT', child: Text('Add Weight')),
-              DropdownMenuItem(value: 'MULTIPLY_WEIGHT', child: Text('Multiply')),
-              DropdownMenuItem(value: 'JUMP_TO_STAGE', child: Text('Jump Stage')),
+              DropdownMenuItem(
+                value: 'MULTIPLY_WEIGHT',
+                child: Text('Multiply'),
+              ),
+              DropdownMenuItem(
+                value: 'JUMP_TO_STAGE',
+                child: Text('Jump Stage'),
+              ),
             ],
             onChanged: (value) {
               if (value != null) onTypeChanged(value);
@@ -1318,18 +1422,17 @@ class _RuleActionEditorRow extends StatelessWidget {
           )
         else
           const Spacer(),
-        IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline_rounded)),
+        IconButton(
+          onPressed: onDelete,
+          icon: const Icon(Icons.delete_outline_rounded),
+        ),
       ],
     );
   }
 }
 
 class _EditorCard extends StatelessWidget {
-  const _EditorCard({
-    required this.title,
-    required this.child,
-    this.actions,
-  });
+  const _EditorCard({required this.title, required this.child, this.actions});
 
   final String title;
   final Widget child;
@@ -1354,9 +1457,9 @@ class _EditorCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       title,
-                      style: theme.uiStyle(18, theme.fg).copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: theme
+                          .uiStyle(18, theme.fg)
+                          .copyWith(fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -1396,9 +1499,7 @@ class _ModeTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: selected
-              ? theme.accentDim
-              : theme.surfaceHi,
+          color: selected ? theme.accentDim : theme.surfaceHi,
           border: Border.all(
             color: selected
                 ? theme.accent.withValues(alpha: 0.8)
@@ -1410,14 +1511,14 @@ class _ModeTile extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.uiStyle(15, theme.fg).copyWith(fontWeight: FontWeight.w700),
+              style: theme
+                  .uiStyle(15, theme.fg)
+                  .copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
               subtitle,
-              style: theme.uiStyle(12, theme.fgDim).copyWith(
-                height: 1.4,
-              ),
+              style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
             ),
           ],
         ),
@@ -1452,7 +1553,8 @@ class _SlotChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: theme.uiStyle(13, selected ? theme.accentInk : theme.fgDim)
+          style: theme
+              .uiStyle(13.0, selected ? theme.accentInk : theme.fgDim)
               ?.copyWith(fontWeight: FontWeight.w600),
         ),
       ),
@@ -1476,7 +1578,9 @@ class _DraftTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = TextEditingController(text: value);
-    controller.selection = TextSelection.collapsed(offset: controller.text.length);
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
     return TextField(
       controller: controller,
       maxLines: maxLines,
@@ -1500,7 +1604,9 @@ class _DraftIntField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = TextEditingController(text: value.toString());
-    controller.selection = TextSelection.collapsed(offset: controller.text.length);
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
     return TextField(
       controller: controller,
       keyboardType: TextInputType.number,
@@ -1524,7 +1630,9 @@ class _DraftDoubleField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = TextEditingController(text: value.toString());
-    controller.selection = TextSelection.collapsed(offset: controller.text.length);
+    controller.selection = TextSelection.collapsed(
+      offset: controller.text.length,
+    );
     return TextField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -1593,9 +1701,9 @@ class _ValidationBanner extends StatelessWidget {
         children: [
           Text(
             'Validation',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
           for (final error in errors.take(6))

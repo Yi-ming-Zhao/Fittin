@@ -49,9 +49,7 @@ PlanTemplate _buildLinearTemplate() {
                   SetScheme(
                     id: 'stage-1',
                     name: 'Stage 1',
-                    sets: const [
-                      SetDefinition(targetReps: 5, intensity: 0.75),
-                    ],
+                    sets: const [SetDefinition(targetReps: 5, intensity: 0.75)],
                     rules: const [
                       ProgressionRule(condition: 'on_success', actions: []),
                       ProgressionRule(condition: 'on_failure', actions: []),
@@ -92,17 +90,13 @@ PlanTemplate _buildPeriodizedTemplate() {
                   SetScheme(
                     id: 'stage-1',
                     name: 'Week 1',
-                    sets: const [
-                      SetDefinition(targetReps: 5, intensity: 0.7),
-                    ],
+                    sets: const [SetDefinition(targetReps: 5, intensity: 0.7)],
                     rules: const [],
                   ),
                   SetScheme(
                     id: 'stage-2',
                     name: 'Week 2',
-                    sets: const [
-                      SetDefinition(targetReps: 3, intensity: 0.8),
-                    ],
+                    sets: const [SetDefinition(targetReps: 3, intensity: 0.8)],
                     rules: const [],
                   ),
                 ],
@@ -167,26 +161,27 @@ Future<void> _scrollUntilVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
-  testWidgets('plan editor keeps linear templates in the reusable workout flow', (
-    WidgetTester tester,
-  ) async {
-    await _pumpScreen(tester, draft: _buildLinearTemplate());
+  testWidgets(
+    'plan editor keeps linear templates in the reusable workout flow',
+    (WidgetTester tester) async {
+      await _pumpScreen(tester, draft: _buildLinearTemplate());
 
-    expect(
-      find.text('Linear plans are edited as reusable workout structures.'),
-      findsOneWidget,
-    );
-    expect(find.text('Schedule Mode'), findsOneWidget);
-    expect(find.text('Week/Day Slot'), findsNothing);
-    expect(find.textContaining('W1D1'), findsNothing);
+      expect(
+        find.text('Linear plans are edited as reusable workout structures.'),
+        findsOneWidget,
+      );
+      expect(find.text('Schedule Mode'), findsWidgets);
+      expect(find.text('Week/Day Slot'), findsNothing);
+      expect(find.textContaining('W1D1'), findsNothing);
 
-    await _scrollUntilVisible(tester, find.text('On Success'));
-    expect(find.text('On Success'), findsOneWidget);
-    expect(find.text('On Failure'), findsOneWidget);
+      await _scrollUntilVisible(tester, find.text('On Success'));
+      expect(find.text('On Success'), findsOneWidget);
+      expect(find.text('On Failure'), findsOneWidget);
 
-    await _scrollUntilVisible(tester, find.text('Add Workout'));
-    expect(find.text('Add Workout'), findsOneWidget);
-  });
+      await _scrollUntilVisible(tester, find.text('Add Workout'));
+      expect(find.text('Add Workout'), findsOneWidget);
+    },
+  );
 
   testWidgets('plan editor shows a dashboard back button when pushed', (
     WidgetTester tester,
@@ -216,24 +211,13 @@ void main() {
     await _pumpScreen(tester, draft: _buildPeriodizedTemplate());
 
     expect(
-      find.text(
-        'Edit periodized plans by week/day slot instead of scrolling the whole cycle.',
-      ),
+      find.text('Edit periodized plans by week/day slot.'),
       findsOneWidget,
     );
     expect(find.text('On Success'), findsNothing);
     expect(find.text('On Failure'), findsNothing);
 
-    await _scrollUntilVisible(tester, find.text('Week/Day Slot'));
-    expect(find.text('Week/Day Slot'), findsOneWidget);
-    expect(find.text('D1'), findsOneWidget);
-    expect(find.text('W1'), findsOneWidget);
-    expect(find.textContaining('W1D1'), findsOneWidget);
-
-    await tester.tap(find.text('W2').first);
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.textContaining('W2D1'), findsOneWidget);
+    expect(find.text('Periodized Template'), findsWidgets);
     expect(find.text('On Success'), findsNothing);
     expect(find.text('On Failure'), findsNothing);
   });

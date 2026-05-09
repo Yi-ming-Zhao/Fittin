@@ -17,58 +17,77 @@ class FittinTabBar extends StatelessWidget {
   final ValueChanged<String> onChange;
 
   static const _tabs = [
-    ('home', 'Today'),
-    ('plans', 'Plans'),
-    ('progress', 'Progress'),
-    ('body', 'Body'),
-    ('profile', 'Profile'),
+    ('home', 'TODAY', Icons.play_arrow_rounded),
+    ('plans', 'PLANS', Icons.layers_rounded),
+    ('progress', 'PR', Icons.trending_up_rounded),
+    ('body', 'BODY', Icons.accessibility_new_rounded),
+    ('profile', 'ME', Icons.person_outline_rounded),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 34),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(999),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              color: theme.surface,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: theme.border, width: 0.5),
-            ),
-            child: Row(
-              children: _tabs.map((t) {
-                final isActive = t.$1 == active;
-                return Expanded(
-                  child: _FittinTabItem(
-                    theme: theme,
-                    label: t.$2,
-                    isActive: isActive,
-                    onTap: () => onChange(t.$1),
-                  ),
-                );
-              }).toList(),
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 430),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 18),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: theme.surface.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: theme.border, width: 0.5),
+                ),
+                child: Row(
+                  children: _tabs.map((t) {
+                    final isActive = t.$1 == active;
+                    return Expanded(
+                      child: _FittinTabItem(
+                        key: ValueKey(_navKeyFor(t.$1)),
+                        theme: theme,
+                        label: t.$2,
+                        icon: t.$3,
+                        isActive: isActive,
+                        onTap: () => onChange(t.$1),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  static String _navKeyFor(String id) {
+    return switch (id) {
+      'plans' => 'nav-plan-library',
+      'profile' => 'nav-profile',
+      _ => 'nav-$id',
+    };
+  }
 }
 
 class _FittinTabItem extends StatelessWidget {
   const _FittinTabItem({
+    super.key,
     required this.theme,
     required this.label,
+    required this.icon,
     required this.isActive,
     required this.onTap,
   });
 
   final FittinTheme theme;
   final String label;
+  final IconData icon;
   final bool isActive;
   final VoidCallback onTap;
 
@@ -83,15 +102,29 @@ class _FittinTabItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(999),
         ),
         child: Center(
-          child: Text(
-            label,
-            style: theme.uiStyle(
-              11,
-              isActive ? theme.accentInk : theme.fgDim,
-            ).copyWith(
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.4,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isActive ? theme.accentInk : theme.fgDim,
+              ),
+              const SizedBox(height: 2),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme
+                      .uiStyle(10, isActive ? theme.accentInk : theme.fgDim)
+                      .copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -118,10 +151,7 @@ class GlassBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     // If no FittinTheme provided, use a default
     if (theme == null) {
-      return _LegacyNav(
-        currentIndex: currentIndex,
-        onTap: onTap,
-      );
+      return _LegacyNav(currentIndex: currentIndex, onTap: onTap);
     }
     return FittinTabBar(
       theme: theme!,
@@ -133,10 +163,7 @@ class GlassBottomNav extends StatelessWidget {
 
 // Legacy fallback for when no FittinTheme is available
 class _LegacyNav extends StatelessWidget {
-  const _LegacyNav({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _LegacyNav({required this.currentIndex, required this.onTap});
 
   final int currentIndex;
   final ValueChanged<int> onTap;

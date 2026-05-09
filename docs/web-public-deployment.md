@@ -42,6 +42,9 @@ flutter build web --release \
   --dart-define=BACKEND_URL=https://api.yimelo.cc
 ```
 
+The `BACKEND_URL` dart-define is required for production Web builds. Without it,
+the client may attempt the local development fallback and auth/sync will fail.
+
 Or use the repo wrapper that pulls, rebuilds, and restarts the public web service:
 
 ```bash

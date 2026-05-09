@@ -43,30 +43,7 @@ class PlanLibraryScreen extends ConsumerWidget {
 
     return templatesAsync.when(
       data: (templates) => DashboardPageScaffold(
-        bottomPadding: 170,
-        floatingActionButton: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.22),
-                blurRadius: 22,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: FittinBtn(
-            fittinTheme,
-            strings.newPlan,
-            icon: Icons.add_rounded,
-            onPressed: () async {
-              await Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const PlanEditorScreen()));
-              ref.invalidate(planLibraryItemsProvider);
-            },
-          ),
-        ),
+        bottomPadding: 140,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.planLibrary,
@@ -95,7 +72,7 @@ class PlanLibraryScreen extends ConsumerWidget {
             shrinkWrap: true,
             padding: EdgeInsets.zero,
             itemCount: templates.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final item = templates[index];
               final record = item.record;
@@ -120,32 +97,12 @@ class PlanLibraryScreen extends ConsumerWidget {
                   );
                   ref.invalidate(planLibraryItemsProvider);
                 },
-                padding: const EdgeInsets.all(22),
-                radius: 32,
+                padding: const EdgeInsets.all(20),
+                radius: 20,
                 highlight: false,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            localizedTemplateName(record.template, locale),
-                            style: fittinTheme.displayStyle(22, fittinTheme.fg).copyWith(
-                              height: 1.15,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: fittinTheme.fgMuted,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
                     Row(
                       children: [
                         FittinEyebrow(
@@ -165,17 +122,39 @@ class PlanLibraryScreen extends ConsumerWidget {
                           const SizedBox(width: 5),
                           Text(
                             'Active',
-                            style: fittinTheme.uiStyle(10, fittinTheme.accent).copyWith(
-                              letterSpacing: 0.8,
-                            ),
+                            style: fittinTheme
+                                .uiStyle(10, fittinTheme.accent)
+                                .copyWith(letterSpacing: 0.8),
                           ),
                         ],
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            localizedTemplateName(record.template, locale),
+                            style: fittinTheme
+                                .displayStyle(22, fittinTheme.fg)
+                                .copyWith(height: 1.15),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: fittinTheme.fgMuted,
+                          size: 18,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     Text(
                       localizedTemplateDescription(record.template, locale),
-                      style: fittinTheme.uiStyle(13, fittinTheme.fgDim).copyWith(height: 1.45),
+                      style: fittinTheme
+                          .uiStyle(13, fittinTheme.fgDim)
+                          .copyWith(height: 1.45),
                     ),
                     const SizedBox(height: 16),
                     Wrap(
@@ -184,9 +163,15 @@ class PlanLibraryScreen extends ConsumerWidget {
                       children: [
                         for (final tag in preview.split(' · '))
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              border: Border.all(color: fittinTheme.border, width: 0.5),
+                              border: Border.all(
+                                color: fittinTheme.border,
+                                width: 0.5,
+                              ),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -200,60 +185,20 @@ class PlanLibraryScreen extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _Stat(theme: fittinTheme, label: 'Workouts', value: '$workoutCount'),
-                        _Stat(theme: fittinTheme, label: 'Exercises', value: '$exerciseCount'),
-                        _Stat(theme: fittinTheme, label: 'Running', value: '${record.instanceCount}'),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FittinBtn(
-                            fittinTheme,
-                            item.isActive ? strings.current : strings.switchPlan,
-                            size: 'sm',
-                            onPressed:
-                                item.isActive ||
-                                    (actionState.isSwitching &&
-                                        actionState.switchingTemplateId ==
-                                            record.template.id)
-                                ? null
-                                : () async {
-                                    final trainingMaxProfile =
-                                        await _resolveTrainingMaxProfile(
-                                          context,
-                                          record,
-                                        );
-                                    if (!context.mounted ||
-                                        trainingMaxProfile == null) {
-                                      return;
-                                    }
-                                    await actionNotifier.activateTemplate(
-                                      record,
-                                      trainingMaxProfile: trainingMaxProfile,
-                                    );
-                                  },
-                          ),
+                        _Stat(
+                          theme: fittinTheme,
+                          label: 'Workouts',
+                          value: '$workoutCount',
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FittinBtn(
-                            fittinTheme,
-                            strings.edit,
-                            size: 'sm',
-                            variant: 'secondary',
-                            onPressed: () async {
-                              await Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => PlanEditorScreen(
-                                    templateId: record.template.id,
-                                  ),
-                                ),
-                              );
-                              ref.invalidate(planLibraryItemsProvider);
-                            },
-                          ),
+                        _Stat(
+                          theme: fittinTheme,
+                          label: 'Exercises',
+                          value: '$exerciseCount',
+                        ),
+                        _Stat(
+                          theme: fittinTheme,
+                          label: 'Running',
+                          value: '${record.instanceCount}',
                         ),
                       ],
                     ),
@@ -301,10 +246,7 @@ class _Stat extends StatelessWidget {
       children: [
         FittinEyebrow(theme, label),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.numStyle(16.0, theme.fg),
-        ),
+        Text(value, style: theme.numStyle(16.0, theme.fg)),
       ],
     );
   }
@@ -334,12 +276,9 @@ class _PlanDetailScreen extends ConsumerWidget {
       children: [
         Row(
           children: [
-            FittinBtn(
-              theme,
-              'Library',
-              variant: 'ghost',
-              size: 'sm',
-              icon: Icons.chevron_left_rounded,
+            DashboardBackButton(
+              theme: theme,
+              label: 'Library',
               onPressed: () => Navigator.of(context).pop(),
             ),
             const Spacer(),
@@ -385,7 +324,10 @@ class _PlanDetailScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 20),
-        FittinEyebrow(theme, record.isBuiltIn ? strings.builtIn : strings.custom),
+        FittinEyebrow(
+          theme,
+          record.isBuiltIn ? strings.builtIn : strings.custom,
+        ),
         const SizedBox(height: 10),
         Text(
           localizedTemplateName(template, locale),
@@ -406,10 +348,9 @@ class _PlanDetailScreen extends ConsumerWidget {
               const SizedBox(width: 6),
               Text(
                 'CURRENTLY ACTIVE',
-                style: theme.uiStyle(11, theme.accent).copyWith(
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: theme
+                    .uiStyle(11, theme.accent)
+                    .copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -422,14 +363,22 @@ class _PlanDetailScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         DashboardSurfaceCard(
-          radius: 30,
+          radius: theme.radius,
           padding: const EdgeInsets.all(20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _Stat(theme: theme, label: 'Workouts', value: '${workouts.length}'),
+              _Stat(
+                theme: theme,
+                label: 'Workouts',
+                value: '${workouts.length}',
+              ),
               _Stat(theme: theme, label: 'Exercises', value: '$exerciseCount'),
-              _Stat(theme: theme, label: 'Running', value: '${record.instanceCount}'),
+              _Stat(
+                theme: theme,
+                label: 'Running',
+                value: '${record.instanceCount}',
+              ),
             ],
           ),
         ),
@@ -444,7 +393,7 @@ class _PlanDetailScreen extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: DashboardSurfaceCard(
-              radius: 24,
+              radius: theme.radius,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
                 children: [
@@ -462,9 +411,9 @@ class _PlanDetailScreen extends ConsumerWidget {
                       children: [
                         Text(
                           localizedWorkoutName(workout, locale),
-                          style: theme.uiStyle(14, theme.fg).copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: theme
+                              .uiStyle(14, theme.fg)
+                              .copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -489,7 +438,7 @@ class _PlanDetailScreen extends ConsumerWidget {
         FittinEyebrow(theme, strings.progression),
         const SizedBox(height: 10),
         DashboardSurfaceCard(
-          radius: 30,
+          radius: theme.radius,
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -502,7 +451,7 @@ class _PlanDetailScreen extends ConsumerWidget {
                     style: theme.uiStyle(13, theme.fg),
                   ),
                   Text(
-                    'Intensity ${progressionValues.first.toStringAsFixed(0)}% -> ${progressionValues.last.toStringAsFixed(0)}%',
+                    'Intensity ${progressionValues.first.toStringAsFixed(0)}% → ${progressionValues.last.toStringAsFixed(0)}%',
                     style: theme.numStyle(12, theme.fgDim),
                   ),
                 ],
@@ -512,7 +461,7 @@ class _PlanDetailScreen extends ConsumerWidget {
                 theme,
                 progressionValues,
                 height: 120,
-                showDots: false,
+                showDots: true,
                 yLabels: const ['95', '78', '60'],
               ),
             ],
@@ -528,7 +477,8 @@ List<double> _buildProgressionSeries(PlanTemplate template) {
     1,
     (max, workout) => workout.exercises.fold<int>(
       max,
-      (inner, exercise) => exercise.stages.length > inner ? exercise.stages.length : inner,
+      (inner, exercise) =>
+          exercise.stages.length > inner ? exercise.stages.length : inner,
     ),
   );
   if (maxStages <= 1) {
@@ -579,62 +529,87 @@ class _TrainingMaxSetupDialogState extends State<_TrainingMaxSetupDialog> {
     final container = ProviderScope.containerOf(context);
     final locale = container.read(appLocaleProvider);
     final strings = AppStrings.fromLocale(locale);
+    final fittinTheme = container.read(resolvedFittinThemeProvider);
     return AlertDialog(
-      title: Text(strings.setTrainingMaxes),
+      backgroundColor: fittinTheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(fittinTheme.radius),
+        side: BorderSide(color: fittinTheme.border),
+      ),
+      title: Text(
+        strings.setTrainingMaxes,
+        style: fittinTheme.displayStyle(22, fittinTheme.fg),
+      ),
       content: SizedBox(
         width: 380,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                localizedTemplateName(widget.template, locale),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                strings.isChinese
-                    ? '可以先输入已知主项训练最大值，或直接快速开始，之后再去计划编辑页补齐动作起始重量。'
-                    : 'Enter known training maxes now, or quick start first and fill in accessory starting loads later in the plan editor.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 16),
-              for (final liftKey
-                  in widget.template.requiredTrainingMaxKeys) ...[
-                TextFormField(
-                  controller: _controllers[liftKey],
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: liftLabelFor(liftKey),
-                    hintText: 'kg',
-                  ),
-                  validator: (value) {
-                    final parsed = double.tryParse((value ?? '').trim());
-                    if (parsed == null || parsed <= 0) {
-                      return strings.enterValidMax;
-                    }
-                    return null;
-                  },
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  localizedTemplateName(widget.template, locale),
+                  style: fittinTheme
+                      .uiStyle(14, fittinTheme.fg)
+                      .copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                Text(
+                  strings.isChinese
+                      ? '可以先输入已知主项训练最大值，或直接快速开始，之后再去计划编辑页补齐动作起始重量。'
+                      : 'Enter known training maxes now, or quick start first and fill in accessory starting loads later in the plan editor.',
+                  style: fittinTheme
+                      .uiStyle(12, fittinTheme.fgDim)
+                      .copyWith(height: 1.45),
+                ),
+                const SizedBox(height: 16),
+                for (final liftKey
+                    in widget.template.requiredTrainingMaxKeys) ...[
+                  TextFormField(
+                    controller: _controllers[liftKey],
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: liftLabelFor(liftKey),
+                      hintText: 'kg',
+                    ),
+                    validator: (value) {
+                      final parsed = double.tryParse((value ?? '').trim());
+                      if (parsed == null || parsed <= 0) {
+                        return strings.enterValidMax;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
       actions: [
-        TextButton(
+        FittinBtn(
+          fittinTheme,
+          strings.cancel,
+          size: 'sm',
+          variant: 'secondary',
           onPressed: () => Navigator.of(context).pop(),
-          child: Text(strings.cancel),
         ),
-        TextButton(
+        FittinBtn(
+          fittinTheme,
+          strings.isChinese ? '快速开始' : 'Quick Start',
+          size: 'sm',
+          variant: 'secondary',
           onPressed: () => Navigator.of(context).pop(TrainingMaxProfile.empty),
-          child: Text(strings.isChinese ? '快速开始' : 'Quick Start'),
         ),
-        FilledButton(
+        FittinBtn(
+          fittinTheme,
+          strings.startPlan,
+          size: 'sm',
           onPressed: () {
             if (!_formKey.currentState!.validate()) {
               return;
@@ -646,7 +621,6 @@ class _TrainingMaxSetupDialogState extends State<_TrainingMaxSetupDialog> {
               }),
             );
           },
-          child: Text(strings.startPlan),
         ),
       ],
     );

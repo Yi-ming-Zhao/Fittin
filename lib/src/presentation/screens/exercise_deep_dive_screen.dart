@@ -8,7 +8,8 @@ import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class ExerciseDeepDiveScreen extends ConsumerWidget {
   const ExerciseDeepDiveScreen({super.key, required this.summary});
@@ -26,12 +27,9 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              FittinBtn(
-                fittinTheme,
-                'Progress',
-                variant: 'ghost',
-                size: 'sm',
-                icon: Icons.chevron_left_rounded,
+              DashboardBackButton(
+                theme: fittinTheme,
+                label: strings.isChinese ? '进度' : 'Progress',
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -91,10 +89,12 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
               children: [
                 Text(
                   'E1RM',
-                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                  ),
+                  style: theme
+                      .uiStyle(10, theme.fgMuted)
+                      .copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 FittinBigNum(
@@ -117,10 +117,12 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
               children: [
                 Text(
                   strings.change30d,
-                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                  ),
+                  style: theme
+                      .uiStyle(10, theme.fgMuted)
+                      .copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 if (change != null)
@@ -141,10 +143,12 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
               children: [
                 Text(
                   strings.encounterCount,
-                  style: theme.uiStyle(10, theme.fgMuted).copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.0,
-                  ),
+                  style: theme
+                      .uiStyle(10, theme.fgMuted)
+                      .copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.0,
+                      ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -174,8 +178,12 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
 
     // Extract e1rm, e3rm, e5rm data series
     final e1rmData = recent.map((e) => e.value).toList();
-    final e3rmData = recent.map((e) => service.calculateNRM(e.value, 3) ?? 0.0).toList();
-    final e5rmData = recent.map((e) => service.calculateNRM(e.value, 5) ?? 0.0).toList();
+    final e3rmData = recent
+        .map((e) => service.calculateNRM(e.value, 3) ?? 0.0)
+        .toList();
+    final e5rmData = recent
+        .map((e) => service.calculateNRM(e.value, 5) ?? 0.0)
+        .toList();
 
     // Compute y-axis labels
     final allValues = [...e1rmData, ...e3rmData, ...e5rmData];
@@ -260,9 +268,9 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                     children: [
                       Text(
                         strings.longDate(point.completedAt),
-                        style: theme.uiStyle(14, theme.fg).copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: theme
+                            .uiStyle(14, theme.fg)
+                            .copyWith(fontWeight: FontWeight.w700),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -277,16 +285,18 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                   children: [
                     Text(
                       point.value.toStringAsFixed(1),
-                      style: theme.numStyle(18, theme.fg).copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: theme
+                          .numStyle(18, theme.fg)
+                          .copyWith(fontWeight: FontWeight.w800),
                     ),
                     Text(
                       'E1RM',
-                      style: theme.uiStyle(10, theme.fgMuted).copyWith(
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: theme
+                          .uiStyle(10, theme.fgMuted)
+                          .copyWith(
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ],
                 ),

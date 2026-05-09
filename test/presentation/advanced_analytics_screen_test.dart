@@ -29,8 +29,8 @@ void main() {
         instanceId: 'instance-1',
         templateId: 'template-1',
         currentWorkoutIndex: 0,
-        createdAt: DateTime(2026, 3, 1),
-        updatedAt: DateTime(2026, 3, 1),
+        createdAt: DateTime(2026, 5, 1),
+        updatedAt: DateTime(2026, 5, 1),
         states: const [],
       ),
     );
@@ -41,7 +41,7 @@ void main() {
         workoutId: 'day-1',
         workoutName: 'Lower A',
         dayLabel: 'Day 1',
-        completedAt: DateTime(2026, 3, 2, 10),
+        completedAt: DateTime(2026, 5, 4, 10),
         exercises: const [
           ExerciseLog(
             exerciseId: 'squat',
@@ -70,12 +70,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('TRAINING CONSISTENCY'), findsOneWidget);
+    expect(find.textContaining('Consistency'), findsOneWidget);
 
     final recordedDay = find.byKey(
-      const ValueKey('consistency-day-2026-03-02T00:00:00.000'),
+      const ValueKey('consistency-day-2026-05-04T00:00:00.000'),
     );
-    await tester.tap(recordedDay);
+    final dayCell = tester.widget<InkWell>(recordedDay);
+    dayCell.onTap!.call();
     await tester.pumpAndSettle();
 
     expect(find.text('Workout Record Details'), findsOneWidget);
@@ -97,7 +98,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('训练一致性'.toUpperCase()), findsOneWidget);
+    expect(find.text('训练一致性'), findsOneWidget);
     expect(find.text('按周'), findsOneWidget);
   });
 }

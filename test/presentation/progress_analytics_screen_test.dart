@@ -46,15 +46,13 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(repository),
-        ],
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
         child: const MaterialApp(home: ProgressAnalyticsScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Progress Analytics'), findsOneWidget);
+    expect(find.text('Trends & analytics'), findsOneWidget);
     expect(find.text('Squat'), findsWidgets);
     expect(find.text('Epley'), findsOneWidget);
 
@@ -105,16 +103,14 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(repository),
-        ],
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
         child: const MaterialApp(home: ProgressAnalyticsScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('进步分析'), findsOneWidget);
-    expect(find.text('力量轨迹'), findsOneWidget);
-    expect(find.text('全部动作'), findsOneWidget);
+    expect(find.text('Trends & analytics'), findsOneWidget);
+    expect(find.text('Training consistency'), findsOneWidget);
+    expect(find.text('Squat'), findsWidgets);
   });
 }

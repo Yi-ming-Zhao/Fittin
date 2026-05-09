@@ -8,8 +8,10 @@ import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class BodyMetricsScreen extends ConsumerWidget {
   const BodyMetricsScreen({super.key});
@@ -21,26 +23,7 @@ class BodyMetricsScreen extends ConsumerWidget {
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      floatingActionButton: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 22,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: FittinBtn(
-          fittinTheme,
-          strings.addMeasurement,
-          icon: Icons.add_rounded,
-          size: 'sm',
-          onPressed: () => _showAddMetricDialog(context),
-        ),
-      ),
+      backgroundColor: fittinTheme.bg,
       body: metricsAsync.when(
         data: (metrics) {
           final latest = metrics.firstOrNull;
@@ -50,19 +33,35 @@ class BodyMetricsScreen extends ConsumerWidget {
             bottomPadding: 100,
             children: [
               DashboardScreenHeader(
-                eyebrow: strings.composition,
-                title: strings.bodyMetrics,
-                subtitle: strings.bodyMetricsSubtitle,
+                eyebrow: 'Composition',
+                title: 'Body metrics',
+                subtitle: 'Track physical change alongside the barbell.',
               ),
               const SizedBox(height: 24),
-              _buildHeroCard(context, fittinTheme, metrics, screenState, strings),
-              const SizedBox(height: 24),
-              _buildStateCallout(context, fittinTheme, screenState, latest, strings),
-              const SizedBox(height: 24),
+              _buildHeroCard(
+                context,
+                fittinTheme,
+                metrics,
+                screenState,
+                strings,
+              ),
+              const SizedBox(height: 16),
+              if (screenState != _BodyMetricsScreenState.empty) ...[
+                _buildStateCallout(
+                  context,
+                  fittinTheme,
+                  screenState,
+                  latest,
+                  strings,
+                ),
+                const SizedBox(height: 16),
+              ],
               DashboardSectionLabel(label: strings.currentSnapshot),
               const SizedBox(height: 16),
               _buildMetricGrid(context, fittinTheme, metrics, strings),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              _buildCheckInCta(context, fittinTheme, strings),
+              const SizedBox(height: 24),
               DashboardSectionLabel(label: strings.measurementLog),
               const SizedBox(height: 16),
               _buildHistoryList(context, fittinTheme, metrics, strings),
@@ -86,7 +85,13 @@ class BodyMetricsScreen extends ConsumerWidget {
         .where((metric) => metric.weightKg != null)
         .toList();
     if (weightedMetrics.isNotEmpty) {
-      return _buildWeightHero(context, theme, weightedMetrics, screenState, strings);
+      return _buildWeightHero(
+        context,
+        theme,
+        weightedMetrics,
+        screenState,
+        strings,
+      );
     }
 
     return _BodyMetricsHeroEmptyState(
@@ -101,7 +106,7 @@ class BodyMetricsScreen extends ConsumerWidget {
       actionLabel: screenState == _BodyMetricsScreenState.empty
           ? strings.addFirstMeasurement
           : strings.addCompleteMeasurement,
-      onPressed: () => _showAddMetricDialog(context),
+      onPressed: () => _showAddMetricDialog(context, theme),
     );
   }
 
@@ -138,7 +143,7 @@ class BodyMetricsScreen extends ConsumerWidget {
               // Unit segmented control
               FittinSegmented(
                 theme: theme,
-                options: const ['kg', 'lbs'],
+                options: const ['kg', 'lb'],
                 value: 'kg',
                 onChange: (_) {},
               ),
@@ -164,13 +169,24 @@ class BodyMetricsScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (delta != null)
-            FittinDelta(theme, delta, unit: 'kg')
-          else
-            Text(
-              strings.shortMonthDay(weightedMetrics.first.timestamp),
-              style: theme.uiStyle(12, theme.fgDim),
-            ),
+          if (sparklineData.length > 1) ...[
+            StepChart(theme, sparklineData, height: 90, showDots: false),
+            const SizedBox(height: 10),
+          ],
+          Row(
+            children: [
+              if (delta != null) FittinDelta(theme, delta, unit: ' kg'),
+              if (delta != null) const SizedBox(width: 8),
+              Text(
+                delta == null
+                    ? strings.shortMonthDay(weightedMetrics.first.timestamp)
+                    : strings.isChinese
+                    ? '上次记录以来'
+                    : 'since last check-in',
+                style: theme.uiStyle(11, theme.fgMuted),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -229,16 +245,14 @@ class BodyMetricsScreen extends ConsumerWidget {
               children: [
                 Text(
                   title,
-                  style: theme.uiStyle(16, theme.fg).copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme
+                      .uiStyle(16, theme.fg)
+                      .copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   body,
-                  style: theme.uiStyle(14, theme.fgDim).copyWith(
-                    height: 1.4,
-                  ),
+                  style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.4),
                 ),
                 const SizedBox(height: 14),
                 Wrap(
@@ -253,10 +267,7 @@ class BodyMetricsScreen extends ConsumerWidget {
                       size: 'sm',
                       variant: 'secondary',
                     ),
-                    Text(
-                      footer,
-                      style: theme.uiStyle(12, theme.fgDim),
-                    ),
+                    Text(footer, style: theme.uiStyle(12, theme.fgDim)),
                   ],
                 ),
               ],
@@ -277,14 +288,14 @@ class BodyMetricsScreen extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 640;
+        final isWide = constraints.maxWidth >= 520;
         return GridView.count(
-          crossAxisCount: isWide ? 2 : 1,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisCount: isWide ? 3 : 3,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: isWide ? 1.7 : 2.6,
+          childAspectRatio: isWide ? 1.15 : 0.95,
           children: [
             _MetricCard(
               theme: theme,
@@ -308,9 +319,58 @@ class BodyMetricsScreen extends ConsumerWidget {
               ),
               unit: 'cm',
             ),
+            _MetricCard(
+              theme: theme,
+              strings: strings,
+              label: strings.isChinese ? '记录' : 'CHECK-INS',
+              latestValue: metrics.isEmpty ? null : metrics.length.toDouble(),
+              previousValue: null,
+              unit: '',
+            ),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildCheckInCta(
+    BuildContext context,
+    FittinTheme theme,
+    AppStrings strings,
+  ) {
+    return DashboardSurfaceCard(
+      radius: theme.radius,
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.recordFirstCheckIn,
+                  style: theme.displayStyle(17, theme.fg),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  strings.bodyMetricsHeroEmptyBody,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.35),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FittinBtn(
+            theme,
+            strings.addMeasurement,
+            icon: Icons.add_rounded,
+            size: 'sm',
+            onPressed: () => _showAddMetricDialog(context, theme),
+          ),
+        ],
+      ),
     );
   }
 
@@ -355,17 +415,24 @@ class BodyMetricsScreen extends ConsumerWidget {
       );
     }
 
-    return Column(
-      children: metrics
-          .map(
-            (metric) =>
-                _HistoryEntry(theme: theme, metric: metric, strings: strings),
-          )
-          .toList(),
+    return FittinCard(
+      theme: theme,
+      noPad: true,
+      child: Column(
+        children: [
+          for (var i = 0; i < metrics.length; i++)
+            _HistoryEntry(
+              theme: theme,
+              metric: metrics[i],
+              strings: strings,
+              showDivider: i < metrics.length - 1,
+            ),
+        ],
+      ),
     );
   }
 
-  void _showAddMetricDialog(BuildContext context) {
+  void _showAddMetricDialog(BuildContext context, FittinTheme theme) {
     final container = ProviderScope.containerOf(context);
     final weightController = TextEditingController();
     final bodyFatController = TextEditingController();
@@ -375,10 +442,20 @@ class BodyMetricsScreen extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (dialogContext) {
-        final strings = AppStrings.fromLocale(container.read(appLocaleProvider));
+        final strings = AppStrings.fromLocale(
+          container.read(appLocaleProvider),
+        );
         return AlertDialog(
-          backgroundColor: const Color(0xFF111111),
-          title: Text(strings.addMeasurementTitle),
+          backgroundColor: theme.surface,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(theme.radius),
+            side: BorderSide(color: theme.border),
+          ),
+          title: Text(
+            strings.addMeasurementTitle,
+            style: theme.displayStyle(22, theme.fg),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -403,17 +480,23 @@ class BodyMetricsScreen extends ConsumerWidget {
                   minLines: 2,
                   maxLines: 3,
                   decoration: InputDecoration(labelText: strings.noteOptional),
-                  style: const TextStyle(color: Colors.white),
+                  style: theme.uiStyle(14, theme.fg),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(strings.cancel),
+            FittinBtn(
+              theme,
+              strings.cancel,
+              size: 'sm',
+              variant: 'secondary',
+              onPressed: () => Navigator.pop(dialogContext),
             ),
-            ElevatedButton(
+            FittinBtn(
+              theme,
+              strings.save,
+              size: 'sm',
               onPressed: () {
                 final weight = double.tryParse(weightController.text);
                 final bodyFat = double.tryParse(bodyFatController.text);
@@ -424,7 +507,7 @@ class BodyMetricsScreen extends ConsumerWidget {
                     bodyFat == null &&
                     waist == null &&
                     note.isEmpty) {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   return;
                 }
 
@@ -436,9 +519,8 @@ class BodyMetricsScreen extends ConsumerWidget {
                       waist: waist,
                       note: note.isEmpty ? null : note,
                     );
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
               },
-              child: Text(strings.save),
             ),
           ],
         );
@@ -502,9 +584,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
       height: 180,
       headerAction: Text(
         strings.heroAreaIntentionalHint,
-        style: theme.uiStyle(11, theme.fgDim).copyWith(
-          height: 1.35,
-        ),
+        style: theme.uiStyle(11, theme.fgDim).copyWith(height: 1.35),
       ),
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -523,7 +603,11 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
                 color: Colors.white.withValues(alpha: 0.08),
               ),
-              child: Icon(Icons.timeline_rounded, color: theme.accent, size: 20),
+              child: Icon(
+                Icons.timeline_rounded,
+                color: theme.accent,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -533,16 +617,14 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.uiStyle(16, theme.fg).copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                    style: theme
+                        .uiStyle(16, theme.fg)
+                        .copyWith(fontWeight: FontWeight.w800),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     body,
-                    style: theme.uiStyle(12, theme.fgDim).copyWith(
-                      height: 1.4,
-                    ),
+                    style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -587,9 +669,6 @@ class _MetricCard extends StatelessWidget {
     final delta = latestValue == null || previousValue == null
         ? null
         : latestValue! - previousValue!;
-    final value = latestValue == null
-        ? strings.notYetRecorded
-        : '${latestValue!.toStringAsFixed(1)} $unit';
     final caption = latestValue == null
         ? strings.addThisMetricNextCheckIn
         : delta == null
@@ -597,39 +676,36 @@ class _MetricCard extends StatelessWidget {
         : strings.bodyMetricChangeVsPrevious(delta, unit);
 
     return DashboardSurfaceCard(
-      radius: 24,
-      padding: const EdgeInsets.all(18),
-      highlight: delta != null && delta < 0,
+      radius: theme.radiusSm,
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: theme.accent),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: theme.uiStyle(11, theme.fgDim).copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme
+                .uiStyle(9, theme.fgMuted)
+                .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1),
           ),
           const Spacer(),
-          Text(
-            value,
-            style: theme.numStyle(28, theme.fg),
+          FittinBigNum(
+            theme,
+            latestValue == null
+                ? '--'
+                : latestValue!.toStringAsFixed(unit.isEmpty ? 0 : 1),
+            unit: unit.isEmpty ? null : unit,
+            size: 22,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           if (delta != null)
-            FittinDelta(theme, delta, unit: unit)
+            FittinDelta(theme, delta, unit: unit.isEmpty ? '' : ' $unit')
           else
             Text(
               caption,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: theme.uiStyle(11, theme.fgDim),
             ),
         ],
@@ -643,11 +719,13 @@ class _HistoryEntry extends StatelessWidget {
     required this.theme,
     required this.metric,
     required this.strings,
+    required this.showDivider,
   });
 
   final FittinTheme theme;
   final BodyMetric metric;
   final AppStrings strings;
+  final bool showDivider;
 
   @override
   Widget build(BuildContext context) {
@@ -659,62 +737,55 @@ class _HistoryEntry extends StatelessWidget {
         '${metric.waistCm!.toStringAsFixed(1)} cm ${strings.waistSuffix}',
     ];
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: DashboardSurfaceCard(
-        radius: 22,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    strings.longDate(metric.timestamp),
-                    style: theme.uiStyle(14, theme.fg).copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        border: showDivider
+            ? Border(bottom: BorderSide(color: theme.border, width: 0.5))
+            : null,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(
+              strings.shortMonthDay(metric.timestamp),
+              style: theme.numStyle(12, theme.fgMuted),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (recordedItems.isNotEmpty) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: recordedItems
+                        .map((item) => _HistoryPill(label: item))
+                        .toList(),
                   ),
+                ],
+                if (metric.note != null && metric.note!.trim().isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
-                    strings.weekdayName(metric.timestamp),
-                    style: theme.uiStyle(11, theme.fgDim),
+                    metric.note!,
+                    style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
                   ),
-                  if (recordedItems.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: recordedItems
-                          .map((item) => _HistoryPill(label: item))
-                          .toList(),
-                    ),
-                  ],
-                  if (metric.note != null &&
-                      metric.note!.trim().isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      metric.note!,
-                      style: theme.uiStyle(12, theme.fgDim).copyWith(
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
-            const SizedBox(width: 12),
-            IconButton(
-              tooltip: strings.deleteMeasurement,
-              icon: const Icon(Icons.delete_outline, size: 20),
-              onPressed: () => ProviderScope.containerOf(context)
-                  .read(bodyMetricsProvider.notifier)
-                  .deleteMetric(metric.metricId),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          IconButton(
+            tooltip: strings.deleteMeasurement,
+            icon: const Icon(Icons.delete_outline, size: 20),
+            onPressed: () => ProviderScope.containerOf(
+              context,
+            ).read(bodyMetricsProvider.notifier).deleteMetric(metric.metricId),
+          ),
+        ],
       ),
     );
   }

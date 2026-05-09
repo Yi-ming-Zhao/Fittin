@@ -17,7 +17,6 @@ import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/widgets/fittin_ring.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
@@ -48,42 +47,46 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       backgroundColor: theme.bg,
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: EdgeInsets.symmetric(horizontal: theme.pad, vertical: 16.0),
-          children: [
-            homeDataAsync.when(
-              data: (data) => _FittinTopMetaRow(
-                theme: theme,
-                data: data,
-                onNotificationTap: () => _openMilestonesPanel(context, data),
-              ),
-              loading: () => _FittinTopMetaRowSkeleton(theme: theme),
-              error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 430),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(theme.pad, 54, theme.pad, 0),
+              children: [
+                homeDataAsync.when(
+                  data: (data) => _FittinTopMetaRow(
+                    theme: theme,
+                    data: data,
+                    onNotificationTap: () =>
+                        _openMilestonesPanel(context, data),
+                  ),
+                  loading: () => _FittinTopMetaRowSkeleton(theme: theme),
+                  error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
+                ),
+                const SizedBox(height: 24),
+                const TodayWorkoutHeroCard(),
+                const SizedBox(height: 16),
+                homeDataAsync.when(
+                  data: (data) => _AtAGlanceSection(
+                    data: data,
+                    strings: strings,
+                    theme: theme,
+                    selectedLiftPage: _selectedLiftPage,
+                    pageController: _pageController,
+                    onLiftPageChanged: (value) {
+                      setState(() {
+                        _selectedLiftPage = value;
+                      });
+                    },
+                  ),
+                  loading: () => const _HomeOverviewSkeleton(),
+                  error: (error, _) =>
+                      _HomeOverviewError(message: error.toString()),
+                ),
+                const SizedBox(height: 140),
+              ],
             ),
-            const SizedBox(height: 32),
-            const TodayWorkoutHeroCard(),
-            const SizedBox(height: 32),
-            FittinEyebrow(theme, strings.atAGlance),
-            const SizedBox(height: 16),
-            homeDataAsync.when(
-              data: (data) => _AtAGlanceSection(
-                data: data,
-                strings: strings,
-                theme: theme,
-                selectedLiftPage: _selectedLiftPage,
-                pageController: _pageController,
-                onLiftPageChanged: (value) {
-                  setState(() {
-                    _selectedLiftPage = value;
-                  });
-                },
-              ),
-              loading: () => const _HomeOverviewSkeleton(),
-              error: (error, _) =>
-                  _HomeOverviewError(message: error.toString()),
-            ),
-            const SizedBox(height: 120),
-          ],
+          ),
         ),
       ),
     );
@@ -223,10 +226,7 @@ class _FittinTopMetaRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        FittinEyebrow(
-          theme,
-          dateStr,
-        ),
+        FittinEyebrow(theme, dateStr),
         FittinEyebrow(
           theme,
           'Week ${data.todayWorkout.currentWeekNumber} · Day ${data.todayWorkout.currentDayNumber}',
@@ -292,25 +292,13 @@ class _AtAGlanceSection extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final cards = [
-              _CycleProgressCard(
-                data: data,
-                strings: strings,
-                theme: theme,
-              ),
-              _HighlightLiftCard(
-                data: data,
-                strings: strings,
-                theme: theme,
-              ),
+              _CycleProgressCard(data: data, strings: strings, theme: theme),
+              _HighlightLiftCard(data: data, strings: strings, theme: theme),
             ];
 
-            if (constraints.maxWidth < 420) {
+            if (constraints.maxWidth < 320) {
               return Column(
-                children: [
-                  cards[0],
-                  const SizedBox(height: 16),
-                  cards[1],
-                ],
+                children: [cards[0], const SizedBox(height: 10), cards[1]],
               );
             }
 
@@ -318,7 +306,7 @@ class _AtAGlanceSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: cards[0]),
-                const SizedBox(width: 16),
+                const SizedBox(width: 10),
                 Expanded(child: cards[1]),
               ],
             );
@@ -377,72 +365,41 @@ class _CycleProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FittinEyebrow(theme, strings.cycleProgress),
-          const SizedBox(height: 16),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittinRing(
-                theme,
-                value: data.cycleProgress,
-                max: 1,
-                size: 94,
-                strokeWidth: 3,
-                child: Center(
-                  child: Text(
-                    '${(data.cycleProgress * 100).round()}',
-                    style: theme.numStyle(20, theme.fg),
-                  ),
+          FittinEyebrow(theme, 'Cycle'),
+          const SizedBox(height: 14),
+          FittinBigNum(
+            theme,
+            '${(data.cycleProgress * 100).round()}',
+            size: 44,
+            unit: '%',
+          ),
+          const SizedBox(height: 10),
+          Container(
+            height: 3,
+            decoration: BoxDecoration(
+              color: theme.fgFaint,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: data.cycleProgress.clamp(0.0, 1.0),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.accent,
+                  borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittinBigNum(
-                      theme,
-                      '${(data.cycleProgress * 100).round()}',
-                      size: 36,
-                      unit: '%',
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      strings.weekDayProgressLabel(
-                        data.todayWorkout.currentWeekNumber,
-                        data.todayWorkout.cycleWeekCount,
-                        data.todayWorkout.currentDayNumber,
-                        data.todayWorkout.workoutsPerWeek,
-                      ),
-                      style: theme.uiStyle(13, theme.fgDim).copyWith(height: 1.4),
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 3,
-                      decoration: BoxDecoration(
-                        color: theme.fgFaint,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: data.weekProgress.clamp(0.0, 1.0),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: theme.accent,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      strings.weekProgress,
-                      style: theme.uiStyle(12, theme.fgMuted),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            strings.weekDayProgressLabel(
+              data.todayWorkout.currentWeekNumber,
+              data.todayWorkout.cycleWeekCount,
+              data.todayWorkout.currentDayNumber,
+              data.todayWorkout.workoutsPerWeek,
+            ),
+            style: theme.uiStyle(11, theme.fgMuted).copyWith(height: 1.35),
           ),
         ],
       ),
@@ -464,15 +421,16 @@ class _HighlightLiftCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final summary = _resolveHighlightSummary(data);
-    final points = summary?.estimatedHistory.map((point) => point.value).toList() ?? [];
+    final points =
+        summary?.estimatedHistory.map((point) => point.value).toList() ?? [];
 
     return FittinCard(
       theme: theme,
       style: FittinCardStyle.glass,
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PRDashboardScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
       },
       child: summary == null
           ? Padding(
@@ -485,46 +443,47 @@ class _HighlightLiftCard extends StatelessWidget {
               ),
             )
           : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  FittinEyebrow(theme, strings.estimatedOneRepMax),
-                  const SizedBox(height: 10),
-                  FittinSectionTitle(theme, summary.exerciseName, fontSize: 18),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: FittinBigNum(
-                          theme,
-                          (summary.currentEstimatedOneRepMax ?? 0).toStringAsFixed(1),
-                          size: 28,
-                          unit: strings.isChinese ? '公斤' : 'kg',
-                        ),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittinEyebrow(theme, 'Squat e1RM'),
+                const SizedBox(height: 10),
+                FittinSectionTitle(theme, summary.exerciseName, fontSize: 18),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: FittinBigNum(
+                        theme,
+                        (summary.currentEstimatedOneRepMax ?? 0)
+                            .toStringAsFixed(1),
+                        size: 30,
+                        unit: strings.isChinese ? '公斤' : 'kg',
                       ),
-                      if (summary.recentChange != null)
-                        FittinDelta(theme, summary.recentChange!, unit: 'kg'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (points.length > 1)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Sparkline(theme, points, width: 120, height: 40),
-                    )
-                  else
-                    Text(
-                      strings.noStrengthTrendYet,
-                      style: theme.uiStyle(13, theme.fgDim),
                     ),
-                  const SizedBox(height: 12),
+                    if (summary.recentChange != null)
+                      FittinDelta(theme, summary.recentChange!, unit: 'kg'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (points.length > 1)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Sparkline(theme, points, width: 120, height: 40),
+                  )
+                else
                   Text(
-                    strings.sessionsLogged(summary.estimatedHistory.length),
-                    style: theme.uiStyle(12, theme.fgMuted),
+                    strings.noStrengthTrendYet,
+                    style: theme.uiStyle(13, theme.fgDim),
                   ),
-                ],
-              ),
+                const SizedBox(height: 12),
+                Text(
+                  strings.sessionsLogged(summary.estimatedHistory.length),
+                  style: theme.uiStyle(12, theme.fgMuted),
+                ),
+              ],
+            ),
     );
   }
 
@@ -565,9 +524,9 @@ class _ActivityCard extends StatelessWidget {
       theme: theme,
       style: FittinCardStyle.glass,
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const PRDashboardScreen()),
-        );
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
       },
       child: SizedBox(
         height: 228,
@@ -583,30 +542,57 @@ class _ActivityCard extends StatelessWidget {
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      FittinEyebrow(theme, strings.activity),
-                      FittinBigNum(
-                        theme,
-                        data.sparklineLifts[safeIndex].currentEstimatedOneRepMax
-                                ?.toStringAsFixed(1) ??
-                            '—',
-                        size: 18,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FittinEyebrow(theme, strings.activity),
+                            const SizedBox(height: 4),
+                            Text(
+                              data.sparklineLifts[safeIndex].exerciseName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.uiStyle(
+                                14,
+                                theme.fg,
+                                FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Row(
+                        children: [
+                          Text(
+                            'Mar 12',
+                            style: theme.uiStyle(10, theme.fgMuted),
+                          ),
+                          Container(
+                            width: 10,
+                            height: 0.5,
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            color: theme.borderHi,
+                          ),
+                          Text(
+                            'Apr 16',
+                            style: theme.uiStyle(10, theme.fgMuted),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    data.sparklineLifts[safeIndex].exerciseName,
-                    style: theme.uiStyle(18, theme.fg, FontWeight.w600),
-                  ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Expanded(
                     child: PageView.builder(
                       controller: pageController,
                       onPageChanged: onLiftPageChanged,
                       itemCount: data.sparklineLifts.length,
                       itemBuilder: (context, index) {
-                        final values = data.sparklineLifts[index]
+                        final values = data
+                            .sparklineLifts[index]
                             .estimatedHistory
                             .map((point) => point.value)
                             .toList();
@@ -621,29 +607,40 @@ class _ActivityCard extends StatelessWidget {
                       },
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 14),
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        strings.sessionsLogged(
-                          data.sparklineLifts[safeIndex].estimatedHistory.length,
-                        ),
-                        style: theme.uiStyle(12, theme.fgMuted),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FittinEyebrow(theme, 'Latest'),
+                          const SizedBox(height: 2),
+                          FittinBigNum(
+                            theme,
+                            data
+                                    .sparklineLifts[safeIndex]
+                                    .currentEstimatedOneRepMax
+                                    ?.toStringAsFixed(1) ??
+                                '—',
+                            size: 24,
+                            unit: strings.isChinese ? '公斤' : 'kg',
+                          ),
+                        ],
                       ),
                       const Spacer(),
-                      for (var i = 0; i < data.sparklineLifts.length; i++) ...[
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: i == safeIndex ? 16 : 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(999),
-                            color: i == safeIndex ? theme.accent : theme.fgFaint,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FittinEyebrow(theme, 'Sessions'),
+                          const SizedBox(height: 2),
+                          FittinBigNum(
+                            theme,
+                            '${data.sparklineLifts[safeIndex].estimatedHistory.length}',
+                            size: 24,
                           ),
-                        ),
-                        if (i < data.sparklineLifts.length - 1)
-                          const SizedBox(width: 6),
-                      ],
+                        ],
+                      ),
                     ],
                   ),
                 ],
@@ -686,11 +683,6 @@ class _QuickActionsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        FittinEyebrow(
-          theme,
-          strings.isChinese ? '快捷入口' : 'Quick Actions',
-        ),
-        const SizedBox(height: 12),
         GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -711,10 +703,15 @@ class _QuickActionsCard extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      action.label,
-                      style: theme.uiStyle(13, theme.fg, FontWeight.w500),
+                    Expanded(
+                      child: Text(
+                        action.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.uiStyle(13, theme.fg, FontWeight.w500),
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     Icon(action.icon, color: theme.fgDim, size: 16),
                   ],
                 ),

@@ -8,7 +8,6 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 import 'package:fittin_v2/src/application/theme_provider.dart';
-import 'package:fittin_v2/src/bootstrap/local_persistence_bundle.dart';
 import 'package:fittin_v2/src/bootstrap/local_persistence_factory.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';

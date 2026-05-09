@@ -5,8 +5,10 @@ import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
+import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
 
 class WeightToolsSheet extends ConsumerStatefulWidget {
   const WeightToolsSheet({
@@ -78,11 +80,17 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              DashboardBackButton(
+                theme: fittinTheme,
+                label: strings.cancel,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: 10),
               Text(
                 strings.isChinese ? '重量工具' : 'Weight Tools',
-                style: fittinTheme.uiStyle(22, fittinTheme.fg).copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: fittinTheme
+                    .uiStyle(22, fittinTheme.fg)
+                    .copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               Text(
@@ -99,15 +107,18 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                 const SizedBox(height: 8),
                 Text(
                   widget.exerciseName!,
-                  style: fittinTheme.uiStyle(14, fittinTheme.fg).copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: fittinTheme
+                      .uiStyle(14, fittinTheme.fg)
+                      .copyWith(fontWeight: FontWeight.w700),
                 ),
               ],
               const SizedBox(height: 20),
               FittinSegmented(
                 theme: fittinTheme,
-                options: [strings.isChinese ? '公斤' : 'kg', strings.isChinese ? '磅' : 'lb'],
+                options: [
+                  strings.isChinese ? '公斤' : 'kg',
+                  strings.isChinese ? '磅' : 'lb',
+                ],
                 value: _unit == LoadUnits.kg
                     ? (strings.isChinese ? '公斤' : 'kg')
                     : (strings.isChinese ? '磅' : 'lb'),
@@ -169,7 +180,9 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                           widget.onApply?.call(rawInput, _unit);
                           Navigator.of(context).pop();
                         },
-                        child: Text(strings.isChinese ? '用于当前组' : 'Use for Set'),
+                        child: Text(
+                          strings.isChinese ? '用于当前组' : 'Use for Set',
+                        ),
                       ),
                     ),
                   ],
@@ -241,9 +254,9 @@ class _WeightToolsSettingsCardState
       children: [
         Text(
           strings.isChinese ? '重量工具' : 'Weight Tools',
-          style: fittinTheme.uiStyle(16, fittinTheme.fg).copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          style: fittinTheme
+              .uiStyle(16, fittinTheme.fg)
+              .copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
         Text(
@@ -341,17 +354,19 @@ class _ResultCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: theme.uiStyle(12, theme.fgMuted).copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: theme
+                .uiStyle(12, theme.fgMuted)
+                .copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: theme.uiStyle(16, theme.fg).copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.fg.withValues(alpha: dimmed ? 0.72 : 0.94),
-            ),
+            style: theme
+                .uiStyle(16, theme.fg)
+                .copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: theme.fg.withValues(alpha: dimmed ? 0.72 : 0.94),
+                ),
           ),
         ],
       ),

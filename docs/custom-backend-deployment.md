@@ -24,6 +24,9 @@ Use:
 --dart-define=BACKEND_URL=https://api.yimelo.cc
 ```
 
+Production Web and Android builds must pass this value explicitly. Do not rely
+on the desktop/local fallback to `http://127.0.0.1:8081` for release builds.
+
 Optionally include:
 
 ```bash

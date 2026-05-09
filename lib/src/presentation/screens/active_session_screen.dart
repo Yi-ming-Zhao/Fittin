@@ -117,6 +117,8 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
       children: [
         Row(
           children: [
+            DashboardBackButton(theme: fittinTheme),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 compactWorkoutTitle,
@@ -127,11 +129,6 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   letterSpacing: -1.2,
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            _HeaderIconButton(
-              icon: Icons.close_rounded,
-              onTap: () => Navigator.of(context).maybePop(),
             ),
           ],
         ),
@@ -370,6 +367,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                 ),
                 onLongPress: () => _editWeight(
                   strings,
+                  theme: fittinTheme,
                   currentValue: displayWeight,
                   displayUnit: displayUnit,
                   onSubmit: (value) => notifier.updateWeightFromDisplayUnit(
@@ -415,6 +413,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                       ),
                       onTap: () => _editRpe(
                         strings,
+                        theme: fittinTheme,
                         currentValue:
                             currentSet.completedRpe ?? currentSet.targetRpe,
                         onSubmit: (value) => notifier.updateCompletedRpe(
@@ -481,16 +480,35 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (dialogContext) => AlertDialog(
-                title: Text(strings.confirmConcludeWorkoutTitle),
-                content: Text(strings.confirmConcludeWorkoutMessage),
+                backgroundColor: fittinTheme.surface,
+                surfaceTintColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(fittinTheme.radius),
+                  side: BorderSide(color: fittinTheme.border),
+                ),
+                title: Text(
+                  strings.confirmConcludeWorkoutTitle,
+                  style: fittinTheme.displayStyle(22, fittinTheme.fg),
+                ),
+                content: Text(
+                  strings.confirmConcludeWorkoutMessage,
+                  style: fittinTheme
+                      .uiStyle(14, fittinTheme.fgDim)
+                      .copyWith(height: 1.45),
+                ),
                 actions: [
-                  TextButton(
+                  FittinBtn(
+                    fittinTheme,
+                    strings.cancel,
+                    size: 'sm',
+                    variant: 'secondary',
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    child: Text(strings.cancel),
                   ),
-                  FilledButton(
+                  FittinBtn(
+                    fittinTheme,
+                    strings.concludeWorkout,
+                    size: 'sm',
                     onPressed: () => Navigator.of(dialogContext).pop(true),
-                    child: Text(strings.concludeWorkout),
                   ),
                 ],
               ),
@@ -551,6 +569,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
 
   Future<void> _editWeight(
     AppStrings strings, {
+    required dynamic theme,
     required double currentValue,
     required String displayUnit,
     required ValueChanged<double> onSubmit,
@@ -561,7 +580,16 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final result = await showDialog<double>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(strings.isChinese ? '直接输入重量' : 'Enter Weight'),
+        backgroundColor: theme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(theme.radius),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Text(
+          strings.isChinese ? '直接输入重量' : 'Enter Weight',
+          style: theme.displayStyle(22, theme.fg),
+        ),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -571,15 +599,20 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           ),
         ),
         actions: [
-          TextButton(
+          FittinBtn(
+            theme,
+            strings.cancel,
+            size: 'sm',
+            variant: 'secondary',
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(strings.cancel),
           ),
-          FilledButton(
+          FittinBtn(
+            theme,
+            strings.saveChanges,
+            size: 'sm',
             onPressed: () => Navigator.of(
               dialogContext,
             ).pop(double.tryParse(controller.text.trim())),
-            child: Text(strings.saveChanges),
           ),
         ],
       ),
@@ -592,6 +625,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
 
   Future<void> _editRpe(
     AppStrings strings, {
+    required dynamic theme,
     required double? currentValue,
     required ValueChanged<double?> onSubmit,
   }) async {
@@ -601,7 +635,16 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final result = await showDialog<double?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(strings.isChinese ? '输入 RPE' : 'Enter RPE'),
+        backgroundColor: theme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(theme.radius),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Text(
+          strings.isChinese ? '输入 RPE' : 'Enter RPE',
+          style: theme.displayStyle(22, theme.fg),
+        ),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -611,19 +654,27 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           ),
         ),
         actions: [
-          TextButton(
+          FittinBtn(
+            theme,
+            strings.cancel,
+            size: 'sm',
+            variant: 'secondary',
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(strings.cancel),
           ),
-          TextButton(
+          FittinBtn(
+            theme,
+            strings.isChinese ? '清空' : 'Clear',
+            size: 'sm',
+            variant: 'secondary',
             onPressed: () => Navigator.of(dialogContext).pop(null),
-            child: Text(strings.isChinese ? '清空' : 'Clear'),
           ),
-          FilledButton(
+          FittinBtn(
+            theme,
+            strings.saveChanges,
+            size: 'sm',
             onPressed: () => Navigator.of(
               dialogContext,
             ).pop(double.tryParse(controller.text.trim())),
-            child: Text(strings.saveChanges),
           ),
         ],
       ),
@@ -712,31 +763,6 @@ String _targetSummary(
       ? ''
       : ' · RPE ${set.targetRpe!.toStringAsFixed(set.targetRpe!.truncateToDouble() == set.targetRpe ? 0 : 1)}';
   return '${_formatDisplayWeight(displayTargetWeight, displayUnit)} · $reps$rpe';
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: Colors.white.withValues(alpha: 0.05),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Icon(icon),
-      ),
-    );
-  }
 }
 
 class _CompactMetaTile extends StatelessWidget {

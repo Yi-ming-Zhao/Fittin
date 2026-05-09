@@ -10,7 +10,7 @@ import '../support/fake_auth_repository.dart';
 import '../support/in_memory_database_repository.dart';
 
 class _TrackingSyncController extends SyncController {
-  _TrackingSyncController(Ref ref) : super(ref);
+  _TrackingSyncController(super.ref);
 
   final List<bool> recoveryCalls = [];
   int clearCalls = 0;
@@ -33,90 +33,94 @@ class _TrackingSyncController extends SyncController {
 }
 
 void main() {
-  testWidgets('sync lifecycle gate hydrates restored sessions and syncs on resume', (
-    WidgetTester tester,
-  ) async {
-    final authRepository = FakeAuthRepository(
-      initialUser: const AuthUser(id: 'tracked-user', email: 'restore@test.dev'),
-    );
-    final repository = InMemoryDatabaseRepository();
-    late _TrackingSyncController tracker;
+  testWidgets(
+    'sync lifecycle gate hydrates restored sessions and syncs on resume',
+    (WidgetTester tester) async {
+      final authRepository = FakeAuthRepository(
+        initialUser: const AuthUser(
+          id: 'tracked-user',
+          email: 'restore@test.dev',
+        ),
+      );
+      final repository = InMemoryDatabaseRepository();
+      late _TrackingSyncController tracker;
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(repository),
-          authRepositoryProvider.overrideWithValue(authRepository),
-          syncControllerProvider.overrideWith((ref) {
-            tracker = _TrackingSyncController(ref);
-            return tracker;
-          }),
-          supabaseBootstrapProvider.overrideWithValue(
-            const SupabaseBootstrapState.configured(
-              url: 'https://example.supabase.co',
-              anonKey: 'anon-key',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            authRepositoryProvider.overrideWithValue(authRepository),
+            syncControllerProvider.overrideWith((ref) {
+              tracker = _TrackingSyncController(ref);
+              return tracker;
+            }),
+            supabaseBootstrapProvider.overrideWithValue(
+              const SupabaseBootstrapState.configured(
+                url: 'https://example.supabase.co',
+                anonKey: 'anon-key',
+              ),
             ),
-          ),
-        ],
-        child: const MaterialApp(
-          home: SyncLifecycleGate(
-            child: Scaffold(body: Text('sync-child')),
+          ],
+          child: const MaterialApp(
+            home: SyncLifecycleGate(child: Scaffold(body: Text('sync-child'))),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tracker.recoveryCalls, [true]);
+      expect(tracker.recoveryCalls, [true]);
 
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
 
-    expect(tracker.recoveryCalls, [true, false]);
-  });
+      expect(tracker.recoveryCalls, [true, false]);
+    },
+  );
 
-  testWidgets('sync lifecycle gate reacts to sign-in and sign-out transitions', (
-    WidgetTester tester,
-  ) async {
-    final authRepository = FakeAuthRepository();
-    final repository = InMemoryDatabaseRepository();
-    late _TrackingSyncController tracker;
+  testWidgets(
+    'sync lifecycle gate reacts to sign-in and sign-out transitions',
+    (WidgetTester tester) async {
+      final authRepository = FakeAuthRepository();
+      final repository = InMemoryDatabaseRepository();
+      late _TrackingSyncController tracker;
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(repository),
-          authRepositoryProvider.overrideWithValue(authRepository),
-          syncControllerProvider.overrideWith((ref) {
-            tracker = _TrackingSyncController(ref);
-            return tracker;
-          }),
-          supabaseBootstrapProvider.overrideWithValue(
-            const SupabaseBootstrapState.configured(
-              url: 'https://example.supabase.co',
-              anonKey: 'anon-key',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            authRepositoryProvider.overrideWithValue(authRepository),
+            syncControllerProvider.overrideWith((ref) {
+              tracker = _TrackingSyncController(ref);
+              return tracker;
+            }),
+            supabaseBootstrapProvider.overrideWithValue(
+              const SupabaseBootstrapState.configured(
+                url: 'https://example.supabase.co',
+                anonKey: 'anon-key',
+              ),
             ),
-          ),
-        ],
-        child: const MaterialApp(
-          home: SyncLifecycleGate(
-            child: Scaffold(body: Text('sync-child')),
+          ],
+          child: const MaterialApp(
+            home: SyncLifecycleGate(child: Scaffold(body: Text('sync-child'))),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tracker.clearCalls, greaterThanOrEqualTo(1));
+      expect(tracker.clearCalls, greaterThanOrEqualTo(1));
 
-    await authRepository.signIn(email: 'user@test.dev', password: 'password123');
-    await tester.pumpAndSettle();
+      await authRepository.signIn(
+        email: 'user@test.dev',
+        password: 'password123',
+      );
+      await tester.pumpAndSettle();
 
-    expect(tracker.recoveryCalls, [true]);
+      expect(tracker.recoveryCalls, [true]);
 
-    await authRepository.signOut();
-    await tester.pumpAndSettle();
+      await authRepository.signOut();
+      await tester.pumpAndSettle();
 
-    expect(tracker.clearCalls, greaterThanOrEqualTo(2));
-  });
+      expect(tracker.clearCalls, greaterThanOrEqualTo(2));
+    },
+  );
 }

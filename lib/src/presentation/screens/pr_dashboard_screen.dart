@@ -40,9 +40,9 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
           return DashboardPageScaffold(
             children: [
               DashboardScreenHeader(
-                eyebrow: strings.performance,
-                title: strings.prDashboard,
-                subtitle: strings.prDashboardSubtitle,
+                eyebrow: 'Performance',
+                title: 'PR dashboard',
+                subtitle: 'Peak strength benchmarks, derived and actual.',
               ),
               const SizedBox(height: 24),
               _buildMetricToggle(fittinTheme, strings),
@@ -183,7 +183,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
             children: [
               for (var i = 0; i < cards.length; i++) ...[
                 cards[i],
-                if (i < cards.length - 1) const SizedBox(height: 12),
+                if (i < cards.length - 1) const SizedBox(height: 10),
               ],
             ],
           );
@@ -339,56 +339,59 @@ class _StrengthCard extends StatelessWidget {
 
     return DashboardSurfaceCard(
       onTap: onTap,
-      radius: 24,
-      padding: const EdgeInsets.all(16),
+      radius: 20,
+      padding: const EdgeInsets.all(20),
       child: SizedBox(
         width: double.infinity,
-        height: 188,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label.toUpperCase(),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: theme
-                  .uiStyle(11, theme.fgMuted)
-                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0),
-            ),
-            const Spacer(),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: FittinBigNum(
-                    theme,
-                    value?.toStringAsFixed(1) ?? '—',
-                    size: 34,
-                    color: theme.fg,
-                  ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 88),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittinEyebrow(theme, label),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        FittinBigNum(
+                          theme,
+                          value?.toStringAsFixed(1) ?? '—',
+                          size: 34,
+                          color: theme.fg,
+                        ),
+                        const SizedBox(width: 4),
+                        Text('kg', style: theme.uiStyle(12, theme.fgDim)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    if (change != null)
+                      FittinDelta(theme, change, unit: ' kg')
+                    else
+                      Text('—', style: theme.uiStyle(12, theme.fgDim)),
+                  ],
                 ),
-                if (sparklineData.length > 1) ...[
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Sparkline(theme, sparklineData, width: 110, height: 44),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${sparklineData.length} sessions',
-                        style: theme.uiStyle(10, theme.fgMuted),
-                      ),
-                    ],
-                  ),
-                ],
+              ),
+              if (sparklineData.length > 1) ...[
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Sparkline(theme, sparklineData, width: 110, height: 44),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${sparklineData.length} sessions',
+                      style: theme.uiStyle(10, theme.fgMuted),
+                    ),
+                  ],
+                ),
               ],
-            ),
-            const SizedBox(height: 8),
-            if (change != null)
-              FittinDelta(theme, change, unit: ' kg')
-            else
-              Text('—', style: theme.uiStyle(12, theme.fgDim)),
-          ],
+            ],
+          ),
         ),
       ),
     );

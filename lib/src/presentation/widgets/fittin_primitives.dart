@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 
-/// Eyebrow label — 10px, uppercase, letter-spacing 1.8, fgMuted
+/// Eyebrow label — 10px, letter-spacing 1.8, fgMuted
 class FittinEyebrow extends StatelessWidget {
   const FittinEyebrow(this.theme, this.text, {super.key, this.style});
 
@@ -11,7 +11,7 @@ class FittinEyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(text.toUpperCase(), style: theme.eyebrowStyle().merge(style));
+    return Text(text, style: theme.eyebrowStyle().merge(style));
   }
 }
 

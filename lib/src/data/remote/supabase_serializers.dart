@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/models/body_metric_collection.dart';
-import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';

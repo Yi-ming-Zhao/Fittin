@@ -13,7 +13,7 @@ import '../support/in_memory_database_repository.dart';
 
 void main() {
   testWidgets(
-    'home dashboard shows live header, opens milestone panel, and removes avatar',
+    'home dashboard shows prototype meta row, workout hero, and removes avatar',
     (tester) async {
       final repository = InMemoryDatabaseRepository();
       final fakeGateway = FakeTodayWorkoutGateway();
@@ -32,18 +32,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Good morning,'), findsOneWidget);
-      expect(find.text('Alex'), findsOneWidget);
+      expect(find.textContaining('Week 2'), findsWidgets);
+      expect(find.textContaining('Day 3'), findsWidgets);
       expect(find.byIcon(Icons.person_outline), findsNothing);
-      expect(
-        find.byKey(const ValueKey('home-notification-button')),
-        findsOneWidget,
-      );
-
-      await tester.tap(find.byKey(const ValueKey('home-notification-button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Training Milestones'), findsOneWidget);
       expect(find.text('Competition Squat'), findsWidgets);
     },
   );

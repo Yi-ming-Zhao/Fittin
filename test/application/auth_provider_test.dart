@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/auth_session_store.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import '../support/fake_auth_repository.dart';
 
@@ -37,4 +40,31 @@ void main() {
 
     expect(repository.signedOut, isTrue);
   });
+
+  test(
+    'backend auth converts socket client failures into release guidance',
+    () async {
+      final repository = BackendAuthRepository(
+        baseUrl: 'http://127.0.0.1:8081',
+        sessionStore: InMemoryAuthSessionStore(),
+        httpClient: MockClient((request) async {
+          throw http.ClientException(
+            'ClientException with SocketException: Connection refused',
+            request.url,
+          );
+        }),
+      );
+
+      await expectLater(
+        repository.signIn(email: 'user@test.dev', password: 'password123'),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            backendUnavailableMessage,
+          ),
+        ),
+      );
+    },
+  );
 }

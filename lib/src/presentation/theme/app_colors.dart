@@ -46,7 +46,6 @@ class AppColors {
           outline: sunsetTextSecondary,
         );
       case AppThemeType.minimalDark:
-      default:
         return const ColorScheme.dark(
           surface: darkSurface,
           primary: darkPrimary,
