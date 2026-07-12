@@ -180,6 +180,7 @@ void main() {
       expect(find.text('Bench Press'), findsOneWidget);
       expect(find.text('Deadlift'), findsOneWidget);
       expect(find.text('Overhead Press'), findsOneWidget);
+      expect(find.text('Quick Start'), findsNothing);
     },
   );
 }

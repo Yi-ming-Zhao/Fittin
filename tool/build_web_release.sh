@@ -79,8 +79,8 @@ cat <<'EOF'
 
 Build complete.
 Next steps:
-1. Start Caddy: caddy run --config deploy/caddy/fittin.Caddyfile
-2. Verify local origin: http://127.0.0.1:4173
-3. Confirm Cloudflare Tunnel routes fittin.yimelo.cc to 127.0.0.1:4173
-4. Follow docs/web-public-deployment.md for smoke checks and rollback
+1. Preview build/web locally if needed.
+2. Publish it to the Alibaba Cloud release root with tool/update_public_web.sh.
+3. Verify the public frontend and /api/healthz endpoint.
+4. Follow docs/web-public-deployment.md for bootstrap, smoke checks, and rollback.
 EOF

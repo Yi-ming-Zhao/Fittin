@@ -289,6 +289,7 @@ mixin _$SessionSetState {
   double? get completedRpe => throw _privateConstructorUsedError;
   bool get isAmrap => throw _privateConstructorUsedError;
   bool get isCompleted => throw _privateConstructorUsedError;
+  bool get isSkipped => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -312,7 +313,8 @@ abstract class $SessionSetStateCopyWith<$Res> {
       double? targetRpe,
       double? completedRpe,
       bool isAmrap,
-      bool isCompleted});
+      bool isCompleted,
+      bool isSkipped});
 }
 
 /// @nodoc
@@ -338,6 +340,7 @@ class _$SessionSetStateCopyWithImpl<$Res, $Val extends SessionSetState>
     Object? completedRpe = freezed,
     Object? isAmrap = null,
     Object? isCompleted = null,
+    Object? isSkipped = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -380,6 +383,10 @@ class _$SessionSetStateCopyWithImpl<$Res, $Val extends SessionSetState>
           ? _value.isCompleted
           : isCompleted // ignore: cast_nullable_to_non_nullable
               as bool,
+      isSkipped: null == isSkipped
+          ? _value.isSkipped
+          : isSkipped // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -402,7 +409,8 @@ abstract class _$$SessionSetStateImplCopyWith<$Res>
       double? targetRpe,
       double? completedRpe,
       bool isAmrap,
-      bool isCompleted});
+      bool isCompleted,
+      bool isSkipped});
 }
 
 /// @nodoc
@@ -426,6 +434,7 @@ class __$$SessionSetStateImplCopyWithImpl<$Res>
     Object? completedRpe = freezed,
     Object? isAmrap = null,
     Object? isCompleted = null,
+    Object? isSkipped = null,
   }) {
     return _then(_$SessionSetStateImpl(
       id: null == id
@@ -468,6 +477,10 @@ class __$$SessionSetStateImplCopyWithImpl<$Res>
           ? _value.isCompleted
           : isCompleted // ignore: cast_nullable_to_non_nullable
               as bool,
+      isSkipped: null == isSkipped
+          ? _value.isSkipped
+          : isSkipped // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -485,7 +498,8 @@ class _$SessionSetStateImpl implements _SessionSetState {
       this.targetRpe,
       this.completedRpe,
       this.isAmrap = false,
-      this.isCompleted = false});
+      this.isCompleted = false,
+      this.isSkipped = false});
 
   factory _$SessionSetStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$SessionSetStateImplFromJson(json);
@@ -512,10 +526,13 @@ class _$SessionSetStateImpl implements _SessionSetState {
   @override
   @JsonKey()
   final bool isCompleted;
+  @override
+  @JsonKey()
+  final bool isSkipped;
 
   @override
   String toString() {
-    return 'SessionSetState(id: $id, role: $role, targetReps: $targetReps, completedReps: $completedReps, targetWeight: $targetWeight, weight: $weight, targetRpe: $targetRpe, completedRpe: $completedRpe, isAmrap: $isAmrap, isCompleted: $isCompleted)';
+    return 'SessionSetState(id: $id, role: $role, targetReps: $targetReps, completedReps: $completedReps, targetWeight: $targetWeight, weight: $weight, targetRpe: $targetRpe, completedRpe: $completedRpe, isAmrap: $isAmrap, isCompleted: $isCompleted, isSkipped: $isSkipped)';
   }
 
   @override
@@ -538,7 +555,9 @@ class _$SessionSetStateImpl implements _SessionSetState {
                 other.completedRpe == completedRpe) &&
             (identical(other.isAmrap, isAmrap) || other.isAmrap == isAmrap) &&
             (identical(other.isCompleted, isCompleted) ||
-                other.isCompleted == isCompleted));
+                other.isCompleted == isCompleted) &&
+            (identical(other.isSkipped, isSkipped) ||
+                other.isSkipped == isSkipped));
   }
 
   @JsonKey(ignore: true)
@@ -554,7 +573,8 @@ class _$SessionSetStateImpl implements _SessionSetState {
       targetRpe,
       completedRpe,
       isAmrap,
-      isCompleted);
+      isCompleted,
+      isSkipped);
 
   @JsonKey(ignore: true)
   @override
@@ -582,7 +602,8 @@ abstract class _SessionSetState implements SessionSetState {
       final double? targetRpe,
       final double? completedRpe,
       final bool isAmrap,
-      final bool isCompleted}) = _$SessionSetStateImpl;
+      final bool isCompleted,
+      final bool isSkipped}) = _$SessionSetStateImpl;
 
   factory _SessionSetState.fromJson(Map<String, dynamic> json) =
       _$SessionSetStateImpl.fromJson;
@@ -607,6 +628,8 @@ abstract class _SessionSetState implements SessionSetState {
   bool get isAmrap;
   @override
   bool get isCompleted;
+  @override
+  bool get isSkipped;
   @override
   @JsonKey(ignore: true)
   _$$SessionSetStateImplCopyWith<_$SessionSetStateImpl> get copyWith =>

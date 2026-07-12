@@ -64,7 +64,7 @@ The workflow builds the web artifact with:
 If `RELEASE_BACKEND_URL` is not configured, the workflow falls back to:
 
 ```text
-https://api.yimelo.cc
+https://fittin.hammerscholar.net/api
 ```
 
 The generated GitHub Release notes include the backend URL baked into the web bundle.

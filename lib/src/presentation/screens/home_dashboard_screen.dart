@@ -80,8 +80,9 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                     },
                   ),
                   loading: () => const _HomeOverviewSkeleton(),
-                  error: (error, _) =>
-                      _HomeOverviewError(message: error.toString()),
+                  error: (error, _) => _isMissingActivePlanError(error)
+                      ? const SizedBox.shrink()
+                      : _HomeOverviewError(message: error.toString()),
                 ),
                 const SizedBox(height: 140),
               ],
@@ -205,6 +206,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       },
     );
   }
+}
+
+bool _isMissingActivePlanError(Object error) {
+  return error.toString().contains('No active training plan instance');
 }
 
 class _FittinTopMetaRow extends StatelessWidget {

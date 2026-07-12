@@ -7,7 +7,8 @@ This document describes the self-hosted backend that replaces the previous Supab
 - Go API process on `127.0.0.1:8081`
 - PostgreSQL database reachable through `FITTIN_DATABASE_URL`
 - Local disk storage for progress photos
-- Caddy and Cloudflare Tunnel exposing the public API
+- NPS exposing the 241 backend to Alibaba Cloud nginx on loopback port `24181`
+- Alibaba Cloud nginx exposing the same-origin public `/api` prefix
 
 ## Required Environment
 
@@ -21,7 +22,7 @@ This document describes the self-hosted backend that replaces the previous Supab
 Use:
 
 ```bash
---dart-define=BACKEND_URL=https://api.yimelo.cc
+--dart-define=BACKEND_URL=https://fittin.hammerscholar.net/api
 ```
 
 Production Web and Android builds must pass this value explicitly. Do not rely

@@ -155,9 +155,11 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       workout.copyWith(
         currentExerciseIndex: index,
         exercises: [
-          for (var exerciseIndex = 0;
-              exerciseIndex < workout.exercises.length;
-              exerciseIndex++)
+          for (
+            var exerciseIndex = 0;
+            exerciseIndex < workout.exercises.length;
+            exerciseIndex++
+          )
             exerciseIndex == index
                 ? _withResolvedCurrentSet(workout.exercises[exerciseIndex])
                 : workout.exercises[exerciseIndex],
@@ -185,9 +187,33 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   }
 
   void updateWeight(int setIndex, double newWeight) {
-    _updateCurrentExerciseSet(
-      setIndex,
-      (set) => set.copyWith(weight: newWeight < 0 ? 0 : newWeight),
+    final workout = state.activeWorkout;
+    if (workout == null) {
+      return;
+    }
+
+    final exerciseIndex = workout.currentExerciseIndex;
+    final currentExercise = workout.exercises[exerciseIndex];
+    if (setIndex < 0 || setIndex >= currentExercise.sets.length) {
+      return;
+    }
+
+    final resolvedWeight = newWeight < 0 ? 0.0 : newWeight;
+    final updatedSets = [
+      for (var index = 0; index < currentExercise.sets.length; index++)
+        if (index == setIndex ||
+            (index > setIndex && !_isResolved(currentExercise.sets[index])))
+          currentExercise.sets[index].copyWith(weight: resolvedWeight)
+        else
+          currentExercise.sets[index],
+    ];
+    final updatedExercises = [...workout.exercises];
+    updatedExercises[exerciseIndex] = currentExercise.copyWith(
+      sets: updatedSets,
+    );
+    _setActiveWorkout(
+      workout.copyWith(exercises: updatedExercises),
+      preserveLoading: false,
     );
   }
 
@@ -196,7 +222,11 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     double displayWeight, {
     required String displayUnit,
   }) {
-    final canonicalWeight = convertWeight(displayWeight, displayUnit, LoadUnits.kg);
+    final canonicalWeight = convertWeight(
+      displayWeight,
+      displayUnit,
+      LoadUnits.kg,
+    );
     updateWeight(setIndex, canonicalWeight);
   }
 
@@ -211,10 +241,20 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     if (!LoadUnits.supported.contains(unit)) {
       return;
     }
-    _updateCurrentExercise((exercise) => exercise.copyWith(displayLoadUnit: unit));
+    _updateCurrentExercise(
+      (exercise) => exercise.copyWith(displayLoadUnit: unit),
+    );
   }
 
   void completeSet(int setIndex) {
+    _resolveSet(setIndex, completed: true);
+  }
+
+  void cancelSet(int setIndex) {
+    _resolveSet(setIndex, completed: false);
+  }
+
+  void _resolveSet(int setIndex, {required bool completed}) {
     final workout = state.activeWorkout;
     if (workout == null) {
       return;
@@ -227,15 +267,18 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     }
 
     final updatedSets = [...currentExercise.sets];
-    updatedSets[setIndex] = updatedSets[setIndex].copyWith(isCompleted: true);
+    updatedSets[setIndex] = updatedSets[setIndex].copyWith(
+      isCompleted: completed,
+      isSkipped: !completed,
+    );
 
     var nextExerciseIndex = exerciseIndex;
     var nextCurrentSetIndex = setIndex;
-    final nextSetIndex = updatedSets.indexWhere((set) => !set.isCompleted);
+    final nextSetIndex = updatedSets.indexWhere((set) => !_isResolved(set));
     if (nextSetIndex == -1) {
       for (var i = exerciseIndex + 1; i < workout.exercises.length; i++) {
         final candidate = workout.exercises[i];
-        if (candidate.sets.any((set) => !set.isCompleted)) {
+        if (candidate.sets.any((set) => !_isResolved(set))) {
           nextExerciseIndex = i;
           nextCurrentSetIndex = candidate.currentSetIndex;
           break;
@@ -270,7 +313,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   void toggleSetComplete(int setIndex) {
     _updateCurrentExerciseSet(
       setIndex,
-      (set) => set.copyWith(isCompleted: !set.isCompleted),
+      (set) => set.copyWith(isCompleted: !set.isCompleted, isSkipped: false),
     );
   }
 
@@ -381,10 +424,15 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     if (exercise.sets.isEmpty) {
       return exercise;
     }
-    final firstIncomplete = exercise.sets.indexWhere((set) => !set.isCompleted);
+    final firstIncomplete = exercise.sets.indexWhere(
+      (set) => !_isResolved(set),
+    );
     if (firstIncomplete == -1) {
       return exercise.copyWith(
-        currentSetIndex: _clampSetIndex(exercise.currentSetIndex, exercise.sets.length),
+        currentSetIndex: _clampSetIndex(
+          exercise.currentSetIndex,
+          exercise.sets.length,
+        ),
       );
     }
     return exercise.copyWith(
@@ -412,4 +460,6 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     final clamped = value.clamp(0, 10).toDouble();
     return (clamped * 2).round() / 2;
   }
+
+  bool _isResolved(SessionSetState set) => set.isCompleted || set.isSkipped;
 }

@@ -18,20 +18,15 @@ install_unit \
   "$REPO_ROOT/deploy/systemd-user/fittin-web.service" \
   "$SYSTEMD_USER_DIR/fittin-web.service"
 
-install_unit \
-  "$REPO_ROOT/deploy/systemd-user/fittin-cloudflared.service" \
-  "$SYSTEMD_USER_DIR/fittin-cloudflared.service"
-
 systemctl --user daemon-reload
 
 cat <<EOF
 Installed user services:
   $SYSTEMD_USER_DIR/fittin-web.service
-  $SYSTEMD_USER_DIR/fittin-cloudflared.service
 
 Next steps:
-1. Enable the static web server:
+1. Enable the optional local preview server:
    systemctl --user enable --now fittin-web.service
-2. Enable the Cloudflare tunnel after ~/.cloudflared/config.yml and tunnel credentials exist:
-   systemctl --user enable --now fittin-cloudflared.service
+2. Production Web is served directly by Alibaba Cloud nginx. See:
+   docs/web-public-deployment.md
 EOF

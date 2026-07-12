@@ -38,6 +38,34 @@ void main() {
       expect(find.text('Competition Squat'), findsWidgets);
     },
   );
+
+  testWidgets('missing plan error is shown only once', (tester) async {
+    final repository = InMemoryDatabaseRepository();
+    final fakeGateway = FakeTodayWorkoutGateway();
+    final failure = StateError(
+      'No active training plan instance. Open Plan Library to start one.',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(fakeGateway),
+          todayWorkoutSummaryProvider.overrideWith(
+            (ref) async => throw failure,
+          ),
+          homeDashboardDataProvider.overrideWith((ref) async => throw failure),
+        ],
+        child: const MaterialApp(home: HomeDashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('No active training plan instance'),
+      findsOneWidget,
+    );
+  });
 }
 
 HomeDashboardData _fakeHomeData() {

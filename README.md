@@ -128,20 +128,20 @@ Android APK/AAB 构建不能依赖这个本地回退，因为设备里的 `127.0
 
 ```bash
 flutter build apk --release \
-  --dart-define=BACKEND_URL=https://api.yimelo.cc
+  --dart-define=BACKEND_URL=https://fittin.hammerscholar.net/api
 ```
 
 Flutter Web 正式构建同样必须显式传入公网后端地址，避免发布版本误回退到本机开发端口：
 
 ```bash
 flutter build web --release \
-  --dart-define=BACKEND_URL=https://api.yimelo.cc
+  --dart-define=BACKEND_URL=https://fittin.hammerscholar.net/api
 ```
 
 或使用仓库脚本同时产出 APK 和 AAB：
 
 ```bash
-tool/build_android_release.sh https://api.yimelo.cc
+tool/build_android_release.sh https://fittin.hammerscholar.net/api
 ```
 
 ### 4. 运行应用
@@ -176,7 +176,7 @@ flutter test test/presentation/plan_editor_screen_test.dart
 
 ## Web 公网发布
 
-如果你要把 Flutter Web 客户端发布到公网子域名，例如 `fittin.yimelo.cc`，请查看：
+Flutter Web 客户端通过阿里云直连发布到 `fittin.hammerscholar.net`，请查看：
 
 - `docs/web-public-deployment.md`
 
@@ -184,8 +184,9 @@ flutter test test/presentation/plan_editor_screen_test.dart
 
 - release 构建命令
 - `BACKEND_URL` / `BACKEND_API_KEY` 注入方式
-- 本机 Caddy 静态托管
-- Cloudflare Tunnel ingress 形状
+- 阿里云 nginx 静态托管与版本化发布
+- NPS 到 `241-dhg` 后端的 `/api` 反向代理
+- TLS、smoke checks 与旧 Cloudflare Tunnel 下线步骤
 - smoke checks 与回滚步骤
 
 常用的一键更新命令：

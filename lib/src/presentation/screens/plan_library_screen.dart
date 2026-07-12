@@ -558,8 +558,8 @@ class _TrainingMaxSetupDialogState extends State<_TrainingMaxSetupDialog> {
                 const SizedBox(height: 16),
                 Text(
                   strings.isChinese
-                      ? '可以先输入已知主项训练最大值，或直接快速开始，之后再去计划编辑页补齐动作起始重量。'
-                      : 'Enter known training maxes now, or quick start first and fill in accessory starting loads later in the plan editor.',
+                      ? '请输入主项训练最大值；动作起始重量可之后在计划编辑页调整。'
+                      : 'Enter the main-lift training maxes. Accessory starting loads can be adjusted later in the plan editor.',
                   style: fittinTheme
                       .uiStyle(12, fittinTheme.fgDim)
                       .copyWith(height: 1.45),
@@ -598,13 +598,6 @@ class _TrainingMaxSetupDialogState extends State<_TrainingMaxSetupDialog> {
           size: 'sm',
           variant: 'secondary',
           onPressed: () => Navigator.of(context).pop(),
-        ),
-        FittinBtn(
-          fittinTheme,
-          strings.isChinese ? '快速开始' : 'Quick Start',
-          size: 'sm',
-          variant: 'secondary',
-          onPressed: () => Navigator.of(context).pop(TrainingMaxProfile.empty),
         ),
         FittinBtn(
           fittinTheme,

@@ -10,7 +10,7 @@ Usage:
   tool/build_android_release.sh <BACKEND_URL> [BACKEND_API_KEY]
 
 Example:
-  tool/build_android_release.sh https://api.yimelo.cc
+  tool/build_android_release.sh https://fittin.hammerscholar.net/api
 
 The Android app cannot use the repository-local 127.0.0.1 backend fallback.
 Release APK/AAB builds must include BACKEND_URL through dart-define.

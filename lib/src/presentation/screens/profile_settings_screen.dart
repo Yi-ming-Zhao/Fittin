@@ -25,6 +25,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
     final notifier = ref.read(appLocaleProvider.notifier);
     final authUser = ref.watch(authStateProvider).valueOrNull;
+    final recordingMode = ref.watch(workoutRecordingModeProvider);
 
     return DashboardPageScaffold(
       bottomPadding: 180,
@@ -99,6 +100,44 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 subtitle: 'Chinese',
                 selected: locale == AppLocale.zh,
                 onTap: () => notifier.setLocale(AppLocale.zh),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(
+          label: strings.isChinese ? '训练记录方式' : 'WORKOUT LOGGING',
+        ),
+        const SizedBox(height: 10),
+        FittinCard(
+          theme: fittinTheme,
+          noPad: true,
+          child: Column(
+            children: [
+              _LocaleTile(
+                key: const ValueKey('recording-mode-card'),
+                theme: fittinTheme,
+                title: strings.isChinese ? '卡片记录' : 'Card logger',
+                subtitle: strings.isChinese
+                    ? '左滑完成、下滑取消，实时查看后续组。'
+                    : 'Swipe left to finish, down to cancel, with a live set stack.',
+                selected: recordingMode == WorkoutRecordingMode.card,
+                onTap: () => ref
+                    .read(workoutRecordingModeProvider.notifier)
+                    .update(WorkoutRecordingMode.card),
+                showDivider: true,
+              ),
+              _LocaleTile(
+                key: const ValueKey('recording-mode-traditional'),
+                theme: fittinTheme,
+                title: strings.isChinese ? '传统记录' : 'Traditional logger',
+                subtitle: strings.isChinese
+                    ? '保留按钮式录入与居中的完成操作。'
+                    : 'Keep button-based entry with a centered finish action.',
+                selected: recordingMode == WorkoutRecordingMode.traditional,
+                onTap: () => ref
+                    .read(workoutRecordingModeProvider.notifier)
+                    .update(WorkoutRecordingMode.traditional),
               ),
             ],
           ),

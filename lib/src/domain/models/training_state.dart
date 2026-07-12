@@ -32,6 +32,7 @@ class SessionSetState with _$SessionSetState {
     double? completedRpe,
     @Default(false) bool isAmrap,
     @Default(false) bool isCompleted,
+    @Default(false) bool isSkipped,
   }) = _SessionSetState;
 
   factory SessionSetState.fromJson(Map<String, dynamic> json) =>

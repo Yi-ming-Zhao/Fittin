@@ -46,7 +46,7 @@ jobs:
           version_name="${RELEASE_TAG#v}"
           build_number="${GITHUB_RUN_NUMBER}"
           release_dir="$RUNNER_TEMP/release-assets"
-          backend_url="${RELEASE_BACKEND_URL:-https://api.yimelo.cc}"
+          backend_url="${RELEASE_BACKEND_URL:-https://fittin.hammerscholar.net/api}"
           mkdir -p "$release_dir"
 
           {

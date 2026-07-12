@@ -42,6 +42,7 @@ _$SessionSetStateImpl _$$SessionSetStateImplFromJson(
       completedRpe: (json['completedRpe'] as num?)?.toDouble(),
       isAmrap: json['isAmrap'] as bool? ?? false,
       isCompleted: json['isCompleted'] as bool? ?? false,
+      isSkipped: json['isSkipped'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$SessionSetStateImplToJson(
@@ -57,6 +58,7 @@ Map<String, dynamic> _$$SessionSetStateImplToJson(
       'completedRpe': instance.completedRpe,
       'isAmrap': instance.isAmrap,
       'isCompleted': instance.isCompleted,
+      'isSkipped': instance.isSkipped,
     };
 
 _$ExerciseSessionStateImpl _$$ExerciseSessionStateImplFromJson(
