@@ -15,7 +15,7 @@
 ## 3. Local Quality And Visual Validation
 
 - [x] 3.1 Format changed Dart files and run targeted provider/widget tests for active session and profile settings.
-- [ ] 3.2 Run Flutter static analysis, the repository CI test entrypoint, Go tests, and a release Web build.
+- [x] 3.2 Run Flutter static analysis, the repository CI test entrypoint, Go tests, and a release Web build.
 - [x] 3.3 Exercise card gestures and both recording modes at narrow/tall phone viewports, capture screenshots, and iterate until layout, overflow, semantics, and console output are clean.
 
 ## 4. Alibaba Cloud Direct Deployment
@@ -28,4 +28,4 @@
 ## 5. Delivery
 
 - [x] 5.1 Review the final diff to exclude unrelated files and all credentials, then commit and push the scoped change.
-- [ ] 5.2 Monitor GitHub CI to completion, fix any failures, and re-run public mobile visual/function checks on the deployed revision.
+- [x] 5.2 Monitor GitHub CI to completion, fix any failures, and re-run public mobile visual/function checks on the deployed revision.
