@@ -25,7 +25,7 @@ git tag v1.2.0
 git push origin v1.2.0
 ```
 
-That tag creates or updates a GitHub Release for the same version and uploads release assets.
+That tag creates a new GitHub Release for the same version and uploads release assets. Existing releases are never overwritten.
 
 ## Standard CI
 
@@ -38,10 +38,11 @@ It does not publish release assets. It only validates the repository before you 
 
 Current CI coverage:
 
+- `flutter analyze --no-pub`
 - `tool/run_ci_flutter_tests.sh`
 - `cd backend && go test ./...`
 
-The Flutter CI suite is intentionally a curated stable subset of the repository test suite. It currently covers the application layer, data layer, and selected domain tests that pass consistently on Linux GitHub runners. This keeps PR validation green while the remaining widget and template-validation tests are still being repaired.
+The Flutter CI suite is intentionally a curated stable subset of the repository test suite. It covers the application layer, data layer, selected domain tests, and the About, settings, and theme-palette widget tests that pass consistently on Linux GitHub runners.
 
 ## Release Assets
 
@@ -73,10 +74,9 @@ The generated GitHub Release notes include the backend URL baked into the web bu
 
 Current behavior:
 
-- if GitHub secrets for Android signing are configured, the workflow writes `android/key.properties` and uses that keystore for release builds
-- if those secrets are absent, Android release builds fall back to the existing debug signing config so the workflow can still publish artifacts
-
-That fallback is useful for internal distribution and validating the pipeline, but it is not the final production signing setup you would want for store submission.
+- all four Android signing secrets are required; a tagged build fails if any one is absent
+- the workflow verifies the keystore and built APK against Fittin's fixed release certificate SHA-256
+- there is no debug-signing fallback and an existing GitHub Release cannot be replaced
 
 ### Required secrets for repository-backed signing
 
@@ -104,14 +104,21 @@ Recommended sequence:
 
 1. Push your branch and let ordinary CI pass.
 2. Merge or fast-forward the code you want to release.
-3. Create and push the release tag.
-4. Wait for the `Publish Release` workflow to finish.
-5. Open the GitHub Release page and verify the uploaded assets and release notes.
+3. Increment both parts of `version: X.Y.Z+N` in `pubspec.yaml`; `N` is the Android `versionCode` and must never decrease or be reused.
+4. Create and push the matching release tag.
+5. Wait for the `Publish Release` workflow to finish.
+6. Open the GitHub Release page and verify the uploaded assets and release notes.
+
+Repository administrators should also protect `refs/tags/v*` from updates and deletion with a GitHub ruleset. The workflow re-checks the remote tag before publishing, but repository-level tag protection removes the race entirely.
+
+### One-time migration for older Android installs
+
+`v1.0.6` is the first build using the fixed release certificate. Devices with `v1.0.5` or earlier must first sync or back up their data, uninstall the old app, and install `v1.0.6` once. Releases after that can update in place as long as the signing certificate remains unchanged and the build number increases.
 
 ## Tagged Release Flow
 
 1. Make sure the code on `main` is the version you want to release.
-2. Update `pubspec.yaml` version if you want the app metadata to match the tag.
+2. Increment `pubspec.yaml` to the new version and a larger build number.
 3. Create and push the tag.
 4. Wait for the `Publish Release` workflow to finish.
 5. Open the GitHub Release page and verify the uploaded assets and release notes.
@@ -119,5 +126,5 @@ Recommended sequence:
 ## Notes
 
 - The workflow uses GitHub-hosted runners. It does not deploy to the public Cloudflare Tunnel host.
-- Public deployment of the web app remains the separate flow documented in [docs/web-public-deployment.md](/data/zhaoyiming/Fittin/docs/web-public-deployment.md).
+- Public deployment of the web app remains the separate flow documented in [docs/web-public-deployment.md](web-public-deployment.md).
 - The release workflow uses `tool/build_web_release.sh` so CI and manual web releases stay aligned.

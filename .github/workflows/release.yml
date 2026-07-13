@@ -8,20 +8,22 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: publish-release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.ref_name }}
       RELEASE_BACKEND_URL: ${{ vars.RELEASE_BACKEND_URL }}
-      BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      EXPECTED_ANDROID_SIGNER_SHA256: 0c52c1350c14a360c833422967ac33469572e9acb64a33ddaad1a407532d0671
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -39,12 +41,108 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Validate release inputs
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tags must use a new semantic version such as v1.0.6."
+            exit 1
+          fi
+
+          package_version_spec="$(sed -n 's/^version: //p' pubspec.yaml)"
+          package_version="${package_version_spec%%+*}"
+          package_build_number="${package_version_spec##*+}"
+          if [[ "$package_version_spec" == "$package_version" ||
+                ! "$package_build_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "pubspec version must include a positive integer build number."
+            exit 1
+          fi
+          if [[ "v${package_version}" != "$RELEASE_TAG" ]]; then
+            echo "Tag $RELEASE_TAG does not match pubspec version $package_version."
+            exit 1
+          fi
+          if (( package_build_number < 13 )); then
+            echo "Android build number must be at least 13 to upgrade v1.0.5."
+            exit 1
+          fi
+
+          previous_tag="$(
+            git tag --list \
+              | awk -v current="$RELEASE_TAG" \
+                '$0 != current && $0 ~ /^v[0-9]+\.[0-9]+\.[0-9]+$/ { print }' \
+              | sort -V \
+              | tail -n 1
+          )"
+          if [[ -n "$previous_tag" ]]; then
+            highest_tag="$(printf '%s\n%s\n' "$previous_tag" "$RELEASE_TAG" | sort -V | tail -n 1)"
+            if [[ "$highest_tag" != "$RELEASE_TAG" ]]; then
+              echo "Release tag $RELEASE_TAG must be newer than $previous_tag."
+              exit 1
+            fi
+
+            previous_version_spec="$(git show "${previous_tag}:pubspec.yaml" | sed -n 's/^version: //p')"
+            previous_version="${previous_version_spec%%+*}"
+            previous_build_number="${previous_version_spec##*+}"
+            if [[ "$previous_version_spec" == "$previous_version" ||
+                  ! "$previous_build_number" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Previous tag $previous_tag has an invalid pubspec build number."
+              exit 1
+            fi
+            if (( package_build_number <= previous_build_number )); then
+              echo "Android build number $package_build_number must exceed $previous_build_number from $previous_tag."
+              exit 1
+            fi
+          fi
+
+          for secret_name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "Required Android signing secret is missing: $secret_name"
+              exit 1
+            fi
+          done
+
+      - name: Refuse an existing GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          status="$(
+            curl --silent --show-error --retry 3 --retry-all-errors \
+              --connect-timeout 10 --max-time 30 \
+              --output /dev/null --write-out '%{http_code}' \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}"
+          )"
+          case "$status" in
+            404) ;;
+            200)
+              echo "Release $RELEASE_TAG already exists; refusing to replace its assets."
+              exit 1
+              ;;
+            *)
+              echo "Unable to verify that release $RELEASE_TAG is unused (HTTP $status)."
+              exit 1
+              ;;
+          esac
+
       - name: Resolve release metadata
         id: meta
         run: |
           set -euo pipefail
           version_name="${RELEASE_TAG#v}"
-          build_number="${GITHUB_RUN_NUMBER}"
+          package_version_spec="$(sed -n 's/^version: //p' pubspec.yaml)"
+          build_number="${package_version_spec##*+}"
           release_dir="$RUNNER_TEMP/release-assets"
           backend_url="${RELEASE_BACKEND_URL:-https://fittin.hammerscholar.net/api}"
           mkdir -p "$release_dir"
@@ -61,11 +159,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Materialize Android signing config
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release-keystore.jks
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release-keystore.jks
           cat > key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEY_PASSWORD
@@ -73,11 +176,26 @@ jobs:
           storeFile=release-keystore.jks
           EOF
 
+          actual_signer_sha256="$(
+            keytool -exportcert \
+              -keystore release-keystore.jks \
+              -storepass:env ANDROID_KEYSTORE_PASSWORD \
+              -alias "$ANDROID_KEY_ALIAS" \
+              | sha256sum \
+              | awk '{print $1}'
+          )"
+          if [[ "$actual_signer_sha256" != "$EXPECTED_ANDROID_SIGNER_SHA256" ]]; then
+            echo "Android signing certificate does not match the stable Fittin signer."
+            exit 1
+          fi
+
       - name: Flutter pub get
         run: flutter pub get
 
       - name: Build Android APK
         id: build_apk
+        env:
+          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
         run: |
           set -euo pipefail
           flutter build apk --release \
@@ -95,11 +213,34 @@ jobs:
             apk_output="${apk_outputs[0]}"
           fi
           echo "Using APK output: $apk_output"
+
+          apksigner_path="$(
+            find "$ANDROID_HOME/build-tools" -type f -name apksigner -print \
+              | sort -V \
+              | tail -n 1
+          )"
+          if [[ -z "$apksigner_path" ]]; then
+            echo "Android apksigner was not found."
+            exit 1
+          fi
+          actual_signer_sha256="$(
+            "$apksigner_path" verify --print-certs "$apk_output" \
+              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
+              | head -n 1 \
+              | tr '[:upper:]' '[:lower:]'
+          )"
+          if [[ "$actual_signer_sha256" != "$EXPECTED_ANDROID_SIGNER_SHA256" ]]; then
+            echo "Built APK does not match the stable Fittin signer."
+            exit 1
+          fi
+
           cp "$apk_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.apk_name }}"
 
       - name: Build Android App Bundle
         id: build_aab
+        env:
+          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
         run: |
           set -euo pipefail
           flutter build appbundle --release \
@@ -120,7 +261,13 @@ jobs:
           cp "$aab_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
 
+      - name: Remove Android signing material
+        if: ${{ always() }}
+        run: rm -f android/key.properties android/release-keystore.jks
+
       - name: Build Flutter Web release bundle
+        env:
+          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
         run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}" "$BACKEND_API_KEY"
 
       - name: Package web artifact
@@ -157,13 +304,55 @@ jobs:
           - AAB step: ${{ steps.build_aab.conclusion }}
 
           Android signing mode:
-          - $(if [[ -f "${GITHUB_WORKSPACE}/android/key.properties" ]]; then echo "repository-provided signing"; else echo "fallback debug signing"; fi)
+          - stable repository release signing
+
+          Android upgrade note:
+          - v1.0.6 is the first release using the stable signer.
+          - If v1.0.5 or earlier is installed, sync or back up first, uninstall it, then install v1.0.6 once.
           EOF
+
+      - name: Confirm release tag still points to this commit
+        run: |
+          set -euo pipefail
+          git fetch --force --no-tags origin "refs/tags/${RELEASE_TAG}"
+          remote_tag_commit="$(git rev-parse 'FETCH_HEAD^{commit}')"
+          if [[ "$remote_tag_commit" != "$GITHUB_SHA" ]]; then
+            echo "Tag $RELEASE_TAG moved after this workflow started; refusing to publish."
+            exit 1
+          fi
+
+      - name: Confirm release tag remains unused
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          status="$(
+            curl --silent --show-error --retry 3 --retry-all-errors \
+              --connect-timeout 10 --max-time 30 \
+              --output /dev/null --write-out '%{http_code}' \
+              --header "Authorization: Bearer $GH_TOKEN" \
+              --header 'Accept: application/vnd.github+json' \
+              --header 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}"
+          )"
+          case "$status" in
+            404) ;;
+            200)
+              echo "Release $RELEASE_TAG was created during this run; refusing to replace it."
+              exit 1
+              ;;
+            *)
+              echo "Unable to verify that release $RELEASE_TAG is unused (HTTP $status)."
+              exit 1
+              ;;
+          esac
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           body_path: ${{ steps.meta.outputs.release_dir }}/release-notes.md
           files: ${{ steps.meta.outputs.release_dir }}/*
-          overwrite_files: true
+          overwrite_files: false
+          fail_on_unmatched_files: true

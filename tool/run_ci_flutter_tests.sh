@@ -15,4 +15,7 @@ flutter test \
   test/domain/one_rep_max_test.dart \
   test/domain/program_engine_test.dart \
   test/domain/rule_engine_test.dart \
-  test/domain/weight_tools_test.dart
+  test/domain/weight_tools_test.dart \
+  test/presentation/about_screen_test.dart \
+  test/presentation/profile_settings_screen_test.dart \
+  test/presentation/theme_palette_test.dart

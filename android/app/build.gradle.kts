@@ -54,14 +54,11 @@ android {
 
     buildTypes {
         release {
-            // Prefer repository-local release signing when android/key.properties exists.
-            // Otherwise keep the current debug-signing fallback so CI can still produce artifacts.
-            signingConfig =
-                if (hasReleaseKeystore) {
-                    signingConfigs.getByName("release")
-                } else {
-                    signingConfigs.getByName("debug")
-                }
+            // Tagged releases materialize key.properties from GitHub Actions secrets.
+            // Without it, keep the output unsigned instead of silently changing identity.
+            if (hasReleaseKeystore) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }

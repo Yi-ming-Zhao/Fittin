@@ -4,6 +4,12 @@ set -euo pipefail
 
 export PATH="$HOME/.local/bin:$HOME/.local/lib/flutter/bin:$PATH"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+EXPECTED_ANDROID_SIGNER_SHA256="0c52c1350c14a360c833422967ac33469572e9acb64a33ddaad1a407532d0671"
+
+cd "$REPO_ROOT"
+
 if [[ $# -lt 1 || $# -gt 2 ]]; then
   cat <<'EOF'
 Usage:
@@ -21,6 +27,11 @@ fi
 BACKEND_URL="$1"
 BACKEND_API_KEY="${2:-}"
 
+if [[ ! -f android/key.properties ]]; then
+  echo "android/key.properties is required for a signed release build."
+  exit 1
+fi
+
 echo "==> Resolving Flutter dependencies"
 flutter pub get
 
@@ -28,6 +39,28 @@ echo "==> Building Android APK"
 flutter build apk --release \
   --dart-define=BACKEND_URL="$BACKEND_URL" \
   --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+
+ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+APKSIGNER="$(
+  find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner -print 2>/dev/null \
+    | sort \
+    | tail -n 1
+)"
+if [[ -z "$APKSIGNER" ]]; then
+  echo "Android apksigner was not found under $ANDROID_SDK_ROOT/build-tools."
+  exit 1
+fi
+
+ACTUAL_ANDROID_SIGNER_SHA256="$(
+  "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
+    | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
+    | head -n 1 \
+    | tr '[:upper:]' '[:lower:]'
+)"
+if [[ "$ACTUAL_ANDROID_SIGNER_SHA256" != "$EXPECTED_ANDROID_SIGNER_SHA256" ]]; then
+  echo "Built APK does not match the stable Fittin signer."
+  exit 1
+fi
 
 echo "==> Building Android App Bundle"
 flutter build appbundle --release \

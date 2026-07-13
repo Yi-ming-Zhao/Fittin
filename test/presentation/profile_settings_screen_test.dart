@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
+import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_settings_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -180,5 +181,60 @@ void main() {
       ProviderScope.containerOf(context).read(workoutRecordingModeProvider),
       WorkoutRecordingMode.traditional,
     );
+  });
+
+  testWidgets('profile settings exposes the about entry', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final aboutButton = find.byKey(const ValueKey('open-about-screen'));
+    await tester.scrollUntilVisible(
+      aboutButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(aboutButton, findsOneWidget);
+    expect(find.text('ABOUT'), findsOneWidget);
+    expect(find.text('About Fittin'), findsOneWidget);
+  });
+
+  testWidgets('profile settings opens the about screen', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final aboutButton = find.byKey(const ValueKey('open-about-screen'));
+    await tester.scrollUntilVisible(
+      aboutButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(aboutButton);
+    await tester.pumpAndSettle();
+    await tester.tap(aboutButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.byType(AboutScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('dashboard-header-back')), findsOneWidget);
   });
 }

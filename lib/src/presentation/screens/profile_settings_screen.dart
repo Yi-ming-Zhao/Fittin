@@ -5,6 +5,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
@@ -253,6 +254,24 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 },
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(label: strings.isChinese ? '关于' : 'ABOUT'),
+        const SizedBox(height: 10),
+        FittinCard(
+          theme: fittinTheme,
+          noPad: true,
+          child: _SettingsLinkRow(
+            key: const ValueKey('open-about-screen'),
+            theme: fittinTheme,
+            title: strings.isChinese ? '关于 Fittin' : 'About Fittin',
+            subtitle: strings.isChinese
+                ? '查看版本信息并检查应用更新。'
+                : 'View version information and check for app updates.',
+            onTap: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),
           ),
         ),
       ],
