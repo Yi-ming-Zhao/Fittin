@@ -318,9 +318,9 @@ Color _getMuscleColor(String category) {
     case 'LEGS':
       return const Color(0xFFDDCC77);
     case 'BACK':
-      return const Color(0xFF44AA99);
+      return const Color(0xFF4477AA);
     case 'SHOULDERS':
-      return const Color(0xFF88CCEE);
+      return const Color(0xFFAA7744);
     case 'ARMS':
       return const Color(0xFFAA4499);
     default:

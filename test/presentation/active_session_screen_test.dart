@@ -58,7 +58,7 @@ void main() {
     expect(gateway.concludedSession, isNotNull);
   });
 
-  testWidgets('card logger completes with a short left swipe and skips right', (
+  testWidgets('card logger navigates horizontally and resolves vertically', (
     WidgetTester tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -87,31 +87,63 @@ void main() {
     );
     expect(find.text('Tap for exact weight'), findsNothing);
 
-    final leftGesture = await tester.startGesture(tester.getCenter(card));
-    await leftGesture.moveBy(const Offset(-64, 0));
-    await tester.pump();
-    await leftGesture.up();
-    await tester.pumpAndSettle(
-      const Duration(milliseconds: 50),
-      EnginePhase.sendSemanticsUpdate,
-      const Duration(seconds: 3),
-    );
+    await _swipeCard(tester, card, const Offset(64, 0));
     var workout = container.read(activeSessionProvider).activeWorkout!;
-    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.currentSetIndex, 0);
+
+    await _swipeCard(tester, card, const Offset(-64, 0));
+    workout = container.read(activeSessionProvider).activeWorkout!;
+    expect(workout.exercises.first.currentSetIndex, 1);
+    expect(workout.exercises.first.sets.first.isCompleted, false);
+    expect(workout.exercises.first.sets.first.isSkipped, false);
+    expect(workout.exercises.first.sets[1].isCompleted, false);
+    expect(workout.exercises.first.sets[1].isSkipped, false);
+
+    await _swipeCard(tester, card, const Offset(-64, 0));
+    workout = container.read(activeSessionProvider).activeWorkout!;
     expect(workout.exercises.first.currentSetIndex, 1);
 
-    final rightGesture = await tester.startGesture(tester.getCenter(card));
-    await rightGesture.moveBy(const Offset(64, 0));
-    await tester.pump();
-    await rightGesture.up();
-    await tester.pumpAndSettle(
-      const Duration(milliseconds: 50),
-      EnginePhase.sendSemanticsUpdate,
-      const Duration(seconds: 3),
-    );
+    await _swipeCard(tester, card, const Offset(64, 0));
+    workout = container.read(activeSessionProvider).activeWorkout!;
+    expect(workout.exercises.first.currentSetIndex, 0);
+
+    await _swipeCard(tester, card, const Offset(0, -64));
+    workout = container.read(activeSessionProvider).activeWorkout!;
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.sets.first.isSkipped, false);
+    expect(workout.exercises.first.currentSetIndex, 1);
+
+    await _swipeCard(tester, card, const Offset(0, 64));
     workout = container.read(activeSessionProvider).activeWorkout!;
     expect(workout.exercises.first.sets[1].isSkipped, true);
     expect(workout.exercises.first.sets[1].isCompleted, false);
+  });
+
+  testWidgets('card controls remain tappable with four-way pan gestures', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final container = await _sessionContainer(WorkoutRecordingMode.card);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ActiveSessionScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('current-weight-editor')));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter Weight'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter Weight'), findsNothing);
   });
 
   testWidgets('traditional logger opens exact weight entry on tap', (
@@ -191,6 +223,18 @@ Finder _findPlateWidgets(String weight) {
         key.value.startsWith('barbell-plate-kg-') &&
         key.value.endsWith('-$weight');
   });
+}
+
+Future<void> _swipeCard(WidgetTester tester, Finder card, Offset offset) async {
+  final gesture = await tester.startGesture(tester.getCenter(card));
+  await gesture.moveBy(offset);
+  await tester.pump();
+  await gesture.up();
+  await tester.pumpAndSettle(
+    const Duration(milliseconds: 50),
+    EnginePhase.sendSemanticsUpdate,
+    const Duration(seconds: 3),
+  );
 }
 
 Future<ProviderContainer> _sessionContainer(

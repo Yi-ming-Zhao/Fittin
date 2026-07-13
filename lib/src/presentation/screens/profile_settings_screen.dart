@@ -119,8 +119,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 theme: fittinTheme,
                 title: strings.isChinese ? '卡片记录' : 'Card logger',
                 subtitle: strings.isChinese
-                    ? '左滑完成、右滑跳过，实时查看后续组。'
-                    : 'Swipe left to finish, right to skip, with a live set stack.',
+                    ? '左滑下一组、右滑上一组，上滑记录、下滑跳过。'
+                    : 'Swipe left for next, right for previous, up to log, and down to skip.',
                 selected: recordingMode == WorkoutRecordingMode.card,
                 onTap: () => ref
                     .read(workoutRecordingModeProvider.notifier)

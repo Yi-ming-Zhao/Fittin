@@ -162,7 +162,6 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   currentSet: currentSet,
                   upcomingSets: currentExercise.sets
                       .skip(resolvedSetIndex + 1)
-                      .where((set) => !set.isCompleted && !set.isSkipped)
                       .take(2)
                       .toList(),
                   displayWeight: displayWeight,
@@ -213,6 +212,12 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   onComplete: () =>
                       _handleCompleteSet(notifier, resolvedSetIndex),
                   onCancel: () => notifier.cancelSet(resolvedSetIndex),
+                  onPreviousSet: resolvedSetIndex > 0
+                      ? () => notifier.selectSet(resolvedSetIndex - 1)
+                      : null,
+                  onNextSet: resolvedSetIndex < currentExercise.sets.length - 1
+                      ? () => notifier.selectSet(resolvedSetIndex + 1)
+                      : null,
                 )
               : _TraditionalSetLogger(
                   strings: strings,
@@ -960,6 +965,8 @@ class _CardSetStack extends StatefulWidget {
     required this.onEditRpe,
     required this.onComplete,
     required this.onCancel,
+    required this.onPreviousSet,
+    required this.onNextSet,
   });
 
   final FittinTheme theme;
@@ -982,6 +989,8 @@ class _CardSetStack extends StatefulWidget {
   final VoidCallback onEditRpe;
   final VoidCallback onComplete;
   final VoidCallback onCancel;
+  final VoidCallback? onPreviousSet;
+  final VoidCallback? onNextSet;
 
   @override
   State<_CardSetStack> createState() => _CardSetStackState();
@@ -989,23 +998,31 @@ class _CardSetStack extends StatefulWidget {
 
 class _CardSetStackState extends State<_CardSetStack> {
   static const _commitDistance = 56.0;
-  double _dragX = 0;
+  static const _axisLockDistance = 10.0;
+  Offset _dragOffset = Offset.zero;
+  _CardDragAxis? _dragAxis;
   bool _animate = false;
   bool _committing = false;
 
   @override
   Widget build(BuildContext context) {
-    final dragProgress = (_dragX.abs() / _commitDistance).clamp(0.0, 1.0);
-    final leftProgress = (-_dragX / _commitDistance).clamp(0.0, 1.0);
-    final rightProgress = (_dragX / _commitDistance).clamp(0.0, 1.0);
-    final activeColor = leftProgress >= rightProgress
-        ? widget.theme.accent
-        : const Color(0xFFB77A70);
+    final dragProgress = (_dragOffset.distance / _commitDistance).clamp(
+      0.0,
+      1.0,
+    );
+    final leftProgress = (-_dragOffset.dx / _commitDistance).clamp(0.0, 1.0);
+    final rightProgress = (_dragOffset.dx / _commitDistance).clamp(0.0, 1.0);
+    final upProgress = (-_dragOffset.dy / _commitDistance).clamp(0.0, 1.0);
+    final downProgress = (_dragOffset.dy / _commitDistance).clamp(0.0, 1.0);
+    final isVertical = _dragOffset.dy.abs() > _dragOffset.dx.abs();
+    final activeColor = isVertical
+        ? (_dragOffset.dy < 0 ? widget.theme.accent : const Color(0xFFB77A70))
+        : widget.theme.fgDim;
     final transform = Matrix4.translationValues(
-      _dragX,
-      (_dragX.abs() / 42).clamp(0, 5),
+      _dragOffset.dx,
+      _dragOffset.dy + (_dragOffset.dx.abs() / 42).clamp(0, 5),
       0,
-    )..rotateZ(_dragX / 1650);
+    )..rotateZ(_dragOffset.dx / 1650);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1015,35 +1032,57 @@ class _CardSetStackState extends State<_CardSetStack> {
           children: [
             Positioned.fill(
               bottom: bottomReveal,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Align(
+              child: IgnorePointer(
+                child: Stack(
+                  children: [
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Opacity(
-                        opacity: rightProgress,
+                        opacity: widget.onPreviousSet == null
+                            ? 0
+                            : rightProgress,
+                        child: _GestureStamp(
+                          label: widget.strings.isChinese ? '上一组' : 'PREVIOUS',
+                          icon: Icons.arrow_forward_rounded,
+                          color: widget.theme.fgDim,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Opacity(
+                        opacity: widget.onNextSet == null ? 0 : leftProgress,
+                        child: _GestureStamp(
+                          label: widget.strings.isChinese ? '下一组' : 'NEXT',
+                          icon: Icons.arrow_back_rounded,
+                          color: widget.theme.fgDim,
+                        ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: Opacity(
+                        opacity: downProgress,
                         child: _GestureStamp(
                           label: widget.strings.isChinese ? '跳过' : 'SKIP',
-                          icon: Icons.redo_rounded,
+                          icon: Icons.keyboard_arrow_down_rounded,
                           color: const Color(0xFFB77A70),
                         ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
+                    Align(
+                      alignment: Alignment.bottomCenter,
                       child: Opacity(
-                        opacity: leftProgress,
+                        opacity: upProgress,
                         child: _GestureStamp(
-                          label: widget.strings.isChinese ? '完成' : 'DONE',
+                          label: widget.strings.isChinese ? '记录' : 'LOG',
                           icon: Icons.check_rounded,
                           color: widget.theme.accent,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             for (var depth = widget.upcomingSets.length; depth >= 1; depth--)
@@ -1072,21 +1111,17 @@ class _CardSetStackState extends State<_CardSetStack> {
               bottom: bottomReveal,
               child: Semantics(
                 label: widget.strings.isChinese
-                    ? '当前第 ${widget.setIndex + 1} 组，左滑完成，右滑跳过'
-                    : 'Current set ${widget.setIndex + 1}. Swipe left to finish or right to skip.',
+                    ? '当前第 ${widget.setIndex + 1} 组，左滑下一组，右滑上一组，上滑记录，下滑跳过'
+                    : 'Current set ${widget.setIndex + 1}. Swipe left for next, right for previous, up to log, or down to skip.',
                 child: GestureDetector(
                   key: const ValueKey('active-set-card'),
                   behavior: HitTestBehavior.opaque,
-                  onHorizontalDragUpdate: _committing
+                  onPanStart: _committing
                       ? null
-                      : (details) {
-                          setState(() {
-                            _animate = false;
-                            _dragX += details.delta.dx;
-                          });
-                        },
-                  onHorizontalDragEnd: _committing ? null : _resolveDrag,
-                  onHorizontalDragCancel: _committing ? null : _resetDrag,
+                      : (_) => setState(() => _animate = false),
+                  onPanUpdate: _committing ? null : _updateDrag,
+                  onPanEnd: _committing ? null : _resolveDrag,
+                  onPanCancel: _committing ? null : _resetDrag,
                   child: AnimatedContainer(
                     duration: _animate
                         ? const Duration(milliseconds: 180)
@@ -1160,38 +1195,52 @@ class _CardSetStackState extends State<_CardSetStack> {
                               ),
                             ),
                             const Spacer(),
-                            Icon(
-                              Icons.keyboard_double_arrow_left_rounded,
-                              size: 17,
-                              color: widget.theme.accent.withValues(
-                                alpha: 0.72,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              widget.strings.isChinese ? '完成' : 'DONE',
-                              style: widget.theme.uiStyle(
-                                9,
-                                widget.theme.fgMuted,
-                                FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              widget.strings.isChinese ? '跳过' : 'SKIP',
-                              style: widget.theme.uiStyle(
-                                9,
-                                widget.theme.fgMuted,
-                                FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(width: 3),
-                            Icon(
-                              Icons.keyboard_double_arrow_right_rounded,
-                              size: 17,
-                              color: const Color(
-                                0xFFB77A70,
-                              ).withValues(alpha: 0.78),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.keyboard_double_arrow_left_rounded,
+                                      size: 15,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      widget.strings.isChinese ? '下一组' : 'NEXT',
+                                      style: widget.theme.uiStyle(
+                                        9,
+                                        widget.theme.fgMuted,
+                                        FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      widget.strings.isChinese ? '上一组' : 'PREV',
+                                      style: widget.theme.uiStyle(
+                                        9,
+                                        widget.theme.fgMuted,
+                                        FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Icon(
+                                      Icons.keyboard_double_arrow_right_rounded,
+                                      size: 15,
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  widget.strings.isChinese
+                                      ? '↑ 记录 · ↓ 跳过'
+                                      : 'UP LOG · DOWN SKIP',
+                                  style: widget.theme.uiStyle(
+                                    8,
+                                    widget.theme.fgMuted,
+                                    FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -1332,6 +1381,12 @@ class _CardSetStackState extends State<_CardSetStack> {
                                   tooltip: widget.strings.isChinese
                                       ? '跳过当前组'
                                       : 'Skip current set',
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: const Color(
+                                      0xFFB77A70,
+                                    ).withValues(alpha: 0.2),
+                                    foregroundColor: const Color(0xFFE7B8B0),
+                                  ),
                                   onPressed: widget.onCancel,
                                   icon: const Icon(Icons.redo_rounded),
                                 ),
@@ -1351,28 +1406,65 @@ class _CardSetStackState extends State<_CardSetStack> {
     );
   }
 
+  void _updateDrag(DragUpdateDetails details) {
+    final candidate = _dragOffset + details.delta;
+    final axis =
+        _dragAxis ??
+        (candidate.distance >= _axisLockDistance
+            ? (candidate.dx.abs() >= candidate.dy.abs()
+                  ? _CardDragAxis.horizontal
+                  : _CardDragAxis.vertical)
+            : null);
+    setState(() {
+      _animate = false;
+      _dragAxis = axis;
+      _dragOffset = switch (axis) {
+        _CardDragAxis.horizontal => Offset(candidate.dx, 0),
+        _CardDragAxis.vertical => Offset(0, candidate.dy),
+        null => candidate,
+      };
+    });
+  }
+
   Future<void> _resolveDrag(DragEndDetails details) async {
-    final projected = _dragX + details.velocity.pixelsPerSecond.dx * 0.06;
-    final completes = projected <= -_commitDistance;
-    final skips = projected >= _commitDistance;
-    if (!completes && !skips) {
+    final velocity = details.velocity.pixelsPerSecond;
+    final axis =
+        _dragAxis ??
+        (_dragOffset.dx.abs() >= _dragOffset.dy.abs()
+            ? _CardDragAxis.horizontal
+            : _CardDragAxis.vertical);
+    final projected = axis == _CardDragAxis.horizontal
+        ? _dragOffset.dx + velocity.dx * 0.06
+        : _dragOffset.dy + velocity.dy * 0.06;
+    final commits = projected.abs() >= _commitDistance;
+    final action = switch (axis) {
+      _CardDragAxis.horizontal =>
+        projected < 0 ? widget.onNextSet : widget.onPreviousSet,
+      _CardDragAxis.vertical =>
+        projected < 0 ? widget.onComplete : widget.onCancel,
+    };
+    if (!commits || action == null) {
       _resetDrag();
       return;
     }
+    final direction = axis == _CardDragAxis.horizontal
+        ? Offset(projected.sign, 0)
+        : Offset(0, projected.sign);
+    final screenSize = MediaQuery.sizeOf(context);
     setState(() {
       _committing = true;
       _animate = true;
-      _dragX = (completes ? -1 : 1) * MediaQuery.sizeOf(context).width * 1.25;
+      _dragOffset = Offset(
+        direction.dx * screenSize.width * 1.25,
+        direction.dy * screenSize.height,
+      );
     });
     await Future<void>.delayed(const Duration(milliseconds: 180));
-    if (completes) {
-      widget.onComplete();
-    } else {
-      widget.onCancel();
-    }
+    action();
     if (!mounted) return;
     setState(() {
-      _dragX = 0;
+      _dragOffset = Offset.zero;
+      _dragAxis = null;
       _animate = false;
       _committing = false;
     });
@@ -1381,10 +1473,13 @@ class _CardSetStackState extends State<_CardSetStack> {
   void _resetDrag() {
     setState(() {
       _animate = true;
-      _dragX = 0;
+      _dragOffset = Offset.zero;
+      _dragAxis = null;
     });
   }
 }
+
+enum _CardDragAxis { horizontal, vertical }
 
 class _StackBackCard extends StatelessWidget {
   const _StackBackCard({
@@ -1760,7 +1855,7 @@ _BarbellPlateVisualSpec _plateVisualSpec({
     25 => const Color(0xFFB94A48),
     20 => const Color(0xFF416F9F),
     15 => const Color(0xFFC3A74A),
-    10 => const Color(0xFF4F7F61),
+    10 => const Color(0xFF4E7A45),
     5 => const Color(0xFFD8D5CC),
     2.5 => const Color(0xFF292A2C),
     _ => const Color(0xFFA7ADB2),

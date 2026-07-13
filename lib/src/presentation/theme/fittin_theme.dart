@@ -250,8 +250,8 @@ final _directions = {
     radiusSm: 12,
   ),
   FittinDirection.technical: _DirectionTokens(
-    surface: const Color(0xFF121412),
-    surfaceHi: const Color(0xFF1C201C),
+    surface: const Color(0xFF131313),
+    surfaceHi: const Color(0xFF201F1D),
     displayWeight: FontWeight.w500,
     numWeight: FontWeight.w500,
     radius: 16,
@@ -273,7 +273,7 @@ final _accents = {
     ink: const Color(0xFF0C0B0A),
   ),
   FittinAccent.lime: _AccentTokens(
-    color: const Color(0xFFA8B89C),
+    color: const Color(0xFFB6A27C),
     ink: const Color(0xFF0A0B0A),
   ),
   FittinAccent.terracotta: _AccentTokens(
@@ -281,8 +281,8 @@ final _accents = {
     ink: const Color(0xFF1B1512),
   ),
   FittinAccent.sky: _AccentTokens(
-    color: const Color(0xFF7BAFD4),
-    ink: const Color(0xFF091017),
+    color: const Color(0xFF817FA8),
+    ink: const Color(0xFF111018),
   ),
   FittinAccent.plum: _AccentTokens(
     color: const Color(0xFFB87AA8),
@@ -302,7 +302,7 @@ final _bgs = {
     surfaceOpacity: 0.6,
     border: const Color(0xFFFFFFFF),
     borderHi: const Color(0xFFFFFFFF),
-    fg: const Color(0xFFE8ECE4),
+    fg: const Color(0xFFECE8E1),
   ),
   FittinBg.warmBlack: _BgTokens(
     bg: const Color(0xFF0C0B0A),

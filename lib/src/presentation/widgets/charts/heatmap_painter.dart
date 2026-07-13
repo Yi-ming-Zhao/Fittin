@@ -7,7 +7,7 @@ class HeatmapPainter extends CustomPainter {
 
   HeatmapPainter({
     required this.activityData,
-    this.activeColor = Colors.greenAccent,
+    this.activeColor = const Color(0xFFB69B72),
     this.daysToShow = 91, // 13 weeks
   });
 
