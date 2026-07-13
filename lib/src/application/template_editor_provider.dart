@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_plan_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
@@ -8,6 +9,7 @@ import 'package:fittin_v2/src/domain/template_validation.dart';
 final templateLibraryProvider = FutureProvider<List<StoredTemplateRecord>>((
   ref,
 ) async {
+  ref.watch(syncRefreshProvider);
   final repository = ref.watch(localPlanRepositoryProvider);
   await repository.ensureDefaultProgramSeeded();
   return repository.fetchTemplates();

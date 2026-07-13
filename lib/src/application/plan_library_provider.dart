@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_instance_repository.dart';
@@ -46,6 +47,7 @@ class PlanLibraryActionState {
 final planLibraryItemsProvider = FutureProvider<List<PlanLibraryItem>>((
   ref,
 ) async {
+  ref.watch(syncRefreshProvider);
   final planRepository = ref.watch(localPlanRepositoryProvider);
   final instanceRepository = ref.watch(localInstanceRepositoryProvider);
   await planRepository.ensureDefaultProgramSeeded();

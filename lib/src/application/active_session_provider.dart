@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
@@ -25,17 +26,21 @@ final todayWorkoutGatewayProvider = Provider<TodayWorkoutGateway>((ref) {
 final todayWorkoutSummaryProvider = FutureProvider<TodayWorkoutSummary>((
   ref,
 ) async {
+  ref.watch(syncRefreshProvider);
   final gateway = ref.watch(todayWorkoutGatewayProvider);
   return gateway.loadTodayWorkoutSummary();
 });
 
 final activeTemplateProvider = FutureProvider<PlanTemplate>((ref) async {
+  ref.watch(syncRefreshProvider);
   final gateway = ref.watch(todayWorkoutGatewayProvider);
   return gateway.loadActiveTemplate();
 });
 
 final activeSessionProvider =
     StateNotifierProvider<ActiveSessionNotifier, SessionState>((ref) {
+      ref.watch(currentUserIdProvider);
+      ref.watch(syncRefreshProvider);
       return ActiveSessionNotifier(ref);
     });
 

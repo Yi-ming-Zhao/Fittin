@@ -159,22 +159,31 @@ class PeriodizedProgramEngine extends ProgramEngine {
           : currentStageIndex;
       final nextStage = exercise.stages[nextStageIndex];
 
-      logs.add(
-        _exerciseLogFromSession(
-          stageId: currentState.currentStageId,
-          session: exerciseSession,
-        ),
+      final log = _exerciseLogFromSession(
+        stageId: currentState.currentStageId,
+        session: exerciseSession,
       );
+      logs.add(log);
+
+      final progressedState = currentStage.rules.isEmpty
+          ? currentState
+          : RuleEngine.evaluateNextWorkout(
+              currentState,
+              log,
+              currentStage.rules,
+            );
 
       final stateIndex = updatedStates.indexWhere(
         (state) => state.exerciseId == currentState.exerciseId,
       );
       updatedStates[stateIndex] = currentState.copyWith(
-        baseWeight: _resolveStageBaseWeight(
-          exercise: exercise,
-          stage: nextStage,
-          trainingMaxProfile: instance.trainingMaxProfile,
-        ),
+        baseWeight: exercise.trainingMaxLift == null
+            ? progressedState.baseWeight
+            : _resolveStageBaseWeight(
+                exercise: exercise,
+                stage: nextStage,
+                trainingMaxProfile: instance.trainingMaxProfile,
+              ),
         currentStageId: nextStage.id,
         history: [...currentState.history, session.workoutId],
       );
@@ -274,6 +283,9 @@ double _resolvePeriodizedBaseWeight({
   required TrainingState state,
   required TrainingMaxProfile trainingMaxProfile,
 }) {
+  if (exercise.trainingMaxLift == null) {
+    return state.baseWeight;
+  }
   final stage = exercise.stageById(state.currentStageId);
   return _resolveStageBaseWeight(
     exercise: exercise,

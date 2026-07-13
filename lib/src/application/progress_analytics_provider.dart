@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
@@ -102,6 +103,7 @@ class AnalyticsFormulaNotifier extends StateNotifier<OneRepMaxFormula> {
 
 final progressAnalyticsOverviewProvider =
     FutureProvider<ProgressAnalyticsOverview>((ref) async {
+      ref.watch(syncRefreshProvider);
       final repository = ref.watch(localWorkoutLogRepositoryProvider);
       final formula = ref.watch(analyticsFormulaProvider);
       final logs = await repository.fetchAllWorkoutLogs();

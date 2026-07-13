@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
+import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
@@ -58,9 +59,16 @@ class DatabaseRepository {
       templateId: TsaIntermediateSeed.templateId,
       loadTemplate: TsaIntermediateSeed.loadTemplate,
     );
+    await _syncBuiltInTemplate(
+      templateId: Powerbuilding4Day12WeekSeed.templateId,
+      loadTemplate: Powerbuilding4Day12WeekSeed.loadTemplate,
+    );
     await _purgeLegacyBuiltInInstanceIfNeeded(GzclpSeed.instanceId);
     await _purgeLegacyBuiltInInstanceIfNeeded(JackedAndTanSeed.instanceId);
     await _purgeLegacyBuiltInInstanceIfNeeded(TsaIntermediateSeed.instanceId);
+    await _purgeLegacyBuiltInInstanceIfNeeded(
+      Powerbuilding4Day12WeekSeed.instanceId,
+    );
 
     final activeInstanceId = await fetchActiveInstanceId();
     final activeInstance = activeInstanceId == null
@@ -1119,6 +1127,9 @@ class DatabaseRepository {
     }
     if (templateId == TsaIntermediateSeed.templateId) {
       return TsaIntermediateSeed.instanceId;
+    }
+    if (templateId == Powerbuilding4Day12WeekSeed.templateId) {
+      return Powerbuilding4Day12WeekSeed.instanceId;
     }
     return 'instance-$templateId';
   }

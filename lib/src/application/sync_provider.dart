@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/sync/sync_service.dart';
 
 final syncControllerProvider =
@@ -68,6 +69,7 @@ class SyncController extends StateNotifier<SyncControllerState> {
     );
     try {
       await _ref.read(syncServiceProvider).synchronize();
+      _ref.read(syncRefreshProvider.notifier).state += 1;
       state = state.copyWith(
         stage: SyncStage.synced,
         activeUserId: userId,

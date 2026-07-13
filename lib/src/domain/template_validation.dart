@@ -113,13 +113,6 @@ class TemplateValidation {
           }
 
           for (final rule in stage.rules) {
-            if (template.isPeriodized &&
-                (rule.condition == 'on_success' ||
-                    rule.condition == 'on_failure')) {
-              errors.add(
-                'Stage "$stageLabel" in exercise "$exerciseLabel" uses a linear-only rule in a periodized template.',
-              );
-            }
             for (final action in rule.actions) {
               if (!supportedActionTypes.contains(action.type)) {
                 errors.add(

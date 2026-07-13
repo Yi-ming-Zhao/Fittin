@@ -4,6 +4,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
+import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
@@ -36,6 +37,10 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     await saveTemplate(await JackedAndTanSeed.loadTemplate(), isBuiltIn: true);
     await saveTemplate(
       await TsaIntermediateSeed.loadTemplate(),
+      isBuiltIn: true,
+    );
+    await saveTemplate(
+      await Powerbuilding4Day12WeekSeed.loadTemplate(),
       isBuiltIn: true,
     );
   }
@@ -403,6 +408,8 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
         ? JackedAndTanSeed.instanceId
         : templateId == TsaIntermediateSeed.templateId
         ? TsaIntermediateSeed.instanceId
+        : templateId == Powerbuilding4Day12WeekSeed.templateId
+        ? Powerbuilding4Day12WeekSeed.instanceId
         : templateId == GzclpSeed.templateId
         ? GzclpSeed.instanceId
         : 'instance-$templateId';

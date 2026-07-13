@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
@@ -64,6 +65,7 @@ final advancedAnalyticsDataProvider =
 
 final _activeTrainingInstanceProvider =
     FutureProvider<StoredTrainingInstance?>((ref) async {
+      ref.watch(syncRefreshProvider);
       return ref.watch(databaseRepositoryProvider).fetchActiveInstance();
     });
 

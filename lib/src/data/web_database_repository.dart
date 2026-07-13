@@ -4,6 +4,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
+import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
@@ -46,6 +47,10 @@ class WebDatabaseRepository extends DatabaseRepository {
     await _syncBuiltInTemplate(
       templateId: TsaIntermediateSeed.templateId,
       loadTemplate: TsaIntermediateSeed.loadTemplate,
+    );
+    await _syncBuiltInTemplate(
+      templateId: Powerbuilding4Day12WeekSeed.templateId,
+      loadTemplate: Powerbuilding4Day12WeekSeed.loadTemplate,
     );
     final activeInstanceId = await fetchActiveInstanceId();
     final activeInstance = activeInstanceId == null
@@ -923,6 +928,9 @@ class WebDatabaseRepository extends DatabaseRepository {
     }
     if (templateId == TsaIntermediateSeed.templateId) {
       return TsaIntermediateSeed.instanceId;
+    }
+    if (templateId == Powerbuilding4Day12WeekSeed.templateId) {
+      return Powerbuilding4Day12WeekSeed.instanceId;
     }
     return 'instance-$templateId';
   }

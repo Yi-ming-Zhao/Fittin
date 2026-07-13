@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
+import 'package:fittin_v2/src/data/sync/sync_service.dart';
 
 import '../support/fake_auth_repository.dart';
 import '../support/in_memory_database_repository.dart';
@@ -32,7 +34,34 @@ class _TrackingSyncController extends SyncController {
   }
 }
 
+class _SuccessfulSyncService implements SyncService {
+  int calls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    calls += 1;
+  }
+}
+
 void main() {
+  test('successful synchronization refreshes cached data providers', () async {
+    final service = _SuccessfulSyncService();
+    final container = ProviderContainer(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('sync-user'),
+        syncServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    expect(container.read(syncRefreshProvider), 0);
+
+    await container.read(syncControllerProvider.notifier).synchronize();
+
+    expect(service.calls, 1);
+    expect(container.read(syncRefreshProvider), 1);
+  });
+
   testWidgets(
     'sync lifecycle gate hydrates restored sessions and syncs on resume',
     (WidgetTester tester) async {

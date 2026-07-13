@@ -18,7 +18,12 @@ class RuleEngine {
   ) {
     final workingSets = todayLog.sets.where((set) => set.role == 'working');
     final hasFailed = workingSets.any(
-      (set) => !set.isCompleted || set.completedReps < set.targetReps,
+      (set) =>
+          !set.isCompleted ||
+          set.completedReps < set.targetReps ||
+          (set.completedRpe != null &&
+              set.targetRpe != null &&
+              set.completedRpe! > set.targetRpe!),
     );
 
     // 2. Evaluate rules

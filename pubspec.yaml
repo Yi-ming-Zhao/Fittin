@@ -75,6 +75,7 @@ flutter:
     - assets/plans/gzclp_4day_12week.json
     - assets/plans/jacked_and_tan_2_0.json
     - assets/plans/tsa_intermediate_approach_2_0.json
+    - assets/plans/powerbuilding_4day_12week.json
     - assets/guides/set_types_en.md
     - assets/guides/set_types_zh.md
 
