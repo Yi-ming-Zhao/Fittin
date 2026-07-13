@@ -134,6 +134,37 @@ void main() {
     final updatedInstance = await repository.fetchInstance('instance-1');
     expect(updatedInstance?.states.first.baseWeight, 102.5);
   });
+
+  test('deleting a workout log removes it from local history', () async {
+    final repository = InMemoryDatabaseRepository();
+    const preState = TrainingState(
+      workoutId: 'day-1',
+      exerciseId: 'squat-session',
+      exerciseName: 'Squat',
+      baseWeight: 100,
+      currentStageId: 'stage-1',
+    );
+    final log = _buildLog(
+      completedAt: DateTime(2026, 4, 1, 10),
+      completedReps: 5,
+      preState: preState,
+      postState: preState.copyWith(baseWeight: 102.5),
+      logId: 'log-to-delete',
+    );
+    await repository.logWorkout(log);
+
+    final container = ProviderContainer(
+      overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(localWorkoutLogRepositoryProvider)
+        .deleteWorkoutLog(log.logId);
+
+    expect(await repository.fetchWorkoutLogById(log.logId), isNull);
+    expect(await repository.fetchAllWorkoutLogs(), isEmpty);
+  });
 }
 
 PlanTemplate _buildTemplate() {

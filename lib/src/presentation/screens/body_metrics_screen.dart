@@ -5,7 +5,6 @@ import 'package:fittin_v2/src/application/body_metrics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
-import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
@@ -26,7 +25,6 @@ class BodyMetricsScreen extends ConsumerWidget {
       backgroundColor: fittinTheme.bg,
       body: metricsAsync.when(
         data: (metrics) {
-          final latest = metrics.firstOrNull;
           final screenState = _BodyMetricsScreenState.fromMetrics(metrics);
 
           return DashboardPageScaffold(
@@ -46,21 +44,13 @@ class BodyMetricsScreen extends ConsumerWidget {
                 strings,
               ),
               const SizedBox(height: 16),
-              if (screenState != _BodyMetricsScreenState.empty) ...[
-                _buildStateCallout(
-                  context,
-                  fittinTheme,
-                  screenState,
-                  latest,
-                  strings,
-                ),
-                const SizedBox(height: 16),
-              ],
               DashboardSectionLabel(label: strings.currentSnapshot),
               const SizedBox(height: 16),
               _buildMetricGrid(context, fittinTheme, metrics, strings),
-              const SizedBox(height: 16),
-              _buildCheckInCta(context, fittinTheme, strings),
+              if (screenState == _BodyMetricsScreenState.populated) ...[
+                const SizedBox(height: 16),
+                _buildCheckInCta(context, fittinTheme, strings),
+              ],
               const SizedBox(height: 24),
               DashboardSectionLabel(label: strings.measurementLog),
               const SizedBox(height: 16),
@@ -96,7 +86,6 @@ class BodyMetricsScreen extends ConsumerWidget {
 
     return _BodyMetricsHeroEmptyState(
       theme: theme,
-      strings: strings,
       title: screenState == _BodyMetricsScreenState.empty
           ? strings.recordFirstCheckIn
           : strings.noWeightTrendYet,
@@ -186,92 +175,6 @@ class BodyMetricsScreen extends ConsumerWidget {
                 style: theme.uiStyle(11, theme.fgMuted),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStateCallout(
-    BuildContext context,
-    FittinTheme theme,
-    _BodyMetricsScreenState screenState,
-    BodyMetric? latest,
-    AppStrings strings,
-  ) {
-    if (screenState == _BodyMetricsScreenState.populated) {
-      return const SizedBox.shrink();
-    }
-
-    final title = screenState == _BodyMetricsScreenState.empty
-        ? strings.noBodyMeasurementsYet
-        : strings.latestCheckInIncomplete;
-    final body = screenState == _BodyMetricsScreenState.empty
-        ? strings.emptyMeasurementsCallout
-        : strings.partialMeasurementsCallout;
-    final actionLabel = screenState == _BodyMetricsScreenState.empty
-        ? strings.addMeasurement
-        : strings.completeLatestSnapshot;
-    final footer = latest == null
-        ? strings.noRecordedEntries
-        : strings.latestEntry(latest.timestamp);
-
-    return DashboardSurfaceCard(
-      radius: 24,
-      padding: const EdgeInsets.all(18),
-      highlight: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.08),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              screenState == _BodyMetricsScreenState.empty
-                  ? Icons.insights_outlined
-                  : Icons.edit_note_rounded,
-              color: theme.accent,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme
-                      .uiStyle(16, theme.fg)
-                      .copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  body,
-                  style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.4),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    FittinBtn(
-                      theme,
-                      actionLabel,
-                      icon: Icons.add_rounded,
-                      size: 'sm',
-                      variant: 'secondary',
-                    ),
-                    Text(footer, style: theme.uiStyle(12, theme.fgDim)),
-                  ],
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -563,7 +466,6 @@ enum _BodyMetricsScreenState {
 class _BodyMetricsHeroEmptyState extends StatelessWidget {
   const _BodyMetricsHeroEmptyState({
     required this.theme,
-    required this.strings,
     required this.title,
     required this.body,
     required this.actionLabel,
@@ -571,7 +473,6 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
   });
 
   final FittinTheme theme;
-  final AppStrings strings;
   final String title;
   final String body;
   final String actionLabel;
@@ -579,69 +480,56 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChartContainer(
-      title: strings.progressSurface,
-      height: 180,
-      headerAction: Text(
-        strings.heroAreaIntentionalHint,
-        style: theme.uiStyle(11, theme.fgDim).copyWith(height: 1.35),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white.withValues(alpha: 0.035),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-              child: Icon(
-                Icons.timeline_rounded,
-                color: theme.accent,
-                size: 20,
-              ),
+    return DashboardSurfaceCard(
+      key: const ValueKey('body-empty-hero'),
+      radius: 24,
+      padding: const EdgeInsets.all(18),
+      highlight: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.06),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme
-                        .uiStyle(16, theme.fg)
-                        .copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    body,
-                    style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  FittinBtn(
-                    theme,
-                    actionLabel,
-                    icon: Icons.add_rounded,
-                    size: 'sm',
-                    variant: 'secondary',
-                    onPressed: onPressed,
-                  ),
-                ],
-              ),
+            alignment: Alignment.center,
+            child: Icon(Icons.timeline_rounded, color: theme.accent, size: 19),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme
+                      .uiStyle(16, theme.fg)
+                      .copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                FittinBtn(
+                  theme,
+                  actionLabel,
+                  icon: Icons.add_rounded,
+                  size: 'sm',
+                  variant: 'secondary',
+                  onPressed: onPressed,
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

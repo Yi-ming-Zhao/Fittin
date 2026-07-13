@@ -69,7 +69,6 @@ class SyncController extends StateNotifier<SyncControllerState> {
     );
     try {
       await _ref.read(syncServiceProvider).synchronize();
-      _ref.read(syncRefreshProvider.notifier).state += 1;
       state = state.copyWith(
         stage: SyncStage.synced,
         activeUserId: userId,
@@ -79,6 +78,7 @@ class SyncController extends StateNotifier<SyncControllerState> {
     } catch (_) {
       rethrow;
     } finally {
+      _ref.read(syncRefreshProvider.notifier).state += 1;
       _isSynchronizing = false;
     }
   }

@@ -115,324 +115,83 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
         : null;
 
     return DashboardPageScaffold(
-      bottomPadding: 28,
+      scrollable: false,
+      extendBody: false,
+      safeAreaBottom: true,
+      topPadding: 12,
+      bottomPadding: 12,
       children: [
-        Row(
-          children: [
-            DashboardBackButton(theme: fittinTheme),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                compactWorkoutTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        DashboardSurfaceCard(
-          highlight: true,
-          radius: 28,
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.08),
-                    ),
-                    child: const Icon(Icons.fitness_center_rounded, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          currentExerciseName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            height: 1,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          strings.isChinese
-                              ? '第 ${resolvedSetIndex + 1} 组 / 共 ${currentExercise.sets.length} 组'
-                              : 'Set ${resolvedSetIndex + 1} / ${currentExercise.sets.length}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.62),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  _ExerciseSwitchMenu(
-                    exercises: workout.exercises,
-                    activeIndex: workout.currentExerciseIndex,
-                    localizedExercise: localizedExercise,
-                    onSelect: notifier.selectExercise,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _CompactMetaTile(
-                      label: strings.tier,
-                      value: currentExercise.tier,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: _CompactMetaTile(
-                      label: strings.isChinese ? '目标' : 'Target',
-                      value: _targetSummary(
-                        strings,
-                        currentSet,
-                        displayTargetWeight,
-                        displayUnit,
-                      ),
-                      highlight: true,
-                    ),
-                  ),
-                ],
-              ),
-              if (_supportsUnitToggle(displayUnit)) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FittinSegmented(
-                        theme: fittinTheme,
-                        options: [
-                          strings.isChinese ? '公斤' : 'kg',
-                          strings.isChinese ? '磅' : 'lb',
-                        ],
-                        value: displayUnit == LoadUnits.kg
-                            ? (strings.isChinese ? '公斤' : 'kg')
-                            : (strings.isChinese ? '磅' : 'lb'),
-                        expand: true,
-                        onChange: (selection) =>
-                            notifier.switchExerciseDisplayUnit(
-                              selection == (strings.isChinese ? '公斤' : 'kg')
-                                  ? LoadUnits.kg
-                                  : LoadUnits.lbs,
-                            ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    FittinBtn(
-                      fittinTheme,
-                      strings.isChinese ? '换算' : 'Tools',
-                      icon: Icons.calculate_rounded,
-                      onPressed: () => _openWeightTools(
-                        exerciseName: currentExerciseName,
-                        weight: displayWeight,
-                        unit: displayUnit,
-                        onApply: (value, unit) {
-                          notifier.updateWeightFromDisplayUnit(
-                            resolvedSetIndex,
-                            value,
-                            displayUnit: unit,
-                          );
-                          notifier.switchExerciseDisplayUnit(unit);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ],
+        _SessionHeader(
+          theme: fittinTheme,
+          workoutTitle: compactWorkoutTitle,
+          exerciseName: currentExerciseName,
+          tier: currentExercise.tier,
+          setIndex: resolvedSetIndex,
+          totalSets: currentExercise.sets.length,
+          displayUnit: displayUnit,
+          canSwitchUnit: _supportsUnitToggle(displayUnit),
+          onToggleUnit: () => notifier.switchExerciseDisplayUnit(
+            displayUnit == LoadUnits.kg ? LoadUnits.lbs : LoadUnits.kg,
           ),
-        ),
-        const SizedBox(height: 12),
-        if (recordingMode == WorkoutRecordingMode.card)
-          _CardSetStack(
-            strings: strings,
-            setIndex: resolvedSetIndex,
-            totalSets: currentExercise.sets.length,
-            currentSet: currentSet,
-            upcomingSets: currentExercise.sets
-                .skip(resolvedSetIndex + 1)
-                .where((set) => !set.isCompleted && !set.isSkipped)
-                .take(2)
-                .toList(),
-            displayWeight: displayWeight,
-            displayTargetWeight: displayTargetWeight,
-            displayUnit: displayUnit,
-            step: step,
-            plateBreakdown: plateBreakdown,
-            completionController: _completionController,
-            onDecreaseReps: currentSet.completedReps > 0
-                ? () => notifier.updateReps(
-                    resolvedSetIndex,
-                    currentSet.completedReps - 1,
-                  )
-                : null,
-            onIncreaseReps: () => notifier.updateReps(
-              resolvedSetIndex,
-              currentSet.completedReps + 1,
-            ),
-            onDecreaseWeight: () => notifier.updateWeightFromDisplayUnit(
-              resolvedSetIndex,
-              displayWeight - step < 0 ? 0 : displayWeight - step,
-              displayUnit: displayUnit,
-            ),
-            onIncreaseWeight: () => notifier.updateWeightFromDisplayUnit(
-              resolvedSetIndex,
-              displayWeight + step,
-              displayUnit: displayUnit,
-            ),
-            onEditWeight: () => _editWeight(
-              strings,
-              theme: fittinTheme,
-              currentValue: displayWeight,
-              displayUnit: displayUnit,
-              onSubmit: (value) => notifier.updateWeightFromDisplayUnit(
+          onOpenTools: () => _openWeightTools(
+            exerciseName: currentExerciseName,
+            weight: displayWeight,
+            unit: displayUnit,
+            onApply: (value, unit) {
+              notifier.updateWeightFromDisplayUnit(
                 resolvedSetIndex,
                 value,
-                displayUnit: displayUnit,
-              ),
-            ),
-            onEditRpe: () => _editRpe(
-              strings,
-              theme: fittinTheme,
-              currentValue: currentSet.completedRpe ?? currentSet.targetRpe,
-              onSubmit: (value) =>
-                  notifier.updateCompletedRpe(resolvedSetIndex, value),
-            ),
-            onComplete: () => _handleCompleteSet(notifier, resolvedSetIndex),
-            onCancel: () => notifier.cancelSet(resolvedSetIndex),
-          )
-        else
-          DashboardSurfaceCard(
-            key: const ValueKey('traditional-set-logger'),
-            highlight: true,
-            radius: 30,
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    _SquareActionButton(
-                      icon: Icons.remove_rounded,
-                      onTap: currentSet.completedReps > 0
-                          ? () => notifier.updateReps(
-                              resolvedSetIndex,
-                              currentSet.completedReps - 1,
-                            )
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => notifier.updateReps(
-                          resolvedSetIndex,
-                          currentSet.completedReps + 1,
-                        ),
-                        child: Container(
-                          height: 126,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Colors.white.withValues(alpha: 0.96),
-                                Colors.white.withValues(alpha: 0.8),
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.18,
-                                ),
-                                blurRadius: 28,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.fitness_center_rounded,
-                                size: 20,
-                                color: Colors.black.withValues(alpha: 0.76),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '+1',
-                                style: theme.textTheme.displaySmall?.copyWith(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -2,
-                                ),
-                              ),
-                              Text(
-                                strings.isChinese ? '次数' : 'Reps',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: Colors.black.withValues(alpha: 0.76),
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    const SizedBox(width: 74),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Center(
-                  child: _AnimatedCheckButton(
-                    key: const ValueKey('complete-current-set'),
-                    controller: _completionController,
-                    onTap: () => _handleCompleteSet(notifier, resolvedSetIndex),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _InfoPanel(
-                  label: strings.isChinese ? '当前次数' : 'Current Reps',
-                  primary: '${currentSet.completedReps}',
-                  secondary: currentSet.isAmrap
-                      ? 'AMRAP'
-                      : (strings.isChinese
-                            ? '目标 ${currentSet.targetReps}'
-                            : 'Target ${currentSet.targetReps}'),
-                ),
-                const SizedBox(height: 12),
-                _WeightEntryCard(
+                displayUnit: unit,
+              );
+              notifier.switchExerciseDisplayUnit(unit);
+            },
+          ),
+          exercises: workout.exercises,
+          activeExerciseIndex: workout.currentExerciseIndex,
+          localizedExercise: localizedExercise,
+          onSelectExercise: notifier.selectExercise,
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: recordingMode == WorkoutRecordingMode.card
+              ? _CardSetStack(
+                  theme: fittinTheme,
                   strings: strings,
+                  setIndex: resolvedSetIndex,
+                  totalSets: currentExercise.sets.length,
+                  currentSet: currentSet,
+                  upcomingSets: currentExercise.sets
+                      .skip(resolvedSetIndex + 1)
+                      .where((set) => !set.isCompleted && !set.isSkipped)
+                      .take(2)
+                      .toList(),
                   displayWeight: displayWeight,
+                  displayTargetWeight: displayTargetWeight,
                   displayUnit: displayUnit,
                   step: step,
-                  onDecrease: () => notifier.updateWeightFromDisplayUnit(
+                  plateBreakdown: plateBreakdown,
+                  completionController: _completionController,
+                  onDecreaseReps: currentSet.completedReps > 0
+                      ? () => notifier.updateReps(
+                          resolvedSetIndex,
+                          currentSet.completedReps - 1,
+                        )
+                      : null,
+                  onIncreaseReps: () => notifier.updateReps(
+                    resolvedSetIndex,
+                    currentSet.completedReps + 1,
+                  ),
+                  onDecreaseWeight: () => notifier.updateWeightFromDisplayUnit(
                     resolvedSetIndex,
                     displayWeight - step < 0 ? 0 : displayWeight - step,
                     displayUnit: displayUnit,
                   ),
-                  onIncrease: () => notifier.updateWeightFromDisplayUnit(
+                  onIncreaseWeight: () => notifier.updateWeightFromDisplayUnit(
                     resolvedSetIndex,
                     displayWeight + step,
                     displayUnit: displayUnit,
                   ),
-                  onTap: () => _editWeight(
+                  onEditWeight: () => _editWeight(
                     strings,
                     theme: fittinTheme,
                     currentValue: displayWeight,
@@ -443,168 +202,156 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                       displayUnit: displayUnit,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _InfoPanel(
-                        label: strings.isChinese ? '目标 RPE' : 'Target RPE',
-                        primary: currentSet.targetRpe == null
-                            ? (strings.isChinese ? '未设置' : 'Not set')
-                            : currentSet.targetRpe!.toStringAsFixed(
-                                currentSet.targetRpe!.truncateToDouble() ==
-                                        currentSet.targetRpe
-                                    ? 0
-                                    : 1,
-                              ),
-                        secondary: strings.isChinese ? '计划预填' : 'Planned',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _RpeEditorCard(
-                        strings: strings,
-                        currentRpe: currentSet.completedRpe,
-                        onDecrease: () => notifier.updateCompletedRpe(
-                          resolvedSetIndex,
-                          (currentSet.completedRpe ??
-                                  currentSet.targetRpe ??
-                                  7) -
-                              0.5,
-                        ),
-                        onIncrease: () => notifier.updateCompletedRpe(
-                          resolvedSetIndex,
-                          (currentSet.completedRpe ??
-                                  currentSet.targetRpe ??
-                                  6.5) +
-                              0.5,
-                        ),
-                        onTap: () => _editRpe(
-                          strings,
-                          theme: fittinTheme,
-                          currentValue:
-                              currentSet.completedRpe ?? currentSet.targetRpe,
-                          onSubmit: (value) => notifier.updateCompletedRpe(
-                            resolvedSetIndex,
-                            value,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (plateBreakdown != null) ...[
-                  const SizedBox(height: 12),
-                  _PlateBreakdownCard(
-                    strings: strings,
-                    breakdown: plateBreakdown,
+                  onEditRpe: () => _editRpe(
+                    strings,
+                    theme: fittinTheme,
+                    currentValue:
+                        currentSet.completedRpe ?? currentSet.targetRpe,
+                    onSubmit: (value) =>
+                        notifier.updateCompletedRpe(resolvedSetIndex, value),
                   ),
-                ],
-              ],
+                  onComplete: () =>
+                      _handleCompleteSet(notifier, resolvedSetIndex),
+                  onCancel: () => notifier.cancelSet(resolvedSetIndex),
+                )
+              : _TraditionalSetLogger(
+                  strings: strings,
+                  setIndex: resolvedSetIndex,
+                  totalSets: currentExercise.sets.length,
+                  currentSet: currentSet,
+                  displayWeight: displayWeight,
+                  displayTargetWeight: displayTargetWeight,
+                  displayUnit: displayUnit,
+                  step: step,
+                  plateBreakdown: plateBreakdown,
+                  completionController: _completionController,
+                  onDecreaseReps: currentSet.completedReps > 0
+                      ? () => notifier.updateReps(
+                          resolvedSetIndex,
+                          currentSet.completedReps - 1,
+                        )
+                      : null,
+                  onIncreaseReps: () => notifier.updateReps(
+                    resolvedSetIndex,
+                    currentSet.completedReps + 1,
+                  ),
+                  onDecreaseWeight: () => notifier.updateWeightFromDisplayUnit(
+                    resolvedSetIndex,
+                    displayWeight - step < 0 ? 0 : displayWeight - step,
+                    displayUnit: displayUnit,
+                  ),
+                  onIncreaseWeight: () => notifier.updateWeightFromDisplayUnit(
+                    resolvedSetIndex,
+                    displayWeight + step,
+                    displayUnit: displayUnit,
+                  ),
+                  onEditWeight: () => _editWeight(
+                    strings,
+                    theme: fittinTheme,
+                    currentValue: displayWeight,
+                    displayUnit: displayUnit,
+                    onSubmit: (value) => notifier.updateWeightFromDisplayUnit(
+                      resolvedSetIndex,
+                      value,
+                      displayUnit: displayUnit,
+                    ),
+                  ),
+                  onEditRpe: () => _editRpe(
+                    strings,
+                    theme: fittinTheme,
+                    currentValue:
+                        currentSet.completedRpe ?? currentSet.targetRpe,
+                    onSubmit: (value) =>
+                        notifier.updateCompletedRpe(resolvedSetIndex, value),
+                  ),
+                  onComplete: () =>
+                      _handleCompleteSet(notifier, resolvedSetIndex),
+                ),
+        ),
+        const SizedBox(height: 10),
+        _SetProgressRail(
+          sets: currentExercise.sets,
+          activeIndex: resolvedSetIndex,
+          onSelect: notifier.selectSet,
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 48,
+          child: PremiumPrimaryButton(
+            label: sessionState.isLoading
+                ? strings.saving
+                : strings.concludeWorkout,
+            icon: Icons.check_circle_outline_rounded,
+            loading: sessionState.isLoading,
+            onPressed: () => _confirmAndConclude(
+              strings: strings,
+              theme: fittinTheme,
+              notifier: notifier,
             ),
           ),
-        const SizedBox(height: 12),
-        DashboardSurfaceCard(
-          radius: 28,
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DashboardSectionLabel(
-                label: strings.isChinese ? '组进度' : 'Set Progress',
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  for (var i = 0; i < currentExercise.sets.length; i++) ...[
-                    _SetProgressDot(
-                      index: i,
-                      set: currentExercise.sets[i],
-                      active: i == resolvedSetIndex,
-                      onTap: () => notifier.selectSet(i),
-                    ),
-                    if (i != currentExercise.sets.length - 1)
-                      Expanded(
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          height: 2,
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
-                      ),
-                  ],
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        PremiumPrimaryButton(
-          label: sessionState.isLoading
-              ? strings.saving
-              : strings.concludeWorkout,
-          icon: Icons.check_circle_outline_rounded,
-          loading: sessionState.isLoading,
-          onPressed: () async {
-            final confirmed = await showDialog<bool>(
-              context: context,
-              builder: (dialogContext) => AlertDialog(
-                backgroundColor: fittinTheme.surface,
-                surfaceTintColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(fittinTheme.radius),
-                  side: BorderSide(color: fittinTheme.border),
-                ),
-                title: Text(
-                  strings.confirmConcludeWorkoutTitle,
-                  style: fittinTheme.displayStyle(22, fittinTheme.fg),
-                ),
-                content: Text(
-                  strings.confirmConcludeWorkoutMessage,
-                  style: fittinTheme
-                      .uiStyle(14, fittinTheme.fgDim)
-                      .copyWith(height: 1.45),
-                ),
-                actions: [
-                  FittinBtn(
-                    fittinTheme,
-                    strings.cancel,
-                    size: 'sm',
-                    variant: 'secondary',
-                    onPressed: () => Navigator.of(dialogContext).pop(false),
-                  ),
-                  FittinBtn(
-                    fittinTheme,
-                    strings.concludeWorkout,
-                    size: 'sm',
-                    onPressed: () => Navigator.of(dialogContext).pop(true),
-                  ),
-                ],
-              ),
-            );
-            if (confirmed != true) {
-              return;
-            }
-            final success = await notifier.concludeSession();
-            if (!context.mounted) return;
-            if (success) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(strings.workoutSaved)));
-              Navigator.of(context).pop();
-            } else {
-              final latestState = ref.read(activeSessionProvider);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    latestState.errorMessage ?? 'Unable to conclude workout.',
-                  ),
-                ),
-              );
-            }
-          },
         ),
       ],
+    );
+  }
+
+  Future<void> _confirmAndConclude({
+    required AppStrings strings,
+    required FittinTheme theme,
+    required ActiveSessionNotifier notifier,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: theme.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(theme.radius),
+          side: BorderSide(color: theme.border),
+        ),
+        title: Text(
+          strings.confirmConcludeWorkoutTitle,
+          style: theme.displayStyle(22, theme.fg),
+        ),
+        content: Text(
+          strings.confirmConcludeWorkoutMessage,
+          style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.45),
+        ),
+        actions: [
+          FittinBtn(
+            theme,
+            strings.cancel,
+            size: 'sm',
+            variant: 'secondary',
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+          ),
+          FittinBtn(
+            theme,
+            strings.concludeWorkout,
+            size: 'sm',
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) {
+      return;
+    }
+    final success = await notifier.concludeSession();
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.workoutSaved)));
+      Navigator.of(context).pop();
+      return;
+    }
+    final latestState = ref.read(activeSessionProvider);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          latestState.errorMessage ?? 'Unable to conclude workout.',
+        ),
+      ),
     );
   }
 
@@ -834,111 +581,356 @@ String _targetSummary(
   return '${_formatDisplayWeight(displayTargetWeight, displayUnit)} · $reps$rpe';
 }
 
-class _CompactMetaTile extends StatelessWidget {
-  const _CompactMetaTile({
-    required this.label,
-    required this.value,
-    this.highlight = false,
+class _SessionHeader extends StatelessWidget {
+  const _SessionHeader({
+    required this.theme,
+    required this.workoutTitle,
+    required this.exerciseName,
+    required this.tier,
+    required this.setIndex,
+    required this.totalSets,
+    required this.displayUnit,
+    required this.canSwitchUnit,
+    required this.onToggleUnit,
+    required this.onOpenTools,
+    required this.exercises,
+    required this.activeExerciseIndex,
+    required this.localizedExercise,
+    required this.onSelectExercise,
   });
 
-  final String label;
-  final String value;
-  final bool highlight;
+  final FittinTheme theme;
+  final String workoutTitle;
+  final String exerciseName;
+  final String tier;
+  final int setIndex;
+  final int totalSets;
+  final String displayUnit;
+  final bool canSwitchUnit;
+  final VoidCallback onToggleUnit;
+  final VoidCallback onOpenTools;
+  final List<ExerciseSessionState> exercises;
+  final int activeExerciseIndex;
+  final String Function(ExerciseSessionState) localizedExercise;
+  final ValueChanged<int> onSelectExercise;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Colors.white.withValues(alpha: highlight ? 0.08 : 0.04),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: highlight ? 0.12 : 0.08),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        DashboardBackButton(theme: theme),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FittinEyebrow(theme, workoutTitle),
+              const SizedBox(height: 3),
+              Text(
+                exerciseName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.displayStyle(24, theme.fg).copyWith(height: 1),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$tier · SET ${setIndex + 1} / $totalSets',
+                style: theme.uiStyle(11, theme.fgMuted, FontWeight.w600),
+              ),
+            ],
+          ),
+        ),
+        if (canSwitchUnit)
+          _HeaderTextButton(
+            key: const ValueKey('session-unit-toggle'),
+            label: displayUnit == LoadUnits.kg ? 'KG' : 'LB',
+            onTap: onToggleUnit,
+          ),
+        const SizedBox(width: 6),
+        _HeaderIconButton(
+          key: const ValueKey('session-weight-tools'),
+          icon: Icons.calculate_outlined,
+          tooltip: 'Weight tools',
+          onTap: onOpenTools,
+        ),
+        const SizedBox(width: 6),
+        _ExerciseSwitchMenu(
+          exercises: exercises,
+          activeIndex: activeExerciseIndex,
+          localizedExercise: localizedExercise,
+          onSelect: onSelectExercise,
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderTextButton extends StatelessWidget {
+  const _HeaderTextButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.8,
+          ),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Icon(icon, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+class _SetProgressRail extends StatelessWidget {
+  const _SetProgressRail({
+    required this.sets,
+    required this.activeIndex,
+    required this.onSelect,
+  });
+
+  final List<SessionSetState> sets;
+  final int activeIndex;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 28,
+      child: Row(
         children: [
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.52),
-              fontWeight: FontWeight.w700,
+          for (var index = 0; index < sets.length; index++) ...[
+            Expanded(
+              child: InkWell(
+                key: ValueKey('session-set-progress-$index'),
+                onTap: () => onSelect(index),
+                borderRadius: BorderRadius.circular(99),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  height: 6,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(99),
+                    color: sets[index].isCompleted
+                        ? Colors.white.withValues(alpha: 0.9)
+                        : sets[index].isSkipped
+                        ? const Color(0xFFB77A70).withValues(alpha: 0.7)
+                        : index == activeIndex
+                        ? Colors.white.withValues(alpha: 0.38)
+                        : Colors.white.withValues(alpha: 0.1),
+                    border: index == activeIndex
+                        ? Border.all(
+                            color: Colors.white.withValues(alpha: 0.52),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+            if (index != sets.length - 1) const SizedBox(width: 6),
+          ],
         ],
       ),
     );
   }
 }
 
-class _InfoPanel extends StatelessWidget {
-  const _InfoPanel({
-    required this.label,
-    required this.primary,
-    required this.secondary,
+class _TraditionalSetLogger extends StatelessWidget {
+  const _TraditionalSetLogger({
+    required this.strings,
+    required this.setIndex,
+    required this.totalSets,
+    required this.currentSet,
+    required this.displayWeight,
+    required this.displayTargetWeight,
+    required this.displayUnit,
+    required this.step,
+    required this.plateBreakdown,
+    required this.completionController,
+    required this.onDecreaseReps,
+    required this.onIncreaseReps,
+    required this.onDecreaseWeight,
+    required this.onIncreaseWeight,
+    required this.onEditWeight,
+    required this.onEditRpe,
+    required this.onComplete,
   });
 
-  final String label;
-  final String primary;
-  final String secondary;
+  final AppStrings strings;
+  final int setIndex;
+  final int totalSets;
+  final SessionSetState currentSet;
+  final double displayWeight;
+  final double displayTargetWeight;
+  final String displayUnit;
+  final double step;
+  final PlateBreakdownResult? plateBreakdown;
+  final AnimationController completionController;
+  final VoidCallback? onDecreaseReps;
+  final VoidCallback onIncreaseReps;
+  final VoidCallback onDecreaseWeight;
+  final VoidCallback onIncreaseWeight;
+  final VoidCallback onEditWeight;
+  final VoidCallback onEditRpe;
+  final VoidCallback onComplete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
+    return DashboardSurfaceCard(
+      key: const ValueKey('traditional-set-logger'),
+      highlight: true,
+      radius: 28,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.54),
-                    fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              Text(
+                strings.isChinese
+                    ? '第 ${setIndex + 1} / $totalSets 组'
+                    : 'SET ${setIndex + 1} / $totalSets',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.56),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                _targetSummary(
+                  strings,
+                  currentSet,
+                  displayTargetWeight,
+                  displayUnit,
+                ),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _CardMetric(
+                  label: strings.isChinese ? '完成次数' : 'REPS',
+                  value: '${currentSet.completedReps}',
+                  onDecrease: onDecreaseReps,
+                  onIncrease: onIncreaseReps,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  key: const ValueKey('current-weight-editor'),
+                  onTap: onEditWeight,
+                  borderRadius: BorderRadius.circular(20),
+                  child: _CardMetric(
+                    label: displayUnit == LoadUnits.kg ? 'KG' : 'LB',
+                    value: _formatWeightValue(displayWeight),
+                    onDecrease: onDecreaseWeight,
+                    onIncrease: onIncreaseWeight,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  primary,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -2,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          InkWell(
+            key: const ValueKey('current-rpe-editor'),
+            onTap: onEditRpe,
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    strings.isChinese ? '实际 RPE' : 'PERFORMED RPE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-              ],
+                  const Spacer(),
+                  Text(
+                    '${currentSet.completedRpe ?? currentSet.targetRpe ?? '—'}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          Text(
-            secondary,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.end,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.72),
-              fontWeight: FontWeight.w700,
-            ),
+          if (plateBreakdown != null) ...[
+            const Spacer(),
+            _BarbellGraphic(breakdown: plateBreakdown!, height: 58),
+          ] else
+            const Spacer(),
+          _AnimatedCheckButton(
+            key: const ValueKey('complete-current-set'),
+            controller: completionController,
+            onTap: onComplete,
+            size: 58,
           ),
         ],
       ),
@@ -948,6 +940,7 @@ class _InfoPanel extends StatelessWidget {
 
 class _CardSetStack extends StatefulWidget {
   const _CardSetStack({
+    required this.theme,
     required this.strings,
     required this.setIndex,
     required this.totalSets,
@@ -969,6 +962,7 @@ class _CardSetStack extends StatefulWidget {
     required this.onCancel,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final int setIndex;
   final int totalSets;
@@ -994,345 +988,383 @@ class _CardSetStack extends StatefulWidget {
 }
 
 class _CardSetStackState extends State<_CardSetStack> {
-  static const _cardHeight = 390.0;
-  Offset _drag = Offset.zero;
+  static const _commitDistance = 56.0;
+  double _dragX = 0;
   bool _animate = false;
   bool _committing = false;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dragProgress = (_drag.distance / 220).clamp(0.0, 1.0);
-    final leftProgress = (-_drag.dx / 120).clamp(0.0, 1.0);
-    final downProgress = (_drag.dy / 130).clamp(0.0, 1.0);
-    final transform = Matrix4.translationValues(_drag.dx, _drag.dy, 0)
-      ..rotateZ(_drag.dx / 1500);
+    final dragProgress = (_dragX.abs() / _commitDistance).clamp(0.0, 1.0);
+    final leftProgress = (-_dragX / _commitDistance).clamp(0.0, 1.0);
+    final rightProgress = (_dragX / _commitDistance).clamp(0.0, 1.0);
+    final activeColor = leftProgress >= rightProgress
+        ? widget.theme.accent
+        : const Color(0xFFB77A70);
+    final transform = Matrix4.translationValues(
+      _dragX,
+      (_dragX.abs() / 42).clamp(0, 5),
+      0,
+    )..rotateZ(_dragX / 1650);
 
-    return SizedBox(
-      height: _cardHeight + 28,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (var depth = widget.upcomingSets.length; depth >= 1; depth--)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 120),
-              curve: Curves.easeOut,
-              left: 10.0 * depth * (1 - dragProgress * 0.45),
-              right: 10.0 * depth * (1 - dragProgress * 0.45),
-              top: 13.0 * depth * (1 - dragProgress * 0.55),
-              height: _cardHeight,
-              child: _StackBackCard(
-                set: widget.upcomingSets[depth - 1],
-                setNumber: widget.setIndex + depth + 1,
-                displayUnit: widget.displayUnit,
-                emphasis: 1 - depth * 0.22 + dragProgress * 0.18,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const bottomReveal = 20.0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned.fill(
+              bottom: bottomReveal,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Opacity(
+                        opacity: rightProgress,
+                        child: _GestureStamp(
+                          label: widget.strings.isChinese ? '跳过' : 'SKIP',
+                          icon: Icons.redo_rounded,
+                          color: const Color(0xFFB77A70),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Opacity(
+                        opacity: leftProgress,
+                        child: _GestureStamp(
+                          label: widget.strings.isChinese ? '完成' : 'DONE',
+                          icon: Icons.check_rounded,
+                          color: widget.theme.accent,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          Semantics(
-            label: widget.strings.isChinese
-                ? '当前第 ${widget.setIndex + 1} 组，左滑完成，下滑取消'
-                : 'Current set ${widget.setIndex + 1}. Swipe left to finish or down to cancel.',
-            child: GestureDetector(
-              key: const ValueKey('active-set-card'),
-              behavior: HitTestBehavior.opaque,
-              onPanUpdate: _committing
-                  ? null
-                  : (details) {
-                      setState(() {
-                        _animate = false;
-                        _drag += details.delta;
-                      });
-                    },
-              onPanEnd: _committing ? null : (_) => _resolveDrag(),
-              onPanCancel: _committing ? null : _resetDrag,
-              child: AnimatedContainer(
-                duration: _animate
-                    ? const Duration(milliseconds: 190)
-                    : Duration.zero,
+            for (var depth = widget.upcomingSets.length; depth >= 1; depth--)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 170),
                 curve: Curves.easeOutCubic,
-                height: _cardHeight,
-                transform: transform,
-                transformAlignment: Alignment.center,
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.colorScheme.primary.withValues(alpha: 0.26),
-                      const Color(0xFF151619),
-                      const Color(0xFF0B0C0E),
-                    ],
-                    stops: const [0, 0.42, 1],
+                left:
+                    (depth.isEven ? 7.0 : 13.0) * depth -
+                    dragProgress * depth * 3,
+                right:
+                    (depth.isEven ? 13.0 : 7.0) * depth -
+                    dragProgress * depth * 3,
+                top: 9.0 * depth - dragProgress * depth * 3,
+                bottom: bottomReveal - depth * 2,
+                child: Transform.rotate(
+                  angle: depth.isEven ? -0.014 * depth : 0.012 * depth,
+                  child: _StackBackCard(
+                    set: widget.upcomingSets[depth - 1],
+                    setNumber: widget.setIndex + depth + 1,
+                    displayUnit: widget.displayUnit,
+                    emphasis: 1 - depth * 0.2 + dragProgress * 0.16,
                   ),
-                  border: Border.all(
-                    color: Color.lerp(
-                      Colors.white.withValues(alpha: 0.14),
-                      leftProgress >= downProgress
-                          ? const Color(0xFF9CE8BF)
-                          : const Color(0xFFFFB4A8),
-                      (leftProgress > downProgress
-                              ? leftProgress
-                              : downProgress) *
-                          0.75,
-                    )!,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.36),
-                      blurRadius: 30,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
                 ),
-                child: Column(
-                  children: [
-                    Row(
+              ),
+            Positioned.fill(
+              bottom: bottomReveal,
+              child: Semantics(
+                label: widget.strings.isChinese
+                    ? '当前第 ${widget.setIndex + 1} 组，左滑完成，右滑跳过'
+                    : 'Current set ${widget.setIndex + 1}. Swipe left to finish or right to skip.',
+                child: GestureDetector(
+                  key: const ValueKey('active-set-card'),
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragUpdate: _committing
+                      ? null
+                      : (details) {
+                          setState(() {
+                            _animate = false;
+                            _dragX += details.delta.dx;
+                          });
+                        },
+                  onHorizontalDragEnd: _committing ? null : _resolveDrag,
+                  onHorizontalDragCancel: _committing ? null : _resetDrag,
+                  child: AnimatedContainer(
+                    duration: _animate
+                        ? const Duration(milliseconds: 180)
+                        : Duration.zero,
+                    curve: Curves.easeOutCubic,
+                    transform: transform,
+                    transformAlignment: Alignment.center,
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          widget.theme.surfaceHi.withValues(alpha: 0.72),
+                          widget.theme.surfaceSolid,
+                          widget.theme.bgDeep,
+                        ],
+                        stops: const [0, 0.5, 1],
+                      ),
+                      border: Border.all(
+                        color: Color.lerp(
+                          widget.theme.borderHi,
+                          activeColor,
+                          (leftProgress > rightProgress
+                                  ? leftProgress
+                                  : rightProgress) *
+                              0.7,
+                        )!,
+                        width: 0.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.42),
+                          blurRadius: 30,
+                          offset: const Offset(0, 16),
+                        ),
+                        BoxShadow(
+                          color: widget.theme.fg.withValues(alpha: 0.035),
+                          blurRadius: 0,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
                       children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: widget.theme.borderHi,
+                                ),
+                              ),
+                              child: Text(
+                                widget.strings.isChinese
+                                    ? '第 ${widget.setIndex + 1} / ${widget.totalSets} 组'
+                                    : 'SET ${widget.setIndex + 1} / ${widget.totalSets}',
+                                style: widget.theme
+                                    .uiStyle(
+                                      10,
+                                      widget.theme.fgDim,
+                                      FontWeight.w700,
+                                    )
+                                    .copyWith(letterSpacing: 0.7),
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(
+                              Icons.keyboard_double_arrow_left_rounded,
+                              size: 17,
+                              color: widget.theme.accent.withValues(
+                                alpha: 0.72,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              widget.strings.isChinese ? '完成' : 'DONE',
+                              style: widget.theme.uiStyle(
+                                9,
+                                widget.theme.fgMuted,
+                                FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              widget.strings.isChinese ? '跳过' : 'SKIP',
+                              style: widget.theme.uiStyle(
+                                9,
+                                widget.theme.fgMuted,
+                                FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            Icon(
+                              Icons.keyboard_double_arrow_right_rounded,
+                              size: 17,
+                              color: const Color(
+                                0xFFB77A70,
+                              ).withValues(alpha: 0.78),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _CardMetric(
+                                label: widget.strings.isChinese
+                                    ? '完成次数'
+                                    : 'REPS',
+                                value: '${widget.currentSet.completedReps}',
+                                onDecrease: widget.onDecreaseReps,
+                                onIncrease: widget.onIncreaseReps,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _CardTarget(
+                                theme: widget.theme,
+                                strings: widget.strings,
+                                set: widget.currentSet,
+                                targetWeight: widget.displayTargetWeight,
+                                unit: widget.displayUnit,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
-                          ),
+                          height: 58,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(999),
+                            color: widget.theme.fg.withValues(alpha: 0.045),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: widget.theme.border),
                           ),
-                          child: Text(
-                            widget.strings.isChinese
-                                ? '第 ${widget.setIndex + 1} / ${widget.totalSets} 组'
-                                : 'SET ${widget.setIndex + 1} / ${widget.totalSets}',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.7,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Icon(
-                          Icons.swipe_left_alt_rounded,
-                          size: 18,
-                          color: const Color(
-                            0xFF9CE8BF,
-                          ).withValues(alpha: 0.82),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.south_rounded,
-                          size: 16,
-                          color: const Color(
-                            0xFFFFB4A8,
-                          ).withValues(alpha: 0.82),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _CardMetric(
-                            label: widget.strings.isChinese ? '完成次数' : 'REPS',
-                            value: '${widget.currentSet.completedReps}',
-                            onDecrease: widget.onDecreaseReps,
-                            onIncrease: widget.onIncreaseReps,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _CardTarget(
-                            strings: widget.strings,
-                            set: widget.currentSet,
-                            targetWeight: widget.displayTargetWeight,
-                            unit: widget.displayUnit,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Container(
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            onPressed: widget.onDecreaseWeight,
-                            icon: const Icon(Icons.remove_rounded),
-                          ),
-                          Expanded(
-                            child: InkWell(
-                              key: const ValueKey('current-weight-editor'),
-                              onTap: widget.onEditWeight,
-                              borderRadius: BorderRadius.circular(16),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _formatDisplayWeight(
-                                      widget.displayWeight,
-                                      widget.displayUnit,
-                                    ),
-                                    style: theme.textTheme.titleLarge?.copyWith(
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1.1,
-                                      height: 1,
-                                    ),
-                                  ),
-                                  Text(
-                                    widget.strings.isChinese
-                                        ? '点按精确修改'
-                                        : 'Tap for exact weight',
-                                    style: theme.textTheme.labelSmall?.copyWith(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.5,
+                          child: Row(
+                            children: [
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                onPressed: widget.onDecreaseWeight,
+                                icon: const Icon(Icons.remove_rounded),
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  key: const ValueKey('current-weight-editor'),
+                                  onTap: widget.onEditWeight,
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Center(
+                                    child: Text(
+                                      _formatDisplayWeight(
+                                        widget.displayWeight,
+                                        widget.displayUnit,
                                       ),
-                                      fontSize: 10,
-                                      height: 1,
+                                      style: widget.theme.numStyle(
+                                        24,
+                                        widget.theme.fg,
+                                      ),
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: widget.onIncreaseWeight,
-                            icon: const Icon(Icons.add_rounded),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 9),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.strings.isChinese
-                                ? '目标 ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} 次'
-                                : 'Target ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} reps',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.66),
-                              fontWeight: FontWeight.w700,
-                            ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                onPressed: widget.onIncreaseWeight,
+                                icon: const Icon(Icons.add_rounded),
+                              ),
+                            ],
                           ),
                         ),
-                        InkWell(
-                          key: const ValueKey('current-rpe-editor'),
-                          onTap: widget.onEditRpe,
-                          borderRadius: BorderRadius.circular(999),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 7,
-                            ),
-                            child: Text(
-                              'RPE ${widget.currentSet.completedRpe ?? widget.currentSet.targetRpe ?? '—'}',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.strings.isChinese
+                                    ? '目标 ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} 次'
+                                    : 'Target ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} reps',
+                                style: widget.theme.uiStyle(
+                                  12,
+                                  widget.theme.fgDim,
+                                  FontWeight.w600,
+                                ),
                               ),
                             ),
+                            InkWell(
+                              key: const ValueKey('current-rpe-editor'),
+                              onTap: widget.onEditRpe,
+                              borderRadius: BorderRadius.circular(999),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 7,
+                                ),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(999),
+                                  border: Border.all(
+                                    color: widget.theme.border,
+                                  ),
+                                ),
+                                child: Text(
+                                  'RPE ${widget.currentSet.completedRpe ?? widget.currentSet.targetRpe ?? '—'}',
+                                  style: widget.theme.uiStyle(
+                                    12,
+                                    widget.theme.fg,
+                                    FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (widget.plateBreakdown != null) ...[
+                          const Spacer(),
+                          _BarbellGraphic(
+                            breakdown: widget.plateBreakdown!,
+                            height: 58,
+                          ),
+                        ] else
+                          const Spacer(),
+                        SizedBox(
+                          height: 56,
+                          child: Stack(
+                            children: [
+                              Align(
+                                alignment: Alignment.center,
+                                child: _AnimatedCheckButton(
+                                  key: const ValueKey('complete-current-set'),
+                                  controller: widget.completionController,
+                                  onTap: widget.onComplete,
+                                  size: 56,
+                                ),
+                              ),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: IconButton.filledTonal(
+                                  key: const ValueKey('cancel-current-set'),
+                                  tooltip: widget.strings.isChinese
+                                      ? '跳过当前组'
+                                      : 'Skip current set',
+                                  onPressed: widget.onCancel,
+                                  icon: const Icon(Icons.redo_rounded),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    if (widget.plateBreakdown != null) ...[
-                      const SizedBox(height: 6),
-                      _BarbellGraphic(
-                        breakdown: widget.plateBreakdown!,
-                        height: 43,
-                      ),
-                    ] else
-                      const Spacer(),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 56,
-                      child: Stack(
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton.filledTonal(
-                              key: const ValueKey('cancel-current-set'),
-                              tooltip: widget.strings.isChinese
-                                  ? '取消当前组'
-                                  : 'Cancel current set',
-                              onPressed: widget.onCancel,
-                              icon: const Icon(Icons.south_rounded),
-                            ),
-                          ),
-                          Align(
-                            alignment: Alignment.center,
-                            child: _AnimatedCheckButton(
-                              key: const ValueKey('complete-current-set'),
-                              controller: widget.completionController,
-                              onTap: widget.onComplete,
-                              size: 56,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          IgnorePointer(
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Opacity(
-                opacity: leftProgress,
-                child: _GestureStamp(
-                  label: widget.strings.isChinese ? '完成' : 'DONE',
-                  icon: Icons.check_rounded,
-                  color: const Color(0xFF9CE8BF),
-                ),
-              ),
-            ),
-          ),
-          IgnorePointer(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Opacity(
-                opacity: downProgress,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 42),
-                  child: _GestureStamp(
-                    label: widget.strings.isChinese ? '取消' : 'SKIP',
-                    icon: Icons.south_rounded,
-                    color: const Color(0xFFFFB4A8),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 
-  Future<void> _resolveDrag() async {
-    final horizontal = _drag.dx.abs();
-    final vertical = _drag.dy.abs();
-    final completes = _drag.dx < -96 && horizontal > vertical * 1.12;
-    final cancels = _drag.dy > 110 && vertical > horizontal * 1.12;
-    if (!completes && !cancels) {
+  Future<void> _resolveDrag(DragEndDetails details) async {
+    final projected = _dragX + details.velocity.pixelsPerSecond.dx * 0.06;
+    final completes = projected <= -_commitDistance;
+    final skips = projected >= _commitDistance;
+    if (!completes && !skips) {
       _resetDrag();
       return;
     }
-
     setState(() {
       _committing = true;
       _animate = true;
-      _drag = completes
-          ? Offset(-MediaQuery.sizeOf(context).width * 1.3, _drag.dy)
-          : Offset(_drag.dx, MediaQuery.sizeOf(context).height * 0.9);
+      _dragX = (completes ? -1 : 1) * MediaQuery.sizeOf(context).width * 1.25;
     });
-    await Future<void>.delayed(const Duration(milliseconds: 190));
+    await Future<void>.delayed(const Duration(milliseconds: 180));
     if (completes) {
       widget.onComplete();
     } else {
@@ -1340,7 +1372,7 @@ class _CardSetStackState extends State<_CardSetStack> {
     }
     if (!mounted) return;
     setState(() {
-      _drag = Offset.zero;
+      _dragX = 0;
       _animate = false;
       _committing = false;
     });
@@ -1349,7 +1381,7 @@ class _CardSetStackState extends State<_CardSetStack> {
   void _resetDrag() {
     setState(() {
       _animate = true;
-      _drag = Offset.zero;
+      _dragX = 0;
     });
   }
 }
@@ -1469,12 +1501,14 @@ class _CardMetric extends StatelessWidget {
 
 class _CardTarget extends StatelessWidget {
   const _CardTarget({
+    required this.theme,
     required this.strings,
     required this.set,
     required this.targetWeight,
     required this.unit,
   });
 
+  final FittinTheme theme;
   final AppStrings strings;
   final SessionSetState set;
   final double targetWeight;
@@ -1486,7 +1520,7 @@ class _CardTarget extends StatelessWidget {
       height: 78,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: theme.accent.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
@@ -1495,7 +1529,7 @@ class _CardTarget extends StatelessWidget {
           Text(
             strings.isChinese ? '计划目标' : 'PRESCRIBED',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.black.withValues(alpha: 0.54),
+              color: theme.accentInk.withValues(alpha: 0.58),
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1504,7 +1538,7 @@ class _CardTarget extends StatelessWidget {
             child: Text(
               '${_formatDisplayWeight(targetWeight, unit)} × ${set.targetReps}${set.isAmrap ? '+' : ''}',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: Colors.black,
+                color: theme.accentInk,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1555,261 +1589,6 @@ class _GestureStamp extends StatelessWidget {
   }
 }
 
-class _WeightEntryCard extends StatelessWidget {
-  const _WeightEntryCard({
-    required this.strings,
-    required this.displayWeight,
-    required this.displayUnit,
-    required this.step,
-    required this.onDecrease,
-    required this.onIncrease,
-    required this.onTap,
-  });
-
-  final AppStrings strings;
-  final double displayWeight;
-  final String displayUnit;
-  final double step;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              _MiniStepButton(
-                label: '-${_formatWeightValue(step)}',
-                onTap: onDecrease,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: InkWell(
-                  key: const ValueKey('current-weight-editor'),
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.white.withValues(alpha: 0.04),
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          strings.isChinese ? '点按直接输入重量' : 'Tap to type weight',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.52),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _formatDisplayWeight(displayWeight, displayUnit),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              _MiniStepButton(
-                label: '+${_formatWeightValue(step)}',
-                onTap: onIncrease,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniStepButton extends StatelessWidget {
-  const _MiniStepButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 74,
-        height: 94,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white.withValues(alpha: 0.08),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-        ),
-      ),
-    );
-  }
-}
-
-class _RpeEditorCard extends StatelessWidget {
-  const _RpeEditorCard({
-    required this.strings,
-    required this.currentRpe,
-    required this.onDecrease,
-    required this.onIncrease,
-    required this.onTap,
-  });
-
-  final AppStrings strings;
-  final double? currentRpe;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            strings.isChinese ? '实际 RPE' : 'Performed RPE',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.54),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              IconButton(
-                onPressed: onDecrease,
-                icon: const Icon(Icons.remove_rounded),
-              ),
-              Expanded(
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        currentRpe == null
-                            ? (strings.isChinese ? '未记录' : 'Not logged')
-                            : currentRpe!.toStringAsFixed(
-                                currentRpe!.truncateToDouble() == currentRpe
-                                    ? 0
-                                    : 1,
-                              ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1.2,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: onIncrease,
-                icon: const Icon(Icons.add_rounded),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PlateBreakdownCard extends StatelessWidget {
-  const _PlateBreakdownCard({required this.strings, required this.breakdown});
-
-  final AppStrings strings;
-  final PlateBreakdownResult breakdown;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final detail = breakdown.platesPerSide
-        .map((plate) => '${_formatWeightValue(plate.weight)} × ${plate.count}')
-        .join(' + ');
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            strings.isChinese ? '杠铃上片' : 'Barbell Loading',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.54),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 8),
-          _BarbellGraphic(breakdown: breakdown),
-          const SizedBox(height: 8),
-          Text(
-            strings.isChinese ? '每边 $detail' : '$detail each side',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          if (!breakdown.exact) ...[
-            const SizedBox(height: 6),
-            Text(
-              strings.isChinese
-                  ? '当前默认杠重下无法完全精确匹配，还差 ${_formatWeightValue(breakdown.unresolvedWeight)} ${breakdown.unit == LoadUnits.kg ? '公斤' : '磅'}'
-                  : 'Exact loading is not possible with the current default bar weight. Remaining ${_formatWeightValue(breakdown.unresolvedWeight)} ${breakdown.unit == LoadUnits.kg ? 'kg' : 'lb'}.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _BarbellGraphic extends StatelessWidget {
   const _BarbellGraphic({required this.breakdown, this.height = 58});
 
@@ -1822,40 +1601,69 @@ class _BarbellGraphic extends StatelessWidget {
       for (final plate in breakdown.platesPerSide)
         for (var count = 0; count < plate.count; count++) plate.weight,
     ];
-    final largest = plates.isEmpty ? 1.0 : plates.first;
     final detail = breakdown.platesPerSide
         .map((plate) => '${_formatWeightValue(plate.weight)} × ${plate.count}')
         .join(' + ');
 
-    Widget plate(double weight) {
-      final ratio = (weight / largest).clamp(0.35, 1.0);
-      final colors = <Color>[
-        const Color(0xFFE45D50),
-        const Color(0xFF4B8FE2),
-        const Color(0xFFE4C451),
-        const Color(0xFF6CB98A),
-      ];
-      final colorIndex = breakdown.platesPerSide.indexWhere(
-        (candidate) => candidate.weight == weight,
+    Widget plate(double weight, {required String side, required int index}) {
+      final spec = _plateVisualSpec(
+        weight: weight,
+        unit: breakdown.unit,
+        maxHeight: height - 2,
       );
       return Container(
-        width: 7 + ratio * 4,
-        height: 22 + ratio * (height - 28),
-        margin: const EdgeInsets.symmetric(horizontal: 1),
+        key: ValueKey('barbell-plate-${breakdown.unit}-$side-$index-$weight'),
+        width: spec.width,
+        height: spec.height,
+        margin: const EdgeInsets.symmetric(horizontal: 0.8),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: colors[(colorIndex < 0 ? 0 : colorIndex) % colors.length],
-          borderRadius: BorderRadius.circular(2.5),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+          color: spec.color,
+          borderRadius: BorderRadius.circular(2),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.18),
+            width: 0.7,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.24),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 3,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 1.5),
             ),
           ],
         ),
+        child: RotatedBox(
+          quarterTurns: 3,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              _formatWeightValue(weight),
+              style: TextStyle(
+                color: spec.labelColor,
+                fontSize: 6.5,
+                fontWeight: FontWeight.w900,
+                height: 1,
+              ),
+            ),
+          ),
+        ),
       );
     }
+
+    Widget sleeveEnd() => SizedBox(
+      width: 13,
+      child: Container(
+        height: 5,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF74797D), Color(0xFFD6D9DB), Color(0xFF676C70)],
+          ),
+          borderRadius: BorderRadius.circular(99),
+        ),
+      ),
+    );
 
     return Semantics(
       label: breakdown.unit == LoadUnits.kg
@@ -1869,34 +1677,123 @@ class _BarbellGraphic extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             Container(
-              height: 4,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
+              height: 3,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFF686D72),
-                    Color(0xFFE2E5E7),
-                    Color(0xFF686D72),
+                    Color(0xFF5E6367),
+                    Color(0xFFE1E3E4),
+                    Color(0xFF555A5E),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                for (final weight in plates.reversed) plate(weight),
-                _BarbellCollar(height: height * 0.48),
-                SizedBox(width: height * 1.05),
-                _BarbellCollar(height: height * 0.48),
-                for (final weight in plates) plate(weight),
-              ],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  sleeveEnd(),
+                  _BarbellCollar(height: height * 0.46),
+                  for (var index = plates.length - 1; index >= 0; index--)
+                    plate(plates[index], side: 'left', index: index),
+                  const _BarbellShoulder(),
+                  SizedBox(width: height * 0.98),
+                  const _BarbellShoulder(),
+                  for (var index = 0; index < plates.length; index++)
+                    plate(plates[index], side: 'right', index: index),
+                  _BarbellCollar(height: height * 0.46),
+                  sleeveEnd(),
+                ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+_BarbellPlateVisualSpec _plateVisualSpec({
+  required double weight,
+  required String unit,
+  required double maxHeight,
+}) {
+  if (unit == LoadUnits.lbs) {
+    final diameter = switch (weight) {
+      >= 45 => 450.0,
+      >= 35 => 400.0,
+      >= 25 => 325.0,
+      >= 10 => 228.0,
+      >= 5 => 190.0,
+      _ => 160.0,
+    };
+    return _BarbellPlateVisualSpec(
+      height: (maxHeight * diameter / 450).clamp(18, maxHeight),
+      width: switch (weight) {
+        >= 45 => 12,
+        >= 35 => 10,
+        >= 25 => 9,
+        >= 10 => 7,
+        >= 5 => 6,
+        _ => 5,
+      },
+      color: const Color(0xFF858B90),
+      labelColor: const Color(0xFF111315),
+    );
+  }
+
+  final diameter = switch (weight) {
+    >= 20 => 450.0,
+    >= 15 => 400.0,
+    >= 10 => 325.0,
+    >= 5 => 228.0,
+    >= 2.5 => 190.0,
+    _ => 160.0,
+  };
+  final color = switch (weight) {
+    25 => const Color(0xFFB94A48),
+    20 => const Color(0xFF416F9F),
+    15 => const Color(0xFFC3A74A),
+    10 => const Color(0xFF4F7F61),
+    5 => const Color(0xFFD8D5CC),
+    2.5 => const Color(0xFF292A2C),
+    _ => const Color(0xFFA7ADB2),
+  };
+  final darkLabel = weight == 15 || weight == 5 || weight <= 1.25;
+  return _BarbellPlateVisualSpec(
+    height: (maxHeight * diameter / 450).clamp(18, maxHeight),
+    width: switch (weight) {
+      >= 25 => 12,
+      >= 20 => 10,
+      >= 15 => 9,
+      >= 10 => 8,
+      >= 5 => 7,
+      >= 2.5 => 6,
+      _ => 5,
+    },
+    color: color,
+    labelColor: darkLabel ? const Color(0xFF17191B) : Colors.white,
+  );
+}
+
+class _BarbellPlateVisualSpec {
+  const _BarbellPlateVisualSpec({
+    required this.height,
+    required this.width,
+    required this.color,
+    required this.labelColor,
+  });
+
+  final double height;
+  final double width;
+  final Color color;
+  final Color labelColor;
 }
 
 class _BarbellCollar extends StatelessWidget {
@@ -1907,11 +1804,31 @@ class _BarbellCollar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 6,
+      width: 7,
       height: height,
-      margin: const EdgeInsets.symmetric(horizontal: 3),
+      margin: const EdgeInsets.symmetric(horizontal: 2.5),
       decoration: BoxDecoration(
-        color: const Color(0xFFBEC3C7),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF777C80), Color(0xFFD4D7D9), Color(0xFF6B7074)],
+        ),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+    );
+  }
+}
+
+class _BarbellShoulder extends StatelessWidget {
+  const _BarbellShoulder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 5,
+      height: 27,
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFBFC3C6),
         borderRadius: BorderRadius.circular(2),
       ),
     );
@@ -2081,95 +1998,6 @@ class _ExerciseMenuItem extends StatelessWidget {
         ),
         if (active) const Icon(Icons.check_rounded, size: 18),
       ],
-    );
-  }
-}
-
-class _SquareActionButton extends StatelessWidget {
-  const _SquareActionButton({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        width: 74,
-        height: 74,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withValues(alpha: 0.08),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Icon(
-          icon,
-          size: 32,
-          color: Colors.white.withValues(alpha: 0.88),
-        ),
-      ),
-    );
-  }
-}
-
-class _SetProgressDot extends StatelessWidget {
-  const _SetProgressDot({
-    required this.index,
-    required this.set,
-    required this.active,
-    required this.onTap,
-  });
-
-  final int index;
-  final SessionSetState set;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final fillColor = set.isCompleted
-        ? Colors.white
-        : set.isSkipped
-        ? const Color(0xFFFFB4A8).withValues(alpha: 0.18)
-        : active
-        ? Colors.white.withValues(alpha: 0.88)
-        : Colors.transparent;
-    final borderColor = set.isSkipped
-        ? const Color(0xFFFFB4A8)
-        : active || set.isCompleted
-        ? Colors.white.withValues(alpha: 0.96)
-        : Colors.white.withValues(alpha: 0.34);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Column(
-        children: [
-          Container(
-            width: active ? 22 : 18,
-            height: active ? 22 : 18,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: fillColor,
-              border: Border.all(color: borderColor, width: 2),
-              boxShadow: active
-                  ? [
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        blurRadius: 16,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: set.isSkipped
-                ? const Icon(Icons.close_rounded, size: 12)
-                : null,
-          ),
-          const SizedBox(height: 6),
-          Text('${index + 1}'),
-        ],
-      ),
     );
   }
 }

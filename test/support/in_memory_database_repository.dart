@@ -460,6 +460,11 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    _workoutLogs.removeWhere((log) => log.logId == logId);
+  }
+
+  @override
   Future<List<WorkoutLog>> fetchWorkoutLogs(
     String instanceId, {
     String? ownerUserId,

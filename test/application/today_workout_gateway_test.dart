@@ -1,8 +1,28 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
+import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
+import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/rule_engine.dart';
+
+import '../support/in_memory_database_repository.dart';
+
+class _TrackingDatabaseRepository extends InMemoryDatabaseRepository {
+  String? lastInstanceSyncStatus;
+
+  @override
+  Future<void> saveInstance(
+    StoredTrainingInstance data, {
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    lastInstanceSyncStatus = syncStatus;
+    await super.saveInstance(data, syncStatus: syncStatus, deviceId: deviceId);
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -101,4 +121,76 @@ void main() {
     expect(nextBench.baseWeight, 85.0);
     expect(nextBench.currentStageId, 't1-4x3');
   });
+
+  test(
+    'conclusion persists and exposes the next workout before cloud sync',
+    () async {
+      const ownerUserId = 'signed-in-user';
+      final repository = _TrackingDatabaseRepository();
+      final template = await GzclpSeed.loadTemplate();
+      await repository.saveTemplate(template, isBuiltIn: true);
+      await repository.saveInstance(
+        StoredTrainingInstance(
+          instanceId: 'signed-in-instance',
+          templateId: template.id,
+          currentWorkoutIndex: 0,
+          ownerUserId: ownerUserId,
+          trainingMaxProfile: const TrainingMaxProfile({
+            'squat': 180,
+            'bench': 110,
+            'deadlift': 220,
+            'overhead_press': 70,
+          }),
+          states: GzclpSeed.buildStarterStates(template),
+        ),
+        syncStatus: SyncStatusKeys.synced,
+      );
+      await repository.saveActiveInstanceIdForUser(
+        'signed-in-instance',
+        ownerUserId,
+      );
+      final gateway = DatabaseTodayWorkoutGateway(
+        repository,
+        ownerUserId: ownerUserId,
+      );
+
+      final before = await gateway.loadTodayWorkoutSummary();
+      final session = await gateway.loadTodayWorkoutSession();
+      final firstExercise = session.exercises.first;
+      final firstSet = firstExercise.sets.first;
+      final completedSession = session.copyWith(
+        exercises: [
+          firstExercise.copyWith(
+            sets: [
+              firstSet.copyWith(
+                targetRpe: 8.0,
+                completedRpe: null,
+                isCompleted: true,
+              ),
+              ...firstExercise.sets.skip(1),
+            ],
+          ),
+          ...session.exercises.skip(1),
+        ],
+      );
+
+      await gateway.concludeWorkoutSession(completedSession);
+
+      final storedInstance = await repository.fetchInstance(
+        'signed-in-instance',
+      );
+      final after = await gateway.loadTodayWorkoutSummary();
+      final logs = await repository.fetchWorkoutLogs(
+        'signed-in-instance',
+        ownerUserId: ownerUserId,
+      );
+
+      expect(before.currentDayNumber, 1);
+      expect(storedInstance?.currentWorkoutIndex, 1);
+      expect(repository.lastInstanceSyncStatus, SyncStatusKeys.pendingUpload);
+      expect(after.currentDayNumber, 2);
+      expect(after.workoutId, template.workoutByIndex(1).id);
+      expect(logs.single.exercises.first.sets.first.completedRpe, 8.0);
+    },
+  );
 }

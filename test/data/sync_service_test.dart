@@ -31,6 +31,29 @@ class _FlakySupabaseRemoteRepository extends FakeSupabaseRemoteRepository {
   }
 }
 
+class _FailingFirstPullRemoteRepository extends FakeSupabaseRemoteRepository {
+  bool _hasFailed = false;
+
+  @override
+  Future<List<Map<String, dynamic>>> fetchRows({
+    required String table,
+    required String userId,
+    String timestampColumn = 'updated_at',
+    DateTime? since,
+  }) async {
+    if (!_hasFailed) {
+      _hasFailed = true;
+      throw Exception('Remote pull failed');
+    }
+    return super.fetchRows(
+      table: table,
+      userId: userId,
+      timestampColumn: timestampColumn,
+      since: since,
+    );
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -216,6 +239,8 @@ void main() {
     final remoteInstance = await databaseRepository.fetchInstance(
       'remote-instance',
     );
+    final activeInstance = await databaseRepository
+        .fetchActiveInstanceForUser('user-123');
     final logs = await databaseRepository.fetchAllWorkoutLogs(
       ownerUserId: 'user-123',
     );
@@ -243,6 +268,7 @@ void main() {
       containsAll(['local-template', 'remote-template']),
     );
     expect(remoteInstance, isNotNull);
+    expect(activeInstance?.instanceId, 'remote-instance');
     expect(logs.map((log) => log.workoutId), containsAll(['w1', 'rw1']));
     expect(
       metrics.map((metric) => metric.metricId),
@@ -258,6 +284,60 @@ void main() {
     );
     expect(remainingQueue, isEmpty);
   });
+
+  test(
+    'claims local logs and active plan before the first remote pull',
+    () async {
+      await _seedLocalPowerbuildingData(databaseRepository);
+      final failingRemote = _FailingFirstPullRemoteRepository();
+      syncService = SyncService(
+        databaseRepository: databaseRepository,
+        progressRepository: progressRepository,
+        remoteRepository: failingRemote,
+        ownerUserId: 'user-123',
+      );
+
+      await expectLater(syncService.synchronize(), throwsException);
+
+      final active = await databaseRepository.fetchActiveInstanceForUser(
+        'user-123',
+      );
+      final logs = await databaseRepository.fetchAllWorkoutLogs(
+        ownerUserId: 'user-123',
+      );
+
+      expect(active?.instanceId, 'user-123-local-powerbuilding-instance');
+      expect(active?.templateId, 'powerbuilding-4day-12week');
+      expect(logs, hasLength(1));
+      expect(logs.single.instanceId, active?.instanceId);
+    },
+  );
+
+  test(
+    'keeps a claimed local active plan when remote instances exist',
+    () async {
+      await _seedLocalPowerbuildingData(databaseRepository);
+      remoteRepository.rowsByTable['plan_instances'] = [
+        _remoteInstanceRow(
+          id: 'remote-newer-instance',
+          templateId: 'remote-other-template',
+        ),
+      ];
+
+      await syncService.synchronize();
+
+      final active = await databaseRepository.fetchActiveInstanceForUser(
+        'user-123',
+      );
+      final remoteInstance = await databaseRepository.fetchInstance(
+        'remote-newer-instance',
+      );
+
+      expect(active?.instanceId, 'user-123-local-powerbuilding-instance');
+      expect(active?.templateId, 'powerbuilding-4day-12week');
+      expect(remoteInstance, isNotNull);
+    },
+  );
 
   test('synchronize replays queued changes after a retryable failure', () async {
     final flakyRemote = _FlakySupabaseRemoteRepository();
@@ -382,4 +462,53 @@ void main() {
     expect(conflictedMetric?.syncStatusKey, SyncStatusKeys.conflict);
     expect(conflictedMetric?.weightKg, 82.0);
   });
+}
+
+Future<void> _seedLocalPowerbuildingData(DatabaseRepository repository) async {
+  const instanceId = 'local-powerbuilding-instance';
+  await repository.saveInstance(
+    StoredTrainingInstance(
+      instanceId: instanceId,
+      templateId: 'powerbuilding-4day-12week',
+      currentWorkoutIndex: 2,
+      states: const [],
+      trainingMaxProfile: const TrainingMaxProfile({
+        'squat': 180,
+        'bench': 110,
+        'deadlift': 220,
+      }),
+      engineState: const {},
+    ),
+  );
+  await repository.saveActiveInstanceId(instanceId);
+  await repository.logWorkout(
+    WorkoutLog(
+      instanceId: instanceId,
+      workoutId: 'power-day-1',
+      workoutName: 'Power Day 1',
+      dayLabel: 'W1D1',
+      completedAt: DateTime(2026, 7, 13, 9),
+      exercises: const [],
+    ),
+  );
+}
+
+Map<String, dynamic> _remoteInstanceRow({
+  required String id,
+  required String templateId,
+}) {
+  return {
+    'id': id,
+    'user_id': 'user-123',
+    'template_id': templateId,
+    'current_workout_index': 4,
+    'current_states_json': '[]',
+    'training_max_profile_json': '{}',
+    'engine_state_json': '{}',
+    'created_at': '2026-07-13T01:00:00.000Z',
+    'updated_at': '2026-07-13T02:00:00.000Z',
+    'deleted_at': null,
+    'version': 1,
+    'last_modified_by_device_id': 'remote-device',
+  };
 }

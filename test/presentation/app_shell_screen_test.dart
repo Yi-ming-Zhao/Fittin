@@ -49,6 +49,10 @@ void main() {
 
     expect(find.text('Squat'), findsWidgets);
     expect(find.text('Squat Focus'), findsOneWidget);
+    expect(find.textContaining('GZCLP 4-Day 12-Week'), findsOneWidget);
+    expect(find.textContaining('TSA Intermediate Approach 2.0'), findsNothing);
+    expect(find.textContaining('55 mins'), findsOneWidget);
+    expect(find.textContaining('3×6+'), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('nav-plan-library')));
     await tester.pump();

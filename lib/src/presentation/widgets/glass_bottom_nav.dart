@@ -28,6 +28,7 @@ class FittinTabBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.bottomCenter,
+      heightFactor: 1,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 430),
         child: Padding(

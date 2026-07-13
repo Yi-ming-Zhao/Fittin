@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
+import 'package:fittin_v2/src/data/seeds/built_in_seed_coordinator.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
@@ -47,21 +48,16 @@ class DatabaseRepository {
   }
 
   Future<void> ensureDefaultProgramSeeded() async {
-    await _syncBuiltInTemplate(
-      templateId: GzclpSeed.templateId,
-      loadTemplate: GzclpSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: JackedAndTanSeed.templateId,
-      loadTemplate: JackedAndTanSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: TsaIntermediateSeed.templateId,
-      loadTemplate: TsaIntermediateSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: Powerbuilding4Day12WeekSeed.templateId,
-      loadTemplate: Powerbuilding4Day12WeekSeed.loadTemplate,
+    await ensureBuiltInTemplateSeeds(
+      fetchSeedVersion: () =>
+          _fetchStringState(builtInTemplateSeedVersionStateKey),
+      saveSeedVersion: (version) =>
+          _saveStringState(builtInTemplateSeedVersionStateKey, version),
+      templateExists: _hasStoredBuiltInTemplate,
+      syncTemplate: (seed) => _syncBuiltInTemplate(
+        templateId: seed.templateId,
+        loadTemplate: seed.loadTemplate,
+      ),
     );
     await _purgeLegacyBuiltInInstanceIfNeeded(GzclpSeed.instanceId);
     await _purgeLegacyBuiltInInstanceIfNeeded(JackedAndTanSeed.instanceId);
@@ -744,6 +740,30 @@ class DatabaseRepository {
     );
   }
 
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    final existing = await _database.workoutLogCollections.getByLogId(logId);
+    if (existing == null ||
+        existing.deletedAt != null ||
+        !_ownerMatches(existing.ownerUserId, ownerUserId)) {
+      return;
+    }
+
+    existing
+      ..deletedAt = DateTime.now()
+      ..version = existing.version + 1
+      ..syncStatusKey = SyncStatusKeys.pendingDelete;
+    await _database.writeTxn(() async {
+      await _database.workoutLogCollections.putByLogId(existing);
+    });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.workoutLog,
+      entityId: logId,
+      ownerUserId: existing.ownerUserId,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: existing.syncStatusKey,
+    );
+  }
+
   Future<List<WorkoutLog>> fetchWorkoutLogs(
     String instanceId, {
     String? ownerUserId,
@@ -1056,6 +1076,13 @@ class DatabaseRepository {
     required Future<PlanTemplate> Function() loadTemplate,
   }) async {
     await saveTemplate(await loadTemplate(), isBuiltIn: true);
+  }
+
+  Future<bool> _hasStoredBuiltInTemplate(String templateId) async {
+    final template = await _database.templateCollections.getByTemplateId(
+      templateId,
+    );
+    return template != null && template.isBuiltIn && template.deletedAt == null;
   }
 
   Future<void> _purgeLegacyBuiltInInstanceIfNeeded(String instanceId) async {

@@ -66,6 +66,51 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('today dashboard fits a phone viewport without vertical scroll', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final repository = InMemoryDatabaseRepository();
+    final fakeGateway = FakeTodayWorkoutGateway();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(fakeGateway),
+          homeDashboardDataProvider.overrideWith(
+            (ref) async => _fakeHomeData(),
+          ),
+        ],
+        child: const MaterialApp(home: HomeDashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const ValueKey('today-cycle-card'))),
+      tester.getSize(find.byKey(const ValueKey('today-e1rm-card'))),
+    );
+    final verticalScrollables = tester
+        .widgetList<Scrollable>(find.byType(Scrollable))
+        .where(
+          (widget) =>
+              (widget.axisDirection == AxisDirection.down ||
+                  widget.axisDirection == AxisDirection.up) &&
+              widget.physics is! NeverScrollableScrollPhysics,
+        );
+    expect(verticalScrollables, isEmpty);
+    expect(
+      tester
+          .getBottomRight(find.byKey(const ValueKey('today-quick-action-1')))
+          .dy,
+      lessThanOrEqualTo(770),
+    );
+  });
 }
 
 HomeDashboardData _fakeHomeData() {

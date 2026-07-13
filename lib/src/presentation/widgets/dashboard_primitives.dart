@@ -12,14 +12,20 @@ class DashboardPageScaffold extends StatelessWidget {
     super.key,
     required this.children,
     this.bottomPadding = 120,
+    this.topPadding = 54,
     this.floatingActionButton,
     this.extendBody = true,
+    this.scrollable = true,
+    this.safeAreaBottom = false,
   });
 
   final List<Widget> children;
   final double bottomPadding;
+  final double topPadding;
   final Widget? floatingActionButton;
   final bool extendBody;
+  final bool scrollable;
+  final bool safeAreaBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +49,29 @@ class DashboardPageScaffold extends StatelessWidget {
               ),
             ),
             child: SafeArea(
-              bottom: false,
+              bottom: safeAreaBottom,
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 430),
-                  child: ListView(
-                    padding: EdgeInsets.fromLTRB(20, 54, 20, bottomPadding),
-                    children: children,
-                  ),
+                  child: scrollable
+                      ? ListView(
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            topPadding,
+                            20,
+                            bottomPadding,
+                          ),
+                          children: children,
+                        )
+                      : Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            topPadding,
+                            20,
+                            bottomPadding,
+                          ),
+                          child: Column(children: children),
+                        ),
                 ),
               ),
             ),

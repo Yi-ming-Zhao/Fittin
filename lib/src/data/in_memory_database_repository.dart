@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/seeds/built_in_seed_coordinator.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
@@ -28,20 +29,24 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   double _glassOpacity = 0.3;
   double _kgBarWeight = defaultKgBarWeight;
   double _lbBarWeight = defaultLbBarWeight;
+  String? _builtInTemplateSeedVersion;
 
   String _ownerScope(String? ownerUserId) => ownerUserId ?? '__local__';
 
   @override
   Future<void> ensureDefaultProgramSeeded() async {
-    await saveTemplate(await GzclpSeed.loadTemplate(), isBuiltIn: true);
-    await saveTemplate(await JackedAndTanSeed.loadTemplate(), isBuiltIn: true);
-    await saveTemplate(
-      await TsaIntermediateSeed.loadTemplate(),
-      isBuiltIn: true,
-    );
-    await saveTemplate(
-      await Powerbuilding4Day12WeekSeed.loadTemplate(),
-      isBuiltIn: true,
+    await ensureBuiltInTemplateSeeds(
+      fetchSeedVersion: () async => _builtInTemplateSeedVersion,
+      saveSeedVersion: (version) async => _builtInTemplateSeedVersion = version,
+      templateExists: (templateId) async {
+        final template = _templates[templateId];
+        return template != null &&
+            template.isBuiltIn &&
+            template.deletedAt == null;
+      },
+      syncTemplate: (seed) async {
+        await saveTemplate(await seed.loadTemplate(), isBuiltIn: true);
+      },
     );
   }
 
@@ -473,6 +478,11 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       throw StateError('Workout log not found: ${logRecord.logId}');
     }
     _workoutLogs[index] = logRecord;
+  }
+
+  @override
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    _workoutLogs.removeWhere((log) => log.logId == logId);
   }
 
   @override

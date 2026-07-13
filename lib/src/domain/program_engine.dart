@@ -263,7 +263,7 @@ SessionSetState _buildSessionSet({
   required double roundingIncrement,
 }) {
   final targetWeight = roundToIncrement(
-    baseWeight * definition.intensity,
+    baseWeight * _resolveSetIntensity(definition),
     roundingIncrement,
   );
   return SessionSetState(
@@ -328,10 +328,38 @@ ExerciseLog _exerciseLogFromSession({
           targetWeight: set.targetWeight,
           weight: set.weight,
           targetRpe: set.targetRpe,
-          completedRpe: set.completedRpe,
+          completedRpe: set.isCompleted
+              ? set.completedRpe ?? set.targetRpe
+              : set.completedRpe,
           isAmrap: set.isAmrap,
           isCompleted: set.isCompleted,
         ),
     ],
   );
 }
+
+double _resolveSetIntensity(SetDefinition definition) {
+  final targetRpe = definition.targetRpe;
+  final usesRpePrescription =
+      targetRpe != null &&
+      (definition.intensity <= 0.001 || definition.intensity == 1.0);
+  if (!usesRpePrescription) {
+    return definition.intensity;
+  }
+
+  final rpeHalfStep = (targetRpe * 2).round().clamp(13, 20);
+  final reps = definition.targetReps.clamp(1, 12).toInt();
+  return _rpeLoadPercentages[rpeHalfStep]![reps - 1];
+}
+
+// TSA Intermediate Approach 2.0 workbook, Reference!F9:R16.
+const _rpeLoadPercentages = <int, List<double>>{
+  20: [1.0, 0.955, 0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68],
+  19: [0.978, 0.939, 0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667],
+  18: [0.955, 0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653],
+  17: [0.939, 0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64],
+  16: [0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653, 0.626],
+  15: [0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64, 0.613],
+  14: [0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653, 0.626, 0.599],
+  13: [0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64, 0.613, 0.586],
+};

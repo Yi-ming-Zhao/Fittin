@@ -80,28 +80,30 @@ class _WorkoutRecordDetailScreenState
                                 ?.copyWith(fontWeight: FontWeight.w800),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: () => _editLog(context, log),
-                          icon: const Icon(Icons.edit_rounded, size: 18),
-                          label: Text(strings.edit),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            textStyle: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.w700),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            TextButton.icon(
+                              key: ValueKey('edit-workout-${log.logId}'),
+                              onPressed: () => _editLog(context, log),
+                              icon: const Icon(Icons.edit_rounded, size: 17),
+                              label: Text(strings.edit),
+                              style: _recordActionStyle(context),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: BorderSide(
-                                color: Colors.white.withValues(alpha: 0.16),
+                            TextButton.icon(
+                              key: ValueKey('delete-workout-${log.logId}'),
+                              onPressed: () => _confirmDeleteLog(context, log),
+                              icon: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 17,
+                              ),
+                              label: Text(strings.delete),
+                              style: _recordActionStyle(
+                                context,
+                                foregroundColor: const Color(0xFFE7A09B),
                               ),
                             ),
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.05,
-                            ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -202,6 +204,69 @@ class _WorkoutRecordDetailScreenState
         ),
       ),
     );
+  }
+
+  ButtonStyle _recordActionStyle(
+    BuildContext context, {
+    Color foregroundColor = Colors.white,
+  }) {
+    return TextButton.styleFrom(
+      foregroundColor: foregroundColor,
+      textStyle: Theme.of(
+        context,
+      ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      visualDensity: VisualDensity.compact,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      backgroundColor: Colors.white.withValues(alpha: 0.05),
+    );
+  }
+
+  Future<void> _confirmDeleteLog(BuildContext context, WorkoutLog log) async {
+    final strings = AppStrings.of(context, ref);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(strings.deleteWorkoutRecordTitle),
+        content: Text(strings.deleteWorkoutRecordMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(strings.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('confirm-delete-workout'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFE7A09B),
+            ),
+            child: Text(strings.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    await ref
+        .read(localWorkoutLogRepositoryProvider)
+        .deleteWorkoutLog(log.logId);
+    if (!mounted) {
+      return;
+    }
+
+    ref.invalidate(advancedAnalyticsDataProvider);
+    ref.invalidate(progressAnalyticsOverviewProvider);
+    setState(() {
+      _logs.removeWhere((item) => item.logId == log.logId);
+    });
+    ScaffoldMessenger.of(
+      this.context,
+    ).showSnackBar(SnackBar(content: Text(strings.workoutRecordDeleted)));
   }
 }
 

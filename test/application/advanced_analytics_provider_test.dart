@@ -42,6 +42,8 @@ void main() {
       planSections.expand((section) => section.days).where((day) => day.hasActivity),
       hasLength(3),
     );
+    expect(data.volumeData.single.label, 'LEGS');
+    expect(data.volumeData.single.color.toARGB32(), 0xFFDDCC77);
   });
 }
 

@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 class MuscleVolumeData {
@@ -11,7 +10,7 @@ class MuscleVolumeData {
     required this.label,
     required this.currentSets,
     required this.targetSets,
-    this.color = Colors.blueAccent,
+    this.color = const Color(0xFF999933),
   });
 }
 
@@ -57,7 +56,7 @@ class MuscleDistributionPainter extends CustomPainter {
         Paint()..color = Colors.white.withValues(alpha: 0.04),
       );
 
-      // Draw Progress Bar
+      // Muted categorical color, kept flat so magnitude remains the focus.
       final progress = (entry.currentSets / entry.targetSets).clamp(0.0, 1.5);
       if (progress > 0) {
         final fillWidth = barWidth * progress.clamp(0.0, 1.0);
@@ -65,35 +64,11 @@ class MuscleDistributionPainter extends CustomPainter {
           Rect.fromLTWH(textSpace, y, fillWidth, barHeight),
           const Radius.circular(7),
         );
-        
-        // Gradient fill
-        final gradient = ui.Gradient.linear(
-          Offset(textSpace, y),
-          Offset(textSpace + fillWidth, y),
-          [entry.color.withValues(alpha: 0.5), entry.color],
-        );
-        canvas.drawRRect(
-          progressRect,
-          Paint()..shader = gradient,
-        );
-        
-        // Neon outer glow
-        canvas.drawRRect(
-          progressRect,
-          Paint()
-            ..color = entry.color.withValues(alpha: 0.12 + 0.1 * progress)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.outer, 5),
-        );
 
-        // White core highlight for completed bars
-        if (progress >= 1.0) {
-          canvas.drawRRect(
-            progressRect,
-            Paint()
-              ..color = Colors.white.withValues(alpha: 0.08)
-              ..maskFilter = const MaskFilter.blur(BlurStyle.inner, 3),
-          );
-        }
+        canvas.drawRRect(
+          progressRect,
+          Paint()..color = entry.color.withValues(alpha: 0.78),
+        );
       }
 
       // Draw Counter (e.g., 8/10) with emphasis

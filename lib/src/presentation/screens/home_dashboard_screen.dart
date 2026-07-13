@@ -29,7 +29,6 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   final PageController _pageController = PageController(viewportFraction: 1);
-  int _selectedLiftPage = 0;
 
   @override
   void dispose() {
@@ -50,42 +49,37 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(theme.pad, 54, theme.pad, 0),
-              children: [
-                homeDataAsync.when(
-                  data: (data) => _FittinTopMetaRow(
-                    theme: theme,
-                    data: data,
-                    onNotificationTap: () =>
-                        _openMilestonesPanel(context, data),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(theme.pad, 16, theme.pad, 20),
+              child: Column(
+                children: [
+                  homeDataAsync.when(
+                    data: (data) => _FittinTopMetaRow(
+                      theme: theme,
+                      data: data,
+                      onNotificationTap: () =>
+                          _openMilestonesPanel(context, data),
+                    ),
+                    loading: () => _FittinTopMetaRowSkeleton(theme: theme),
+                    error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
                   ),
-                  loading: () => _FittinTopMetaRowSkeleton(theme: theme),
-                  error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
-                ),
-                const SizedBox(height: 24),
-                const TodayWorkoutHeroCard(),
-                const SizedBox(height: 16),
-                homeDataAsync.when(
-                  data: (data) => _AtAGlanceSection(
-                    data: data,
-                    strings: strings,
-                    theme: theme,
-                    selectedLiftPage: _selectedLiftPage,
-                    pageController: _pageController,
-                    onLiftPageChanged: (value) {
-                      setState(() {
-                        _selectedLiftPage = value;
-                      });
-                    },
+                  const SizedBox(height: 6),
+                  const TodayWorkoutHeroCard(compact: true),
+                  const SizedBox(height: 6),
+                  homeDataAsync.when(
+                    data: (data) => _AtAGlanceSection(
+                      data: data,
+                      strings: strings,
+                      theme: theme,
+                      pageController: _pageController,
+                    ),
+                    loading: () => const _HomeOverviewSkeleton(),
+                    error: (error, _) => _isMissingActivePlanError(error)
+                        ? const SizedBox.shrink()
+                        : _HomeOverviewError(message: error.toString()),
                   ),
-                  loading: () => const _HomeOverviewSkeleton(),
-                  error: (error, _) => _isMissingActivePlanError(error)
-                      ? const SizedBox.shrink()
-                      : _HomeOverviewError(message: error.toString()),
-                ),
-                const SizedBox(height: 140),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -277,56 +271,47 @@ class _AtAGlanceSection extends StatelessWidget {
     required this.data,
     required this.strings,
     required this.theme,
-    required this.selectedLiftPage,
     required this.pageController,
-    required this.onLiftPageChanged,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
-  final int selectedLiftPage;
   final PageController pageController;
-  final ValueChanged<int> onLiftPageChanged;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cards = [
-              _CycleProgressCard(data: data, strings: strings, theme: theme),
-              _HighlightLiftCard(data: data, strings: strings, theme: theme),
-            ];
-
-            if (constraints.maxWidth < 320) {
-              return Column(
-                children: [cards[0], const SizedBox(height: 10), cards[1]],
-              );
-            }
-
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: cards[0]),
-                const SizedBox(width: 10),
-                Expanded(child: cards[1]),
-              ],
-            );
-          },
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _CycleProgressCard(
+                data: data,
+                strings: strings,
+                theme: theme,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _HighlightLiftCard(
+                data: data,
+                strings: strings,
+                theme: theme,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
         _ActivityCard(
           data: data,
           strings: strings,
           theme: theme,
-          selectedLiftPage: selectedLiftPage,
           pageController: pageController,
-          onLiftPageChanged: onLiftPageChanged,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 6),
         _QuickActionsCard(
           theme: theme,
           strings: strings,
@@ -359,54 +344,61 @@ class _CycleProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FittinCard(
-      theme: theme,
-      style: FittinCardStyle.glass,
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AdvancedAnalyticsScreen()),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          FittinEyebrow(theme, 'Cycle'),
-          const SizedBox(height: 14),
-          FittinBigNum(
-            theme,
-            '${(data.cycleProgress * 100).round()}',
-            size: 44,
-            unit: '%',
-          ),
-          const SizedBox(height: 10),
-          Container(
-            height: 3,
-            decoration: BoxDecoration(
-              color: theme.fgFaint,
-              borderRadius: BorderRadius.circular(999),
+    return SizedBox(
+      key: const ValueKey('today-cycle-card'),
+      height: 144,
+      child: FittinCard(
+        theme: theme,
+        style: FittinCardStyle.glass,
+        padding: 14,
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const AdvancedAnalyticsScreen()),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            FittinEyebrow(theme, 'Cycle'),
+            const SizedBox(height: 7),
+            FittinBigNum(
+              theme,
+              '${(data.cycleProgress * 100).round()}',
+              size: 31,
+              unit: '%',
             ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: data.cycleProgress.clamp(0.0, 1.0),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.accent,
-                  borderRadius: BorderRadius.circular(999),
+            const SizedBox(height: 7),
+            Container(
+              height: 3,
+              decoration: BoxDecoration(
+                color: theme.fgFaint,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: data.cycleProgress.clamp(0.0, 1.0),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.accent,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            strings.weekDayProgressLabel(
-              data.todayWorkout.currentWeekNumber,
-              data.todayWorkout.cycleWeekCount,
-              data.todayWorkout.currentDayNumber,
-              data.todayWorkout.workoutsPerWeek,
+            const SizedBox(height: 7),
+            Text(
+              strings.weekDayProgressLabel(
+                data.todayWorkout.currentWeekNumber,
+                data.todayWorkout.cycleWeekCount,
+                data.todayWorkout.currentDayNumber,
+                data.todayWorkout.workoutsPerWeek,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.uiStyle(10, theme.fgMuted).copyWith(height: 1.25),
             ),
-            style: theme.uiStyle(11, theme.fgMuted).copyWith(height: 1.35),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -429,66 +421,65 @@ class _HighlightLiftCard extends StatelessWidget {
     final points =
         summary?.estimatedHistory.map((point) => point.value).toList() ?? [];
 
-    return FittinCard(
-      theme: theme,
-      style: FittinCardStyle.glass,
-      onTap: () {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
-      },
-      child: summary == null
-          ? Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Center(
+    return SizedBox(
+      key: const ValueKey('today-e1rm-card'),
+      height: 144,
+      child: FittinCard(
+        theme: theme,
+        style: FittinCardStyle.glass,
+        padding: 14,
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
+        },
+        child: summary == null
+            ? Center(
                 child: Text(
                   strings.noStrengthTrendYet,
-                  style: theme.uiStyle(14, theme.fgDim),
+                  textAlign: TextAlign.center,
+                  style: theme.uiStyle(12, theme.fgDim),
                 ),
-              ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FittinEyebrow(theme, 'Squat e1RM'),
-                const SizedBox(height: 10),
-                FittinSectionTitle(theme, summary.exerciseName, fontSize: 18),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: FittinBigNum(
-                        theme,
-                        (summary.currentEstimatedOneRepMax ?? 0)
-                            .toStringAsFixed(1),
-                        size: 30,
-                        unit: strings.isChinese ? '公斤' : 'kg',
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FittinEyebrow(theme, 'Squat e1RM'),
+                  const SizedBox(height: 4),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: FittinBigNum(
+                          theme,
+                          (summary.currentEstimatedOneRepMax ?? 0)
+                              .toStringAsFixed(1),
+                          size: 26,
+                          unit: strings.isChinese ? '公斤' : 'kg',
+                        ),
                       ),
-                    ),
-                    if (summary.recentChange != null)
-                      FittinDelta(theme, summary.recentChange!, unit: 'kg'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (points.length > 1)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Sparkline(theme, points, width: 120, height: 40),
-                  )
-                else
-                  Text(
-                    strings.noStrengthTrendYet,
-                    style: theme.uiStyle(13, theme.fgDim),
+                    ],
                   ),
-                const SizedBox(height: 12),
-                Text(
-                  strings.sessionsLogged(summary.estimatedHistory.length),
-                  style: theme.uiStyle(12, theme.fgMuted),
-                ),
-              ],
-            ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          strings.sessionsLogged(
+                            summary.estimatedHistory.length,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.uiStyle(10, theme.fgMuted),
+                        ),
+                      ),
+                      if (points.length > 1)
+                        Sparkline(theme, points, width: 54, height: 16),
+                    ],
+                  ),
+                ],
+              ),
+      ),
     );
   }
 
@@ -507,148 +498,84 @@ class _ActivityCard extends StatelessWidget {
     required this.data,
     required this.strings,
     required this.theme,
-    required this.selectedLiftPage,
     required this.pageController,
-    required this.onLiftPageChanged,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
-  final int selectedLiftPage;
   final PageController pageController;
-  final ValueChanged<int> onLiftPageChanged;
 
   @override
   Widget build(BuildContext context) {
-    final safeIndex = data.sparklineLifts.isEmpty
-        ? 0
-        : selectedLiftPage.clamp(0, data.sparklineLifts.length - 1);
-
     return FittinCard(
       theme: theme,
       style: FittinCardStyle.glass,
+      padding: 14,
       onTap: () {
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const PRDashboardScreen()));
       },
       child: SizedBox(
-        height: 228,
+        key: const ValueKey('today-activity-card'),
+        height: 74,
         child: data.sparklineLifts.isEmpty
             ? Center(
                 child: Text(
                   strings.noStrengthTrendYet,
-                  style: theme.uiStyle(14, theme.fgDim),
+                  style: theme.uiStyle(12, theme.fgDim),
                 ),
               )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            : PageView.builder(
+                controller: pageController,
+                itemCount: data.sparklineLifts.length,
+                itemBuilder: (context, index) {
+                  final summary = data.sparklineLifts[index];
+                  final values = summary.estimatedHistory
+                      .map((point) => point.value)
+                      .toList();
+                  return Row(
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             FittinEyebrow(theme, strings.activity),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 3),
                             Text(
-                              data.sparklineLifts[safeIndex].exerciseName,
+                              summary.exerciseName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.uiStyle(
-                                14,
+                                13,
                                 theme.fg,
-                                FontWeight.w500,
+                                FontWeight.w600,
                               ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${summary.currentEstimatedOneRepMax?.toStringAsFixed(1) ?? '—'} ${strings.isChinese ? '公斤' : 'kg'} · ${strings.sessionsLogged(summary.estimatedHistory.length)}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.uiStyle(10, theme.fgMuted),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Row(
-                        children: [
-                          Text(
-                            'Mar 12',
-                            style: theme.uiStyle(10, theme.fgMuted),
-                          ),
-                          Container(
-                            width: 10,
-                            height: 0.5,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            color: theme.borderHi,
-                          ),
-                          Text(
-                            'Apr 16',
-                            style: theme.uiStyle(10, theme.fgMuted),
-                          ),
-                        ],
+                      const SizedBox(width: 14),
+                      StepChart(
+                        theme,
+                        values,
+                        width: 128,
+                        height: 58,
+                        showDots: true,
+                        showGrid: false,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: pageController,
-                      onPageChanged: onLiftPageChanged,
-                      itemCount: data.sparklineLifts.length,
-                      itemBuilder: (context, index) {
-                        final values = data
-                            .sparklineLifts[index]
-                            .estimatedHistory
-                            .map((point) => point.value)
-                            .toList();
-                        return StepChart(
-                          theme,
-                          values,
-                          width: double.infinity,
-                          height: 132,
-                          showDots: true,
-                          showGrid: true,
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FittinEyebrow(theme, 'Latest'),
-                          const SizedBox(height: 2),
-                          FittinBigNum(
-                            theme,
-                            data
-                                    .sparklineLifts[safeIndex]
-                                    .currentEstimatedOneRepMax
-                                    ?.toStringAsFixed(1) ??
-                                '—',
-                            size: 24,
-                            unit: strings.isChinese ? '公斤' : 'kg',
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          FittinEyebrow(theme, 'Sessions'),
-                          const SizedBox(height: 2),
-                          FittinBigNum(
-                            theme,
-                            '${data.sparklineLifts[safeIndex].estimatedHistory.length}',
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                  );
+                },
               ),
       ),
     );
@@ -690,6 +617,8 @@ class _QuickActionsCard extends StatelessWidget {
       children: [
         GridView.builder(
           shrinkWrap: true,
+          primary: false,
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: actions.length,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -701,8 +630,10 @@ class _QuickActionsCard extends StatelessWidget {
           itemBuilder: (context, index) {
             final action = actions[index];
             return FittinCard(
+              key: ValueKey('today-quick-action-$index'),
               theme: theme,
               style: FittinCardStyle.glass,
+              padding: 12,
               onTap: action.onTap,
               child: Center(
                 child: Row(
@@ -803,31 +734,32 @@ class _HomeOverviewSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget card() => Expanded(
-      child: DashboardSurfaceCard(
-        radius: 24,
-        child: const SizedBox(height: 256),
-      ),
+    Widget card({required double height}) => DashboardSurfaceCard(
+      radius: 24,
+      padding: EdgeInsets.zero,
+      child: SizedBox(height: height),
     );
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 380) {
-          return Column(
-            children: [
-              DashboardSurfaceCard(
-                radius: 24,
-                child: const SizedBox(height: 256),
-              ),
-              const SizedBox(height: 16),
-              DashboardSurfaceCard(
-                radius: 24,
-                child: const SizedBox(height: 256),
-              ),
-            ],
-          );
-        }
-        return Row(children: [card(), const SizedBox(width: 16), card()]);
-      },
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: card(height: 142)),
+            const SizedBox(width: 10),
+            Expanded(child: card(height: 142)),
+          ],
+        ),
+        const SizedBox(height: 10),
+        card(height: 104),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(child: card(height: 52)),
+            const SizedBox(width: 10),
+            Expanded(child: card(height: 52)),
+          ],
+        ),
+      ],
     );
   }
 }

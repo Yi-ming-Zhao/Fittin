@@ -24,6 +24,7 @@ class AppStrings {
   String get current => isChinese ? '当前计划' : 'Current';
   String get switchPlan => isChinese ? '切换' : 'Switch';
   String get edit => isChinese ? '编辑' : 'Edit';
+  String get delete => isChinese ? '删除' : 'Delete';
   String get newPlan => isChinese ? '新建计划' : 'New Plan';
   String workoutsCount(int count) =>
       isChinese ? '$count 次训练日' : '$count workouts';
@@ -401,6 +402,13 @@ class AppStrings {
   String get workoutUpdatedNoProgressionRewrite => isChinese
       ? '训练记录已更新，当前下次训练计划保持不变。'
       : 'Workout record updated. Current next-session plan was not changed.';
+  String get deleteWorkoutRecordTitle =>
+      isChinese ? '删除这条训练记录？' : 'Delete this workout record?';
+  String get deleteWorkoutRecordMessage => isChinese
+      ? '删除后，这条训练记录及其统计数据将无法恢复。'
+      : 'This workout record and its analytics will be permanently removed.';
+  String get workoutRecordDeleted =>
+      isChinese ? '训练记录已删除。' : 'Workout record deleted.';
   String get saving => isChinese ? '保存中...' : 'Saving...';
   String get concludeWorkout => isChinese ? '完成本次训练' : 'Conclude Workout';
   String get confirmConcludeWorkoutTitle =>

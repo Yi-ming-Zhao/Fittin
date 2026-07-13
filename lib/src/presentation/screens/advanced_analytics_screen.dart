@@ -24,10 +24,11 @@ class _AdvancedAnalyticsScreenState
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final dataAsync = ref.watch(advancedAnalyticsDataProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: fittinTheme.bg,
       body: dataAsync.when(
         data: (data) => DashboardPageScaffold(
           children: [
@@ -277,13 +278,21 @@ class _DayCell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
     final dayLabel = '${record.date.day}';
-    final foreground = record.hasActivity ? Colors.black : Colors.white;
+    final foreground = record.hasActivity && record.intensity >= 0.58
+        ? theme.accentInk
+        : theme.fg;
     final background = !record.isInRange
-        ? Colors.white.withValues(alpha: 0.02)
+        ? theme.fg.withValues(alpha: 0.02)
         : record.hasActivity
-        ? Color.lerp(Colors.greenAccent, Colors.white, 1 - record.intensity)!
-        : Colors.white.withValues(alpha: 0.06);
+        ? Color.alphaBlend(
+            theme.accent.withValues(
+              alpha: 0.12 + record.intensity.clamp(0, 1) * 0.52,
+            ),
+            theme.surfaceSolid,
+          )
+        : theme.fg.withValues(alpha: 0.055);
 
     return Material(
       color: Colors.transparent,
@@ -309,8 +318,8 @@ class _DayCell extends ConsumerWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: record.hasActivity
-                  ? Colors.white.withValues(alpha: 0.16)
-                  : Colors.white.withValues(alpha: 0.05),
+                  ? theme.accent.withValues(alpha: 0.24)
+                  : theme.border,
             ),
           ),
           child: Stack(

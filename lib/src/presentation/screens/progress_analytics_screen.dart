@@ -62,6 +62,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
             const SizedBox(height: 18),
             DashboardSurfaceCard(
               child: _FormulaPicker(
+                theme: fittinTheme,
                 formula: formula,
                 strings: strings,
                 onChanged: (value) => ref
@@ -154,11 +155,13 @@ class _EmptyState extends StatelessWidget {
 
 class _FormulaPicker extends StatelessWidget {
   const _FormulaPicker({
+    required this.theme,
     required this.formula,
     required this.strings,
     required this.onChanged,
   });
 
+  final FittinTheme theme;
   final OneRepMaxFormula formula;
   final AppStrings strings;
   final ValueChanged<OneRepMaxFormula> onChanged;
@@ -172,29 +175,23 @@ class _FormulaPicker extends StatelessWidget {
         const SizedBox(height: 10),
         DropdownButtonFormField<OneRepMaxFormula>(
           initialValue: formula,
-          dropdownColor: const Color(0xFF111317),
+          dropdownColor: theme.surfaceSolid,
           decoration: InputDecoration(
             isDense: true,
             filled: true,
-            fillColor: Colors.white.withValues(alpha: 0.04),
+            fillColor: theme.fg.withValues(alpha: 0.04),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(22),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.14),
-              ),
+              borderSide: BorderSide(color: theme.borderHi),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(22),
-              borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
+              borderSide: BorderSide(color: theme.border),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(22),
               borderSide: BorderSide(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.72),
+                color: theme.accent.withValues(alpha: 0.72),
               ),
             ),
           ),
@@ -405,9 +402,9 @@ class _ExerciseDetailSheet extends StatelessWidget {
     return SafeArea(
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF0B0D10),
+          color: theme.bgDeep,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          border: Border.all(color: theme.border),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),

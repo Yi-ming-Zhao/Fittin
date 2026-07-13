@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/seeds/built_in_seed_coordinator.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
@@ -36,21 +37,16 @@ class WebDatabaseRepository extends DatabaseRepository {
 
   @override
   Future<void> ensureDefaultProgramSeeded() async {
-    await _syncBuiltInTemplate(
-      templateId: GzclpSeed.templateId,
-      loadTemplate: GzclpSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: JackedAndTanSeed.templateId,
-      loadTemplate: JackedAndTanSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: TsaIntermediateSeed.templateId,
-      loadTemplate: TsaIntermediateSeed.loadTemplate,
-    );
-    await _syncBuiltInTemplate(
-      templateId: Powerbuilding4Day12WeekSeed.templateId,
-      loadTemplate: Powerbuilding4Day12WeekSeed.loadTemplate,
+    await ensureBuiltInTemplateSeeds(
+      fetchSeedVersion: () =>
+          _fetchStringState(builtInTemplateSeedVersionStateKey),
+      saveSeedVersion: (version) =>
+          _saveStringState(builtInTemplateSeedVersionStateKey, version),
+      templateExists: _hasStoredBuiltInTemplate,
+      syncTemplate: (seed) => _syncBuiltInTemplate(
+        templateId: seed.templateId,
+        loadTemplate: seed.loadTemplate,
+      ),
     );
     final activeInstanceId = await fetchActiveInstanceId();
     final activeInstance = activeInstanceId == null
@@ -73,6 +69,13 @@ class WebDatabaseRepository extends DatabaseRepository {
       return;
     }
     await saveTemplate(template, isBuiltIn: true);
+  }
+
+  Future<bool> _hasStoredBuiltInTemplate(String templateId) async {
+    final template = await store.getRecord(WebStoreNames.templates, templateId);
+    return template != null &&
+        template['isBuiltIn'] == true &&
+        parseStoredDateTime(template['deletedAt']) == null;
   }
 
   @override
@@ -658,6 +661,28 @@ class WebDatabaseRepository extends DatabaseRepository {
       ownerUserId: resolvedOwnerUserId,
       operationType: SyncOperationTypes.upsert,
       syncStatus: resolvedSyncStatus,
+    );
+  }
+
+  @override
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    final existing = await store.getRecord(WebStoreNames.workoutLogs, logId);
+    if (existing == null ||
+        parseStoredDateTime(existing['deletedAt']) != null ||
+        !_ownerMatches(existing['ownerUserId'] as String?, ownerUserId)) {
+      return;
+    }
+
+    existing['deletedAt'] = serializeStoredDateTime(DateTime.now());
+    existing['version'] = (existing['version'] as int? ?? 0) + 1;
+    existing['syncStatusKey'] = SyncStatusKeys.pendingDelete;
+    await store.putRecord(WebStoreNames.workoutLogs, logId, existing);
+    await _enqueueSync(
+      entityType: SyncEntityTypes.workoutLog,
+      entityId: logId,
+      ownerUserId: existing['ownerUserId'] as String?,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: existing['syncStatusKey'] as String,
     );
   }
 

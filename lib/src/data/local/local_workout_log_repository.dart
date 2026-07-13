@@ -70,6 +70,10 @@ class LocalWorkoutLogRepository {
     );
   }
 
+  Future<void> deleteWorkoutLog(String logId) {
+    return _repository.deleteWorkoutLog(logId, ownerUserId: _ownerUserId);
+  }
+
   Future<bool> _rewriteProgressionIfAllowed(WorkoutLog updatedLog) async {
     final preSnapshot = updatedLog.preConclusionSnapshot;
     final postSnapshot = updatedLog.postConclusionSnapshot;

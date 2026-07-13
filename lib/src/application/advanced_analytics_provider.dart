@@ -310,18 +310,20 @@ String _categorizeExercise(String name) {
 }
 
 Color _getMuscleColor(String category) {
+  // Paul Tol's muted categorical palette keeps adjacent series distinct
+  // without competing with the dashboard's restrained neutral surfaces.
   switch (category) {
     case 'CHEST':
-      return Colors.blueAccent;
+      return const Color(0xFFCC6677);
     case 'LEGS':
-      return Colors.orangeAccent;
+      return const Color(0xFFDDCC77);
     case 'BACK':
-      return Colors.greenAccent;
+      return const Color(0xFF44AA99);
     case 'SHOULDERS':
-      return Colors.purpleAccent;
+      return const Color(0xFF88CCEE);
     case 'ARMS':
-      return Colors.pinkAccent;
+      return const Color(0xFFAA4499);
     default:
-      return Colors.grey;
+      return const Color(0xFF999933);
   }
 }

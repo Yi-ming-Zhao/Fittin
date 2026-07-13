@@ -43,6 +43,16 @@ class _SuccessfulSyncService implements SyncService {
   }
 }
 
+class _FailingAfterHydrationSyncService implements SyncService {
+  int calls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    calls += 1;
+    throw Exception('Remote push failed after local hydration');
+  }
+}
+
 void main() {
   test('successful synchronization refreshes cached data providers', () async {
     final service = _SuccessfulSyncService();
@@ -61,6 +71,31 @@ void main() {
     expect(service.calls, 1);
     expect(container.read(syncRefreshProvider), 1);
   });
+
+  test(
+    'failed synchronization still refreshes locally hydrated data',
+    () async {
+      final service = _FailingAfterHydrationSyncService();
+      final container = ProviderContainer(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('sync-user'),
+          syncServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(syncControllerProvider.notifier)
+          .synchronizeWithRecovery(hydrate: true);
+
+      expect(service.calls, 1);
+      expect(container.read(syncRefreshProvider), 1);
+      expect(
+        container.read(syncControllerProvider).stage,
+        SyncStage.retryNeeded,
+      );
+    },
+  );
 
   testWidgets(
     'sync lifecycle gate hydrates restored sessions and syncs on resume',

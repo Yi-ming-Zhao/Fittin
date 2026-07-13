@@ -15,7 +15,9 @@ import '../theme/fittin_theme.dart' show FittinTheme, FittinCardStyle;
 import '../../application/fittin_theme_provider.dart';
 
 class TodayWorkoutHeroCard extends ConsumerWidget {
-  const TodayWorkoutHeroCard({super.key});
+  const TodayWorkoutHeroCard({super.key, this.compact = false});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,9 +32,14 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
         data: (template) => _FittinWorkoutCard(
           theme: theme,
           strings: strings,
+          planName: localizedTemplateName(
+            template,
+            ref.watch(appLocaleProvider),
+          ),
           summary: _localizedSummary(summary, template, ref),
           isResuming: sessionState.activeWorkout != null,
           isLoading: sessionState.isLoading,
+          compact: compact,
           onTap: () async {
             await ref
                 .read(activeSessionProvider.notifier)
@@ -87,11 +94,11 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
             }
           },
         ),
-        loading: () => _LoadingCard(theme: theme),
+        loading: () => _LoadingCard(theme: theme, compact: compact),
         error: (error, _) =>
             _ErrorCard(theme: theme, message: error.toString()),
       ),
-      loading: () => _LoadingCard(theme: theme),
+      loading: () => _LoadingCard(theme: theme, compact: compact),
       error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
     );
   }
@@ -117,18 +124,22 @@ class _FittinWorkoutCard extends StatelessWidget {
   const _FittinWorkoutCard({
     required this.theme,
     required this.strings,
+    required this.planName,
     required this.summary,
     required this.isResuming,
     required this.isLoading,
+    required this.compact,
     required this.onTap,
     required this.onShareTap,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
+  final String planName;
   final TodayWorkoutSummary summary;
   final bool isResuming;
   final bool isLoading;
+  final bool compact;
   final VoidCallback onTap;
   final Future<void> Function() onShareTap;
 
@@ -143,7 +154,7 @@ class _FittinWorkoutCard extends StatelessWidget {
     return FittinCard(
       theme: theme,
       style: FittinCardStyle.glass,
-      padding: theme.pad,
+      padding: compact ? 12 : theme.pad,
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,16 +182,22 @@ class _FittinWorkoutCard extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: compact ? 10 : 20),
 
           // Session title
-          FittinSectionTitle(theme, summary.workoutName, fontSize: 30),
-          const SizedBox(height: 6),
-          Text(
-            'TSA Intermediate Approach 2.0 · $weekDayLabel',
-            style: theme.uiStyle(13, theme.fgDim),
+          FittinSectionTitle(
+            theme,
+            summary.workoutName,
+            fontSize: compact ? 24 : 30,
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: compact ? 4 : 6),
+          Text(
+            '$planName · $weekDayLabel',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.uiStyle(compact ? 11 : 13, theme.fgDim),
+          ),
+          SizedBox(height: compact ? 10 : 20),
 
           // Progress strip — 2px, not glowing
           Row(
@@ -219,7 +236,7 @@ class _FittinWorkoutCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: compact ? 10 : 20),
 
           // Up next + Resume
           LayoutBuilder(
@@ -233,12 +250,21 @@ class _FittinWorkoutCard extends StatelessWidget {
                     summary.primaryExerciseName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.uiStyle(15, theme.fg, FontWeight.w500),
+                    style: theme.uiStyle(
+                      compact ? 14 : 15,
+                      theme.fg,
+                      FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Week ${summary.currentWeekNumber} · 3×6+ @ 0.6',
-                    style: theme.uiStyle(13, theme.fgDim),
+                    strings.dayMinutes(
+                      strings.isChinese
+                          ? '第 ${summary.currentWeekNumber} 周'
+                          : 'Week ${summary.currentWeekNumber}',
+                      summary.estimatedDurationMinutes,
+                    ),
+                    style: theme.uiStyle(compact ? 11 : 13, theme.fgDim),
                   ),
                 ],
               );
@@ -309,9 +335,10 @@ class _ResumeButton extends StatelessWidget {
 }
 
 class _LoadingCard extends StatelessWidget {
-  const _LoadingCard({required this.theme});
+  const _LoadingCard({required this.theme, this.compact = false});
 
   final FittinTheme theme;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -319,7 +346,7 @@ class _LoadingCard extends StatelessWidget {
       theme: theme,
       style: FittinCardStyle.glass,
       child: SizedBox(
-        height: 220,
+        height: compact ? 150 : 220,
         child: Center(
           child: CircularProgressIndicator(strokeWidth: 2, color: theme.fgDim),
         ),

@@ -1,4 +1,5 @@
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
@@ -102,7 +103,12 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       ownerUserId: ownerUserId,
     );
 
-    await _repository.saveInstance(postInstance);
+    await _repository.saveInstance(
+      postInstance,
+      syncStatus: ownerUserId == null
+          ? SyncStatusKeys.localOnly
+          : SyncStatusKeys.pendingUpload,
+    );
   }
 
   @override

@@ -43,9 +43,9 @@ class WebSyncService extends SyncService {
       return;
     }
 
-    await _pullRemote(ownerUserId);
     await _databaseRepository.claimLocalDataForUser(ownerUserId);
     await _progressRepository.claimLocalDataForUser(ownerUserId);
+    await _pullRemote(ownerUserId);
     await _pushPending(ownerUserId);
     await _pullRemote(ownerUserId);
   }

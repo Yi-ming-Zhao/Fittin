@@ -14,6 +14,9 @@ void main() {
   testWidgets('advanced analytics drills into a recorded day', (
     WidgetTester tester,
   ) async {
+    final now = DateTime.now();
+    final recordedDate = DateTime(now.year, now.month, now.day, 10);
+    final recordedDay = DateTime(now.year, now.month, now.day);
     final repository = InMemoryDatabaseRepository();
     await repository.saveTemplate(
       PlanTemplate(
@@ -41,7 +44,7 @@ void main() {
         workoutId: 'day-1',
         workoutName: 'Lower A',
         dayLabel: 'Day 1',
-        completedAt: DateTime(2026, 5, 4, 10),
+        completedAt: recordedDate,
         exercises: const [
           ExerciseLog(
             exerciseId: 'squat',
@@ -72,16 +75,32 @@ void main() {
 
     expect(find.textContaining('Consistency'), findsOneWidget);
 
-    final recordedDay = find.byKey(
-      const ValueKey('consistency-day-2026-05-04T00:00:00.000'),
+    final recordedDayCell = find.byKey(
+      ValueKey('consistency-day-${recordedDay.toIso8601String()}'),
     );
-    final dayCell = tester.widget<InkWell>(recordedDay);
+    final dayCell = tester.widget<InkWell>(recordedDayCell);
     dayCell.onTap!.call();
     await tester.pumpAndSettle();
 
     expect(find.text('Workout Record Details'), findsOneWidget);
     expect(find.text('Lower A'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete this workout record?'), findsOneWidget);
+    expect(await repository.fetchAllWorkoutLogs(), hasLength(1));
+
+    await tester.tap(find.byKey(const ValueKey('confirm-delete-workout')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No workout records available for that day.'),
+      findsOneWidget,
+    );
+    expect(await repository.fetchAllWorkoutLogs(), isEmpty);
   });
 
   testWidgets('advanced analytics localizes labels in Chinese', (
