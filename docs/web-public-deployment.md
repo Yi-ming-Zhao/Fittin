@@ -153,7 +153,7 @@ Also verify in a phone-sized browser viewport:
 2. refreshing a nested app state still returns the Flutter shell;
 3. home, plans, progress, and profile pages do not overflow horizontally;
 4. a workout can start or resume;
-5. card mode completes left, skips right, and snaps back below threshold;
+5. card mode moves to the next/previous set with left/right swipes, logs with an up swipe, skips with a down swipe, and snaps back at set boundaries;
 6. traditional mode remains selectable in Settings;
 7. tapping the current weight opens direct entry and a changed weight carries forward;
 8. authentication and sync requests use `/api`, not localhost or an old hostname.
