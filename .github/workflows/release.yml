@@ -223,15 +223,11 @@ jobs:
             echo "Android apksigner was not found."
             exit 1
           fi
-          signer_report="$(
-            "$apksigner_path" verify --print-certs "$apk_output"
-          )"
           actual_signer_sha256="$(
-            printf '%s\n' "$signer_report" \
-              | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
-              | head -n 1 \
-              | tr '[:upper:]' '[:lower:]' \
-              | tr -d ':[:space:]'
+            "$apksigner_path" verify --print-certs-pem "$apk_output" \
+              | openssl x509 -outform DER \
+              | sha256sum \
+              | awk '{print $1}'
           )"
           if [[ ! "$actual_signer_sha256" =~ ^[0-9a-f]{64}$ ]]; then
             echo "Unable to read a valid SHA-256 signer digest from the APK."
