@@ -26,6 +26,7 @@ void main() {
       final source = GitHubAppUpdateSource(
         client: MockClient((request) async {
           expect(request.url.host, 'api.github.com');
+          expect(request.headers['user-agent'], 'Fittin-App-Update');
           return http.Response(
             jsonEncode({
               'tag_name': 'v1.0.6',

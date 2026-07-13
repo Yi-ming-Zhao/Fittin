@@ -138,6 +138,34 @@ void main() {
     expect(find.text('Try again'), findsOneWidget);
   });
 
+  testWidgets('network failure keeps the official downloads available', (
+    tester,
+  ) async {
+    Uri? launchedUrl;
+    await _pumpAbout(
+      tester,
+      source: _ThrowingUpdateSource(),
+      launcher: (uri) async {
+        launchedUrl = uri;
+        return true;
+      },
+    );
+
+    await _tapCheckForUpdates(tester);
+    final downloads = find.byKey(const ValueKey('open-app-releases'));
+    await tester.scrollUntilVisible(
+      downloads,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.ensureVisible(downloads);
+    await tester.pumpAndSettle();
+    await tester.tap(downloads);
+    await tester.pumpAndSettle();
+
+    expect(launchedUrl, appReleasesPageUri);
+  });
+
   testWidgets('launcher failure returns to a retry state', (tester) async {
     await _pumpAbout(
       tester,

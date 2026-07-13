@@ -8,6 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 const _latestReleaseEndpoint =
     'https://api.github.com/repos/Yi-ming-Zhao/Fittin/releases/latest';
+final appReleasesPageUri = Uri.parse(
+  'https://github.com/Yi-ming-Zhao/Fittin/releases/latest',
+);
 
 class AppReleaseInfo {
   const AppReleaseInfo({
@@ -38,9 +41,10 @@ class GitHubAppUpdateSource implements AppUpdateSource {
     final response = await _client
         .get(
           Uri.parse(_latestReleaseEndpoint),
-          headers: const {
+          headers: {
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
+            if (!kIsWeb) 'User-Agent': 'Fittin-App-Update',
           },
         )
         .timeout(const Duration(seconds: 12));

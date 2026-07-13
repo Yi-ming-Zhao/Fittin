@@ -176,7 +176,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                     if (release != null) _openUrl(release.releasePageUrl);
                   },
                 ),
-              ] else
+              ] else ...[
                 FittinBtn(
                   theme,
                   _checkButtonLabel(isChinese),
@@ -187,6 +187,19 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                       ? null
                       : _checkForUpdate,
                 ),
+                if (_checkState == _UpdateCheckState.failed) ...[
+                  const SizedBox(height: 10),
+                  FittinBtn(
+                    theme,
+                    isChinese ? '打开官方下载页' : 'Open official downloads',
+                    key: const ValueKey('open-app-releases'),
+                    icon: Icons.open_in_new_rounded,
+                    variant: 'secondary',
+                    block: true,
+                    onPressed: () => _openUrl(appReleasesPageUri),
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -378,7 +391,9 @@ class _UpdateStatus extends StatelessWidget {
       _UpdateCheckState.failed => (
         Icons.cloud_off_outlined,
         isChinese ? '检查失败' : 'Update check failed',
-        isChinese ? '请检查网络后重试。' : 'Check your connection and try again.',
+        isChinese
+            ? '请检查网络后重试，也可直接打开官方下载页。'
+            : 'Try again, or open the official downloads page directly.',
       ),
       _ => (
         Icons.system_update_outlined,
