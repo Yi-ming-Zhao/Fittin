@@ -1,44 +1,47 @@
 ## Purpose
 
-Define how the Flutter Web client is published to a stable public subdomain using a repeatable release build flow, local static hosting, and Cloudflare Tunnel routing.
+Define how the Flutter Web client and project-owned backend are published through a stable Alibaba Cloud HTTPS origin without Cloudflare Tunnel.
 ## Requirements
 ### Requirement: Public Web Release Build
-The system MUST provide a repeatable release build flow for the Flutter Web client that is suitable for public serving at `https://fittin.yimelo.cc/`.
+The system MUST provide a repeatable release build flow for the Flutter Web client that is suitable for public serving at the selected production hostname, preferring `https://fittin.yimelo.cc/` and using `https://fittin.hammerscholar.net/` when the preferred DNS zone cannot be updated.
 
 #### Scenario: Build a public web release
 - **WHEN** a maintainer prepares a new public web deployment
 - **THEN** the documented build flow produces a Flutter Web release build from the repository
-- **AND** the build flow uses explicit `BACKEND_URL` (and optional `BACKEND_API_KEY`) `dart-define` values instead of Supabase runtime configuration.
+- **AND** the build flow uses an explicit same-origin `/api` `BACKEND_URL` (and optional `BACKEND_API_KEY`) instead of Supabase runtime configuration.
 
 ### Requirement: Local Static Hosting Contract
-The system MUST define a project-owned local static hosting contract for serving the generated `build/web` output on the same machine that runs the Cloudflare Tunnel.
+The system MUST define an Alibaba Cloud static hosting contract for serving the generated `build/web` output directly from the public ECS nginx instance.
 
-#### Scenario: Serve build output locally
-- **WHEN** a maintainer follows the deployment instructions on the host machine
-- **THEN** the generated `build/web` output is served by a documented local static server configuration
-- **AND** the documented local origin is stable enough for Cloudflare Tunnel to target without ad hoc command discovery
+#### Scenario: Serve build output on Alibaba Cloud
+- **WHEN** a maintainer follows the deployment instructions
+- **THEN** the generated `build/web` output is uploaded to a versioned ECS directory
+- **AND** nginx serves the selected release with single-page application fallback and explicit cache behavior.
 
 ### Requirement: Public Subdomain Routing
-The system MUST define how `fittin.yimelo.cc` routes through Cloudflare Tunnel to the local static hosting origin.
+The system MUST define how the selected Fittin hostname resolves directly to Alibaba Cloud and reaches nginx without Cloudflare Tunnel.
 
 #### Scenario: Reach the published web app from the public subdomain
-- **WHEN** the deployment is active and a user opens `https://fittin.yimelo.cc/`
-- **THEN** Cloudflare Tunnel forwards the request to the documented local static hosting origin
-- **AND** the user reaches the Flutter Web app over HTTPS on the subdomain
+- **WHEN** the deployment is active and a user opens the selected HTTPS hostname
+- **THEN** DNS resolves to the Alibaba Cloud public entrypoint
+- **AND** nginx returns the Flutter Web app over a valid HTTPS connection without a Cloudflare Tunnel hop.
 
 ### Requirement: Deployment Verification And Rollback
-The system MUST document verification and rollback steps for the public web deployment so updates can be shipped and reverted predictably.
+The system MUST document and support verification and rollback for the Alibaba Cloud deployment.
 
 #### Scenario: Verify a newly published release
 - **WHEN** a maintainer publishes a new web release
-- **THEN** the deployment documentation lists concrete smoke checks for first-load rendering, refresh behavior, and backend-backed runtime configuration
-- **AND** the documentation lists how to restore the previous published build or service state if the new release is not acceptable
+- **THEN** checks cover first-load rendering, refresh behavior, core asset loading, backend health, and phone-sized interaction
+- **AND** nginx configuration is tested before reload.
+
+#### Scenario: Roll back a failed release
+- **WHEN** public validation fails after activation
+- **THEN** the maintainer can restore the previous versioned Web bundle and nginx configuration without changing backend user data.
 
 ### Requirement: Public Backend Endpoint Availability
-The system MUST document and support a stable public backend endpoint that can be reached through a dedicated tunnel-backed hostname during web deployment and validation.
+The system MUST expose the project-owned backend on `241-dhg` through an NPS TCP path terminating at the Alibaba Cloud nginx `/api/` route.
 
 #### Scenario: Validate public backend reachability
-- **WHEN** a maintainer completes backend tunnel and DNS configuration for the public environment
-- **THEN** the configured public backend hostname reaches the local backend origin instead of an unrelated service
-- **AND** a public request to `/healthz` succeeds through the tunnel
-
+- **WHEN** a maintainer completes the 241 NPS mapping and nginx configuration
+- **THEN** a public request to `/api/healthz` reaches the Fittin backend on `241-dhg`
+- **AND** the response succeeds without a Cloudflare Tunnel hop.
