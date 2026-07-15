@@ -18,6 +18,26 @@ On the refactored training log screen, the primary visible controls MUST be limi
 - **THEN** left and right gestures navigate next and previous sets
 - **AND** up and down gestures complete and skip the current set.
 
+### Requirement: Four-Way Card Resolution Gestures
+In card recording mode, the logger MUST recognize the dominant supported direction when either drag distance or release velocity passes its configured threshold. Left and right MUST navigate to the next and previous set, while up and down MUST complete and skip the displayed set.
+
+#### Scenario: Completing by swiping up
+- **WHEN** the user releases the current card upward beyond the distance threshold or with dominant upward velocity above the fling threshold
+- **THEN** the set is recorded as complete and the next unresolved card becomes current.
+
+#### Scenario: Skipping by swiping down
+- **WHEN** the user releases the current card downward beyond the distance threshold or with dominant downward velocity above the fling threshold
+- **THEN** the set is marked skipped rather than completed
+- **AND** the skipped set cannot satisfy progression success criteria.
+
+#### Scenario: Navigating horizontally
+- **WHEN** the user performs an accepted left or right gesture
+- **THEN** the logger moves to the next or previous set without changing completion state.
+
+#### Scenario: Gesture stays below both thresholds
+- **WHEN** neither displacement nor release velocity reaches its configured threshold
+- **THEN** the card returns to rest and the workout draft remains unchanged.
+
 ### Requirement: Focused Single-Set Interaction
 The active workout screen MUST prioritize the current set interaction over the full set list, presenting one dominant logging interaction for the active set.
 
@@ -36,3 +56,8 @@ The refactored logger MUST integrate exercise switching into the compact exercis
 - **WHEN** the user releases the card quickly enough to pass the velocity threshold before reaching the full distance threshold
 - **THEN** the intended dominant direction still resolves smoothly
 - **AND** no network request is required before the next local state appears.
+
+## RENAMED Requirements
+
+- FROM: `### Requirement: Directional Card Resolution Gestures`
+- TO: `### Requirement: Four-Way Card Resolution Gestures`

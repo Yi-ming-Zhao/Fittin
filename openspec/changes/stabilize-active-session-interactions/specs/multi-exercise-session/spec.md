@@ -4,7 +4,7 @@
 The system MUST persist the in-progress active workout session so the same current draft can be restored after app relaunch or browser refresh. Draft writes MUST preserve local mutation order, and restoration MUST validate the draft's instance, template, workout, and deterministic progression identity against the active schedule.
 
 #### Scenario: User refreshes during an in-progress workout
-- **WHEN** the user has already changed reps, weights, completion state, cancellation state, or exercise selection in the current active workout and then refreshes the app
+- **WHEN** the user has already changed reps, weights, completion state, skip state, or exercise selection in the current active workout and then refreshes the app
 - **THEN** the app restores the same current in-progress workout draft on resume
 - **AND** it does not rebuild the session from the current training instance as though the workout had never started.
 
@@ -22,6 +22,14 @@ The system MUST persist the in-progress active workout session so the same curre
 - **WHEN** the active instance or scheduled workout identity differs from the persisted draft
 - **THEN** the app does not restore that draft as the current workout.
 
+### Requirement: Skipped Set Draft State
+The active workout draft MUST preserve whether a set was skipped so restoration and navigation do not present it as the current unresolved set or as a completed set.
+
+#### Scenario: Restoring after skipping a set
+- **WHEN** the user skips a set and then refreshes or relaunches the app
+- **THEN** the skipped set remains skipped
+- **AND** the session resumes at the next unresolved set.
+
 ## ADDED Requirements
 
 ### Requirement: Local-First Active Session Commands
@@ -36,3 +44,8 @@ The system MUST apply accepted set navigation, edit, completion, and skip comman
 - **WHEN** an accepted command is waiting for its local draft write
 - **THEN** subsequent valid interaction remains responsive
 - **AND** final persisted state converges to the accepted command order.
+
+## RENAMED Requirements
+
+- FROM: `### Requirement: Cancelled Set Draft State`
+- TO: `### Requirement: Skipped Set Draft State`

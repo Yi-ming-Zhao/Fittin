@@ -38,6 +38,26 @@ The screen MUST NOT include a reset-reps action.
 - **THEN** the set is marked skipped rather than completed
 - **AND** the session advances without counting the skipped set as progression success.
 
+### Requirement: Selectable Card And Traditional Recording Modes
+The active workout screen MUST support a card recording mode and a traditional recording mode while using the same underlying workout draft and actions.
+
+#### Scenario: Opening the selected logger
+- **WHEN** the user starts or resumes a workout
+- **THEN** the current-set controls render in the recording mode saved in settings
+- **AND** switching modes does not discard reps, weight, RPE, completion, skip, or exercise selection state.
+
+### Requirement: Live Current-Set Card Stack
+Card recording mode MUST present the current set as the dominant foreground card and show upcoming unresolved sets as a compact layered stack that reacts continuously to the foreground drag.
+
+#### Scenario: Dragging the active card
+- **WHEN** the user drags the current card in any supported direction without releasing it
+- **THEN** the foreground card translates with the pointer and exposes direction-specific feedback
+- **AND** the next cards expand toward the foreground position in real time.
+
+#### Scenario: Gesture does not meet a threshold
+- **WHEN** the user releases the current card before either its distance or velocity threshold
+- **THEN** the card returns to its resting position without changing session data.
+
 ## ADDED Requirements
 
 ### Requirement: Velocity-Aware Four-Way Card Gestures
