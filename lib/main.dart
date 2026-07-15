@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
@@ -69,6 +70,8 @@ class FittinApp extends ConsumerWidget {
     return MaterialApp(
       title: 'Fittin V2',
       locale: appLocale.locale,
+      supportedLocales: const [Locale('en'), Locale('zh')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: colorScheme,

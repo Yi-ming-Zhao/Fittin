@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/active_session_provider.dart';
 import '../../application/app_locale_provider.dart';
+import '../../application/exercise_library_provider.dart';
+import '../../domain/exercise_library.dart';
 import '../../domain/models/training_state.dart';
 import '../../domain/models/training_plan.dart';
 import '../localization/app_strings.dart';
@@ -33,6 +35,7 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
     final sessionState = ref.watch(activeSessionProvider);
     final summaryAsync = ref.watch(todayWorkoutSummaryProvider);
     final templateAsync = ref.watch(activeTemplateProvider);
+    final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
     final strings = AppStrings.of(context, ref);
 
     return summaryAsync.when(
@@ -44,7 +47,7 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
             template,
             ref.watch(appLocaleProvider),
           ),
-          summary: _localizedSummary(summary, template, ref),
+          summary: _localizedSummary(summary, template, ref, exerciseLibrary),
           isResuming: sessionState.activeWorkout != null,
           isLoading: sessionState.isLoading || _openingSession,
           compact: widget.compact,
@@ -62,18 +65,25 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
               );
             } catch (error) {
               if (!context.mounted) return;
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(error.toString())));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(strings.unableToSharePlan)),
+              );
             }
           },
         ),
         loading: () => _LoadingCard(theme: theme, compact: widget.compact),
-        error: (error, _) =>
-            _ErrorCard(theme: theme, message: error.toString()),
+        error: (error, _) => _ErrorCard(
+          theme: theme,
+          strings: strings,
+          message: strings.loadError(error),
+        ),
       ),
       loading: () => _LoadingCard(theme: theme, compact: widget.compact),
-      error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
+      error: (error, _) => _ErrorCard(
+        theme: theme,
+        strings: strings,
+        message: strings.loadError(error),
+      ),
     );
   }
 
@@ -127,6 +137,7 @@ TodayWorkoutSummary _localizedSummary(
   TodayWorkoutSummary summary,
   PlanTemplate template,
   WidgetRef ref,
+  ExerciseLibrary? library,
 ) {
   final locale = ref.watch(appLocaleProvider);
   final workout = template.findWorkoutById(summary.workoutId);
@@ -134,7 +145,11 @@ TodayWorkoutSummary _localizedSummary(
   return summary.copyWith(
     workoutName: localizedWorkoutName(workout, locale),
     dayLabel: localizedWorkoutDayLabel(workout, locale),
-    primaryExerciseName: localizedExerciseName(exercise, locale),
+    primaryExerciseName: localizedExerciseName(
+      exercise,
+      locale,
+      library: library,
+    ),
   );
 }
 
@@ -165,10 +180,17 @@ class _FittinWorkoutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progressLabel = strings.exercisesCount(summary.exerciseCount);
-    final statusLabel = strings.isChinese ? 'In progress' : 'In progress';
-    final upNextLabel = strings.isChinese ? 'Up next' : 'Up next';
-    final weekDayLabel =
-        'W${summary.currentWeekNumber} D${summary.currentDayNumber}';
+    final weekDayLabel = strings.compactWeekDayLabel(
+      summary.currentWeekNumber,
+      summary.currentDayNumber,
+    );
+    final totalSessions = summary.cycleWeekCount * summary.workoutsPerWeek;
+    final completedPosition =
+        (summary.currentWeekNumber - 1) * summary.workoutsPerWeek +
+        summary.currentDayNumber;
+    final progress = totalSessions <= 0
+        ? 0.0
+        : (completedPosition / totalSessions).clamp(0.0, 1.0).toDouble();
 
     return FittinCard(
       theme: theme,
@@ -182,7 +204,7 @@ class _FittinWorkoutCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              FittinEyebrow(theme, 'Next session'),
+              FittinEyebrow(theme, strings.nextSession),
               if (isResuming)
                 Row(
                   mainAxisSize: MainAxisSize.min,
@@ -196,7 +218,10 @@ class _FittinWorkoutCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 5),
-                    Text(statusLabel, style: theme.uiStyle(11, theme.fgMuted)),
+                    Text(
+                      strings.inProgress,
+                      style: theme.uiStyle(11, theme.fgMuted),
+                    ),
                   ],
                 ),
             ],
@@ -230,7 +255,7 @@ class _FittinWorkoutCard extends StatelessWidget {
                   ),
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
-                    widthFactor: 0.6,
+                    widthFactor: progress,
                     child: Container(
                       decoration: BoxDecoration(
                         color: theme.accent,
@@ -263,7 +288,7 @@ class _FittinWorkoutCard extends StatelessWidget {
               final details = Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FittinEyebrow(theme, upNextLabel),
+                  FittinEyebrow(theme, strings.upNext),
                   const SizedBox(height: 4),
                   Text(
                     summary.primaryExerciseName,
@@ -278,9 +303,7 @@ class _FittinWorkoutCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     strings.dayMinutes(
-                      strings.isChinese
-                          ? '第 ${summary.currentWeekNumber} 周'
-                          : 'Week ${summary.currentWeekNumber}',
+                      weekDayLabel,
                       summary.estimatedDurationMinutes,
                     ),
                     style: theme.uiStyle(compact ? 11 : 13, theme.fgDim),
@@ -375,9 +398,14 @@ class _LoadingCard extends StatelessWidget {
 }
 
 class _ErrorCard extends StatelessWidget {
-  const _ErrorCard({required this.theme, required this.message});
+  const _ErrorCard({
+    required this.theme,
+    required this.strings,
+    required this.message,
+  });
 
   final FittinTheme theme;
+  final AppStrings strings;
   final String message;
 
   @override
@@ -390,7 +418,7 @@ class _ErrorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Unable to load workout',
+            strings.unableToLoadWorkout,
             style: theme
                 .uiStyle(16, theme.fg)
                 .copyWith(fontWeight: FontWeight.w700),

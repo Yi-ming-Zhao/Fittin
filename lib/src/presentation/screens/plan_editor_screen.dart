@@ -55,7 +55,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    _showPendingSnackbars(state, notifier);
+    _showPendingSnackbars(state, notifier, strings);
 
     final workouts = draft.workouts;
     if (_selectedWorkoutIndex >= workouts.length) {
@@ -70,7 +70,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     }
 
     return DashboardPageScaffold(
-      bottomPadding: 140,
+      bottomPadding: 24,
+      safeAreaBottom: true,
       children: [
         Row(
           children: [
@@ -103,12 +104,8 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
         const SizedBox(height: 8),
         Text(
           draft.isPeriodized
-              ? (strings.isChinese
-                    ? '按周/天槽位编辑周期计划。'
-                    : 'Edit periodized plans by week/day slot.')
-              : (strings.isChinese
-                    ? '线性计划按可复用训练日整体编辑。'
-                    : 'Linear plans are edited as reusable workout structures.'),
+              ? strings.planEditorPeriodizedDescription
+              : strings.planEditorLinearDescription,
           style: fittinTheme
               .uiStyle(13, fittinTheme.fgDim)
               .copyWith(height: 1.45),
@@ -119,22 +116,19 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             padding: const EdgeInsets.only(bottom: 12),
             child: _InfoBanner(
               message: state.sourceTemplate!.isBuiltIn
-                  ? (strings.isChinese
-                        ? '内置模板会另存为新的自定义副本。'
-                        : 'Built-in templates save as a new custom copy.')
+                  ? strings.builtInTemplateCopyNotice
                   : state.sourceTemplate!.instanceCount > 0
-                  ? (strings.isChinese
-                        ? '已有进行中实例的模板会另存为新副本，避免覆盖现有进度。'
-                        : 'Templates with active instances save as a new copy to protect existing progress.')
-                  : (strings.isChinese
-                        ? '你正在直接编辑自定义模板。'
-                        : 'You are editing a custom template in place.'),
+                  ? strings.activeTemplateCopyNotice
+                  : strings.customTemplateEditNotice,
             ),
           ),
         if (state.validationErrors.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _ValidationBanner(errors: state.validationErrors),
+            child: _ValidationBanner(
+              errors: state.validationErrors,
+              strings: strings,
+            ),
           ),
         _TemplateMetaCard(draft: draft, notifier: notifier, strings: strings),
         const SizedBox(height: 16),
@@ -172,8 +166,10 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             periodizedWeekIndex: _selectedPeriodizedWeek,
             showWorkoutMetadataEditor: true,
             allowPeriodizedSlotFocus: true,
-            periodizedSlotLabel:
-                'W${_selectedPeriodizedWeek + 1}D${_selectedWorkoutIndex + 1}',
+            periodizedSlotLabel: strings.periodizedEditorSlotLabel(
+              _selectedPeriodizedWeek + 1,
+              _selectedWorkoutIndex + 1,
+            ),
           ),
         ] else ...[
           for (
@@ -210,21 +206,30 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   void _showPendingSnackbars(
     TemplateEditorState state,
     TemplateEditorNotifier notifier,
+    AppStrings strings,
   ) {
     if (state.infoMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.infoMessage!)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              strings.templateEditorInfoMessage(state.infoMessage!),
+            ),
+          ),
+        );
         notifier.dismissMessages();
       });
     } else if (state.errorMessage != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              strings.templateEditorErrorMessage(state.errorMessage!),
+            ),
+          ),
+        );
         notifier.dismissMessages();
       });
     }
@@ -272,11 +277,7 @@ class _HeaderActions extends StatelessWidget {
         const SizedBox(width: 8),
         FittinBtn(
           theme,
-          isSaving
-              ? strings.isChinese
-                    ? '保存中'
-                    : 'Saving'
-              : strings.save,
+          isSaving ? strings.saving : strings.save,
           size: 'sm',
           icon: isSaving ? null : Icons.save_outlined,
           onPressed: isSaving ? null : () => onSave(),
@@ -300,7 +301,7 @@ class _TemplateMetaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _EditorCard(
-      title: strings.isChinese ? '模板' : 'Template',
+      title: strings.templateSection,
       child: Column(
         children: [
           _DraftTextField(
@@ -310,7 +311,7 @@ class _TemplateMetaCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _DraftTextField(
-            label: strings.isChinese ? '描述' : 'Description',
+            label: strings.description,
             value: draft.description,
             maxLines: 3,
             onChanged: notifier.updateTemplateDescription,
@@ -345,9 +346,7 @@ class _ModeSelectorCard extends StatelessWidget {
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.linear,
               title: strings.linearPlan,
-              subtitle: strings.isChinese
-                  ? '整套训练日复用'
-                  : 'Reusable workout structure',
+              subtitle: strings.linearPlanModeDescription,
               onTap: () =>
                   notifier.updateScheduleMode(PlanScheduleModes.linear),
             ),
@@ -357,9 +356,7 @@ class _ModeSelectorCard extends StatelessWidget {
             child: _ModeTile(
               selected: scheduleMode == PlanScheduleModes.periodized,
               title: strings.periodizedPlan,
-              subtitle: strings.isChinese
-                  ? '按周/天槽位编辑'
-                  : 'Edit by week/day slots',
+              subtitle: strings.periodizedPlanModeDescription,
               onTap: () =>
                   notifier.updateScheduleMode(PlanScheduleModes.periodized),
             ),
@@ -413,7 +410,7 @@ class _PeriodizedSlotCard extends StatelessWidget {
               for (var i = 0; i < workouts.length; i++)
                 _SlotChip(
                   theme: theme,
-                  label: 'D${i + 1}',
+                  label: strings.daySlotLabel(i + 1),
                   selected: i == selectedWorkoutIndex,
                   onTap: () => onWorkoutSelected(i),
                 ),
@@ -427,7 +424,7 @@ class _PeriodizedSlotCard extends StatelessWidget {
               for (var i = 0; i < weekCount; i++)
                 _SlotChip(
                   theme: theme,
-                  label: 'W${i + 1}',
+                  label: strings.weekSlotLabel(i + 1),
                   selected: i == selectedWeekIndex,
                   onTap: () => onWeekSelected(i),
                 ),
@@ -626,7 +623,7 @@ class _ExerciseEditorCard extends StatelessWidget {
             ],
           ),
           _DraftTextField(
-            label: strings.isChinese ? '动作名称' : 'Exercise Name',
+            label: strings.exerciseName,
             value: exercise.name,
             onChanged: (value) =>
                 notifier.updateExerciseName(workoutIndex, exerciseIndex, value),
@@ -716,7 +713,7 @@ class _ExerciseEditorCard extends StatelessWidget {
                     ),
                     DropdownMenuItem(
                       value: LoadUnits.bodyweight,
-                      child: Text(strings.isChinese ? '自身体重' : 'Bodyweight'),
+                      child: Text(strings.bodyweightLoad),
                     ),
                     DropdownMenuItem(
                       value: LoadUnits.cableStack,
@@ -750,33 +747,31 @@ class _ExerciseEditorCard extends StatelessWidget {
                 child: DropdownButtonFormField<String>(
                   isExpanded: true,
                   initialValue: exercise.equipmentType,
-                  decoration: InputDecoration(
-                    labelText: strings.isChinese ? '器械类型' : 'Equipment',
-                  ),
+                  decoration: InputDecoration(labelText: strings.equipmentType),
                   items: [
                     DropdownMenuItem(
                       value: EquipmentTypes.general,
-                      child: Text(strings.isChinese ? '通用' : 'General'),
+                      child: Text(strings.equipmentGeneral),
                     ),
                     DropdownMenuItem(
                       value: EquipmentTypes.barbell,
-                      child: Text(strings.isChinese ? '杠铃' : 'Barbell'),
+                      child: Text(strings.equipmentBarbell),
                     ),
                     DropdownMenuItem(
                       value: EquipmentTypes.dumbbell,
-                      child: Text(strings.isChinese ? '哑铃' : 'Dumbbell'),
+                      child: Text(strings.equipmentDumbbell),
                     ),
                     DropdownMenuItem(
                       value: EquipmentTypes.machine,
-                      child: Text(strings.isChinese ? '器械' : 'Machine'),
+                      child: Text(strings.equipmentMachine),
                     ),
                     DropdownMenuItem(
                       value: EquipmentTypes.cable,
-                      child: Text(strings.isChinese ? '绳索' : 'Cable'),
+                      child: Text(strings.equipmentCable),
                     ),
                     DropdownMenuItem(
                       value: EquipmentTypes.bodyweight,
-                      child: Text(strings.isChinese ? '自重' : 'Bodyweight'),
+                      child: Text(strings.equipmentBodyweight),
                     ),
                   ],
                   onChanged: (value) {
@@ -796,30 +791,28 @@ class _ExerciseEditorCard extends StatelessWidget {
                   isExpanded: true,
                   initialValue: exercise.trainingMaxLift,
                   decoration: InputDecoration(
-                    labelText: strings.isChinese ? '训练最大值映射' : 'TM Mapping',
+                    labelText: strings.trainingMaxMapping,
                   ),
                   items: [
                     DropdownMenuItem<String?>(
                       value: null,
-                      child: Text(
-                        strings.isChinese ? '无 / 后续补充' : 'None / Later',
-                      ),
+                      child: Text(strings.noneOrLater),
                     ),
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: 'squat',
-                      child: Text('Squat'),
+                      child: Text(strings.squatShort),
                     ),
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: 'bench',
-                      child: Text('Bench'),
+                      child: Text(strings.benchShort),
                     ),
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: 'deadlift',
-                      child: Text('Deadlift'),
+                      child: Text(strings.deadliftShort),
                     ),
-                    const DropdownMenuItem<String?>(
+                    DropdownMenuItem<String?>(
                       value: 'overhead_press',
-                      child: Text('Overhead Press'),
+                      child: Text(strings.overheadPressShort),
                     ),
                   ],
                   onChanged: (value) => notifier.updateExerciseTrainingMaxLift(
@@ -833,9 +826,7 @@ class _ExerciseEditorCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            strings.isChinese
-                ? '计划可先快速开始，之后再回来补充动作的训练最大值映射或起始重量。'
-                : 'Plans can quick-start now and come back later to finish lift mappings or starting weights.',
+            strings.planEditorDeferredLoadHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Colors.white.withValues(alpha: 0.68),
             ),
@@ -1002,6 +993,7 @@ class _StageEditorCard extends StatelessWidget {
             const SizedBox(height: 8),
             _RuleEditor(
               title: strings.onSuccess,
+              strings: strings,
               condition: 'on_success',
               stage: stage,
               stageIds: stageIds,
@@ -1013,6 +1005,7 @@ class _StageEditorCard extends StatelessWidget {
             const SizedBox(height: 8),
             _RuleEditor(
               title: strings.onFailure,
+              strings: strings,
               condition: 'on_failure',
               stage: stage,
               stageIds: stageIds,
@@ -1132,22 +1125,13 @@ class _SetEditorRow extends StatelessWidget {
                   }
                 },
                 itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'up',
-                    child: Text(strings.isChinese ? '上移' : 'Move up'),
-                  ),
-                  PopupMenuItem(
-                    value: 'down',
-                    child: Text(strings.isChinese ? '下移' : 'Move down'),
-                  ),
+                  PopupMenuItem(value: 'up', child: Text(strings.moveUp)),
+                  PopupMenuItem(value: 'down', child: Text(strings.moveDown)),
                   PopupMenuItem(
                     value: 'duplicate',
-                    child: Text(strings.isChinese ? '复制' : 'Duplicate'),
+                    child: Text(strings.duplicate),
                   ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text(strings.isChinese ? '删除' : 'Delete'),
-                  ),
+                  PopupMenuItem(value: 'delete', child: Text(strings.delete)),
                 ],
               ),
             ],
@@ -1227,7 +1211,7 @@ class _SetEditorRow extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _DraftDoubleField(
-            label: strings.isChinese ? '目标 RPE' : 'Target RPE',
+            label: strings.targetRpe,
             value: setDefinition.targetRpe ?? 0,
             onChanged: (value) => notifier.updateSetTargetRpe(
               workoutIndex,
@@ -1246,6 +1230,7 @@ class _SetEditorRow extends StatelessWidget {
 class _RuleEditor extends StatelessWidget {
   const _RuleEditor({
     required this.title,
+    required this.strings,
     required this.condition,
     required this.stage,
     required this.stageIds,
@@ -1256,6 +1241,7 @@ class _RuleEditor extends StatelessWidget {
   });
 
   final String title;
+  final AppStrings strings;
   final String condition;
   final SetScheme stage;
   final List<String> stageIds;
@@ -1297,6 +1283,7 @@ class _RuleEditor extends StatelessWidget {
               child: _RuleActionEditorRow(
                 action: actions[actionIndex],
                 stageIds: stageIds,
+                strings: strings,
                 onTypeChanged: (value) => notifier.updateRuleActionType(
                   workoutIndex,
                   exerciseIndex,
@@ -1350,6 +1337,7 @@ class _RuleActionEditorRow extends StatelessWidget {
   const _RuleActionEditorRow({
     required this.action,
     required this.stageIds,
+    required this.strings,
     required this.onTypeChanged,
     required this.onAmountChanged,
     required this.onMultiplierChanged,
@@ -1359,6 +1347,7 @@ class _RuleActionEditorRow extends StatelessWidget {
 
   final RuleAction action;
   final List<String> stageIds;
+  final AppStrings strings;
   final ValueChanged<String> onTypeChanged;
   final ValueChanged<double> onAmountChanged;
   final ValueChanged<double> onMultiplierChanged;
@@ -1372,18 +1361,25 @@ class _RuleActionEditorRow extends StatelessWidget {
         Expanded(
           flex: 2,
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: action.type,
-            decoration: const InputDecoration(labelText: 'Action'),
-            items: const [
-              DropdownMenuItem(value: 'STAY_STAGE', child: Text('Stay')),
-              DropdownMenuItem(value: 'ADD_WEIGHT', child: Text('Add Weight')),
+            decoration: InputDecoration(labelText: strings.ruleAction),
+            items: [
+              DropdownMenuItem(
+                value: 'STAY_STAGE',
+                child: Text(strings.ruleActionStay),
+              ),
+              DropdownMenuItem(
+                value: 'ADD_WEIGHT',
+                child: Text(strings.ruleActionAddWeight),
+              ),
               DropdownMenuItem(
                 value: 'MULTIPLY_WEIGHT',
-                child: Text('Multiply'),
+                child: Text(strings.ruleActionMultiply),
               ),
               DropdownMenuItem(
                 value: 'JUMP_TO_STAGE',
-                child: Text('Jump Stage'),
+                child: Text(strings.ruleActionJumpStage),
               ),
             ],
             onChanged: (value) {
@@ -1395,7 +1391,7 @@ class _RuleActionEditorRow extends StatelessWidget {
         if (action.type == 'ADD_WEIGHT')
           Expanded(
             child: _DraftDoubleField(
-              label: 'Amount',
+              label: strings.amount,
               value: action.amount ?? 2.5,
               onChanged: onAmountChanged,
             ),
@@ -1403,7 +1399,7 @@ class _RuleActionEditorRow extends StatelessWidget {
         else if (action.type == 'MULTIPLY_WEIGHT')
           Expanded(
             child: _DraftDoubleField(
-              label: 'Multiplier',
+              label: strings.multiplier,
               value: action.multiplier ?? 0.9,
               onChanged: onMultiplierChanged,
             ),
@@ -1412,7 +1408,7 @@ class _RuleActionEditorRow extends StatelessWidget {
           Expanded(
             child: DropdownButtonFormField<String>(
               initialValue: action.targetStageId,
-              decoration: const InputDecoration(labelText: 'Stage'),
+              decoration: InputDecoration(labelText: strings.stage),
               items: [
                 for (final stageId in stageIds)
                   DropdownMenuItem(value: stageId, child: Text(stageId)),
@@ -1687,9 +1683,10 @@ class _InfoBanner extends StatelessWidget {
 }
 
 class _ValidationBanner extends StatelessWidget {
-  const _ValidationBanner({required this.errors});
+  const _ValidationBanner({required this.errors, required this.strings});
 
   final List<String> errors;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
@@ -1700,7 +1697,7 @@ class _ValidationBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Validation',
+            strings.validation,
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -1709,7 +1706,7 @@ class _ValidationBanner extends StatelessWidget {
           for (final error in errors.take(6))
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Text('• $error'),
+              child: Text('• ${strings.templateValidationError(error)}'),
             ),
         ],
       ),

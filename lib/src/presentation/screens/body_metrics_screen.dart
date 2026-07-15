@@ -5,18 +5,28 @@ import 'package:fittin_v2/src/application/body_metrics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
     show FittinTheme;
 
-class BodyMetricsScreen extends ConsumerWidget {
+class BodyMetricsScreen extends ConsumerStatefulWidget {
   const BodyMetricsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BodyMetricsScreen> createState() =>
+      _BodyMetricsScreenStateful();
+}
+
+enum _BodyWeightUnit { kg, lb }
+
+class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
+  _BodyWeightUnit _weightUnit = _BodyWeightUnit.kg;
+
+  @override
+  Widget build(BuildContext context) {
     final metricsAsync = ref.watch(bodyMetricsProvider);
     final strings = AppStrings.of(context, ref);
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
@@ -28,12 +38,12 @@ class BodyMetricsScreen extends ConsumerWidget {
           final screenState = _BodyMetricsScreenState.fromMetrics(metrics);
 
           return DashboardPageScaffold(
-            bottomPadding: 100,
+            bottomPadding: 24,
             children: [
               DashboardScreenHeader(
-                eyebrow: 'Composition',
-                title: 'Body metrics',
-                subtitle: 'Track physical change alongside the barbell.',
+                eyebrow: strings.composition,
+                title: strings.bodyMetrics,
+                subtitle: strings.bodyMetricsSubtitle,
               ),
               const SizedBox(height: 24),
               _buildHeroCard(
@@ -59,7 +69,7 @@ class BodyMetricsScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(strings.loadError(e))),
       ),
     );
   }
@@ -106,18 +116,40 @@ class BodyMetricsScreen extends ConsumerWidget {
     _BodyMetricsScreenState screenState,
     AppStrings strings,
   ) {
-    final recent = weightedMetrics.length > 10
-        ? weightedMetrics.sublist(0, 10).reversed.toList()
-        : weightedMetrics.reversed.toList();
-
-    final latestWeight = weightedMetrics.first.weightKg!;
-    final previousWeight = weightedMetrics.length > 1
-        ? weightedMetrics[1].weightKg
+    final chronological = [...weightedMetrics]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final latestMetric = chronological.last;
+    final latestWeightKg = latestMetric.weightKg!;
+    final previousWeightKg = chronological.length > 1
+        ? chronological[chronological.length - 2].weightKg
         : null;
+    final scale = _weightUnit == _BodyWeightUnit.kg ? 1.0 : 2.2046226218;
+    final unitSymbol = _weightUnit == _BodyWeightUnit.kg
+        ? strings.kilogramSymbol
+        : strings.poundSymbol;
+    final unit = _weightUnit == _BodyWeightUnit.kg
+        ? strings.kilogramUnit
+        : strings.poundUnit;
+    final latestWeight = latestWeightKg * scale;
+    final previousWeight = previousWeightKg == null
+        ? null
+        : previousWeightKg * scale;
     final delta = _calculateDelta(latestWeight, previousWeight);
-
-    // Build sparkline data
-    final sparklineData = recent.map((m) => m.weightKg!).toList();
+    final chartPoints = <DatedChartPoint>[
+      for (var index = 0; index < chronological.length; index++)
+        DatedChartPoint(
+          date: chronological[index].timestamp,
+          value: chronological[index].weightKg! * scale,
+          detail: index == 0
+              ? strings.firstWeightEntry
+              : strings.weightPointDelta(
+                  (chronological[index].weightKg! -
+                          chronological[index - 1].weightKg!) *
+                      scale,
+                  unit,
+                ),
+        ),
+    ];
 
     return DashboardSurfaceCard(
       radius: 34,
@@ -128,13 +160,19 @@ class BodyMetricsScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              FittinEyebrow(theme, strings.weightKgLabel),
+              FittinEyebrow(theme, strings.weightWithUnitLabel(unit)),
               // Unit segmented control
               FittinSegmented(
                 theme: theme,
-                options: const ['kg', 'lb'],
-                value: 'kg',
-                onChange: (_) {},
+                options: [strings.kilogramSymbol, strings.poundSymbol],
+                value: unitSymbol,
+                onChange: (value) {
+                  setState(() {
+                    _weightUnit = value == strings.poundSymbol
+                        ? _BodyWeightUnit.lb
+                        : _BodyWeightUnit.kg;
+                  });
+                },
               ),
             ],
           ),
@@ -148,30 +186,46 @@ class BodyMetricsScreen extends ConsumerWidget {
                   latestWeight.toStringAsFixed(1),
                   size: 52,
                   color: theme.fg,
-                  unit: 'kg',
+                  unit: unit,
                 ),
               ),
-              if (sparklineData.length > 1) ...[
-                const SizedBox(width: 16),
-                Sparkline(theme, sparklineData, width: 80, height: 36),
-              ],
             ],
           ),
-          const SizedBox(height: 12),
-          if (sparklineData.length > 1) ...[
-            StepChart(theme, sparklineData, height: 90, showDots: false),
-            const SizedBox(height: 10),
-          ],
+          const SizedBox(height: 16),
+          InteractiveLineChart(
+            key: const ValueKey('body-weight-chart'),
+            theme: theme,
+            series: [
+              DatedChartSeries(
+                id: 'body-weight',
+                label: strings.weightSeries,
+                points: chartPoints,
+              ),
+            ],
+            chartLabel: strings.weightProgression,
+            xAxisLabel: strings.dateAxis,
+            yAxisLabel: strings.weightAxis,
+            unit: unit,
+            emptyLabel: strings.noWeightTrendYet,
+            selectionHint: strings.tapChartPoint,
+            axisDateFormatter: strings.shortMonthDay,
+            detailDateFormatter: strings.longDate,
+            axisValueFormatter: (value) => value.toStringAsFixed(0),
+            detailValueFormatter: (value) => value.toStringAsFixed(1),
+            emptySemanticsFormatter: strings.chartEmptySemantics,
+            summarySemanticsFormatter: strings.chartSummarySemantics,
+            pointLabelFormatter: strings.chartPointLabel,
+            height: 250,
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
-              if (delta != null) FittinDelta(theme, delta, unit: ' kg'),
+              if (delta != null) FittinDelta(theme, delta, unit: ' $unit'),
               if (delta != null) const SizedBox(width: 8),
               Text(
                 delta == null
-                    ? strings.shortMonthDay(weightedMetrics.first.timestamp)
-                    : strings.isChinese
-                    ? '上次记录以来'
-                    : 'since last check-in',
+                    ? strings.shortMonthDay(latestMetric.timestamp)
+                    : strings.sinceLastCheckIn,
                 style: theme.uiStyle(11, theme.fgMuted),
               ),
             ],
@@ -209,7 +263,7 @@ class BodyMetricsScreen extends ConsumerWidget {
                 metrics,
                 (metric) => metric.bodyFatPercent,
               ),
-              unit: '%',
+              unit: strings.percentUnit,
             ),
             _MetricCard(
               theme: theme,
@@ -220,12 +274,12 @@ class BodyMetricsScreen extends ConsumerWidget {
                 metrics,
                 (metric) => metric.waistCm,
               ),
-              unit: 'cm',
+              unit: strings.centimeterUnit,
             ),
             _MetricCard(
               theme: theme,
               strings: strings,
-              label: strings.isChinese ? '记录' : 'CHECK-INS',
+              label: strings.checkIns,
               latestValue: metrics.isEmpty ? null : metrics.length.toDouble(),
               previousValue: null,
               unit: '',
@@ -588,7 +642,18 @@ class _MetricCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           if (delta != null)
-            FittinDelta(theme, delta, unit: unit.isEmpty ? '' : ' $unit')
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: FittinDelta(
+                  theme,
+                  delta,
+                  unit: unit.isEmpty ? '' : ' $unit',
+                ),
+              ),
+            )
           else
             Text(
               caption,
@@ -618,11 +683,10 @@ class _HistoryEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recordedItems = <String>[
-      if (metric.weightKg != null) '${metric.weightKg!.toStringAsFixed(1)} kg',
+      if (metric.weightKg != null) strings.kilograms(metric.weightKg!),
       if (metric.bodyFatPercent != null)
-        '${metric.bodyFatPercent!.toStringAsFixed(1)}%',
-      if (metric.waistCm != null)
-        '${metric.waistCm!.toStringAsFixed(1)} cm ${strings.waistSuffix}',
+        strings.bodyFatHistoryValue(metric.bodyFatPercent!),
+      if (metric.waistCm != null) strings.waistHistoryValue(metric.waistCm!),
     ];
 
     return Container(

@@ -1,5 +1,7 @@
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
@@ -19,10 +21,17 @@ abstract class TodayWorkoutGateway {
 }
 
 class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
-  DatabaseTodayWorkoutGateway(this._repository, {this.ownerUserId});
+  DatabaseTodayWorkoutGateway(
+    this._repository, {
+    this.ownerUserId,
+    Future<ExerciseLibrary> Function()? exerciseLibraryLoader,
+  }) : _exerciseLibraryLoader =
+           exerciseLibraryLoader ?? ExerciseLibraryLoader().load;
 
   final DatabaseRepository _repository;
   final String? ownerUserId;
+  final Future<ExerciseLibrary> Function() _exerciseLibraryLoader;
+  Future<ExerciseLibrary>? _exerciseLibraryFuture;
 
   @override
   Future<PlanTemplate> loadActiveTemplate() async {
@@ -61,13 +70,19 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   @override
   Future<WorkoutSessionState> loadTodayWorkoutSession() async {
     final context = await _loadContext();
-    return ProgramEngineDispatcher.resolve(
-      context.template.engineFamily,
-    ).buildSession(
+    final session =
+        ProgramEngineDispatcher.resolve(
+          context.template.engineFamily,
+        ).buildSession(
+          template: context.template,
+          instance: context.instance,
+          workout: context.workout,
+          stateByExerciseId: context.stateByExerciseId,
+        );
+    return _withCanonicalExerciseIds(
+      session: session,
       template: context.template,
-      instance: context.instance,
-      workout: context.workout,
-      stateByExerciseId: context.stateByExerciseId,
+      library: await _exerciseLibrary(),
     );
   }
 
@@ -77,13 +92,23 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
     final engine = ProgramEngineDispatcher.resolve(
       context.template.engineFamily,
     );
-    final scheduledSession = engine.buildSession(
+    final library = await _exerciseLibrary();
+    final scheduledSession = _withCanonicalExerciseIds(
+      session: engine.buildSession(
+        template: context.template,
+        instance: context.instance,
+        workout: context.workout,
+        stateByExerciseId: context.stateByExerciseId,
+      ),
       template: context.template,
-      instance: context.instance,
-      workout: context.workout,
-      stateByExerciseId: context.stateByExerciseId,
+      library: library,
     );
-    if (!workoutSessionMatchesSchedule(session, scheduledSession)) {
+    final canonicalSession = _withCanonicalExerciseIds(
+      session: session,
+      template: context.template,
+      library: library,
+    );
+    if (!workoutSessionMatchesSchedule(canonicalSession, scheduledSession)) {
       throw StateError(
         'This workout is no longer the active scheduled session. '
         'Return Home and open the current workout.',
@@ -93,7 +118,7 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
     final result = engine.conclude(
       template: context.template,
       instance: context.instance,
-      session: session,
+      session: canonicalSession,
       stateByExerciseId: context.stateByExerciseId,
     );
 
@@ -116,10 +141,10 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
     await _repository.logWorkout(
       WorkoutLog(
         instanceId: context.instance.instanceId,
-        workoutId: session.workoutId,
+        workoutId: canonicalSession.workoutId,
         logId: logId,
-        workoutName: session.workoutName,
-        dayLabel: session.dayLabel,
+        workoutName: canonicalSession.workoutName,
+        dayLabel: canonicalSession.dayLabel,
         completedAt: completedAt,
         exercises: result.logs,
         preConclusionSnapshot: _snapshotFromInstance(context.instance),
@@ -166,6 +191,39 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       stateByExerciseId: stateByExerciseId,
     );
   }
+
+  Future<ExerciseLibrary> _exerciseLibrary() {
+    return _exerciseLibraryFuture ??= _exerciseLibraryLoader();
+  }
+}
+
+WorkoutSessionState _withCanonicalExerciseIds({
+  required WorkoutSessionState session,
+  required PlanTemplate template,
+  required ExerciseLibrary library,
+}) {
+  return session.copyWith(
+    exercises: [
+      for (final sessionExercise in session.exercises)
+        _withCanonicalExerciseId(
+          sessionExercise: sessionExercise,
+          templateExercise: template.findExerciseById(sessionExercise.id),
+          library: library,
+        ),
+    ],
+  );
+}
+
+ExerciseSessionState _withCanonicalExerciseId({
+  required ExerciseSessionState sessionExercise,
+  required Exercise templateExercise,
+  required ExerciseLibrary library,
+}) {
+  final resolved = library.resolve(
+    exerciseId: templateExercise.exerciseId,
+    name: templateExercise.name,
+  );
+  return sessionExercise.copyWith(exerciseId: resolved.id);
 }
 
 bool workoutSessionMatchesSchedule(

@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/milestone_exercise_settings_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
@@ -29,14 +30,12 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final recordingMode = ref.watch(workoutRecordingModeProvider);
 
     return DashboardPageScaffold(
-      bottomPadding: 180,
+      bottomPadding: 24,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.profile,
           title: strings.settings,
-          subtitle: strings.isChinese
-              ? '账号、语言、重量工具与界面偏好。'
-              : 'Account, language, weight tools, and interface preferences.',
+          subtitle: strings.profileSettingsSubtitle,
         ),
         const SizedBox(height: 24),
         DashboardSectionLabel(label: strings.account),
@@ -67,7 +66,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
               const SizedBox(width: 12),
               FittinBtn(
                 fittinTheme,
-                strings.isChinese ? strings.manageAccount : 'Manage',
+                strings.manageAccountShort,
                 key: const ValueKey('open-account-screen'),
                 size: 'sm',
                 onPressed: () => Navigator.of(context).push(
@@ -89,7 +88,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 theme: fittinTheme,
                 key: const ValueKey('locale-en'),
                 title: strings.english,
-                subtitle: 'English',
+                subtitle: strings.englishLanguageSubtitle,
                 selected: locale == AppLocale.en,
                 onTap: () => notifier.setLocale(AppLocale.en),
                 showDivider: true,
@@ -98,7 +97,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 theme: fittinTheme,
                 key: const ValueKey('locale-zh'),
                 title: strings.chinese,
-                subtitle: 'Chinese',
+                subtitle: strings.chineseLanguageSubtitle,
                 selected: locale == AppLocale.zh,
                 onTap: () => notifier.setLocale(AppLocale.zh),
               ),
@@ -106,9 +105,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
-        DashboardSectionLabel(
-          label: strings.isChinese ? '训练记录方式' : 'WORKOUT LOGGING',
-        ),
+        DashboardSectionLabel(label: strings.workoutLoggingSection),
         const SizedBox(height: 10),
         FittinCard(
           theme: fittinTheme,
@@ -118,10 +115,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
               _LocaleTile(
                 key: const ValueKey('recording-mode-card'),
                 theme: fittinTheme,
-                title: strings.isChinese ? '卡片记录' : 'Card logger',
-                subtitle: strings.isChinese
-                    ? '左滑下一组、右滑上一组，上滑记录、下滑跳过。'
-                    : 'Swipe left for next, right for previous, up to log, and down to skip.',
+                title: strings.cardLogger,
+                subtitle: strings.cardLoggerSubtitle,
                 selected: recordingMode == WorkoutRecordingMode.card,
                 onTap: () => ref
                     .read(workoutRecordingModeProvider.notifier)
@@ -131,10 +126,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
               _LocaleTile(
                 key: const ValueKey('recording-mode-traditional'),
                 theme: fittinTheme,
-                title: strings.isChinese ? '传统记录' : 'Traditional logger',
-                subtitle: strings.isChinese
-                    ? '保留按钮式录入与居中的完成操作。'
-                    : 'Keep button-based entry with a centered finish action.',
+                title: strings.traditionalLogger,
+                subtitle: strings.traditionalLoggerSubtitle,
                 selected: recordingMode == WorkoutRecordingMode.traditional,
                 onTap: () => ref
                     .read(workoutRecordingModeProvider.notifier)
@@ -144,13 +137,11 @@ class ProfileSettingsScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
-        DashboardSectionLabel(
-          label: strings.isChinese ? '重量工具' : 'WEIGHT TOOLS',
-        ),
+        DashboardSectionLabel(label: strings.weightToolsSection),
         const SizedBox(height: 10),
         const WeightToolsSettingsCard(),
         const SizedBox(height: 24),
-        DashboardSectionLabel(label: strings.isChinese ? '参考' : 'REFERENCE'),
+        DashboardSectionLabel(label: strings.referenceSection),
         const SizedBox(height: 10),
         FittinCard(
           theme: fittinTheme,
@@ -177,14 +168,24 @@ class ProfileSettingsScreen extends ConsumerWidget {
                     builder: (_) => const ProfilePreferencesScreen(),
                   ),
                 ),
+                showDivider: true,
+              ),
+              _SettingsLinkRow(
+                key: const ValueKey('open-milestone-exercise-settings'),
+                theme: fittinTheme,
+                title: strings.milestoneExercises,
+                subtitle: strings.milestoneExercisesSubtitle,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const MilestoneExerciseSettingsScreen(),
+                  ),
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        DashboardSectionLabel(
-          label: strings.isChinese ? '视觉设置' : 'VISUAL SETTINGS',
-        ),
+        DashboardSectionLabel(label: strings.visualSettingsSection),
         const SizedBox(height: 10),
         DashboardSurfaceCard(
           radius: fittinTheme.radius,
@@ -193,16 +194,14 @@ class ProfileSettingsScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                strings.isChinese ? '磨砂玻璃透明度' : 'Glassmorphism Opacity',
+                strings.glassmorphismOpacity,
                 style: fittinTheme
                     .uiStyle(16, fittinTheme.fg)
                     .copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
               Text(
-                strings.isChinese
-                    ? '调节全局界面卡片的透明强度。'
-                    : 'Adjust the global transparency intensity for interface cards.',
+                strings.glassmorphismOpacitySubtitle,
                 style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
               ),
               const SizedBox(height: 24),
@@ -257,7 +256,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
-        DashboardSectionLabel(label: strings.isChinese ? '关于' : 'ABOUT'),
+        DashboardSectionLabel(label: strings.aboutSection),
         const SizedBox(height: 10),
         FittinCard(
           theme: fittinTheme,
@@ -265,10 +264,8 @@ class ProfileSettingsScreen extends ConsumerWidget {
           child: _SettingsLinkRow(
             key: const ValueKey('open-about-screen'),
             theme: fittinTheme,
-            title: strings.isChinese ? '关于 Fittin' : 'About Fittin',
-            subtitle: strings.isChinese
-                ? '查看版本信息并检查应用更新。'
-                : 'View version information and check for app updates.',
+            title: strings.aboutFittin,
+            subtitle: strings.aboutFittinSubtitle,
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const AboutScreen())),

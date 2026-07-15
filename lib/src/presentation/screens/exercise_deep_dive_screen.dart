@@ -5,7 +5,7 @@ import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/progress_service.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
@@ -29,7 +29,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
             children: [
               DashboardBackButton(
                 theme: fittinTheme,
-                label: strings.isChinese ? '进度' : 'Progress',
+                label: strings.progressBackLabel,
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
@@ -51,11 +51,15 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                 size: 26,
               ),
               const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  strings.isChinese ? 'kg · 预估 1RM' : 'kg · estimated 1RM',
-                  style: fittinTheme.uiStyle(13, fittinTheme.fgDim),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    strings.estimatedOneRepMaxUnitLabel(strings.kilogramUnit),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: fittinTheme.uiStyle(13, fittinTheme.fgDim),
+                  ),
                 ),
               ),
             ],
@@ -88,7 +92,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'E1RM',
+                  strings.estimatedOneRepMaxAbbreviation,
                   style: theme
                       .uiStyle(10, theme.fgMuted)
                       .copyWith(
@@ -176,74 +180,56 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
         ? summary.estimatedHistory.sublist(summary.estimatedHistory.length - 10)
         : summary.estimatedHistory;
 
-    // Extract e1rm, e3rm, e5rm data series
-    final e1rmData = recent.map((e) => e.value).toList();
-    final e3rmData = recent
-        .map((e) => service.calculateNRM(e.value, 3) ?? 0.0)
-        .toList();
-    final e5rmData = recent
-        .map((e) => service.calculateNRM(e.value, 5) ?? 0.0)
-        .toList();
-
-    // Compute y-axis labels
-    final allValues = [...e1rmData, ...e3rmData, ...e5rmData];
-    final minVal = allValues.reduce((a, b) => a < b ? a : b) * 0.9;
-    final maxVal = allValues.reduce((a, b) => a > b ? a : b) * 1.05;
-    final yLabels = [
-      strings.chartAxisWeight(minVal.toStringAsFixed(0)),
-      strings.chartAxisWeight(((minVal + maxVal) / 2).toStringAsFixed(0)),
-      strings.chartAxisWeight(maxVal.toStringAsFixed(0)),
-    ];
+    DatedChartPoint pointFor(ExercisePerformancePoint point, double value) =>
+        DatedChartPoint(
+          date: point.completedAt,
+          value: value,
+          detail: strings.derivedFromSet(point.weight, point.reps),
+        );
 
     return ChartContainer(
       title: strings.strengthTrendsOverlay,
-      height: 220,
-      headerAction: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _LegendDot(color: theme.accent, label: '1RM'),
-          const SizedBox(width: 10),
-          _LegendDot(color: theme.fgMuted, label: '3RM'),
-          const SizedBox(width: 10),
-          _LegendDot(color: theme.fgDim, label: '5RM'),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // 5RM - most transparent
-          Opacity(
-            opacity: 0.5,
-            child: StepChart(
-              theme,
-              e5rmData,
-              height: 180,
-              showDots: false,
-              showGrid: false,
-              yLabels: [],
-            ),
+      height: 270,
+      child: InteractiveLineChart(
+        key: const ValueKey('exercise-deep-dive-chart'),
+        theme: theme,
+        series: [
+          DatedChartSeries(
+            id: '1rm',
+            label: strings.repMaxLabel(1),
+            points: [for (final point in recent) pointFor(point, point.value)],
           ),
-          // 3RM - medium opacity
-          Opacity(
-            opacity: 0.7,
-            child: StepChart(
-              theme,
-              e3rmData,
-              height: 180,
-              showDots: false,
-              showGrid: false,
-              yLabels: [],
-            ),
+          DatedChartSeries(
+            id: '3rm',
+            label: strings.repMaxLabel(3),
+            points: [
+              for (final point in recent)
+                pointFor(point, service.calculateNRM(point.value, 3) ?? 0),
+            ],
           ),
-          // 1RM - full opacity with grid
-          StepChart(
-            theme,
-            e1rmData,
-            height: 180,
-            showDots: true,
-            showGrid: true,
-            yLabels: yLabels,
+          DatedChartSeries(
+            id: '5rm',
+            label: strings.repMaxLabel(5),
+            points: [
+              for (final point in recent)
+                pointFor(point, service.calculateNRM(point.value, 5) ?? 0),
+            ],
           ),
         ],
+        chartLabel: strings.strengthTrendsOverlay,
+        xAxisLabel: strings.dateAxis,
+        yAxisLabel: strings.loadAxis,
+        unit: strings.kilogramUnit,
+        emptyLabel: strings.noStrengthTrendYet,
+        selectionHint: strings.tapChartPoint,
+        axisDateFormatter: strings.shortMonthDay,
+        detailDateFormatter: strings.longDate,
+        axisValueFormatter: (value) => value.toStringAsFixed(0),
+        detailValueFormatter: (value) => value.toStringAsFixed(1),
+        emptySemanticsFormatter: strings.chartEmptySemantics,
+        summarySemanticsFormatter: strings.chartSummarySemantics,
+        pointLabelFormatter: strings.chartPointLabel,
+        height: 270,
       ),
     );
   }
@@ -253,6 +239,17 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     AppStrings strings,
     FittinTheme theme,
   ) {
+    if (summary.estimatedHistory.isEmpty) {
+      return DashboardSurfaceCard(
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          strings.noExerciseHistory,
+          style: theme.uiStyle(13, theme.fgMuted),
+        ),
+      );
+    }
+
     return Column(
       children: summary.estimatedHistory.reversed.map((point) {
         return Padding(
@@ -274,7 +271,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${strings.kilograms(point.weight)} × ${point.reps}',
+                        strings.setLoadAndReps(point.weight, point.reps),
                         style: theme.uiStyle(13, theme.fgMuted),
                       ),
                     ],
@@ -290,7 +287,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
                           .copyWith(fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      'E1RM',
+                      strings.estimatedOneRepMaxAbbreviation,
                       style: theme
                           .uiStyle(10, theme.fgMuted)
                           .copyWith(
@@ -305,41 +302,6 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
           ),
         );
       }).toList(),
-    );
-  }
-}
-
-class _LegendDot extends StatelessWidget {
-  const _LegendDot({required this.color, required this.label});
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: color,
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 4),
-            ],
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: Colors.white.withValues(alpha: 0.5),
-          ),
-        ),
-      ],
     );
   }
 }

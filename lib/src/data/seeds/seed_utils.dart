@@ -35,7 +35,8 @@ PlanTemplate _normalizeSeedTemplate(PlanTemplate template) {
                           ? EquipmentTypes.barbell
                           : exercise.equipmentType,
                       trainingMaxLift:
-                          exercise.trainingMaxLift ?? _inferTrainingMaxLift(exercise),
+                          exercise.trainingMaxLift ??
+                          _inferTrainingMaxLift(exercise),
                     ),
                 ],
               ),
@@ -72,6 +73,7 @@ String? _inferTrainingMaxLift(Exercise exercise) {
 List<TrainingState> buildStarterStatesForTemplate(
   PlanTemplate template, {
   TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+  Map<String, double> startingLoadOverridesKg = const {},
 }) {
   return [
     for (final workout in template.workouts)
@@ -84,6 +86,7 @@ List<TrainingState> buildStarterStatesForTemplate(
             template: template,
             exercise: exercise,
             trainingMaxProfile: trainingMaxProfile,
+            startingLoadOverrideKg: startingLoadOverridesKg[exercise.id],
           ),
           currentStageId: exercise.stages.first.id,
         ),
@@ -92,9 +95,10 @@ List<TrainingState> buildStarterStatesForTemplate(
 
 Map<String, dynamic> buildInitialEngineState(PlanTemplate template) {
   if (template.engineFamily == 'periodized_tm') {
-    final firstWorkout = template.workouts.isEmpty ? null : template.workouts.first;
-    final firstExercise =
-        firstWorkout == null || firstWorkout.exercises.isEmpty
+    final firstWorkout = template.workouts.isEmpty
+        ? null
+        : template.workouts.first;
+    final firstExercise = firstWorkout == null || firstWorkout.exercises.isEmpty
         ? null
         : firstWorkout.exercises.first;
     final cycleLengthWeeks =
@@ -114,17 +118,23 @@ double _resolveStarterBaseWeight({
   required PlanTemplate template,
   required Exercise exercise,
   required TrainingMaxProfile trainingMaxProfile,
+  required double? startingLoadOverrideKg,
 }) {
-  if (exercise.trainingMaxLift == null || trainingMaxProfile.isEmpty) {
+  if (exercise.trainingMaxLift != null && trainingMaxProfile.isNotEmpty) {
+    final starterPercent = template.engineFamily == 'periodized_tm'
+        ? exercise.stages.first.basePercent
+        : 1.0;
+    final baseWeight =
+        trainingMaxProfile.require(exercise.trainingMaxLift!) *
+        exercise.trainingMaxMultiplier *
+        starterPercent;
+    return roundToIncrement(baseWeight, exercise.roundingIncrement);
+  }
+  if (exercise.initialBaseWeight > 0) {
     return exercise.initialBaseWeight;
   }
-
-  final starterPercent = template.engineFamily == 'periodized_tm'
-      ? exercise.stages.first.basePercent
-      : 1.0;
-  final baseWeight =
-      trainingMaxProfile.require(exercise.trainingMaxLift!) *
-      exercise.trainingMaxMultiplier *
-      starterPercent;
-  return roundToIncrement(baseWeight, exercise.roundingIncrement);
+  if (startingLoadOverrideKg != null && startingLoadOverrideKg > 0) {
+    return startingLoadOverrideKg;
+  }
+  return exercise.initialBaseWeight;
 }

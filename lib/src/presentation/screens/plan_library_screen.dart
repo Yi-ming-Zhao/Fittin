@@ -1,23 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
+import 'package:fittin_v2/src/application/plan_start_load_review_service.dart';
 import 'package:fittin_v2/src/application/plan_library_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
+import 'package:fittin_v2/src/domain/exercise_performance_profile.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/plan_start_load_review_dialog.dart';
 
-class PlanLibraryScreen extends ConsumerWidget {
+enum _PlanFilter { all, builtIn, custom }
+
+class PlanLibraryScreen extends ConsumerStatefulWidget {
   const PlanLibraryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlanLibraryScreen> createState() => _PlanLibraryScreenState();
+}
+
+class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
+  _PlanFilter _filter = _PlanFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
     final templatesAsync = ref.watch(planLibraryItemsProvider);
     final actionState = ref.watch(planLibraryActionProvider);
     final actionNotifier = ref.read(planLibraryActionProvider.notifier);
@@ -42,177 +57,230 @@ class PlanLibraryScreen extends ConsumerWidget {
     }
 
     return templatesAsync.when(
-      data: (templates) => DashboardPageScaffold(
-        bottomPadding: 140,
-        children: [
-          DashboardScreenHeader(
-            eyebrow: strings.planLibrary,
-            title: strings.isChinese ? 'Training plans' : 'Training plans',
-            subtitle: strings.isChinese
-                ? 'Built-in templates, custom copies, and switching live side-by-side as editable objects.'
-                : 'Built-in templates, custom copies, and switching live side-by-side as editable objects.',
-          ),
-          const SizedBox(height: 24),
-          // Filter chips — Fittin style
-          Row(
-            children: [
-              FittinChip(fittinTheme, 'All', active: true),
-              const SizedBox(width: 8),
-              FittinChip(fittinTheme, strings.builtIn),
-              const SizedBox(width: 8),
-              FittinChip(fittinTheme, strings.custom),
-              const SizedBox(width: 8),
-              const Spacer(),
-              FittinChip(fittinTheme, '+ New'),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ListView.separated(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            itemCount: templates.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              final item = templates[index];
-              final record = item.record;
-              final preview = record.template.workouts
-                  .take(3)
-                  .map((workout) => localizedWorkoutName(workout, locale))
-                  .join(' · ');
-              final workoutCount = record.template.workouts.length;
-              final exerciseCount = record.template.workouts.fold<int>(
-                0,
-                (sum, workout) => sum + workout.exercises.length,
-              );
-              return DashboardSurfaceCard(
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => _PlanDetailScreen(
-                        record: record,
-                        isActive: item.isActive,
+      data: (templates) {
+        final visibleTemplates = switch (_filter) {
+          _PlanFilter.all => templates,
+          _PlanFilter.builtIn =>
+            templates
+                .where((item) => item.record.isBuiltIn)
+                .toList(growable: false),
+          _PlanFilter.custom =>
+            templates
+                .where((item) => !item.record.isBuiltIn)
+                .toList(growable: false),
+        };
+        return DashboardPageScaffold(
+          bottomPadding: 24,
+          children: [
+            DashboardScreenHeader(
+              eyebrow: strings.planLibrary,
+              title: strings.trainingPlans,
+              subtitle: strings.trainingPlansSubtitle,
+            ),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FittinChip(
+                  fittinTheme,
+                  strings.all,
+                  key: const ValueKey('plan-filter-all'),
+                  active: _filter == _PlanFilter.all,
+                  onTap: () => setState(() => _filter = _PlanFilter.all),
+                ),
+                FittinChip(
+                  fittinTheme,
+                  strings.builtIn,
+                  key: const ValueKey('plan-filter-built-in'),
+                  active: _filter == _PlanFilter.builtIn,
+                  onTap: () => setState(() => _filter = _PlanFilter.builtIn),
+                ),
+                FittinChip(
+                  fittinTheme,
+                  strings.custom,
+                  key: const ValueKey('plan-filter-custom'),
+                  active: _filter == _PlanFilter.custom,
+                  onTap: () => setState(() => _filter = _PlanFilter.custom),
+                ),
+                FittinChip(
+                  fittinTheme,
+                  '+ ${strings.newPlan}',
+                  key: const ValueKey('create-plan'),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const PlanEditorScreen(),
                       ),
-                    ),
+                    );
+                    if (mounted) {
+                      ref.invalidate(planLibraryItemsProvider);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (visibleTemplates.isEmpty)
+              DashboardSurfaceCard(
+                child: Text(
+                  strings.noPlansForFilter,
+                  style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
+                ),
+              )
+            else
+              ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: visibleTemplates.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = visibleTemplates[index];
+                  final record = item.record;
+                  final preview = record.template.workouts
+                      .take(3)
+                      .map((workout) => localizedWorkoutName(workout, locale))
+                      .join(' · ');
+                  final workoutCount = record.template.workouts.length;
+                  final exerciseCount = record.template.workouts.fold<int>(
+                    0,
+                    (sum, workout) => sum + workout.exercises.length,
                   );
-                  ref.invalidate(planLibraryItemsProvider);
-                },
-                padding: const EdgeInsets.all(20),
-                radius: 20,
-                highlight: false,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        FittinEyebrow(
-                          fittinTheme,
-                          record.isBuiltIn ? strings.builtIn : strings.custom,
+                  return DashboardSurfaceCard(
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _PlanDetailScreen(
+                            record: record,
+                            isActive: item.isActive,
+                          ),
                         ),
-                        if (item.isActive) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: fittinTheme.accent,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'Active',
-                            style: fittinTheme
-                                .uiStyle(10, fittinTheme.accent)
-                                .copyWith(letterSpacing: 0.8),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
+                      );
+                      ref.invalidate(planLibraryItemsProvider);
+                    },
+                    padding: const EdgeInsets.all(20),
+                    radius: 20,
+                    highlight: false,
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            localizedTemplateName(record.template, locale),
-                            style: fittinTheme
-                                .displayStyle(22, fittinTheme.fg)
-                                .copyWith(height: 1.15),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          color: fittinTheme.fgMuted,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      localizedTemplateDescription(record.template, locale),
-                      style: fittinTheme
-                          .uiStyle(13, fittinTheme.fgDim)
-                          .copyWith(height: 1.45),
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        for (final tag in preview.split(' · '))
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                        Row(
+                          children: [
+                            FittinEyebrow(
+                              fittinTheme,
+                              record.isBuiltIn
+                                  ? strings.builtIn
+                                  : strings.custom,
                             ),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: fittinTheme.border,
-                                width: 0.5,
+                            if (item.isActive) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: fittinTheme.accent,
+                                  shape: BoxShape.circle,
+                                ),
                               ),
-                              borderRadius: BorderRadius.circular(6),
+                              const SizedBox(width: 5),
+                              Text(
+                                strings.active,
+                                style: fittinTheme
+                                    .uiStyle(10, fittinTheme.accent)
+                                    .copyWith(letterSpacing: 0.8),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                localizedTemplateName(record.template, locale),
+                                style: fittinTheme
+                                    .displayStyle(22, fittinTheme.fg)
+                                    .copyWith(height: 1.15),
+                              ),
                             ),
-                            child: Text(
-                              tag,
-                              style: fittinTheme.uiStyle(11, fittinTheme.fgDim),
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: fittinTheme.fgMuted,
+                              size: 18,
                             ),
-                          ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          localizedTemplateDescription(record.template, locale),
+                          style: fittinTheme
+                              .uiStyle(13, fittinTheme.fgDim)
+                              .copyWith(height: 1.45),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final tag in preview.split(' · '))
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: fittinTheme.border,
+                                    width: 0.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: fittinTheme.uiStyle(
+                                    11,
+                                    fittinTheme.fgDim,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _Stat(
+                              theme: fittinTheme,
+                              label: strings.workoutsStat,
+                              value: '$workoutCount',
+                            ),
+                            _Stat(
+                              theme: fittinTheme,
+                              label: strings.exercisesStat,
+                              value: '$exerciseCount',
+                            ),
+                            _Stat(
+                              theme: fittinTheme,
+                              label: strings.runningStat,
+                              value: '${record.instanceCount}',
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _Stat(
-                          theme: fittinTheme,
-                          label: 'Workouts',
-                          value: '$workoutCount',
-                        ),
-                        _Stat(
-                          theme: fittinTheme,
-                          label: 'Exercises',
-                          value: '$exerciseCount',
-                        ),
-                        _Stat(
-                          theme: fittinTheme,
-                          label: 'Running',
-                          value: '${record.instanceCount}',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+                  );
+                },
+              ),
+          ],
+        );
+      },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (error, _) =>
-          Scaffold(body: Center(child: Text(error.toString()))),
+          Scaffold(body: Center(child: Text(strings.loadError(error)))),
     );
   }
 }
@@ -229,6 +297,40 @@ Future<TrainingMaxProfile?> _resolveTrainingMaxProfile(
   return showDialog<TrainingMaxProfile>(
     context: context,
     builder: (_) => _TrainingMaxSetupDialog(template: record.template),
+  );
+}
+
+Future<PlanStartLoadReview?> _resolvePlanStartLoadReview(
+  BuildContext context,
+  WidgetRef ref,
+  StoredTemplateRecord record,
+) async {
+  final library = await ref.read(exerciseLibraryProvider.future);
+  final logs = await ref
+      .read(localWorkoutLogRepositoryProvider)
+      .fetchAllWorkoutLogs();
+  final formula = await ref
+      .read(databaseRepositoryProvider)
+      .fetchAnalyticsFormula();
+  final profiles = const ExercisePerformanceProfileService().build(
+    logs: logs,
+    library: library,
+    formula: formula,
+  );
+  final review = const PlanStartLoadReviewService().build(
+    template: record.template,
+    library: library,
+    profiles: profiles,
+    formula: formula,
+    localeCode: ref.read(appLocaleProvider).code,
+  );
+  if (review.editableEntries.isEmpty || !context.mounted) {
+    return review;
+  }
+  return showDialog<PlanStartLoadReview>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => PlanStartLoadReviewDialog(review: review),
   );
 }
 
@@ -263,22 +365,22 @@ class _PlanDetailScreen extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
     final strings = AppStrings.of(context, ref);
     final theme = ref.watch(resolvedFittinThemeProvider);
+    final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
     final template = record.template;
     final workouts = template.workouts;
     final exerciseCount = workouts.fold<int>(
       0,
       (sum, workout) => sum + workout.exercises.length,
     );
-    final progressionValues = _buildProgressionSeries(template);
+    final progression = _buildProgressionSummary(template);
 
     return DashboardPageScaffold(
-      bottomPadding: 150,
+      bottomPadding: 24,
       children: [
         Row(
           children: [
             DashboardBackButton(
               theme: theme,
-              label: 'Library',
               onPressed: () => Navigator.of(context).pop(),
             ),
             const Spacer(),
@@ -313,11 +415,23 @@ class _PlanDetailScreen extends ConsumerWidget {
                 if (!context.mounted || trainingMaxProfile == null) {
                   return;
                 }
+                PlanStartLoadReview? loadReview;
+                if (record.instanceCount == 0) {
+                  loadReview = await _resolvePlanStartLoadReview(
+                    context,
+                    ref,
+                    record,
+                  );
+                  if (!context.mounted || loadReview == null) {
+                    return;
+                  }
+                }
                 await ref
                     .read(planLibraryActionProvider.notifier)
                     .activateTemplate(
                       record,
                       trainingMaxProfile: trainingMaxProfile,
+                      planStartLoadReview: loadReview,
                     );
               },
             ),
@@ -347,7 +461,7 @@ class _PlanDetailScreen extends ConsumerWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                'CURRENTLY ACTIVE',
+                strings.currentlyActive,
                 style: theme
                     .uiStyle(11, theme.accent)
                     .copyWith(letterSpacing: 0.8, fontWeight: FontWeight.w600),
@@ -357,8 +471,7 @@ class _PlanDetailScreen extends ConsumerWidget {
         ],
         const SizedBox(height: 16),
         Text(
-          '${localizedTemplateDescription(template, locale)} '
-          '${strings.isChinese ? '根据训练最大值与既定周期结构组织主要动作训练。' : 'Derived from training maxes, with fixed weekly loading across the main training block.'}',
+          localizedTemplateDescription(template, locale),
           style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
         ),
         const SizedBox(height: 20),
@@ -370,26 +483,39 @@ class _PlanDetailScreen extends ConsumerWidget {
             children: [
               _Stat(
                 theme: theme,
-                label: 'Workouts',
+                label: strings.workoutsStat,
                 value: '${workouts.length}',
               ),
-              _Stat(theme: theme, label: 'Exercises', value: '$exerciseCount'),
               _Stat(
                 theme: theme,
-                label: 'Running',
+                label: strings.exercisesStat,
+                value: '$exerciseCount',
+              ),
+              _Stat(
+                theme: theme,
+                label: strings.runningStat,
                 value: '${record.instanceCount}',
               ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        FittinEyebrow(theme, 'Weekly structure'),
+        FittinEyebrow(theme, strings.weeklyStructure),
         const SizedBox(height: 10),
         ...workouts.asMap().entries.map((entry) {
           final index = entry.key;
           final workout = entry.value;
           final exerciseTotal = workout.exercises.length;
           final duration = workout.estimatedDurationMinutes;
+          final exerciseNames = workout.exercises
+              .map(
+                (exercise) => localizedExerciseName(
+                  exercise,
+                  locale,
+                  library: exerciseLibrary,
+                ),
+              )
+              .join(' · ');
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: DashboardSurfaceCard(
@@ -417,17 +543,21 @@ class _PlanDetailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '$exerciseTotal ${strings.isChinese ? '个动作' : 'exercises'}'
-                          ' · $duration ${strings.isChinese ? '分钟' : 'min'}',
+                          exerciseNames,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.uiStyle(12, theme.fgDim),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          strings.workoutStructureSummary(
+                            exerciseTotal,
+                            duration,
+                          ),
                           style: theme.uiStyle(12, theme.fgMuted),
                         ),
                       ],
                     ),
-                  ),
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: theme.fgMuted,
-                    size: 18,
                   ),
                 ],
               ),
@@ -447,22 +577,27 @@ class _PlanDetailScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Weeks 1-${progressionValues.length}',
+                    strings.progressionStages(progression.stageCount),
                     style: theme.uiStyle(13, theme.fg),
                   ),
-                  Text(
-                    'Intensity ${progressionValues.first.toStringAsFixed(0)}% → ${progressionValues.last.toStringAsFixed(0)}%',
-                    style: theme.numStyle(12, theme.fgDim),
-                  ),
+                  if (progression.lowerIntensityPercent != null &&
+                      progression.upperIntensityPercent != null)
+                    Flexible(
+                      child: Text(
+                        strings.progressionIntensityRange(
+                          progression.lowerIntensityPercent!,
+                          progression.upperIntensityPercent!,
+                        ),
+                        textAlign: TextAlign.end,
+                        style: theme.numStyle(12, theme.fgDim),
+                      ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 16),
-              StepChart(
-                theme,
-                progressionValues,
-                height: 120,
-                showDots: true,
-                yLabels: const ['95', '78', '60'],
+              const SizedBox(height: 12),
+              Text(
+                strings.progressionSummary,
+                style: theme.uiStyle(12, theme.fgMuted).copyWith(height: 1.4),
               ),
             ],
           ),
@@ -472,8 +607,8 @@ class _PlanDetailScreen extends ConsumerWidget {
   }
 }
 
-List<double> _buildProgressionSeries(PlanTemplate template) {
-  final maxStages = template.workouts.fold<int>(
+_PlanProgressionSummary _buildProgressionSummary(PlanTemplate template) {
+  final stageCount = template.workouts.fold<int>(
     1,
     (max, workout) => workout.exercises.fold<int>(
       max,
@@ -481,16 +616,38 @@ List<double> _buildProgressionSeries(PlanTemplate template) {
           exercise.stages.length > inner ? exercise.stages.length : inner,
     ),
   );
-  if (maxStages <= 1) {
-    return const [60, 70, 80, 90];
+  final intensities = <double>[];
+  for (final workout in template.workouts) {
+    for (final exercise in workout.exercises) {
+      for (final stage in exercise.stages) {
+        for (final set in stage.sets) {
+          if (set.kind != SetKinds.warmup &&
+              set.intensity > 0 &&
+              set.intensity.isFinite) {
+            intensities.add(set.intensity * 100);
+          }
+        }
+      }
+    }
   }
+  intensities.sort();
+  return _PlanProgressionSummary(
+    stageCount: stageCount,
+    lowerIntensityPercent: intensities.isEmpty ? null : intensities.first,
+    upperIntensityPercent: intensities.isEmpty ? null : intensities.last,
+  );
+}
 
-  final start = 60.0;
-  final end = 92.0;
-  return List<double>.generate(maxStages, (index) {
-    final progress = maxStages == 1 ? 1.0 : index / (maxStages - 1);
-    return start + (end - start) * progress;
+class _PlanProgressionSummary {
+  const _PlanProgressionSummary({
+    required this.stageCount,
+    required this.lowerIntensityPercent,
+    required this.upperIntensityPercent,
   });
+
+  final int stageCount;
+  final double? lowerIntensityPercent;
+  final double? upperIntensityPercent;
 }
 
 class _TrainingMaxSetupDialog extends StatefulWidget {
@@ -557,9 +714,7 @@ class _TrainingMaxSetupDialogState extends State<_TrainingMaxSetupDialog> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  strings.isChinese
-                      ? '请输入主项训练最大值；动作起始重量可之后在计划编辑页调整。'
-                      : 'Enter the main-lift training maxes. Accessory starting loads can be adjusted later in the plan editor.',
+                  strings.trainingMaxSetupDescription,
                   style: fittinTheme
                       .uiStyle(12, fittinTheme.fgDim)
                       .copyWith(height: 1.45),

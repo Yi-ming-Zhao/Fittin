@@ -26,7 +26,7 @@ class MuscleDistributionPainter extends CustomPainter {
     const barHeight = 14.0;
     const spacing = 26.0;
     const textSpace = 90.0;
-    
+
     final labelStyle = const TextStyle(
       color: Colors.white54,
       fontSize: 11,
@@ -71,17 +71,19 @@ class MuscleDistributionPainter extends CustomPainter {
         );
       }
 
-      // Draw Counter (e.g., 8/10) with emphasis
-      final isComplete = entry.currentSets >= entry.targetSets;
+      // Show the actual weighted completed-set contribution. The bar itself is
+      // normalized to the highest muscle in the displayed period.
+      final formattedSets =
+          entry.currentSets == entry.currentSets.roundToDouble()
+          ? entry.currentSets.toStringAsFixed(0)
+          : entry.currentSets.toStringAsFixed(1);
       final counterPainter = TextPainter(
         text: TextSpan(
-          text: '${entry.currentSets.toInt()}/${entry.targetSets.toInt()}',
+          text: formattedSets,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w700,
-            color: isComplete 
-                ? entry.color.withValues(alpha: 0.9) 
-                : Colors.white.withValues(alpha: 0.35),
+            color: entry.color.withValues(alpha: 0.9),
           ),
         ),
         textDirection: TextDirection.ltr,

@@ -52,11 +52,16 @@ if [[ -z "$APKSIGNER" ]]; then
 fi
 
 ACTUAL_ANDROID_SIGNER_SHA256="$(
-  "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk \
-    | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' \
-    | head -n 1 \
-    | tr '[:upper:]' '[:lower:]'
+  "$APKSIGNER" verify --print-certs-pem \
+    build/app/outputs/flutter-apk/app-release.apk \
+    | openssl x509 -outform DER \
+    | openssl dgst -sha256 \
+    | awk '{print $2}'
 )"
+if [[ ! "$ACTUAL_ANDROID_SIGNER_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "Unable to read a valid SHA-256 signer digest from the APK."
+  exit 1
+fi
 if [[ "$ACTUAL_ANDROID_SIGNER_SHA256" != "$EXPECTED_ANDROID_SIGNER_SHA256" ]]; then
   echo "Built APK does not match the stable Fittin signer."
   exit 1

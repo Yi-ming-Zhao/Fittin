@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
@@ -48,11 +50,13 @@ class _WorkoutRecordDetailScreenState
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
+    final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: DashboardPageScaffold(
-        bottomPadding: 80,
+        bottomPadding: 24,
+        safeAreaBottom: true,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.insights,
@@ -117,7 +121,11 @@ class _WorkoutRecordDetailScreenState
                     const SizedBox(height: 18),
                     for (final exercise in log.exercises) ...[
                       Text(
-                        exercise.exerciseName,
+                        _localizedExerciseLogName(
+                          exercise,
+                          exerciseLibrary,
+                          strings,
+                        ),
                         style: Theme.of(context).textTheme.titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
@@ -306,6 +314,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
       for (final exercise in widget.log.exercises)
         _EditableExerciseState(
           exerciseId: exercise.exerciseId,
+          exerciseDefinitionId: exercise.exerciseDefinitionId,
           exerciseName: exercise.exerciseName,
           stageId: exercise.stageId,
           displayLoadUnit: exercise.displayLoadUnit,
@@ -436,7 +445,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                                 controller: exercise.sets[index].repsController,
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
-                                  labelText: 'Reps ${index + 1}',
+                                  labelText: strings.recordRepsLabel(index + 1),
                                 ),
                               ),
                             ),
@@ -450,8 +459,12 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                                       decimal: true,
                                     ),
                                 decoration: InputDecoration(
-                                  labelText:
-                                      'Weight ${index + 1} (${exercise.displayLoadUnit == LoadUnits.lbs ? 'lb' : 'kg'})',
+                                  labelText: strings.recordWeightLabel(
+                                    index + 1,
+                                    exercise.displayLoadUnit == LoadUnits.lbs
+                                        ? 'lb'
+                                        : 'kg',
+                                  ),
                                 ),
                               ),
                             ),
@@ -464,7 +477,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                                       decimal: true,
                                     ),
                                 decoration: InputDecoration(
-                                  labelText: 'RPE ${index + 1}',
+                                  labelText: strings.recordRpeLabel(index + 1),
                                 ),
                               ),
                             ),
@@ -486,7 +499,11 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'Target RPE ${_formatOptionalRpe(exercise.sets[index].targetRpe)}',
+                                strings.recordTargetRpe(
+                                  _formatOptionalRpe(
+                                    exercise.sets[index].targetRpe,
+                                  ),
+                                ),
                                 style: fittinTheme.uiStyle(
                                   12,
                                   fittinTheme.fgDim,
@@ -543,6 +560,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
       for (final exercise in _exercises)
         ExerciseLog(
           exerciseId: exercise.exerciseId,
+          exerciseDefinitionId: exercise.exerciseDefinitionId,
           exerciseName: exercise.exerciseName,
           stageId: exercise.stageId,
           displayLoadUnit: exercise.displayLoadUnit,
@@ -577,6 +595,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
 class _EditableExerciseState {
   _EditableExerciseState({
     required this.exerciseId,
+    required this.exerciseDefinitionId,
     required this.exerciseName,
     required this.stageId,
     required this.displayLoadUnit,
@@ -584,6 +603,7 @@ class _EditableExerciseState {
   });
 
   final String exerciseId;
+  final String exerciseDefinitionId;
   final String exerciseName;
   final String stageId;
   String displayLoadUnit;
@@ -633,6 +653,21 @@ DateTime? _parseDateTime(String rawDate, String rawTime) {
     return null;
   }
   return DateTime(year, month, day, hour, minute);
+}
+
+String _localizedExerciseLogName(
+  ExerciseLog exercise,
+  ExerciseLibrary? library,
+  AppStrings strings,
+) {
+  final definition = library?.findKnown(
+    exerciseId: exercise.exerciseDefinitionId.isNotEmpty
+        ? exercise.exerciseDefinitionId
+        : exercise.exerciseId,
+    name: exercise.exerciseName,
+  );
+  return definition?.displayName(strings.isChinese ? 'zh' : 'en') ??
+      exercise.exerciseName;
 }
 
 String _timeLabel(DateTime dateTime) {

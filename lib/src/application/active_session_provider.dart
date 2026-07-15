@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/sync_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
@@ -20,7 +21,11 @@ final databaseRepositoryProvider = Provider<DatabaseRepository>((ref) {
 final todayWorkoutGatewayProvider = Provider<TodayWorkoutGateway>((ref) {
   final repository = ref.watch(databaseRepositoryProvider);
   final ownerUserId = ref.watch(currentUserIdProvider);
-  return DatabaseTodayWorkoutGateway(repository, ownerUserId: ownerUserId);
+  return DatabaseTodayWorkoutGateway(
+    repository,
+    ownerUserId: ownerUserId,
+    exerciseLibraryLoader: () => ref.read(exerciseLibraryProvider.future),
+  );
 });
 
 final todayWorkoutSummaryProvider = FutureProvider<TodayWorkoutSummary>((

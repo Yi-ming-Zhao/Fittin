@@ -11,10 +11,10 @@ class DashboardPageScaffold extends StatelessWidget {
   const DashboardPageScaffold({
     super.key,
     required this.children,
-    this.bottomPadding = 120,
+    this.bottomPadding = 24,
     this.topPadding = 54,
     this.floatingActionButton,
-    this.extendBody = true,
+    this.extendBody = false,
     this.scrollable = true,
     this.safeAreaBottom = false,
   });

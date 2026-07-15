@@ -86,8 +86,15 @@ release_dir="$release_root/$release_id"
 tar -xzf "$release_dir/web.tar.gz" -C "$release_dir"
 rm -f "$release_dir/web.tar.gz"
 REMOTE
+previous_release="$(
+  ssh "$ECS_TARGET" \
+    "readlink -f '${ECS_RELEASE_ROOT%/releases}/current' 2>/dev/null || true"
+)"
+if [[ -n "$previous_release" ]]; then
+  echo "Previous release for rollback: $previous_release"
+fi
 ssh -t "$ECS_TARGET" \
-  "sudo ln -sfn '$ECS_RELEASE_ROOT/$release_id' '${ECS_RELEASE_ROOT%/releases}/current' && sudo nginx -t && sudo nginx -s reload"
+  "sudo nginx -t && sudo ln -sfn '$ECS_RELEASE_ROOT/$release_id' '${ECS_RELEASE_ROOT%/releases}/current' && sudo nginx -s reload"
 
 echo "==> Public smoke checks"
 curl -fsSI --max-time 20 "$PUBLIC_ORIGIN/"

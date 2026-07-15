@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/domain/calendar_month.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/workout_record_detail_screen.dart';
+import 'package:fittin_v2/src/presentation/widgets/anatomy_load_map.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/muscle_distribution_painter.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
@@ -20,6 +22,7 @@ class AdvancedAnalyticsScreen extends ConsumerStatefulWidget {
 class _AdvancedAnalyticsScreenState
     extends ConsumerState<AdvancedAnalyticsScreen> {
   ConsistencyRange _selectedRange = ConsistencyRange.week;
+  CalendarMonthSelection _selectedMonth = CalendarMonthSelection.today();
 
   @override
   Widget build(BuildContext context) {
@@ -42,21 +45,27 @@ class _AdvancedAnalyticsScreenState
             _ConsistencyExplorer(
               range: _selectedRange,
               data: data,
+              selectedMonth: _selectedMonth,
               onRangeChanged: (value) {
                 setState(() {
                   _selectedRange = value;
+                });
+              },
+              onMonthChanged: (value) {
+                setState(() {
+                  _selectedMonth = value;
                 });
               },
             ),
             const SizedBox(height: 24),
             _buildVolumeDistribution(context, strings, data),
             const SizedBox(height: 32),
-            _buildAnatomicalHighlight(context, strings),
+            AnatomyLoadMap(overview: data.muscleLoad),
             const SizedBox(height: 80),
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, _) => Center(child: Text(strings.loadError(e))),
       ),
     );
   }
@@ -66,60 +75,26 @@ class _AdvancedAnalyticsScreenState
     AppStrings strings,
     AdvancedAnalyticsData data,
   ) {
+    final volumeData = data.volumeData(labelFor: strings.muscleName);
     return ChartContainer(
       title: strings.muscleTrainingLoad,
       height: 220,
-      child: CustomPaint(
-        painter: MuscleDistributionPainter(data: data.volumeData),
-        size: Size.infinite,
-      ),
-    );
-  }
-
-  Widget _buildAnatomicalHighlight(BuildContext context, AppStrings strings) {
-    final theme = Theme.of(context);
-    return DashboardSurfaceCard(
-      radius: 28,
-      highlight: true,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 16),
-          ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                theme.colorScheme.primary.withValues(alpha: 0.3),
-                theme.colorScheme.primary.withValues(alpha: 0.05),
-              ],
-            ).createShader(bounds),
-            child: const Icon(
-              Icons.accessibility_new_rounded,
-              size: 100,
-              color: Colors.white,
+      child: volumeData.isEmpty
+          ? Center(
+              child: Text(strings.anatomyNoData, textAlign: TextAlign.center),
+            )
+          : Semantics(
+              container: true,
+              image: true,
+              label: strings.muscleLoadChartSemantics([
+                for (final item in volumeData)
+                  strings.muscleLoadChartEntry(item.label, item.currentSets),
+              ]),
+              child: CustomPaint(
+                painter: MuscleDistributionPainter(data: volumeData),
+                size: Size.infinite,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            strings.anatomicalLoadMap,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.8,
-              color: Colors.white.withValues(alpha: 0.44),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            strings.anatomicalLoadPlaceholder,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.25),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
     );
   }
 }
@@ -128,24 +103,42 @@ class _ConsistencyExplorer extends ConsumerWidget {
   const _ConsistencyExplorer({
     required this.range,
     required this.data,
+    required this.selectedMonth,
     required this.onRangeChanged,
+    required this.onMonthChanged,
   });
 
   final ConsistencyRange range;
   final AdvancedAnalyticsData data;
+  final CalendarMonthSelection selectedMonth;
   final ValueChanged<ConsistencyRange> onRangeChanged;
+  final ValueChanged<CalendarMonthSelection> onMonthChanged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
     final sections = data.sectionsByRange[range] ?? const [];
-    final contentHeight = 78.0 + (sections.length * 56.0);
+    final calendar = CalendarMonthBuilder().build(
+      focusedMonth: selectedMonth.focusedMonth,
+      recordedDates: data.recordedDates,
+      localeCode: strings.isChinese ? 'zh_CN' : 'en',
+    );
+    final contentHeight = range == ConsistencyRange.month
+        ? 112.0 + (calendar.weeks.length * 52.0)
+        : 78.0 + (sections.length * 56.0);
 
     return ChartContainer(
       title: strings.trainingConsistency,
       height: sections.isEmpty ? 140 : contentHeight,
       headerAction: _RangeSelector(selected: range, onChanged: onRangeChanged),
-      child: sections.isEmpty
+      child: range == ConsistencyRange.month
+          ? _CalendarMonthView(
+              month: calendar,
+              data: data,
+              selection: selectedMonth,
+              onSelectionChanged: onMonthChanged,
+            )
+          : sections.isEmpty
           ? Center(
               child: Text(
                 strings.noConsistencyRecords,
@@ -170,6 +163,204 @@ class _ConsistencyExplorer extends ConsumerWidget {
                 ],
               ],
             ),
+    );
+  }
+}
+
+class _CalendarMonthView extends ConsumerWidget {
+  const _CalendarMonthView({
+    required this.month,
+    required this.data,
+    required this.selection,
+    required this.onSelectionChanged,
+  });
+
+  final CalendarMonth month;
+  final AdvancedAnalyticsData data;
+  final CalendarMonthSelection selection;
+  final ValueChanged<CalendarMonthSelection> onSelectionChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    final todayMonth = CalendarMonthBuilder.monthOf(DateTime.now());
+    final earliestMonth = CalendarMonthBuilder.monthOf(
+      data.earliestRecordedDate ?? todayMonth,
+    );
+    final latestRecordedMonth = CalendarMonthBuilder.monthOf(
+      data.latestRecordedDate ?? todayMonth,
+    );
+    final latestMonth = latestRecordedMonth.isAfter(todayMonth)
+        ? latestRecordedMonth
+        : todayMonth;
+    final canMovePrevious = selection.focusedMonth.isAfter(earliestMonth);
+    final canMoveNext = selection.focusedMonth.isBefore(latestMonth);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            IconButton(
+              key: const ValueKey('calendar-previous-month'),
+              tooltip: strings.previousMonth,
+              onPressed: canMovePrevious
+                  ? () => onSelectionChanged(selection.previous())
+                  : null,
+              icon: const Icon(Icons.chevron_left_rounded),
+            ),
+            Expanded(
+              child: Text(
+                month.label,
+                key: const ValueKey('calendar-month-label'),
+                textAlign: TextAlign.center,
+                style: theme.uiStyle(15, theme.fg, FontWeight.w800),
+              ),
+            ),
+            IconButton(
+              key: const ValueKey('calendar-next-month'),
+              tooltip: strings.nextMonth,
+              onPressed: canMoveNext
+                  ? () => onSelectionChanged(selection.next())
+                  : null,
+              icon: const Icon(Icons.chevron_right_rounded),
+            ),
+          ],
+        ),
+        if (!selection.isCurrentMonth())
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: const ValueKey('calendar-today'),
+              onPressed: () => onSelectionChanged(selection.jumpToToday()),
+              child: Text(strings.calendarToday),
+            ),
+          )
+        else
+          const SizedBox(height: 40),
+        Row(
+          children: [
+            for (final label in month.weekdayLabels)
+              Expanded(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.fade,
+                  style: theme.uiStyle(10, theme.fgDim, FontWeight.w700),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        for (final week in month.weeks) ...[
+          Row(
+            children: [
+              for (final day in week.days)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    child: _CalendarDayCell(
+                      day: day,
+                      record: data.recordFor(day.date),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 6),
+        ],
+      ],
+    );
+  }
+}
+
+class _CalendarDayCell extends ConsumerWidget {
+  const _CalendarDayCell({required this.day, required this.record});
+
+  final CalendarDay day;
+  final ConsistencyDayRecord? record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    final hasActivity = record?.hasActivity ?? false;
+    final intensity = record?.intensity ?? 0;
+    final background = hasActivity
+        ? Color.alphaBlend(
+            theme.accent.withValues(alpha: 0.18 + intensity * 0.5),
+            theme.surfaceSolid,
+          )
+        : theme.fg.withValues(alpha: day.isInMonth ? 0.05 : 0.018);
+    final foreground = hasActivity && intensity >= 0.58
+        ? theme.accentInk
+        : theme.fg;
+    final sessionCount = record?.logs.length ?? 0;
+
+    return Semantics(
+      label: strings.calendarDaySemantics(day.date, sessionCount),
+      button: hasActivity,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          key: ValueKey('calendar-day-${day.date.toIso8601String()}'),
+          onTap: !hasActivity
+              ? null
+              : () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => WorkoutRecordDetailScreen(
+                        date: day.date,
+                        logs: record!.logs,
+                      ),
+                    ),
+                  );
+                },
+          borderRadius: BorderRadius.circular(13),
+          child: Ink(
+            height: 44,
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: day.isToday
+                    ? theme.fg.withValues(alpha: 0.7)
+                    : hasActivity
+                    ? theme.accent.withValues(alpha: 0.32)
+                    : theme.border,
+              ),
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Text(
+                  '${day.date.day}',
+                  style: theme
+                      .uiStyle(13, foreground, FontWeight.w800)
+                      .copyWith(
+                        color: foreground.withValues(
+                          alpha: day.isInMonth ? 1 : 0.32,
+                        ),
+                      ),
+                ),
+                if (hasActivity)
+                  Positioned(
+                    bottom: 5,
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: foreground.withValues(alpha: 0.82),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -215,9 +406,7 @@ class _DayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labels = strings.isChinese
-        ? const ['一', '二', '三', '四', '五', '六', '日']
-        : const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final labels = strings.calendarWeekdayInitials;
     return Row(
       children: [
         const SizedBox(width: 74),
@@ -247,13 +436,20 @@ class _WeekRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final planWeekIndex = section.days.isEmpty
+        ? null
+        : section.days.first.planWeekIndex;
+    final label = planWeekIndex == null
+        ? section.label
+        : strings.analyticsPlanWeekLabel(planWeekIndex + 1);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(
           width: 68,
           child: Text(
-            section.label,
+            label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: Colors.white.withValues(alpha: 0.6),
               fontWeight: FontWeight.w700,

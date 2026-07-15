@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/presentation/screens/active_session_screen.dart';
@@ -322,6 +323,41 @@ void main() {
     expect(find.text('Enter Weight'), findsNothing);
   });
 
+  testWidgets('card stack reflows across short and tall mobile viewports', (
+    WidgetTester tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(390, 568);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final container = await _sessionContainer(WorkoutRecordingMode.card);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ActiveSessionScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final card = find.byKey(const ValueKey('active-set-card'));
+    final stage = find.byKey(const ValueKey('active-card-flex-stage'));
+    final complete = find.byKey(const ValueKey('complete-current-set'));
+    final shortCardHeight = tester.getSize(card).height;
+    final shortStageHeight = tester.getSize(stage).height;
+    expect(tester.takeException(), isNull);
+    expect(tester.getBottomRight(complete).dy, lessThanOrEqualTo(568));
+
+    tester.view.physicalSize = const Size(390, 926);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(card).height, greaterThan(shortCardHeight));
+    expect(tester.getSize(stage).height, greaterThan(shortStageHeight));
+    expect(tester.getBottomRight(complete).dy, lessThanOrEqualTo(926));
+  });
+
   testWidgets('traditional logger opens exact weight entry on tap', (
     WidgetTester tester,
   ) async {
@@ -389,6 +425,107 @@ void main() {
     expect(_findPlateWidgets('25.0'), findsNWidgets(4));
     expect(_findPlateWidgets('5.0'), findsNWidgets(2));
     expect(_findPlateWidgets('2.5'), findsNWidgets(2));
+    expect(find.byKey(const ValueKey('barbell-center-span')), findsOneWidget);
+    expect(find.byKey(const ValueKey('barbell-left-sleeve')), findsOneWidget);
+    expect(find.byKey(const ValueKey('barbell-right-sleeve')), findsOneWidget);
+    expect(find.byKey(const ValueKey('barbell-left-collar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('barbell-right-collar')), findsOneWidget);
+    expect(find.text('PER SIDE · 25 × 2 + 5 × 1 + 2.5 × 1 kg'), findsOneWidget);
+  });
+
+  testWidgets('active session controls and semantics localize in en and zh', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final firstExercise = fakeWorkoutSessionState.exercises.first;
+    final session = fakeWorkoutSessionState.copyWith(
+      exercises: [
+        firstExercise.copyWith(
+          showsPlateBreakdown: true,
+          sets: [
+            firstExercise.sets.first.copyWith(targetWeight: 135, weight: 135),
+            ...firstExercise.sets.skip(1),
+          ],
+        ),
+        ...fakeWorkoutSessionState.exercises.skip(1),
+      ],
+    );
+    final cases = [
+      (
+        locale: AppLocale.en,
+        exercise: 'Squat',
+        setPosition: 'SET 1 / 2',
+        hint: '←/→ SET  ·  ↑ LOG  ·  ↓ SKIP',
+        weightTools: 'Weight tools',
+        switchExercise: 'Switch exercise',
+        cardSemantics:
+            'Current set 1. Swipe left for next, right for previous, up to log, or down to skip.',
+        completeSemantics: 'Log current set',
+        progressSemantics: 'Set 1 of 2, current',
+        plateText: 'PER SIDE · 25 × 2 + 5 × 1 + 2.5 × 1 kg',
+      ),
+      (
+        locale: AppLocale.zh,
+        exercise: '深蹲',
+        setPosition: '第 1 / 2 组',
+        hint: '←/→ 切换  ·  ↑ 记录  ·  ↓ 跳过',
+        weightTools: '重量工具',
+        switchExercise: '切换动作',
+        cardSemantics: '当前第 1 组，左滑下一组，右滑上一组，上滑记录，下滑跳过',
+        completeSemantics: '记录当前组',
+        progressSemantics: '第 1 组，共 2 组，当前组',
+        plateText: '每侧 · 25 × 2 + 5 × 1 + 2.5 × 1 kg',
+      ),
+    ];
+
+    for (final testCase in cases) {
+      final container = await _sessionContainer(
+        WorkoutRecordingMode.card,
+        session: session,
+        locale: testCase.locale,
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            locale: testCase.locale.locale,
+            home: const ActiveSessionScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final semantics = tester.ensureSemantics();
+
+      expect(find.text(testCase.exercise), findsOneWidget);
+      expect(find.text(testCase.setPosition), findsWidgets);
+      expect(find.text(testCase.hint), findsOneWidget);
+      expect(find.byTooltip(testCase.weightTools), findsOneWidget);
+      expect(find.byTooltip(testCase.switchExercise), findsOneWidget);
+      expect(find.text(testCase.plateText), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp(RegExp.escape(testCase.cardSemantics))),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(
+          RegExp(RegExp.escape(testCase.completeSemantics)),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel(RegExp(testCase.progressSemantics)),
+        findsOneWidget,
+      );
+
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      container.dispose();
+    }
   });
 }
 
@@ -513,7 +650,10 @@ class _TrackingActiveSessionNotifier extends ActiveSessionNotifier {
 Future<ProviderContainer> _sessionContainer(
   WorkoutRecordingMode mode, {
   WorkoutSessionState? session,
+  AppLocale locale = AppLocale.en,
 }) async {
+  final repository = InMemoryDatabaseRepository();
+  await repository.saveAppLocale(locale);
   final container = ProviderContainer(
     overrides: [
       workoutRecordingModeProvider.overrideWith(
@@ -522,9 +662,7 @@ Future<ProviderContainer> _sessionContainer(
           loadPersisted: false,
         ),
       ),
-      databaseRepositoryProvider.overrideWithValue(
-        InMemoryDatabaseRepository(),
-      ),
+      databaseRepositoryProvider.overrideWithValue(repository),
       todayWorkoutGatewayProvider.overrideWithValue(
         FakeTodayWorkoutGateway(session: session),
       ),

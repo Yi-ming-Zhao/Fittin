@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
@@ -48,6 +49,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final sessionState = ref.watch(activeSessionProvider);
     final template = ref.watch(activeTemplateProvider).valueOrNull;
     final locale = ref.watch(appLocaleProvider);
+    final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
     final strings = AppStrings.of(context, ref);
     final notifier = ref.read(activeSessionProvider.notifier);
     final theme = Theme.of(context);
@@ -56,7 +58,12 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final workout = sessionState.activeWorkout;
 
     if (sessionState.isLoading && workout == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: Semantics(
+          label: strings.loadingActiveWorkout,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      );
     }
 
     if (workout == null) {
@@ -71,11 +78,19 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     }
 
     String localizedExercise(ExerciseSessionState exercise) {
+      final canonical = exerciseLibrary?.findKnown(
+        exerciseId: exercise.exerciseId,
+        name: exercise.exerciseName,
+      );
+      if (canonical != null) {
+        return canonical.displayName(locale.code);
+      }
       if (template == null) return exercise.exerciseName;
       try {
         return localizedExerciseName(
           template.findExerciseById(exercise.id),
           locale,
+          library: exerciseLibrary,
         );
       } on StateError {
         return exercise.exerciseName;
@@ -103,6 +118,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final kgBarWeight = ref.watch(kgBarWeightProvider);
     final lbBarWeight = ref.watch(lbBarWeightProvider);
     final compactWorkoutTitle = _buildWorkoutContextTitle(
+      strings: strings,
       workout: workout,
       displayName: _localizedWorkoutName(template, workout, locale),
       currentStageId: currentExercise.stageId,
@@ -125,6 +141,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
       children: [
         _SessionHeader(
           theme: fittinTheme,
+          strings: strings,
           workoutTitle: compactWorkoutTitle,
           exerciseName: currentExerciseName,
           tier: currentExercise.tier,
@@ -277,6 +294,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
         ),
         const SizedBox(height: 10),
         _SetProgressRail(
+          strings: strings,
           sets: currentExercise.sets,
           activeIndex: resolvedSetIndex,
           onSelect: notifier.selectSet,
@@ -357,7 +375,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          latestState.errorMessage ?? 'Unable to conclude workout.',
+          latestState.errorMessage ?? strings.unableToConcludeWorkout,
         ),
       ),
     );
@@ -408,14 +426,14 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           side: BorderSide(color: theme.border),
         ),
         title: Text(
-          strings.isChinese ? '直接输入重量' : 'Enter Weight',
+          strings.enterWeight,
           style: theme.displayStyle(22, theme.fg),
         ),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: strings.isChinese ? '重量' : 'Weight',
+            labelText: strings.weightLabel,
             suffixText: displayUnit == LoadUnits.kg ? 'kg' : 'lb',
           ),
         ),
@@ -462,16 +480,13 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           borderRadius: BorderRadius.circular(theme.radius),
           side: BorderSide(color: theme.border),
         ),
-        title: Text(
-          strings.isChinese ? '输入 RPE' : 'Enter RPE',
-          style: theme.displayStyle(22, theme.fg),
-        ),
+        title: Text(strings.enterRpe, style: theme.displayStyle(22, theme.fg)),
         content: TextField(
           controller: controller,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            labelText: 'RPE',
-            hintText: strings.isChinese ? '例如 7 或 7.5' : 'For example 7 or 7.5',
+            labelText: strings.rpeLabel,
+            hintText: strings.rpeExample,
           ),
         ),
         actions: [
@@ -484,7 +499,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           ),
           FittinBtn(
             theme,
-            strings.isChinese ? '清空' : 'Clear',
+            strings.clearValue,
             size: 'sm',
             variant: 'secondary',
             onPressed: () => Navigator.of(dialogContext).pop(null),
@@ -522,6 +537,7 @@ String _localizedWorkoutName(
 }
 
 String _buildWorkoutContextTitle({
+  required AppStrings strings,
   required WorkoutSessionState workout,
   required String displayName,
   required String currentStageId,
@@ -531,15 +547,11 @@ String _buildWorkoutContextTitle({
     r'week[-_]?(\d+)',
     caseSensitive: false,
   ).firstMatch(currentStageId);
-  final weekPart = stageWeekMatch == null
-      ? null
-      : 'W${stageWeekMatch.group(1)}';
-  final dayPart = dayMatch == null ? null : 'D${dayMatch.group(1)}';
-  final prefix = [
-    if (weekPart != null) weekPart,
-    if (dayPart != null) dayPart,
-  ].join();
-  return prefix.isEmpty ? displayName : '$prefix-$displayName';
+  return strings.workoutContextTitle(
+    displayName,
+    week: int.tryParse(stageWeekMatch?.group(1) ?? ''),
+    day: int.tryParse(dayMatch?.group(1) ?? ''),
+  );
 }
 
 int _resolveCurrentSetIndex(ExerciseSessionState exercise) {
@@ -589,6 +601,7 @@ String _targetSummary(
 class _SessionHeader extends StatelessWidget {
   const _SessionHeader({
     required this.theme,
+    required this.strings,
     required this.workoutTitle,
     required this.exerciseName,
     required this.tier,
@@ -605,6 +618,7 @@ class _SessionHeader extends StatelessWidget {
   });
 
   final FittinTheme theme;
+  final AppStrings strings;
   final String workoutTitle;
   final String exerciseName;
   final String tier;
@@ -641,7 +655,7 @@ class _SessionHeader extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '$tier · SET ${setIndex + 1} / $totalSets',
+                strings.sessionHeaderSetProgress(tier, setIndex + 1, totalSets),
                 style: theme.uiStyle(11, theme.fgMuted, FontWeight.w600),
               ),
             ],
@@ -651,17 +665,21 @@ class _SessionHeader extends StatelessWidget {
           _HeaderTextButton(
             key: const ValueKey('session-unit-toggle'),
             label: displayUnit == LoadUnits.kg ? 'KG' : 'LB',
+            tooltip: strings.switchWeightUnit(
+              displayUnit == LoadUnits.kg ? 'KG' : 'LB',
+            ),
             onTap: onToggleUnit,
           ),
         const SizedBox(width: 6),
         _HeaderIconButton(
           key: const ValueKey('session-weight-tools'),
           icon: Icons.calculate_outlined,
-          tooltip: 'Weight tools',
+          tooltip: strings.weightTools,
           onTap: onOpenTools,
         ),
         const SizedBox(width: 6),
         _ExerciseSwitchMenu(
+          strings: strings,
           exercises: exercises,
           activeIndex: activeExerciseIndex,
           localizedExercise: localizedExercise,
@@ -676,30 +694,35 @@ class _HeaderTextButton extends StatelessWidget {
   const _HeaderTextButton({
     super.key,
     required this.label,
+    required this.tooltip,
     required this.onTap,
   });
 
   final String label;
+  final String tooltip;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: 38,
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.8,
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 38,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
       ),
@@ -742,11 +765,13 @@ class _HeaderIconButton extends StatelessWidget {
 
 class _SetProgressRail extends StatelessWidget {
   const _SetProgressRail({
+    required this.strings,
     required this.sets,
     required this.activeIndex,
     required this.onSelect,
   });
 
+  final AppStrings strings;
   final List<SessionSetState> sets;
   final int activeIndex;
   final ValueChanged<int> onSelect;
@@ -759,27 +784,37 @@ class _SetProgressRail extends StatelessWidget {
         children: [
           for (var index = 0; index < sets.length; index++) ...[
             Expanded(
-              child: InkWell(
-                key: ValueKey('session-set-progress-$index'),
-                onTap: () => onSelect(index),
-                borderRadius: BorderRadius.circular(99),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  height: 6,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(99),
-                    color: sets[index].isCompleted
-                        ? Colors.white.withValues(alpha: 0.9)
-                        : sets[index].isSkipped
-                        ? const Color(0xFFB77A70).withValues(alpha: 0.7)
-                        : index == activeIndex
-                        ? Colors.white.withValues(alpha: 0.38)
-                        : Colors.white.withValues(alpha: 0.1),
-                    border: index == activeIndex
-                        ? Border.all(
-                            color: Colors.white.withValues(alpha: 0.52),
-                          )
-                        : null,
+              child: Semantics(
+                button: true,
+                label: strings.setProgressSemantics(
+                  index + 1,
+                  sets.length,
+                  isCompleted: sets[index].isCompleted,
+                  isSkipped: sets[index].isSkipped,
+                  isCurrent: index == activeIndex,
+                ),
+                child: InkWell(
+                  key: ValueKey('session-set-progress-$index'),
+                  onTap: () => onSelect(index),
+                  borderRadius: BorderRadius.circular(99),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    height: 6,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(99),
+                      color: sets[index].isCompleted
+                          ? Colors.white.withValues(alpha: 0.9)
+                          : sets[index].isSkipped
+                          ? const Color(0xFFB77A70).withValues(alpha: 0.7)
+                          : index == activeIndex
+                          ? Colors.white.withValues(alpha: 0.38)
+                          : Colors.white.withValues(alpha: 0.1),
+                      border: index == activeIndex
+                          ? Border.all(
+                              color: Colors.white.withValues(alpha: 0.52),
+                            )
+                          : null,
+                    ),
                   ),
                 ),
               ),
@@ -844,9 +879,7 @@ class _TraditionalSetLogger extends StatelessWidget {
           Row(
             children: [
               Text(
-                strings.isChinese
-                    ? '第 ${setIndex + 1} / $totalSets 组'
-                    : 'SET ${setIndex + 1} / $totalSets',
+                strings.setPosition(setIndex + 1, totalSets),
                 style: theme.textTheme.labelMedium?.copyWith(
                   color: Colors.white.withValues(alpha: 0.56),
                   fontWeight: FontWeight.w800,
@@ -872,10 +905,12 @@ class _TraditionalSetLogger extends StatelessWidget {
             children: [
               Expanded(
                 child: _CardMetric(
-                  label: strings.isChinese ? '完成次数' : 'REPS',
+                  label: strings.completedRepsLabel,
                   value: '${currentSet.completedReps}',
                   onDecrease: onDecreaseReps,
                   onIncrease: onIncreaseReps,
+                  decreaseTooltip: strings.decreaseReps,
+                  increaseTooltip: strings.increaseReps,
                 ),
               ),
               const SizedBox(width: 10),
@@ -889,6 +924,8 @@ class _TraditionalSetLogger extends StatelessWidget {
                     value: _formatWeightValue(displayWeight),
                     onDecrease: onDecreaseWeight,
                     onIncrease: onIncreaseWeight,
+                    decreaseTooltip: strings.decreaseWeight,
+                    increaseTooltip: strings.increaseWeight,
                   ),
                 ),
               ),
@@ -909,7 +946,7 @@ class _TraditionalSetLogger extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    strings.isChinese ? '实际 RPE' : 'PERFORMED RPE',
+                    strings.performedRpe,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.5),
                       fontWeight: FontWeight.w800,
@@ -928,7 +965,11 @@ class _TraditionalSetLogger extends StatelessWidget {
           ),
           if (plateBreakdown != null) ...[
             const Spacer(),
-            _BarbellGraphic(breakdown: plateBreakdown!, height: 58),
+            _BarbellGraphic(
+              breakdown: plateBreakdown!,
+              strings: strings,
+              height: 58,
+            ),
           ] else
             const Spacer(),
           _AnimatedCheckButton(
@@ -936,6 +977,7 @@ class _TraditionalSetLogger extends StatelessWidget {
             controller: completionController,
             onTap: onComplete,
             size: 58,
+            semanticLabel: strings.logCurrentSet,
           ),
         ],
       ),
@@ -1034,6 +1076,13 @@ class _CardSetStackState extends State<_CardSetStack> {
     final stack = LayoutBuilder(
       builder: (context, constraints) {
         const bottomReveal = 20.0;
+        final activeCardHeight = constraints.maxHeight - bottomReveal;
+        final compact = activeCardHeight < 430;
+        final veryCompact = activeCardHeight < 330;
+        final contentGap = veryCompact ? 4.0 : (compact ? 6.0 : 10.0);
+        final metricHeight = veryCompact ? 54.0 : (compact ? 62.0 : 78.0);
+        final weightEditorHeight = veryCompact ? 44.0 : (compact ? 50.0 : 58.0);
+        final actionHeight = veryCompact ? 46.0 : (compact ? 50.0 : 56.0);
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -1049,7 +1098,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                             ? 0
                             : rightProgress,
                         child: _GestureStamp(
-                          label: widget.strings.isChinese ? '上一组' : 'PREVIOUS',
+                          label: widget.strings.previousSetAction,
                           icon: Icons.arrow_forward_rounded,
                           color: widget.theme.fgDim,
                         ),
@@ -1060,7 +1109,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                       child: Opacity(
                         opacity: widget.onNextSet == null ? 0 : leftProgress,
                         child: _GestureStamp(
-                          label: widget.strings.isChinese ? '下一组' : 'NEXT',
+                          label: widget.strings.nextSetAction,
                           icon: Icons.arrow_back_rounded,
                           color: widget.theme.fgDim,
                         ),
@@ -1071,7 +1120,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                       child: Opacity(
                         opacity: downProgress,
                         child: _GestureStamp(
-                          label: widget.strings.isChinese ? '跳过' : 'SKIP',
+                          label: widget.strings.skipSetAction,
                           icon: Icons.keyboard_arrow_down_rounded,
                           color: const Color(0xFFB77A70),
                         ),
@@ -1082,7 +1131,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                       child: Opacity(
                         opacity: upProgress,
                         child: _GestureStamp(
-                          label: widget.strings.isChinese ? '记录' : 'LOG',
+                          label: widget.strings.logSetAction,
                           icon: Icons.check_rounded,
                           color: widget.theme.accent,
                         ),
@@ -1107,6 +1156,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                 child: Transform.rotate(
                   angle: depth.isEven ? -0.014 * depth : 0.012 * depth,
                   child: _StackBackCard(
+                    strings: widget.strings,
                     set: widget.upcomingSets[depth - 1],
                     setNumber: widget.setIndex + depth + 1,
                     displayUnit: widget.displayUnit,
@@ -1117,9 +1167,9 @@ class _CardSetStackState extends State<_CardSetStack> {
             Positioned.fill(
               bottom: bottomReveal,
               child: Semantics(
-                label: widget.strings.isChinese
-                    ? '当前第 ${widget.setIndex + 1} 组，左滑下一组，右滑上一组，上滑记录，下滑跳过'
-                    : 'Current set ${widget.setIndex + 1}. Swipe left for next, right for previous, up to log, or down to skip.',
+                label: widget.strings.currentSetGestureSemantics(
+                  widget.setIndex + 1,
+                ),
                 child: GestureDetector(
                   key: const ValueKey('active-set-card'),
                   behavior: HitTestBehavior.opaque,
@@ -1134,7 +1184,12 @@ class _CardSetStackState extends State<_CardSetStack> {
                     curve: Curves.easeOutCubic,
                     transform: transform,
                     transformAlignment: Alignment.center,
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+                    padding: EdgeInsets.fromLTRB(
+                      compact ? 12 : 16,
+                      compact ? 10 : 14,
+                      compact ? 12 : 16,
+                      compact ? 9 : 12,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(28),
                       gradient: LinearGradient(
@@ -1176,9 +1231,9 @@ class _CardSetStackState extends State<_CardSetStack> {
                         Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compact ? 8 : 10,
+                                vertical: compact ? 4 : 5,
                               ),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(999),
@@ -1187,9 +1242,10 @@ class _CardSetStackState extends State<_CardSetStack> {
                                 ),
                               ),
                               child: Text(
-                                widget.strings.isChinese
-                                    ? '第 ${widget.setIndex + 1} / ${widget.totalSets} 组'
-                                    : 'SET ${widget.setIndex + 1} / ${widget.totalSets}',
+                                widget.strings.setPosition(
+                                  widget.setIndex + 1,
+                                  widget.totalSets,
+                                ),
                                 style: widget.theme
                                     .uiStyle(
                                       10,
@@ -1199,70 +1255,38 @@ class _CardSetStackState extends State<_CardSetStack> {
                                     .copyWith(letterSpacing: 0.7),
                               ),
                             ),
-                            const Spacer(),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(
-                                      Icons.keyboard_double_arrow_left_rounded,
-                                      size: 15,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      widget.strings.isChinese ? '下一组' : 'NEXT',
-                                      style: widget.theme.uiStyle(
-                                        9,
-                                        widget.theme.fgMuted,
-                                        FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      widget.strings.isChinese ? '上一组' : 'PREV',
-                                      style: widget.theme.uiStyle(
-                                        9,
-                                        widget.theme.fgMuted,
-                                        FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    const Icon(
-                                      Icons.keyboard_double_arrow_right_rounded,
-                                      size: 15,
-                                    ),
-                                  ],
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.strings.cardGestureHint,
+                                maxLines: 1,
+                                overflow: TextOverflow.fade,
+                                softWrap: false,
+                                textAlign: TextAlign.end,
+                                style: widget.theme.uiStyle(
+                                  compact ? 8 : 9,
+                                  widget.theme.fgMuted,
+                                  FontWeight.w700,
                                 ),
-                                Text(
-                                  widget.strings.isChinese
-                                      ? '↑ 记录 · ↓ 跳过'
-                                      : 'UP LOG · DOWN SKIP',
-                                  style: widget.theme.uiStyle(
-                                    8,
-                                    widget.theme.fgMuted,
-                                    FontWeight.w700,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: contentGap),
                         Row(
                           children: [
                             Expanded(
                               child: _CardMetric(
-                                label: widget.strings.isChinese
-                                    ? '完成次数'
-                                    : 'REPS',
+                                label: widget.strings.completedRepsLabel,
                                 value: '${widget.currentSet.completedReps}',
                                 onDecrease: widget.onDecreaseReps,
                                 onIncrease: widget.onIncreaseReps,
+                                height: metricHeight,
+                                decreaseTooltip: widget.strings.decreaseReps,
+                                increaseTooltip: widget.strings.increaseReps,
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            SizedBox(width: compact ? 7 : 10),
                             Expanded(
                               child: _CardTarget(
                                 theme: widget.theme,
@@ -1270,13 +1294,14 @@ class _CardSetStackState extends State<_CardSetStack> {
                                 set: widget.currentSet,
                                 targetWeight: widget.displayTargetWeight,
                                 unit: widget.displayUnit,
+                                height: metricHeight,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: contentGap),
                         Container(
-                          height: 58,
+                          height: weightEditorHeight,
                           decoration: BoxDecoration(
                             color: widget.theme.fg.withValues(alpha: 0.045),
                             borderRadius: BorderRadius.circular(18),
@@ -1287,6 +1312,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                               IconButton(
                                 visualDensity: VisualDensity.compact,
                                 onPressed: widget.onDecreaseWeight,
+                                tooltip: widget.strings.decreaseWeight,
                                 icon: const Icon(Icons.remove_rounded),
                               ),
                               Expanded(
@@ -1311,19 +1337,21 @@ class _CardSetStackState extends State<_CardSetStack> {
                               IconButton(
                                 visualDensity: VisualDensity.compact,
                                 onPressed: widget.onIncreaseWeight,
+                                tooltip: widget.strings.increaseWeight,
                                 icon: const Icon(Icons.add_rounded),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: contentGap),
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                widget.strings.isChinese
-                                    ? '目标 ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} 次'
-                                    : 'Target ${widget.currentSet.targetReps}${widget.currentSet.isAmrap ? "+" : ""} reps',
+                                widget.strings.targetReps(
+                                  widget.currentSet.targetReps,
+                                  isAmrap: widget.currentSet.isAmrap,
+                                ),
                                 style: widget.theme.uiStyle(
                                   12,
                                   widget.theme.fgDim,
@@ -1358,16 +1386,16 @@ class _CardSetStackState extends State<_CardSetStack> {
                             ),
                           ],
                         ),
-                        if (widget.plateBreakdown != null) ...[
-                          const Spacer(),
-                          _BarbellGraphic(
-                            breakdown: widget.plateBreakdown!,
-                            height: 58,
+                        Expanded(
+                          child: _CardFlexibleStage(
+                            theme: widget.theme,
+                            strings: widget.strings,
+                            breakdown: widget.plateBreakdown,
+                            compact: compact,
                           ),
-                        ] else
-                          const Spacer(),
+                        ),
                         SizedBox(
-                          height: 56,
+                          height: actionHeight,
                           child: Stack(
                             children: [
                               Align(
@@ -1376,16 +1404,15 @@ class _CardSetStackState extends State<_CardSetStack> {
                                   key: const ValueKey('complete-current-set'),
                                   controller: widget.completionController,
                                   onTap: widget.onComplete,
-                                  size: 56,
+                                  size: actionHeight,
+                                  semanticLabel: widget.strings.logCurrentSet,
                                 ),
                               ),
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: IconButton.filledTonal(
                                   key: const ValueKey('cancel-current-set'),
-                                  tooltip: widget.strings.isChinese
-                                      ? '跳过当前组'
-                                      : 'Skip current set',
+                                  tooltip: widget.strings.skipCurrentSet,
                                   style: IconButton.styleFrom(
                                     backgroundColor: const Color(
                                       0xFFB77A70,
@@ -1568,14 +1595,117 @@ class _CardSetStackState extends State<_CardSetStack> {
 
 enum _CardDragAxis { horizontal, vertical }
 
+class _CardFlexibleStage extends StatelessWidget {
+  const _CardFlexibleStage({
+    required this.theme,
+    required this.strings,
+    required this.breakdown,
+    required this.compact,
+  });
+
+  final FittinTheme theme;
+  final AppStrings strings;
+  final PlateBreakdownResult? breakdown;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final verticalPadding = constraints.maxHeight < 70
+            ? 2.0
+            : (compact ? 5.0 : 9.0);
+        final availableHeight = (constraints.maxHeight - verticalPadding * 2)
+            .clamp(0, 116)
+            .toDouble();
+
+        return Padding(
+          padding: EdgeInsets.symmetric(vertical: verticalPadding),
+          child: Container(
+            key: const ValueKey('active-card-flex-stage'),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(compact ? 16 : 20),
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  theme.fg.withValues(alpha: 0.035),
+                  theme.fg.withValues(alpha: 0.012),
+                ],
+              ),
+              border: Border.all(color: theme.border.withValues(alpha: 0.7)),
+            ),
+            alignment: Alignment.center,
+            child: breakdown == null
+                ? _CardGestureCompass(
+                    theme: theme,
+                    strings: strings,
+                    compact: constraints.maxHeight < 84,
+                  )
+                : Padding(
+                    padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12),
+                    child: _BarbellGraphic(
+                      breakdown: breakdown!,
+                      strings: strings,
+                      height: availableHeight,
+                    ),
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CardGestureCompass extends StatelessWidget {
+  const _CardGestureCompass({
+    required this.theme,
+    required this.strings,
+    required this.compact,
+  });
+
+  final FittinTheme theme;
+  final AppStrings strings;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.open_with_rounded,
+              size: compact ? 18 : 22,
+              color: theme.fgMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              strings.swipeAnyDirection,
+              style: theme
+                  .uiStyle(compact ? 9 : 10, theme.fgMuted, FontWeight.w700)
+                  .copyWith(letterSpacing: 0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _StackBackCard extends StatelessWidget {
   const _StackBackCard({
+    required this.strings,
     required this.set,
     required this.setNumber,
     required this.displayUnit,
     required this.emphasis,
   });
 
+  final AppStrings strings;
   final SessionSetState set;
   final int setNumber;
   final String displayUnit;
@@ -1596,7 +1726,7 @@ class _StackBackCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'SET $setNumber',
+            strings.setNumber(setNumber),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: Colors.white.withValues(alpha: 0.34 * emphasis),
               fontWeight: FontWeight.w800,
@@ -1626,18 +1756,24 @@ class _CardMetric extends StatelessWidget {
     required this.value,
     required this.onDecrease,
     required this.onIncrease,
+    required this.decreaseTooltip,
+    required this.increaseTooltip,
+    this.height = 78,
   });
 
   final String label;
   final String value;
   final VoidCallback? onDecrease;
   final VoidCallback onIncrease;
+  final String decreaseTooltip;
+  final String increaseTooltip;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      height: 78,
+      height: height,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
@@ -1647,6 +1783,7 @@ class _CardMetric extends StatelessWidget {
           IconButton(
             visualDensity: VisualDensity.compact,
             onPressed: onDecrease,
+            tooltip: decreaseTooltip,
             icon: const Icon(Icons.remove_rounded),
           ),
           Expanded(
@@ -1673,6 +1810,7 @@ class _CardMetric extends StatelessWidget {
           IconButton(
             visualDensity: VisualDensity.compact,
             onPressed: onIncrease,
+            tooltip: increaseTooltip,
             icon: const Icon(Icons.add_rounded),
           ),
         ],
@@ -1688,6 +1826,7 @@ class _CardTarget extends StatelessWidget {
     required this.set,
     required this.targetWeight,
     required this.unit,
+    this.height = 78,
   });
 
   final FittinTheme theme;
@@ -1695,11 +1834,12 @@ class _CardTarget extends StatelessWidget {
   final SessionSetState set;
   final double targetWeight;
   final String unit;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 78,
+      height: height,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: theme.accent.withValues(alpha: 0.9),
@@ -1709,7 +1849,7 @@ class _CardTarget extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            strings.isChinese ? '计划目标' : 'PRESCRIBED',
+            strings.prescribed,
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: theme.accentInk.withValues(alpha: 0.58),
               fontWeight: FontWeight.w800,
@@ -1772,9 +1912,14 @@ class _GestureStamp extends StatelessWidget {
 }
 
 class _BarbellGraphic extends StatelessWidget {
-  const _BarbellGraphic({required this.breakdown, this.height = 58});
+  const _BarbellGraphic({
+    required this.breakdown,
+    required this.strings,
+    this.height = 70,
+  });
 
   final PlateBreakdownResult breakdown;
+  final AppStrings strings;
   final double height;
 
   @override
@@ -1782,120 +1927,321 @@ class _BarbellGraphic extends StatelessWidget {
     final plates = <double>[
       for (final plate in breakdown.platesPerSide)
         for (var count = 0; count < plate.count; count++) plate.weight,
-    ];
+    ]..sort((a, b) => b.compareTo(a));
     final detail = breakdown.platesPerSide
         .map((plate) => '${_formatWeightValue(plate.weight)} × ${plate.count}')
         .join(' + ');
+    final unitLabel = breakdown.unit == LoadUnits.kg ? 'kg' : 'lb';
+    final perSideText = strings.perSidePlateLoading(
+      detail,
+      unitLabel,
+      isBarOnly: detail.isEmpty,
+    );
+    final semanticLabel = strings.barbellPlateSemantics(perSideText);
+    final showText = height >= 38;
+    final textHeight = showText ? 15.0 : 0.0;
+    final visualHeight = (height - textHeight).clamp(0, 96).toDouble();
 
-    Widget plate(double weight, {required String side, required int index}) {
-      final spec = _plateVisualSpec(
-        weight: weight,
-        unit: breakdown.unit,
-        maxHeight: height - 2,
-      );
-      return Container(
-        key: ValueKey('barbell-plate-${breakdown.unit}-$side-$index-$weight'),
-        width: spec.width,
-        height: spec.height,
-        margin: const EdgeInsets.symmetric(horizontal: 0.8),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: spec.color,
-          borderRadius: BorderRadius.circular(2),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.18),
-            width: 0.7,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 3,
-              offset: const Offset(0, 1.5),
-            ),
-          ],
-        ),
-        child: RotatedBox(
-          quarterTurns: 3,
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              _formatWeightValue(weight),
-              style: TextStyle(
-                color: spec.labelColor,
-                fontSize: 6.5,
-                fontWeight: FontWeight.w900,
-                height: 1,
+    return Semantics(
+      label: semanticLabel,
+      image: true,
+      child: ExcludeSemantics(
+        child: SizedBox(
+          key: const ValueKey('barbell-plate-graphic'),
+          height: height,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: visualHeight,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final availableWidth = constraints.maxWidth.isFinite
+                        ? constraints.maxWidth
+                        : 320.0;
+                    final hardwareScale = (visualHeight / 58)
+                        .clamp(0.62, 1.35)
+                        .toDouble();
+                    final plateSpecs = [
+                      for (final weight in plates)
+                        _plateVisualSpec(
+                          weight: weight,
+                          unit: breakdown.unit,
+                          maxHeight: visualHeight * 0.88,
+                        ),
+                    ];
+                    final plateGroupWidth = plateSpecs.fold<double>(
+                      0,
+                      (width, spec) => width + spec.width + 1.6 * hardwareScale,
+                    );
+                    final sleeveWidth = 18 * hardwareScale;
+                    final collarWidth = 12 * hardwareScale;
+                    final shoulderWidth = 10 * hardwareScale;
+                    final hardwareWidth =
+                        sleeveWidth +
+                        collarWidth +
+                        plateGroupWidth +
+                        shoulderWidth;
+                    final minimumCenterWidth = visualHeight * 2.4;
+                    final remainingCenterWidth =
+                        availableWidth - hardwareWidth * 2;
+                    final centerWidth =
+                        remainingCenterWidth > minimumCenterWidth
+                        ? remainingCenterWidth
+                        : minimumCenterWidth;
+                    final barWidth = centerWidth + hardwareWidth * 2;
+
+                    Widget plate(
+                      double weight, {
+                      required String side,
+                      required int index,
+                    }) {
+                      final spec = _plateVisualSpec(
+                        weight: weight,
+                        unit: breakdown.unit,
+                        maxHeight: visualHeight * 0.88,
+                      );
+                      return Container(
+                        key: ValueKey(
+                          'barbell-plate-${breakdown.unit}-$side-$index-$weight',
+                        ),
+                        width: spec.width,
+                        height: spec.height,
+                        margin: EdgeInsets.symmetric(
+                          horizontal: 0.8 * hardwareScale,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Color.lerp(spec.color, Colors.white, 0.14)!,
+                              spec.color,
+                              Color.lerp(spec.color, Colors.black, 0.2)!,
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            (spec.width * 0.22).clamp(1.5, 3),
+                          ),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            width: 0.7,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 3 * hardwareScale,
+                              offset: Offset(0, 1.5 * hardwareScale),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            Positioned(
+                              left: spec.width * 0.16,
+                              top: 2 * hardwareScale,
+                              bottom: 2 * hardwareScale,
+                              child: Container(
+                                width: 0.8 * hardwareScale,
+                                color: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            Center(
+                              child: RotatedBox(
+                                quarterTurns: 3,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    _formatWeightValue(weight),
+                                    style: TextStyle(
+                                      color: spec.labelColor,
+                                      fontSize: 6.5 * hardwareScale,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    Widget sleeveEnd(String side) => SizedBox(
+                      key: ValueKey('barbell-$side-sleeve'),
+                      width: sleeveWidth,
+                      child: Container(
+                        height: 7 * hardwareScale,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Color(0xFF74797D),
+                              Color(0xFFD6D9DB),
+                              Color(0xFF676C70),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(99),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.16),
+                            width: 0.6,
+                          ),
+                        ),
+                      ),
+                    );
+
+                    return FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(
+                        width: barWidth,
+                        height: visualHeight,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              key: const ValueKey('barbell-full-shaft'),
+                              left: 3 * hardwareScale,
+                              right: 3 * hardwareScale,
+                              child: Container(
+                                height: 3.5 * hardwareScale,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Color(0xFF5E6367),
+                                      Color(0xFFE1E3E4),
+                                      Color(0xFF555A5E),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(99),
+                                ),
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                sleeveEnd('left'),
+                                _BarbellCollar(
+                                  key: const ValueKey('barbell-left-collar'),
+                                  height: visualHeight * 0.52,
+                                  scale: hardwareScale,
+                                ),
+                                for (
+                                  var index = plates.length - 1;
+                                  index >= 0;
+                                  index--
+                                )
+                                  plate(
+                                    plates[index],
+                                    side: 'left',
+                                    index: index,
+                                  ),
+                                _BarbellShoulder(
+                                  height: visualHeight * 0.56,
+                                  scale: hardwareScale,
+                                ),
+                                _BarbellCenterSpan(
+                                  width: centerWidth,
+                                  height: visualHeight,
+                                  scale: hardwareScale,
+                                ),
+                                _BarbellShoulder(
+                                  height: visualHeight * 0.56,
+                                  scale: hardwareScale,
+                                ),
+                                for (
+                                  var index = 0;
+                                  index < plates.length;
+                                  index++
+                                )
+                                  plate(
+                                    plates[index],
+                                    side: 'right',
+                                    index: index,
+                                  ),
+                                _BarbellCollar(
+                                  key: const ValueKey('barbell-right-collar'),
+                                  height: visualHeight * 0.52,
+                                  scale: hardwareScale,
+                                ),
+                                sleeveEnd('right'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
+              if (showText)
+                SizedBox(
+                  height: textHeight,
+                  child: Text(
+                    perSideText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.52),
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.35,
+                    ),
+                  ),
+                ),
+            ],
           ),
-        ),
-      );
-    }
-
-    Widget sleeveEnd() => SizedBox(
-      width: 13,
-      child: Container(
-        height: 5,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF74797D), Color(0xFFD6D9DB), Color(0xFF676C70)],
-          ),
-          borderRadius: BorderRadius.circular(99),
         ),
       ),
     );
+  }
+}
 
-    return Semantics(
-      label: breakdown.unit == LoadUnits.kg
-          ? '$detail kilograms each side'
-          : '$detail pounds each side',
-      image: true,
-      child: SizedBox(
-        key: const ValueKey('barbell-plate-graphic'),
-        height: height,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              height: 3,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFF5E6367),
-                    Color(0xFFE1E3E4),
-                    Color(0xFF555A5E),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(99),
-              ),
-            ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  sleeveEnd(),
-                  _BarbellCollar(height: height * 0.46),
-                  for (var index = plates.length - 1; index >= 0; index--)
-                    plate(plates[index], side: 'left', index: index),
-                  const _BarbellShoulder(),
-                  SizedBox(width: height * 0.98),
-                  const _BarbellShoulder(),
-                  for (var index = 0; index < plates.length; index++)
-                    plate(plates[index], side: 'right', index: index),
-                  _BarbellCollar(height: height * 0.46),
-                  sleeveEnd(),
-                ],
-              ),
-            ),
-          ],
-        ),
+class _BarbellCenterSpan extends StatelessWidget {
+  const _BarbellCenterSpan({
+    required this.width,
+    required this.height,
+    required this.scale,
+  });
+
+  final double width;
+  final double height;
+  final double scale;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget marker(double opacity, {double width = 1}) {
+      return Container(
+        width: width * scale,
+        height: 10 * scale,
+        color: Colors.white.withValues(alpha: opacity),
+      );
+    }
+
+    return SizedBox(
+      key: const ValueKey('barbell-center-span'),
+      width: width,
+      height: height,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(alignment: const Alignment(-0.58, 0), child: marker(0.28)),
+          Align(alignment: const Alignment(0.58, 0), child: marker(0.28)),
+          Align(alignment: Alignment.center, child: marker(0.42, width: 1.3)),
+          Align(
+            alignment: const Alignment(-0.28, 0),
+            child: marker(0.12, width: 0.7),
+          ),
+          Align(
+            alignment: const Alignment(0.28, 0),
+            child: marker(0.12, width: 0.7),
+          ),
+        ],
       ),
     );
   }
@@ -1906,6 +2252,8 @@ _BarbellPlateVisualSpec _plateVisualSpec({
   required String unit,
   required double maxHeight,
 }) {
+  final widthScale = (maxHeight / 56).clamp(0.62, 1.4).toDouble();
+  final minimumHeight = (maxHeight * 0.34).clamp(0, maxHeight).toDouble();
   if (unit == LoadUnits.lbs) {
     final diameter = switch (weight) {
       >= 45 => 450.0,
@@ -1916,15 +2264,19 @@ _BarbellPlateVisualSpec _plateVisualSpec({
       _ => 160.0,
     };
     return _BarbellPlateVisualSpec(
-      height: (maxHeight * diameter / 450).clamp(18, maxHeight),
-      width: switch (weight) {
-        >= 45 => 12,
-        >= 35 => 10,
-        >= 25 => 9,
-        >= 10 => 7,
-        >= 5 => 6,
-        _ => 5,
-      },
+      height: (maxHeight * diameter / 450)
+          .clamp(minimumHeight, maxHeight)
+          .toDouble(),
+      width:
+          switch (weight) {
+            >= 45 => 12,
+            >= 35 => 10,
+            >= 25 => 9,
+            >= 10 => 7,
+            >= 5 => 6,
+            _ => 5,
+          } *
+          widthScale,
       color: const Color(0xFF858B90),
       labelColor: const Color(0xFF111315),
     );
@@ -1949,16 +2301,20 @@ _BarbellPlateVisualSpec _plateVisualSpec({
   };
   final darkLabel = weight == 15 || weight == 5 || weight <= 1.25;
   return _BarbellPlateVisualSpec(
-    height: (maxHeight * diameter / 450).clamp(18, maxHeight),
-    width: switch (weight) {
-      >= 25 => 12,
-      >= 20 => 10,
-      >= 15 => 9,
-      >= 10 => 8,
-      >= 5 => 7,
-      >= 2.5 => 6,
-      _ => 5,
-    },
+    height: (maxHeight * diameter / 450)
+        .clamp(minimumHeight, maxHeight)
+        .toDouble(),
+    width:
+        switch (weight) {
+          >= 25 => 12,
+          >= 20 => 10,
+          >= 15 => 9,
+          >= 10 => 8,
+          >= 5 => 7,
+          >= 2.5 => 6,
+          _ => 5,
+        } *
+        widthScale,
     color: color,
     labelColor: darkLabel ? const Color(0xFF17191B) : Colors.white,
   );
@@ -1979,16 +2335,17 @@ class _BarbellPlateVisualSpec {
 }
 
 class _BarbellCollar extends StatelessWidget {
-  const _BarbellCollar({required this.height});
+  const _BarbellCollar({super.key, required this.height, required this.scale});
 
   final double height;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 7,
+      width: 8 * scale,
       height: height,
-      margin: const EdgeInsets.symmetric(horizontal: 2.5),
+      margin: EdgeInsets.symmetric(horizontal: 2 * scale),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF777C80), Color(0xFFD4D7D9), Color(0xFF6B7074)],
@@ -2001,14 +2358,17 @@ class _BarbellCollar extends StatelessWidget {
 }
 
 class _BarbellShoulder extends StatelessWidget {
-  const _BarbellShoulder();
+  const _BarbellShoulder({required this.height, required this.scale});
+
+  final double height;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 5,
-      height: 27,
-      margin: const EdgeInsets.symmetric(horizontal: 2),
+      width: 6 * scale,
+      height: height,
+      margin: EdgeInsets.symmetric(horizontal: 2 * scale),
       decoration: BoxDecoration(
         color: const Color(0xFFBFC3C6),
         borderRadius: BorderRadius.circular(2),
@@ -2022,11 +2382,13 @@ class _AnimatedCheckButton extends StatelessWidget {
     super.key,
     required this.controller,
     required this.onTap,
+    required this.semanticLabel,
     this.size = 74,
   });
 
   final AnimationController controller;
   final VoidCallback onTap;
+  final String semanticLabel;
   final double size;
 
   @override
@@ -2039,34 +2401,44 @@ class _AnimatedCheckButton extends StatelessWidget {
       begin: 0,
       end: 1,
     ).animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      label: semanticLabel,
       onTap: onTap,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: scale.value,
-            child: Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Colors.white.withValues(alpha: 0.08 + glow.value * 0.12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withValues(
-                      alpha: 0.1 + glow.value * 0.22,
-                    ),
-                    blurRadius: 26,
-                    spreadRadius: 1,
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: scale.value,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: Colors.white.withValues(
+                    alpha: 0.08 + glow.value * 0.12,
                   ),
-                ],
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.14),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.white.withValues(
+                        alpha: 0.1 + glow.value * 0.22,
+                      ),
+                      blurRadius: 26,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Icon(Icons.check_rounded, size: size * 0.43),
               ),
-              child: Icon(Icons.check_rounded, size: size * 0.43),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -2074,12 +2446,14 @@ class _AnimatedCheckButton extends StatelessWidget {
 
 class _ExerciseSwitchMenu extends StatelessWidget {
   const _ExerciseSwitchMenu({
+    required this.strings,
     required this.exercises,
     required this.activeIndex,
     required this.localizedExercise,
     required this.onSelect,
   });
 
+  final AppStrings strings;
   final List<ExerciseSessionState> exercises;
   final int activeIndex;
   final String Function(ExerciseSessionState) localizedExercise;
@@ -2098,7 +2472,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
         ),
       ),
       child: PopupMenuButton<int>(
-        tooltip: 'Switch exercise',
+        tooltip: strings.switchExercise,
         onSelected: onSelect,
         offset: const Offset(0, 54),
         itemBuilder: (context) => [
@@ -2106,6 +2480,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
             PopupMenuItem<int>(
               value: i,
               child: _ExerciseMenuItem(
+                strings: strings,
                 active: i == activeIndex,
                 tier: exercises[i].tier,
                 name: localizedExercise(exercises[i]),
@@ -2133,6 +2508,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
 
 class _ExerciseMenuItem extends StatelessWidget {
   const _ExerciseMenuItem({
+    required this.strings,
     required this.active,
     required this.tier,
     required this.name,
@@ -2140,6 +2516,7 @@ class _ExerciseMenuItem extends StatelessWidget {
     required this.total,
   });
 
+  final AppStrings strings;
   final bool active;
   final String tier;
   final String name;
@@ -2149,37 +2526,48 @@ class _ExerciseMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: active
-                ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                : Colors.white.withValues(alpha: 0.06),
-          ),
-          child: Text(
-            '$completed/$total',
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w800,
+    return Semantics(
+      label: strings.exerciseMenuItemSemantics(
+        tier: tier,
+        name: name,
+        completed: completed,
+        total: total,
+        isActive: active,
+      ),
+      child: ExcludeSemantics(
+        child: Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: active
+                    ? theme.colorScheme.primary.withValues(alpha: 0.2)
+                    : Colors.white.withValues(alpha: 0.06),
+              ),
+              child: Text(
+                '$completed/$total',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            '$tier $name',
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '$tier $name',
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
             ),
-          ),
+            if (active) const Icon(Icons.check_rounded, size: 18),
+          ],
         ),
-        if (active) const Icon(Icons.check_rounded, size: 18),
-      ],
+      ),
     );
   }
 }

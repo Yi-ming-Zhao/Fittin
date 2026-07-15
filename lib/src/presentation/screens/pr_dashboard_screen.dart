@@ -1,15 +1,11 @@
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
-import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/exercise_deep_dive_screen.dart';
-import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
@@ -24,7 +20,20 @@ class PRDashboardScreen extends ConsumerStatefulWidget {
 
 class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
   PRMetricMode _metricMode = PRMetricMode.estimated;
-  String _selectedLiftKey = 'squat';
+  late final PageController _liftPageController;
+  int _selectedLiftIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _liftPageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _liftPageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,21 +45,20 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
       backgroundColor: Colors.black,
       body: dataAsync.when(
         data: (data) {
-          _selectedLiftKey = _resolveSelectedLiftKey(data);
           return DashboardPageScaffold(
+            topPadding: 24,
             children: [
               DashboardScreenHeader(
-                eyebrow: 'Performance',
-                title: 'PR dashboard',
-                subtitle: 'Peak strength benchmarks, derived and actual.',
+                eyebrow: strings.performance,
+                title: strings.prDashboard,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               _buildMetricToggle(fittinTheme, strings),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildQuickStats(fittinTheme, context, strings, data),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               _buildMainChart(fittinTheme, context, strings, data),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               Row(
                 children: [
                   Expanded(
@@ -84,7 +92,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
                   (milestone) => _MilestoneTile(
                     theme: fittinTheme,
                     milestone: milestone,
-                    locale: ref.watch(appLocaleProvider),
+                    strings: strings,
                     valueLabel: strings.milestoneValueLabel(
                       _localizedMilestoneLabel(strings, milestone.type),
                       milestone.value,
@@ -108,21 +116,9 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text('Error: $error')),
+        error: (error, _) => Center(child: Text(strings.loadError(error))),
       ),
     );
-  }
-
-  String _resolveSelectedLiftKey(PRDashboardData data) {
-    final available = {
-      if (data.squat != null) 'squat',
-      if (data.bench != null) 'bench',
-      if (data.deadlift != null) 'deadlift',
-    };
-    if (available.contains(_selectedLiftKey)) {
-      return _selectedLiftKey;
-    }
-    return available.firstOrNull ?? 'squat';
   }
 
   Widget _buildMetricToggle(FittinTheme theme, AppStrings strings) {
@@ -155,51 +151,57 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
         theme: theme,
         summary: data.squat,
         label: strings.squatShort,
+        strings: strings,
         metricMode: _metricMode,
-        onTap: () => _navigateToDeepDive(context, data.squat),
+        selected: _selectedLiftIndex == 0,
+        onTap: () => _selectLift(0),
       ),
       _StrengthCard(
         key: const ValueKey('strength-card-bench'),
         theme: theme,
         summary: data.bench,
         label: strings.benchShort,
+        strings: strings,
         metricMode: _metricMode,
-        onTap: () => _navigateToDeepDive(context, data.bench),
+        selected: _selectedLiftIndex == 1,
+        onTap: () => _selectLift(1),
       ),
       _StrengthCard(
         key: const ValueKey('strength-card-deadlift'),
         theme: theme,
         summary: data.deadlift,
         label: strings.deadliftShort,
+        strings: strings,
         metricMode: _metricMode,
-        onTap: () => _navigateToDeepDive(context, data.deadlift),
+        selected: _selectedLiftIndex == 2,
+        onTap: () => _selectLift(2),
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 420) {
-          return Column(
-            children: [
-              for (var i = 0; i < cards.length; i++) ...[
-                cards[i],
-                if (i < cards.length - 1) const SizedBox(height: 10),
-              ],
-            ],
-          );
-        }
+    return SizedBox(
+      height: 96,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: cards[0]),
+          const SizedBox(width: 8),
+          Expanded(child: cards[1]),
+          const SizedBox(width: 8),
+          Expanded(child: cards[2]),
+        ],
+      ),
+    );
+  }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: cards[0]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[1]),
-            const SizedBox(width: 12),
-            Expanded(child: cards[2]),
-          ],
-        );
-      },
+  void _selectLift(int index) {
+    if (_selectedLiftIndex == index) {
+      return;
+    }
+    setState(() => _selectedLiftIndex = index);
+    _liftPageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -223,82 +225,78 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
     AppStrings strings,
     PRDashboardData data,
   ) {
-    final selectedSummary = switch (_selectedLiftKey) {
-      'bench' => data.bench,
-      'deadlift' => data.deadlift,
-      _ => data.squat,
-    };
+    final summaries = [data.squat, data.bench, data.deadlift];
+    final labels = [
+      strings.squatShort,
+      strings.benchShort,
+      strings.deadliftShort,
+    ];
+    final selectedSummary = summaries[_selectedLiftIndex];
 
-    return ChartContainer(
-      title: strings.strengthProgressionTitle,
-      height: 260,
-      headerAction: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return DashboardSurfaceCard(
+      radius: 26,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+      child: Column(
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: double.infinity,
-              child: FittinSegmented(
-                theme: theme,
-                options: [
-                  strings.squatShort,
-                  strings.benchShort,
-                  strings.deadliftShort,
-                ],
-                value: _selectedLiftKey == 'bench'
-                    ? strings.benchShort
-                    : _selectedLiftKey == 'deadlift'
-                    ? strings.deadliftShort
-                    : strings.squatShort,
-                expand: true,
-                onChange: (selected) {
-                  setState(() {
-                    if (selected == strings.benchShort) {
-                      _selectedLiftKey = 'bench';
-                    } else if (selected == strings.deadliftShort) {
-                      _selectedLiftKey = 'deadlift';
-                    } else {
-                      _selectedLiftKey = 'squat';
-                    }
-                  });
-                },
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          if (selectedSummary != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                selectedSummary.exerciseName,
-                key: const ValueKey('selected-chart-lift-label'),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Expanded(
+                child: DashboardSectionLabel(
+                  label: strings.strengthProgressionTitle,
                 ),
               ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AdvancedAnalyticsScreen(),
+              TextButton(
+                key: const ValueKey('open-selected-lift-details'),
+                onPressed: selectedSummary == null
+                    ? null
+                    : () => _navigateToDeepDive(context, selectedSummary),
+                child: Text(strings.detailsCta),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 308,
+            child: PageView.builder(
+              key: const ValueKey('pr-lift-page-view'),
+              controller: _liftPageController,
+              itemCount: summaries.length,
+              onPageChanged: (index) {
+                if (_selectedLiftIndex != index) {
+                  setState(() => _selectedLiftIndex = index);
+                }
+              },
+              itemBuilder: (context, index) => _LiftChart(
+                key: ValueKey('pr-lift-chart-${labels[index]}'),
+                theme: theme,
+                summary: summaries[index],
+                liftLabel: labels[index],
+                metricMode: _metricMode,
+                strings: strings,
               ),
             ),
-            child: Text(
-              strings.detailsCta,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var index = 0; index < summaries.length; index++) ...[
+                AnimatedContainer(
+                  key: ValueKey('pr-lift-page-indicator-$index'),
+                  duration: const Duration(milliseconds: 180),
+                  width: _selectedLiftIndex == index ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: _selectedLiftIndex == index
+                        ? theme.accent
+                        : theme.fgMuted.withValues(alpha: 0.38),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+                if (index < summaries.length - 1) const SizedBox(width: 6),
+              ],
+            ],
           ),
         ],
-      ),
-      child: _LiftChart(
-        theme: theme,
-        summary: selectedSummary,
-        metricMode: _metricMode,
-        axisWeightLabelBuilder: strings.chartAxisWeight,
-        localeCode: ref.watch(appLocaleProvider).code,
       ),
     );
   }
@@ -310,14 +308,18 @@ class _StrengthCard extends StatelessWidget {
     required this.theme,
     this.summary,
     required this.label,
+    required this.strings,
     required this.metricMode,
+    required this.selected,
     this.onTap,
   });
 
   final FittinTheme theme;
   final ExerciseProgressSummary? summary;
   final String label;
+  final AppStrings strings;
   final PRMetricMode metricMode;
+  final bool selected;
   final VoidCallback? onTap;
 
   @override
@@ -329,69 +331,57 @@ class _StrengthCard extends StatelessWidget {
         ? _actualPrDelta(summary)
         : summary?.recentChange;
 
-    // Build sparkline data from history
-    final history = metricMode == PRMetricMode.actual
-        ? summary?.actualHistory
-        : summary?.estimatedHistory;
-    final sparklineData = history != null && history.isNotEmpty
-        ? history.map((p) => p.value).toList()
-        : <double>[];
-
     return DashboardSurfaceCard(
       onTap: onTap,
-      radius: 20,
-      padding: const EdgeInsets.all(20),
+      highlight: selected,
+      radius: 18,
+      padding: const EdgeInsets.all(10),
       child: SizedBox(
         width: double.infinity,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 88),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittinEyebrow(theme, label),
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        FittinBigNum(
-                          theme,
-                          value?.toStringAsFixed(1) ?? '—',
-                          size: 34,
-                          color: theme.fg,
-                        ),
-                        const SizedBox(width: 4),
-                        Text('kg', style: theme.uiStyle(12, theme.fgDim)),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    if (change != null)
-                      FittinDelta(theme, change, unit: ' kg')
-                    else
-                      Text('—', style: theme.uiStyle(12, theme.fgDim)),
-                  ],
-                ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            FittinEyebrow(theme, label),
+            const SizedBox(height: 5),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  FittinBigNum(
+                    theme,
+                    value?.toStringAsFixed(1) ?? '—',
+                    size: 24,
+                    color: theme.fg,
+                  ),
+                  const SizedBox(width: 3),
+                  Text(
+                    strings.kilogramUnit,
+                    style: theme.uiStyle(10, theme.fgDim),
+                  ),
+                ],
               ),
-              if (sparklineData.length > 1) ...[
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Sparkline(theme, sparklineData, width: 110, height: 44),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${sparklineData.length} sessions',
-                      style: theme.uiStyle(10, theme.fgMuted),
-                    ),
-                  ],
+            ),
+            const SizedBox(height: 4),
+            if (change != null)
+              SizedBox(
+                width: double.infinity,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: FittinDelta(
+                    theme,
+                    change,
+                    unit: ' ${strings.kilogramUnit}',
+                  ),
                 ),
-              ],
-            ],
-          ),
+              )
+            else
+              Text('—', style: theme.uiStyle(10, theme.fgDim)),
+          ],
         ),
       ),
     );
@@ -408,84 +398,73 @@ class _StrengthCard extends StatelessWidget {
 
 class _LiftChart extends StatelessWidget {
   const _LiftChart({
+    super.key,
     required this.theme,
     required this.summary,
+    required this.liftLabel,
     required this.metricMode,
-    required this.axisWeightLabelBuilder,
-    required this.localeCode,
+    required this.strings,
   });
 
   final FittinTheme theme;
   final ExerciseProgressSummary? summary;
+  final String liftLabel;
   final PRMetricMode metricMode;
-  final String Function(String value) axisWeightLabelBuilder;
-  final String localeCode;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
     final history = metricMode == PRMetricMode.actual
         ? (summary?.actualHistory ?? const <ExercisePerformancePoint>[])
         : (summary?.estimatedHistory ?? const <ExercisePerformancePoint>[]);
-    if (summary == null || history.isEmpty) {
-      return const Center(child: Text('—'));
-    }
-
-    final recent = history.length > 8
-        ? history.sublist(history.length - 8)
-        : history;
-    final chartData = recent.map((p) => p.value).toList();
-
-    // Compute y-axis labels
-    final minValue = chartData.reduce((a, b) => a < b ? a : b);
-    final maxValue = chartData.reduce((a, b) => a > b ? a : b);
-    final yLabels = [
-      axisWeightLabelBuilder(minValue.toStringAsFixed(0)),
-      axisWeightLabelBuilder(((minValue + maxValue) / 2).toStringAsFixed(0)),
-      axisWeightLabelBuilder(maxValue.toStringAsFixed(0)),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: StepChart(
-                  theme,
-                  chartData,
-                  height: 200,
-                  showDots: true,
-                  showGrid: true,
-                  yLabels: yLabels,
-                ),
-              ),
-            ],
-          ),
+        Text(
+          summary?.exerciseName ?? liftLabel,
+          key: ValueKey('selected-chart-lift-label-$liftLabel'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.uiStyle(13, theme.fgDim, FontWeight.w700),
         ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            for (final point in _selectTickPoints(recent))
-              Text(
-                _formatShortDate(point.completedAt, localeCode),
-                style: theme.uiStyle(10, theme.fgDim),
+        const SizedBox(height: 6),
+        InteractiveLineChart(
+          key: ValueKey('pr-interactive-chart-$liftLabel'),
+          theme: theme,
+          series: [
+            if (summary != null)
+              DatedChartSeries(
+                id: '${summary!.exerciseId}-${metricMode.name}',
+                label: metricMode == PRMetricMode.actual
+                    ? strings.actualPrShort
+                    : strings.estimated1rmShort,
+                points: [
+                  for (final point in history)
+                    DatedChartPoint(
+                      date: point.completedAt,
+                      value: point.value,
+                      detail: strings.derivedFromSet(point.weight, point.reps),
+                    ),
+                ],
               ),
           ],
+          chartLabel: '$liftLabel ${strings.strengthProgressionTitle}',
+          xAxisLabel: strings.dateAxis,
+          yAxisLabel: strings.loadAxis,
+          unit: strings.kilogramUnit,
+          emptyLabel: strings.noStrengthTrendYet,
+          selectionHint: strings.tapChartPoint,
+          axisDateFormatter: strings.shortMonthDay,
+          detailDateFormatter: strings.longDate,
+          axisValueFormatter: (value) => value.toStringAsFixed(0),
+          detailValueFormatter: (value) => value.toStringAsFixed(1),
+          emptySemanticsFormatter: strings.chartEmptySemantics,
+          summarySemanticsFormatter: strings.chartSummarySemantics,
+          pointLabelFormatter: strings.chartPointLabel,
+          height: 280,
         ),
       ],
     );
-  }
-
-  List<ExercisePerformancePoint> _selectTickPoints(
-    List<ExercisePerformancePoint> points,
-  ) {
-    if (points.length <= 3) {
-      return points;
-    }
-    return [points.first, points[points.length ~/ 2], points.last];
   }
 }
 
@@ -493,20 +472,20 @@ class _MilestoneTile extends StatelessWidget {
   const _MilestoneTile({
     required this.theme,
     required this.milestone,
-    required this.locale,
+    required this.strings,
     required this.valueLabel,
     this.onTap,
   });
 
   final FittinTheme theme;
   final PRMilestone milestone;
-  final AppLocale locale;
+  final AppStrings strings;
   final String valueLabel;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final dateLabel = _formatShortDate(milestone.date, locale.code);
+    final dateLabel = strings.shortMonthDay(milestone.date);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DashboardSurfaceCard(
@@ -582,7 +561,6 @@ class _MilestoneHistoryScreenState
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
-    final locale = ref.watch(appLocaleProvider);
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final exerciseOptions =
         widget.milestones
@@ -685,7 +663,7 @@ class _MilestoneHistoryScreenState
               (milestone) => _MilestoneTile(
                 theme: fittinTheme,
                 milestone: milestone,
-                locale: locale,
+                strings: strings,
                 valueLabel: strings.milestoneValueLabel(
                   _localizedMilestoneLabel(strings, milestone.type),
                   milestone.value,
@@ -740,25 +718,4 @@ String _localizedMilestoneLabel(AppStrings strings, PRMilestoneType type) {
   return type == PRMilestoneType.actual
       ? strings.actualType
       : strings.estimatedType;
-}
-
-String _formatShortDate(DateTime date, String localeCode) {
-  if (localeCode == 'zh') {
-    return '${date.month}月${date.day}日';
-  }
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  return '${months[date.month - 1]} ${date.day}';
 }

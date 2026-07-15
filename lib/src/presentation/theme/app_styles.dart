@@ -1,10 +1,11 @@
+import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppStyles {
   /// Defines the core text theme using GoogleFonts.inter (clean geometric sans-serif)
   static TextTheme getTextTheme(ColorScheme scheme) {
-    return GoogleFonts.interTextTheme(
+    final textTheme = GoogleFonts.interTextTheme(
       TextTheme(
         displayLarge: TextStyle(
           fontSize: 57,
@@ -87,5 +88,6 @@ class AppStyles {
         ),
       ),
     );
+    return AppTypography.withCjkFallbacks(textTheme);
   }
 }

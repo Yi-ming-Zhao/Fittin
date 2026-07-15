@@ -10,6 +10,9 @@ import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
+const _kilogramUnitOption = LoadUnits.kg;
+const _poundUnitOption = 'lb';
+
 class WeightToolsSheet extends ConsumerStatefulWidget {
   const WeightToolsSheet({
     super.key,
@@ -87,7 +90,7 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
               ),
               const SizedBox(height: 10),
               Text(
-                strings.isChinese ? '重量工具' : 'Weight Tools',
+                strings.weightToolsTitle,
                 style: fittinTheme
                     .uiStyle(22, fittinTheme.fg)
                     .copyWith(fontWeight: FontWeight.w800),
@@ -95,12 +98,8 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
               const SizedBox(height: 6),
               Text(
                 widget.exerciseName == null
-                    ? (strings.isChinese
-                          ? '快速做千克/磅换算，并查看杠铃上片方案。'
-                          : 'Convert between kg/lb and preview barbell plate loading.')
-                    : (strings.isChinese
-                          ? '基于当前动作快速换算重量并查看上片。'
-                          : 'Use the current exercise context to convert load and preview plate loading.'),
+                    ? strings.weightToolsDescription
+                    : strings.weightToolsExerciseDescription,
                 style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
               ),
               if (widget.exerciseName != null) ...[
@@ -115,16 +114,13 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
               const SizedBox(height: 20),
               FittinSegmented(
                 theme: fittinTheme,
-                options: [
-                  strings.isChinese ? '公斤' : 'kg',
-                  strings.isChinese ? '磅' : 'lb',
-                ],
+                options: const [_kilogramUnitOption, _poundUnitOption],
                 value: _unit == LoadUnits.kg
-                    ? (strings.isChinese ? '公斤' : 'kg')
-                    : (strings.isChinese ? '磅' : 'lb'),
+                    ? _kilogramUnitOption
+                    : _poundUnitOption,
                 onChange: (value) {
                   setState(() {
-                    _unit = value == (strings.isChinese ? '公斤' : 'kg')
+                    _unit = value == _kilogramUnitOption
                         ? LoadUnits.kg
                         : LoadUnits.lbs;
                   });
@@ -137,29 +133,31 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: strings.isChinese ? '输入重量' : 'Enter Weight',
-                  suffixText: _unit == LoadUnits.kg ? 'kg' : 'lb',
+                  labelText: strings.weightToolsInputLabel,
+                  suffixText: _unit == LoadUnits.kg
+                      ? strings.kilogramSymbol
+                      : strings.poundSymbol,
                 ),
                 onChanged: (_) => setState(() {}),
               ),
               const SizedBox(height: 14),
               _ResultCard(
                 theme: fittinTheme,
-                label: strings.isChinese ? '换算结果' : 'Converted Value',
+                label: strings.convertedValue,
                 value:
-                    '${_formatNumber(convertedValue)} ${_unit == LoadUnits.kg ? 'lb' : 'kg'}',
+                    '${_formatNumber(convertedValue)} ${_unit == LoadUnits.kg ? strings.poundSymbol : strings.kilogramSymbol}',
               ),
               const SizedBox(height: 12),
               _ResultCard(
                 theme: fittinTheme,
-                label: strings.isChinese ? '默认杠重' : 'Default Bar Weight',
+                label: strings.defaultBarWeight,
                 value:
-                    '${_formatNumber(_unit == LoadUnits.kg ? kgBarWeight : lbBarWeight)} ${_unit == LoadUnits.kg ? 'kg' : 'lb'}',
+                    '${_formatNumber(_unit == LoadUnits.kg ? kgBarWeight : lbBarWeight)} ${_unit == LoadUnits.kg ? strings.kilogramSymbol : strings.poundSymbol}',
               ),
               const SizedBox(height: 12),
               _ResultCard(
                 theme: fittinTheme,
-                label: strings.isChinese ? '上片方案' : 'Plate Loading',
+                label: strings.plateLoading,
                 value: _plateBreakdownLabel(strings, breakdown),
                 dimmed: !breakdown.exact,
               ),
@@ -180,9 +178,7 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                           widget.onApply?.call(rawInput, _unit);
                           Navigator.of(context).pop();
                         },
-                        child: Text(
-                          strings.isChinese ? '用于当前组' : 'Use for Set',
-                        ),
+                        child: Text(strings.useForCurrentSet),
                       ),
                     ),
                   ],
@@ -197,19 +193,19 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
 
   String _plateBreakdownLabel(AppStrings strings, PlateBreakdownResult result) {
     if (result.platesPerSide.isEmpty) {
-      return strings.isChinese
-          ? '无需加片，或当前重量低于默认杠重。'
-          : 'No plates needed, or the target load is below the bar weight.';
+      return strings.plateLoadingEmpty;
     }
     final joined = result.platesPerSide
         .map((plate) => '${_formatNumber(plate.weight)} × ${plate.count}')
         .join(' + ');
     if (result.exact) {
-      return strings.isChinese ? '每边 $joined' : '$joined each side';
+      return strings.plateLoadingPerSide(joined);
     }
-    return strings.isChinese
-        ? '每边 $joined，仍差 ${_formatNumber(result.unresolvedWeight)} ${result.unit == LoadUnits.kg ? '公斤' : '磅'}'
-        : '$joined each side, remaining ${_formatNumber(result.unresolvedWeight)} ${result.unit == LoadUnits.kg ? 'kg' : 'lb'}';
+    return strings.plateLoadingRemaining(
+      joined,
+      _formatNumber(result.unresolvedWeight),
+      result.unit == LoadUnits.kg ? strings.kilogramUnit : strings.poundUnit,
+    );
   }
 }
 
@@ -253,16 +249,14 @@ class _WeightToolsSettingsCardState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          strings.isChinese ? '重量工具' : 'Weight Tools',
+          strings.weightToolsTitle,
           style: fittinTheme
               .uiStyle(16, fittinTheme.fg)
               .copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
         Text(
-          strings.isChinese
-              ? '在设置里维护常用换算和默认杠重，训练记录页会直接复用。'
-              : 'Maintain your preferred converter defaults and bar weights here for the workout logger.',
+          strings.weightToolsSettingsDescription,
           style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
         ),
         const SizedBox(height: 18),
@@ -275,8 +269,8 @@ class _WeightToolsSettingsCardState
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: strings.isChinese ? '公斤杠重' : 'kg Bar Weight',
-                  suffixText: 'kg',
+                  labelText: strings.kilogramBarWeight,
+                  suffixText: strings.kilogramSymbol,
                 ),
                 onSubmitted: (value) {
                   final parsed = double.tryParse(value.trim());
@@ -294,8 +288,8 @@ class _WeightToolsSettingsCardState
                   decimal: true,
                 ),
                 decoration: InputDecoration(
-                  labelText: strings.isChinese ? '磅杠重' : 'lb Bar Weight',
-                  suffixText: 'lb',
+                  labelText: strings.poundBarWeight,
+                  suffixText: strings.poundSymbol,
                 ),
                 onSubmitted: (value) {
                   final parsed = double.tryParse(value.trim());
@@ -310,7 +304,7 @@ class _WeightToolsSettingsCardState
         const SizedBox(height: 14),
         FittinBtn(
           fittinTheme,
-          strings.isChinese ? '打开换算器' : 'Open Converter',
+          strings.openConverter,
           icon: Icons.calculate_rounded,
           onPressed: () {
             showModalBottomSheet<void>(

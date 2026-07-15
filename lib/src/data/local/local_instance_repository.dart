@@ -3,6 +3,7 @@ import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 
 final localInstanceRepositoryProvider = Provider<LocalInstanceRepository>((
   ref,
@@ -50,10 +51,12 @@ class LocalInstanceRepository {
   Future<StoredTrainingInstance> activateTemplate(
     String templateId, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
   }) {
     return _repository.activateTemplate(
       templateId,
       trainingMaxProfile: trainingMaxProfile,
+      planStartLoadReview: planStartLoadReview,
       ownerUserId: _ownerUserId,
     );
   }

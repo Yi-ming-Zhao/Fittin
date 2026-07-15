@@ -16,7 +16,7 @@ void main() {
         actual: [_point(DateTime(2026, 3, 12), 130, actual: true)],
       );
       final bench = _summary(
-        id: 'bench',
+        id: 'bench_press',
         name: 'Bench Press',
         estimated: [_point(DateTime(2026, 3, 5), 80)],
         actual: [_point(DateTime(2026, 3, 15), 82.5, actual: true)],
@@ -41,6 +41,42 @@ void main() {
       );
     },
   );
+
+  test('milestones default to Big Three and honor a custom canonical set', () {
+    final squat = _summary(
+      id: 'squat',
+      name: 'Squat',
+      estimated: [_point(DateTime(2026, 3, 1), 120)],
+      actual: const [],
+    );
+    final press = _summary(
+      id: 'overhead_press',
+      name: 'Overhead Press',
+      estimated: [_point(DateTime(2026, 3, 2), 60)],
+      actual: const [],
+    );
+    final overview = ProgressAnalyticsOverview(
+      completedWorkoutCount: 2,
+      recentTrainingDays: 2,
+      recentVolume: 1000,
+      exerciseSummaries: [squat, press],
+      highlightExerciseId: squat.exerciseId,
+    );
+
+    expect(
+      buildPRDashboardData(
+        overview,
+      ).allMilestones.map((item) => item.exerciseId),
+      ['squat'],
+    );
+    expect(
+      buildPRDashboardData(
+        overview,
+        milestoneExerciseIds: {'overhead_press'},
+      ).allMilestones.map((item) => item.exerciseId),
+      ['overhead_press'],
+    );
+  });
 }
 
 ExercisePerformancePoint _point(

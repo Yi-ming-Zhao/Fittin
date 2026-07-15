@@ -3,6 +3,7 @@ import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/domain/rule_engine.dart';
 
 class ProgramEngineDispatcher {
@@ -19,8 +20,11 @@ class ProgramEngineDispatcher {
 }
 
 String buildWorkoutScheduleToken(StoredTrainingInstance instance) {
-  final engineEntries = instance.engineState.entries.toList()
-    ..sort((left, right) => left.key.compareTo(right.key));
+  final engineEntries =
+      instance.engineState.entries
+          .where((entry) => entry.key != planStartLoadReviewEngineStateKey)
+          .toList()
+        ..sort((left, right) => left.key.compareTo(right.key));
   final stateEntries = [...instance.states]
     ..sort((left, right) {
       final workoutComparison = left.workoutId.compareTo(right.workoutId);
@@ -180,8 +184,7 @@ class PeriodizedProgramEngine extends ProgramEngine {
       final exercise = template.findExerciseById(exerciseSession.id);
       final currentStage = exercise.stageById(currentState.currentStageId);
       final currentStageIndex = exercise.stages.indexOf(currentStage);
-      final nextStageIndex =
-          currentStageIndex + 1 < exercise.stages.length
+      final nextStageIndex = currentStageIndex + 1 < exercise.stages.length
           ? currentStageIndex + 1
           : currentStageIndex;
       final nextStage = exercise.stages[nextStageIndex];
@@ -218,7 +221,8 @@ class PeriodizedProgramEngine extends ProgramEngine {
 
     final rawWeekIndex =
         (instance.engineState['currentWeekIndex'] as num?)?.toInt() ?? 0;
-    final completedWeek = instance.currentWorkoutIndex == template.workouts.length - 1;
+    final completedWeek =
+        instance.currentWorkoutIndex == template.workouts.length - 1;
     final nextWeekIndex = completedWeek ? rawWeekIndex + 1 : rawWeekIndex;
     final cycleLengthWeeks =
         (instance.engineState['cycleLengthWeeks'] as num?)?.toInt() ??
@@ -230,6 +234,7 @@ class PeriodizedProgramEngine extends ProgramEngine {
       updatedStates: updatedStates,
       logs: logs,
       updatedEngineState: {
+        ...instance.engineState,
         'currentWeekIndex': nextWeekIndex,
         'currentBlockIndex': nextWeekIndex ~/ cycleLengthWeeks,
         'cycleLengthWeeks': cycleLengthWeeks,
@@ -265,7 +270,8 @@ ExerciseSessionState _buildExerciseSession({
     tier: exercise.tier,
     restSeconds: exercise.restSeconds,
     stageId: stage.id,
-    displayLoadUnit: exercise.loadUnit == LoadUnits.bodyweight ||
+    displayLoadUnit:
+        exercise.loadUnit == LoadUnits.bodyweight ||
             exercise.loadUnit == LoadUnits.cableStack ||
             exercise.loadUnit == LoadUnits.percent1rm
         ? exercise.loadUnit
@@ -343,6 +349,7 @@ ExerciseLog _exerciseLogFromSession({
 }) {
   return ExerciseLog(
     exerciseId: session.id,
+    exerciseDefinitionId: session.exerciseId,
     exerciseName: session.exerciseName,
     stageId: stageId,
     displayLoadUnit: session.displayLoadUnit,
@@ -381,12 +388,116 @@ double _resolveSetIntensity(SetDefinition definition) {
 
 // TSA Intermediate Approach 2.0 workbook, Reference!F9:R16.
 const _rpeLoadPercentages = <int, List<double>>{
-  20: [1.0, 0.955, 0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68],
-  19: [0.978, 0.939, 0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667],
-  18: [0.955, 0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653],
-  17: [0.939, 0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64],
-  16: [0.922, 0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653, 0.626],
-  15: [0.907, 0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64, 0.613],
-  14: [0.892, 0.863, 0.837, 0.811, 0.786, 0.762, 0.739, 0.707, 0.68, 0.653, 0.626, 0.599],
-  13: [0.878, 0.85, 0.824, 0.799, 0.774, 0.751, 0.723, 0.694, 0.667, 0.64, 0.613, 0.586],
+  20: [
+    1.0,
+    0.955,
+    0.922,
+    0.892,
+    0.863,
+    0.837,
+    0.811,
+    0.786,
+    0.762,
+    0.739,
+    0.707,
+    0.68,
+  ],
+  19: [
+    0.978,
+    0.939,
+    0.907,
+    0.878,
+    0.85,
+    0.824,
+    0.799,
+    0.774,
+    0.751,
+    0.723,
+    0.694,
+    0.667,
+  ],
+  18: [
+    0.955,
+    0.922,
+    0.892,
+    0.863,
+    0.837,
+    0.811,
+    0.786,
+    0.762,
+    0.739,
+    0.707,
+    0.68,
+    0.653,
+  ],
+  17: [
+    0.939,
+    0.907,
+    0.878,
+    0.85,
+    0.824,
+    0.799,
+    0.774,
+    0.751,
+    0.723,
+    0.694,
+    0.667,
+    0.64,
+  ],
+  16: [
+    0.922,
+    0.892,
+    0.863,
+    0.837,
+    0.811,
+    0.786,
+    0.762,
+    0.739,
+    0.707,
+    0.68,
+    0.653,
+    0.626,
+  ],
+  15: [
+    0.907,
+    0.878,
+    0.85,
+    0.824,
+    0.799,
+    0.774,
+    0.751,
+    0.723,
+    0.694,
+    0.667,
+    0.64,
+    0.613,
+  ],
+  14: [
+    0.892,
+    0.863,
+    0.837,
+    0.811,
+    0.786,
+    0.762,
+    0.739,
+    0.707,
+    0.68,
+    0.653,
+    0.626,
+    0.599,
+  ],
+  13: [
+    0.878,
+    0.85,
+    0.824,
+    0.799,
+    0.774,
+    0.751,
+    0.723,
+    0.694,
+    0.667,
+    0.64,
+    0.613,
+    0.586,
+  ],
 };

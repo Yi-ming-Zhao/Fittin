@@ -638,6 +638,7 @@ ExerciseLog _$ExerciseLogFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$ExerciseLog {
   String get exerciseId => throw _privateConstructorUsedError;
+  String get exerciseDefinitionId => throw _privateConstructorUsedError;
   String get exerciseName => throw _privateConstructorUsedError;
   String get stageId => throw _privateConstructorUsedError;
   String get displayLoadUnit => throw _privateConstructorUsedError;
@@ -657,6 +658,7 @@ abstract class $ExerciseLogCopyWith<$Res> {
   @useResult
   $Res call(
       {String exerciseId,
+      String exerciseDefinitionId,
       String exerciseName,
       String stageId,
       String displayLoadUnit,
@@ -677,6 +679,7 @@ class _$ExerciseLogCopyWithImpl<$Res, $Val extends ExerciseLog>
   @override
   $Res call({
     Object? exerciseId = null,
+    Object? exerciseDefinitionId = null,
     Object? exerciseName = null,
     Object? stageId = null,
     Object? displayLoadUnit = null,
@@ -686,6 +689,10 @@ class _$ExerciseLogCopyWithImpl<$Res, $Val extends ExerciseLog>
       exerciseId: null == exerciseId
           ? _value.exerciseId
           : exerciseId // ignore: cast_nullable_to_non_nullable
+              as String,
+      exerciseDefinitionId: null == exerciseDefinitionId
+          ? _value.exerciseDefinitionId
+          : exerciseDefinitionId // ignore: cast_nullable_to_non_nullable
               as String,
       exerciseName: null == exerciseName
           ? _value.exerciseName
@@ -717,6 +724,7 @@ abstract class _$$ExerciseLogImplCopyWith<$Res>
   @useResult
   $Res call(
       {String exerciseId,
+      String exerciseDefinitionId,
       String exerciseName,
       String stageId,
       String displayLoadUnit,
@@ -735,6 +743,7 @@ class __$$ExerciseLogImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? exerciseId = null,
+    Object? exerciseDefinitionId = null,
     Object? exerciseName = null,
     Object? stageId = null,
     Object? displayLoadUnit = null,
@@ -744,6 +753,10 @@ class __$$ExerciseLogImplCopyWithImpl<$Res>
       exerciseId: null == exerciseId
           ? _value.exerciseId
           : exerciseId // ignore: cast_nullable_to_non_nullable
+              as String,
+      exerciseDefinitionId: null == exerciseDefinitionId
+          ? _value.exerciseDefinitionId
+          : exerciseDefinitionId // ignore: cast_nullable_to_non_nullable
               as String,
       exerciseName: null == exerciseName
           ? _value.exerciseName
@@ -770,6 +783,7 @@ class __$$ExerciseLogImplCopyWithImpl<$Res>
 class _$ExerciseLogImpl implements _ExerciseLog {
   const _$ExerciseLogImpl(
       {required this.exerciseId,
+      this.exerciseDefinitionId = '',
       required this.exerciseName,
       required this.stageId,
       this.displayLoadUnit = LoadUnits.kg,
@@ -781,6 +795,9 @@ class _$ExerciseLogImpl implements _ExerciseLog {
 
   @override
   final String exerciseId;
+  @override
+  @JsonKey()
+  final String exerciseDefinitionId;
   @override
   final String exerciseName;
   @override
@@ -798,7 +815,7 @@ class _$ExerciseLogImpl implements _ExerciseLog {
 
   @override
   String toString() {
-    return 'ExerciseLog(exerciseId: $exerciseId, exerciseName: $exerciseName, stageId: $stageId, displayLoadUnit: $displayLoadUnit, sets: $sets)';
+    return 'ExerciseLog(exerciseId: $exerciseId, exerciseDefinitionId: $exerciseDefinitionId, exerciseName: $exerciseName, stageId: $stageId, displayLoadUnit: $displayLoadUnit, sets: $sets)';
   }
 
   @override
@@ -808,6 +825,8 @@ class _$ExerciseLogImpl implements _ExerciseLog {
             other is _$ExerciseLogImpl &&
             (identical(other.exerciseId, exerciseId) ||
                 other.exerciseId == exerciseId) &&
+            (identical(other.exerciseDefinitionId, exerciseDefinitionId) ||
+                other.exerciseDefinitionId == exerciseDefinitionId) &&
             (identical(other.exerciseName, exerciseName) ||
                 other.exerciseName == exerciseName) &&
             (identical(other.stageId, stageId) || other.stageId == stageId) &&
@@ -818,8 +837,14 @@ class _$ExerciseLogImpl implements _ExerciseLog {
 
   @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(runtimeType, exerciseId, exerciseName,
-      stageId, displayLoadUnit, const DeepCollectionEquality().hash(_sets));
+  int get hashCode => Object.hash(
+      runtimeType,
+      exerciseId,
+      exerciseDefinitionId,
+      exerciseName,
+      stageId,
+      displayLoadUnit,
+      const DeepCollectionEquality().hash(_sets));
 
   @JsonKey(ignore: true)
   @override
@@ -838,6 +863,7 @@ class _$ExerciseLogImpl implements _ExerciseLog {
 abstract class _ExerciseLog implements ExerciseLog {
   const factory _ExerciseLog(
       {required final String exerciseId,
+      final String exerciseDefinitionId,
       required final String exerciseName,
       required final String stageId,
       final String displayLoadUnit,
@@ -848,6 +874,8 @@ abstract class _ExerciseLog implements ExerciseLog {
 
   @override
   String get exerciseId;
+  @override
+  String get exerciseDefinitionId;
   @override
   String get exerciseName;
   @override

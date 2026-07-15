@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/app_update_provider.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -27,6 +28,52 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(migrationNote, findsOneWidget);
+  });
+
+  testWidgets('about screen uses English copy without Chinese residuals', (
+    tester,
+  ) async {
+    await _pumpAbout(tester, source: _FakeUpdateSource(_release('1.2.3')));
+
+    expect(find.text('About'), findsOneWidget);
+    expect(find.text('Current version'), findsOneWidget);
+    expect(find.text('Get the latest release'), findsOneWidget);
+    final updateMethod = find.text('How updates work');
+    await tester.scrollUntilVisible(
+      updateMethod,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(updateMethod, findsOneWidget);
+    expect(find.text('关于'), findsNothing);
+    expect(find.text('当前版本'), findsNothing);
+    expect(find.text('获取最新版本'), findsNothing);
+    expect(find.text('更新方式'), findsNothing);
+  });
+
+  testWidgets('about screen uses Chinese copy without English residuals', (
+    tester,
+  ) async {
+    await _pumpAbout(
+      tester,
+      source: _FakeUpdateSource(_release('1.2.3')),
+      locale: AppLocale.zh,
+    );
+
+    expect(find.text('关于'), findsOneWidget);
+    expect(find.text('当前版本'), findsOneWidget);
+    expect(find.text('获取最新版本'), findsOneWidget);
+    final updateMethod = find.text('更新方式');
+    await tester.scrollUntilVisible(
+      updateMethod,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(updateMethod, findsOneWidget);
+    expect(find.text('About'), findsNothing);
+    expect(find.text('Current version'), findsNothing);
+    expect(find.text('Get the latest release'), findsNothing);
+    expect(find.text('How updates work'), findsNothing);
   });
 
   testWidgets('same release reports that the app is current', (tester) async {
@@ -218,13 +265,14 @@ Future<void> _pumpAbout(
   required AppUpdateSource source,
   ExternalUrlLauncher? launcher,
   TargetPlatform platform = TargetPlatform.android,
+  AppLocale locale = AppLocale.en,
 }) async {
+  final databaseRepository = InMemoryDatabaseRepository();
+  await databaseRepository.saveAppLocale(locale);
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        databaseRepositoryProvider.overrideWithValue(
-          InMemoryDatabaseRepository(),
-        ),
+        databaseRepositoryProvider.overrideWithValue(databaseRepository),
         appPlatformProvider.overrideWithValue(platform),
         appPackageInfoProvider.overrideWith(
           (ref) async => PackageInfo(

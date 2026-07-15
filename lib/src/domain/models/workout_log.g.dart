@@ -66,6 +66,7 @@ Map<String, dynamic> _$$WorkoutProgressionSnapshotImplToJson(
 _$ExerciseLogImpl _$$ExerciseLogImplFromJson(Map<String, dynamic> json) =>
     _$ExerciseLogImpl(
       exerciseId: json['exerciseId'] as String,
+      exerciseDefinitionId: json['exerciseDefinitionId'] as String? ?? '',
       exerciseName: json['exerciseName'] as String,
       stageId: json['stageId'] as String,
       displayLoadUnit: json['displayLoadUnit'] as String? ?? LoadUnits.kg,
@@ -77,6 +78,7 @@ _$ExerciseLogImpl _$$ExerciseLogImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$ExerciseLogImplToJson(_$ExerciseLogImpl instance) =>
     <String, dynamic>{
       'exerciseId': instance.exerciseId,
+      'exerciseDefinitionId': instance.exerciseDefinitionId,
       'exerciseName': instance.exerciseName,
       'stageId': instance.stageId,
       'displayLoadUnit': instance.displayLoadUnit,

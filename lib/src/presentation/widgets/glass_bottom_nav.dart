@@ -1,10 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 
 /// Fittin bottom tab bar — 5 tabs with glass background
 /// Tabs: Today, Plans, Progress, Body, Profile
-class FittinTabBar extends StatelessWidget {
+class FittinTabBar extends ConsumerWidget {
   const FittinTabBar({
     super.key,
     required this.theme,
@@ -16,23 +18,24 @@ class FittinTabBar extends StatelessWidget {
   final String active; // 'home' | 'plans' | 'progress' | 'body' | 'profile'
   final ValueChanged<String> onChange;
 
-  static const _tabs = [
-    ('home', 'TODAY', Icons.play_arrow_rounded),
-    ('plans', 'PLANS', Icons.layers_rounded),
-    ('progress', 'PR', Icons.trending_up_rounded),
-    ('body', 'BODY', Icons.accessibility_new_rounded),
-    ('profile', 'ME', Icons.person_outline_rounded),
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
-      heightFactor: 1,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 430),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 18),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final tabs = [
+      ('home', strings.navToday, Icons.play_arrow_rounded),
+      ('plans', strings.navPlans, Icons.layers_rounded),
+      ('progress', strings.navPr, Icons.trending_up_rounded),
+      ('body', strings.navBody, Icons.accessibility_new_rounded),
+      ('profile', strings.navMe, Icons.person_outline_rounded),
+    ];
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 398),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: BackdropFilter(
@@ -45,7 +48,7 @@ class FittinTabBar extends StatelessWidget {
                   border: Border.all(color: theme.border, width: 0.5),
                 ),
                 child: Row(
-                  children: _tabs.map((t) {
+                  children: tabs.map((t) {
                     final isActive = t.$1 == active;
                     return Expanded(
                       child: _FittinTabItem(

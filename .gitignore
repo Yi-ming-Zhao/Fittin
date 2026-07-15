@@ -36,6 +36,10 @@ migrate_working_dir/
 cert.pem
 .deploy/*.log
 
+# Local deployment credentials
+wsf_passwd.txt
+zhaoyiming@10.108.17.241
+
 # Symbolication related
 app.*.symbols
 

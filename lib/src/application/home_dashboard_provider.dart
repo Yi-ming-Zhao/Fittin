@@ -3,6 +3,7 @@ import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
+import 'package:fittin_v2/src/application/milestone_preferences_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 
@@ -86,12 +87,20 @@ final homeDashboardDataProvider = FutureProvider<HomeDashboardData>((
   final authUser = ref.watch(authStateProvider).valueOrNull;
   final locale = ref.watch(appLocaleProvider);
   final now = ref.watch(homeDateTimeProvider);
+  final milestoneExerciseIds = ref.watch(
+    milestoneExercisePreferencesProvider.select(
+      (preferences) => preferences.exerciseIds,
+    ),
+  );
   final todayWorkout = await ref.watch(todayWorkoutSummaryProvider.future);
   final analytics = await ref.watch(progressAnalyticsOverviewProvider.future);
   final customDisplayName = await repository.fetchHomeDisplayName(
     ownerUserId: ownerUserId,
   );
-  final prData = buildPRDashboardData(analytics);
+  final prData = buildPRDashboardData(
+    analytics,
+    milestoneExerciseIds: milestoneExerciseIds,
+  );
   final lastSeenAt = await repository.fetchHomeMilestonesLastSeenAt(
     ownerUserId: ownerUserId,
   );

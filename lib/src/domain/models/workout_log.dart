@@ -42,6 +42,7 @@ class WorkoutProgressionSnapshot with _$WorkoutProgressionSnapshot {
 class ExerciseLog with _$ExerciseLog {
   const factory ExerciseLog({
     required String exerciseId,
+    @Default('') String exerciseDefinitionId,
     required String exerciseName,
     required String stageId,
     @Default(LoadUnits.kg) String displayLoadUnit,

@@ -174,6 +174,12 @@ void main() {
 
       final before = await gateway.loadTodayWorkoutSummary();
       final session = await gateway.loadTodayWorkoutSession();
+      expect(session.exercises.map((exercise) => exercise.exerciseId), [
+        'squat',
+        'barbell_row',
+        'lat_pulldown',
+        'biceps_curl',
+      ]);
       final firstExercise = session.exercises.first;
       final firstSet = firstExercise.sets.first;
       final completedSession = session.copyWith(
@@ -184,7 +190,9 @@ void main() {
               ...firstExercise.sets.skip(1),
             ],
           ),
-          ...session.exercises.skip(1),
+          session.exercises[1],
+          session.exercises[2].copyWith(exerciseId: 'lat_pulldowns'),
+          session.exercises[3],
         ],
       );
 
@@ -204,6 +212,16 @@ void main() {
       expect(repository.lastInstanceSyncStatus, SyncStatusKeys.pendingUpload);
       expect(after.currentDayNumber, 2);
       expect(after.workoutId, template.workoutByIndex(1).id);
+      expect(logs.single.exercises.map((exercise) => exercise.exerciseId), [
+        'day1-squat',
+        'day1-barbell-row',
+        'day1-lat-pulldowns',
+        'day1-bicep-curls',
+      ]);
+      expect(
+        logs.single.exercises.map((exercise) => exercise.exerciseDefinitionId),
+        ['squat', 'barbell_row', 'lat_pulldown', 'biceps_curl'],
+      );
       expect(logs.single.exercises.first.sets.first.completedRpe, 8.0);
     },
   );

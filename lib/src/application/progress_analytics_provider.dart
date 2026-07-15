@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 
 class ExercisePerformancePoint {
   const ExercisePerformancePoint({
@@ -106,14 +109,23 @@ final progressAnalyticsOverviewProvider =
       ref.watch(syncRefreshProvider);
       final repository = ref.watch(localWorkoutLogRepositoryProvider);
       final formula = ref.watch(analyticsFormulaProvider);
+      final locale = ref.watch(appLocaleProvider);
+      final exerciseLibrary = await ref.watch(exerciseLibraryProvider.future);
       final logs = await repository.fetchAllWorkoutLogs();
-      return buildProgressAnalytics(logs, formula);
+      return buildProgressAnalytics(
+        logs,
+        formula,
+        exerciseLibrary: exerciseLibrary,
+        localeCode: locale.code,
+      );
     });
 
 ProgressAnalyticsOverview buildProgressAnalytics(
   List<WorkoutLog> logs,
-  OneRepMaxFormula formula,
-) {
+  OneRepMaxFormula formula, {
+  ExerciseLibrary? exerciseLibrary,
+  String localeCode = 'en',
+}) {
   final byExercise = <String, List<_ExerciseLogEntry>>{};
   final now = DateTime.now();
   double recentVolume = 0;
@@ -128,12 +140,21 @@ ProgressAnalyticsOverview buildProgressAnalytics(
     }
 
     for (final exercise in log.exercises) {
+      final resolved = exerciseLibrary?.resolve(
+        exerciseId: exercise.exerciseDefinitionId.trim().isNotEmpty
+            ? exercise.exerciseDefinitionId
+            : exercise.exerciseId,
+        name: exercise.exerciseName,
+      );
+      final exerciseId = resolved?.id ?? exercise.exerciseId;
+      final exerciseName =
+          resolved?.displayName(localeCode) ?? exercise.exerciseName;
       byExercise
-          .putIfAbsent(exercise.exerciseId, () => [])
+          .putIfAbsent(exerciseId, () => [])
           .add(
             _ExerciseLogEntry(
-              exerciseId: exercise.exerciseId,
-              exerciseName: exercise.exerciseName,
+              exerciseId: exerciseId,
+              exerciseName: exerciseName,
               completedAt: log.completedAt,
               sets: exercise.sets,
             ),

@@ -77,21 +77,19 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     final strings = AppStrings.of(context, ref);
     final theme = ref.watch(resolvedFittinThemeProvider);
     final packageInfo = ref.watch(appPackageInfoProvider);
-    final isChinese = strings.isChinese;
 
     return DashboardPageScaffold(
-      bottomPadding: 80,
+      bottomPadding: 24,
+      safeAreaBottom: true,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.settings,
-          title: isChinese ? '关于' : 'About',
-          subtitle: isChinese
-              ? '版本信息、发布来源与应用更新。'
-              : 'Version details, release source, and app updates.',
+          title: strings.aboutPageTitle,
+          subtitle: strings.aboutPageSubtitle,
           showBackButton: true,
         ),
         const SizedBox(height: 24),
-        _AppIdentityCard(theme: theme, isChinese: isChinese),
+        _AppIdentityCard(theme: theme, tagline: strings.aboutTagline),
         const SizedBox(height: 16),
         DashboardSurfaceCard(
           radius: theme.radius,
@@ -101,22 +99,22 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
               children: [
                 _InfoRow(
                   theme: theme,
-                  label: isChinese ? '当前版本' : 'Current version',
+                  label: strings.aboutCurrentVersion,
                   value: info.version,
                   valueKey: const ValueKey('about-current-version'),
                   showDivider: true,
                 ),
                 _InfoRow(
                   theme: theme,
-                  label: isChinese ? '构建号' : 'Build number',
+                  label: strings.aboutBuildNumber,
                   value: info.buildNumber,
                   valueKey: const ValueKey('about-build-number'),
                   showDivider: true,
                 ),
                 _InfoRow(
                   theme: theme,
-                  label: isChinese ? '平台' : 'Platform',
-                  value: _platformLabel(isChinese),
+                  label: strings.aboutPlatform,
+                  value: _platformLabel(),
                 ),
               ],
             ),
@@ -128,9 +126,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
               height: 96,
               child: Center(
                 child: Text(
-                  isChinese
-                      ? '暂时无法读取版本信息。'
-                      : 'Version details are unavailable.',
+                  strings.aboutVersionUnavailable,
                   style: theme.uiStyle(13, theme.fgDim),
                 ),
               ),
@@ -138,7 +134,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        DashboardSectionLabel(label: isChinese ? '应用更新' : 'APP UPDATE'),
+        DashboardSectionLabel(label: strings.aboutAppUpdateSection),
         const SizedBox(height: 10),
         DashboardSurfaceCard(
           radius: theme.radius,
@@ -150,15 +146,15 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                 theme: theme,
                 state: _checkState,
                 release: _latestRelease,
-                isChinese: isChinese,
+                strings: strings,
               ),
               const SizedBox(height: 18),
               if (_checkState == _UpdateCheckState.available) ...[
                 FittinBtn(
                   theme,
                   _isAndroid && _latestRelease?.androidApkUrl != null
-                      ? (isChinese ? '下载安卓更新' : 'Download Android update')
-                      : (isChinese ? '查看新版本' : 'View new release'),
+                      ? strings.aboutDownloadAndroidUpdate
+                      : strings.aboutViewNewRelease,
                   key: const ValueKey('download-app-update'),
                   icon: Icons.system_update_alt_rounded,
                   block: true,
@@ -167,7 +163,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                 const SizedBox(height: 10),
                 FittinBtn(
                   theme,
-                  isChinese ? '查看发布说明' : 'View release notes',
+                  strings.aboutViewReleaseNotes,
                   key: const ValueKey('open-release-notes'),
                   variant: 'secondary',
                   block: true,
@@ -179,7 +175,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
               ] else ...[
                 FittinBtn(
                   theme,
-                  _checkButtonLabel(isChinese),
+                  _checkButtonLabel(strings),
                   key: const ValueKey('check-app-update'),
                   icon: Icons.refresh_rounded,
                   block: true,
@@ -191,7 +187,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                   const SizedBox(height: 10),
                   FittinBtn(
                     theme,
-                    isChinese ? '打开官方下载页' : 'Open official downloads',
+                    strings.aboutOpenOfficialDownloads,
                     key: const ValueKey('open-app-releases'),
                     icon: Icons.open_in_new_rounded,
                     variant: 'secondary',
@@ -229,16 +225,14 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isChinese ? '更新方式' : 'How updates work',
+                      strings.aboutUpdateMethod,
                       style: theme
                           .uiStyle(14, theme.fg)
                           .copyWith(fontWeight: FontWeight.w700),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      isChinese
-                          ? '版本信息来自 Fittin 的 GitHub Release。安卓会在浏览器下载 APK，并由系统要求你确认安装。\n\n从 1.0.6 起，安卓版本使用固定正式签名。若设备仍安装 1.0.5 或更早版本，请先同步或备份数据，卸载旧版后再安装一次 1.0.6。'
-                          : 'Release details come from Fittin on GitHub. Android downloads the APK in your browser and asks you to confirm installation.\n\nFrom 1.0.6 onward, Android releases share one stable signer. If 1.0.5 or earlier is installed, sync or back up first, uninstall it, then install 1.0.6 once.',
+                      strings.aboutUpdateMethodDescription,
                       key: const ValueKey('legacy-signing-note'),
                       style: theme
                           .uiStyle(12, theme.fgDim)
@@ -254,21 +248,21 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     );
   }
 
-  String _checkButtonLabel(bool isChinese) {
+  String _checkButtonLabel(AppStrings strings) {
     return switch (_checkState) {
-      _UpdateCheckState.checking => isChinese ? '正在检查…' : 'Checking…',
-      _UpdateCheckState.current => isChinese ? '再次检查' : 'Check again',
-      _UpdateCheckState.failed => isChinese ? '重试' : 'Try again',
-      _ => isChinese ? '检查更新' : 'Check for updates',
+      _UpdateCheckState.checking => strings.aboutCheckingButton,
+      _UpdateCheckState.current => strings.aboutCheckAgain,
+      _UpdateCheckState.failed => strings.aboutTryAgain,
+      _ => strings.aboutCheckForUpdates,
     };
   }
 }
 
 class _AppIdentityCard extends StatelessWidget {
-  const _AppIdentityCard({required this.theme, required this.isChinese});
+  const _AppIdentityCard({required this.theme, required this.tagline});
 
   final FittinTheme theme;
-  final bool isChinese;
+  final String tagline;
 
   @override
   Widget build(BuildContext context) {
@@ -301,10 +295,7 @@ class _AppIdentityCard extends StatelessWidget {
                   style: theme.displayStyle(28, theme.fg).copyWith(height: 1),
                 ),
                 const SizedBox(height: 7),
-                Text(
-                  isChinese ? '专注每一次训练。' : 'Make every set count.',
-                  style: theme.uiStyle(13, theme.fgDim),
-                ),
+                Text(tagline, style: theme.uiStyle(13, theme.fgDim)),
               ],
             ),
           ),
@@ -360,45 +351,41 @@ class _UpdateStatus extends StatelessWidget {
     required this.theme,
     required this.state,
     required this.release,
-    required this.isChinese,
+    required this.strings,
   });
 
   final FittinTheme theme;
   final _UpdateCheckState state;
   final AppReleaseInfo? release;
-  final bool isChinese;
+  final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
     final (icon, title, detail) = switch (state) {
       _UpdateCheckState.checking => (
         Icons.sync_rounded,
-        isChinese ? '正在检查更新' : 'Checking for updates',
-        isChinese ? '正在连接发布服务器…' : 'Connecting to the release service…',
+        strings.aboutCheckingForUpdates,
+        strings.aboutConnectingReleaseService,
       ),
       _UpdateCheckState.current => (
         Icons.check_circle_outline_rounded,
-        isChinese ? '已是最新版本' : 'You are up to date',
-        isChinese ? '当前没有可用的新版本。' : 'No newer release is available.',
+        strings.aboutUpToDate,
+        strings.aboutNoNewerRelease,
       ),
       _UpdateCheckState.available => (
         Icons.new_releases_outlined,
-        isChinese
-            ? '发现新版本 ${release?.version}'
-            : 'Version ${release?.version} is available',
-        isChinese ? '可立即打开官方下载地址。' : 'The official download is ready to open.',
+        strings.aboutVersionAvailable(release?.version),
+        strings.aboutOfficialDownloadReady,
       ),
       _UpdateCheckState.failed => (
         Icons.cloud_off_outlined,
-        isChinese ? '检查失败' : 'Update check failed',
-        isChinese
-            ? '请检查网络后重试，也可直接打开官方下载页。'
-            : 'Try again, or open the official downloads page directly.',
+        strings.aboutUpdateCheckFailed,
+        strings.aboutUpdateCheckFailedDetail,
       ),
       _ => (
         Icons.system_update_outlined,
-        isChinese ? '获取最新版本' : 'Get the latest release',
-        isChinese ? '手动检查是否有新的安卓安装包。' : 'Check for a newer Android package.',
+        strings.aboutGetLatestRelease,
+        strings.aboutCheckNewAndroidPackage,
       ),
     };
 
@@ -431,8 +418,8 @@ class _UpdateStatus extends StatelessWidget {
   }
 }
 
-String _platformLabel(bool isChinese) {
-  if (kIsWeb) return isChinese ? '网页' : 'Web';
+String _platformLabel() {
+  if (kIsWeb) return 'Web';
   return switch (defaultTargetPlatform) {
     TargetPlatform.android => 'Android',
     TargetPlatform.iOS => 'iOS',

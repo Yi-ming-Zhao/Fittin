@@ -97,7 +97,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.byKey(const ValueKey('nav-profile')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);

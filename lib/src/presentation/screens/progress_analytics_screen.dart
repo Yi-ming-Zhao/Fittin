@@ -6,7 +6,8 @@ import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 class ProgressAnalyticsScreen extends ConsumerWidget {
   const ProgressAnalyticsScreen({super.key});
@@ -24,9 +25,9 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
           return DashboardPageScaffold(
             children: [
               DashboardScreenHeader(
-                eyebrow: 'Insights',
-                title: 'Trends & analytics',
-                subtitle: 'Long-term rhythm through consistency and training load.',
+                eyebrow: strings.insights,
+                title: strings.advancedAnalytics,
+                subtitle: strings.advancedAnalyticsSubtitle,
               ),
               const SizedBox(height: 28),
               _EmptyState(theme: fittinTheme, strings: strings),
@@ -37,9 +38,9 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
         return DashboardPageScaffold(
           children: [
             DashboardScreenHeader(
-              eyebrow: 'Insights',
-              title: 'Trends & analytics',
-              subtitle: 'Long-term rhythm through consistency and training load.',
+              eyebrow: strings.insights,
+              title: strings.advancedAnalytics,
+              subtitle: strings.advancedAnalyticsSubtitle,
             ),
             const SizedBox(height: 20),
             DashboardSurfaceCard(
@@ -48,13 +49,13 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  FittinEyebrow(fittinTheme, 'Training consistency'),
+                  FittinEyebrow(fittinTheme, strings.trainingConsistency),
                   const SizedBox(height: 10),
                   Text(
-                    strings.isChinese
-                        ? '把训练频率、总量与主要动作变化放到一张更长周期的视图里。'
-                        : 'View consistency, workload, and lift momentum in one long-range surface.',
-                    style: fittinTheme.uiStyle(14, fittinTheme.fgDim).copyWith(height: 1.45),
+                    strings.progressConsistencyDescription,
+                    style: fittinTheme
+                        .uiStyle(14, fittinTheme.fgDim)
+                        .copyWith(height: 1.45),
                   ),
                 ],
               ),
@@ -71,7 +72,11 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _OverviewCards(theme: fittinTheme, overview: overview, strings: strings),
+            _OverviewCards(
+              theme: fittinTheme,
+              overview: overview,
+              strings: strings,
+            ),
             const SizedBox(height: 32),
             DashboardSectionLabel(label: strings.allExercises),
             const SizedBox(height: 14),
@@ -101,7 +106,10 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(error.toString(), textAlign: TextAlign.center),
+            child: Text(
+              strings.progressAnalyticsLoadFailure,
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       ),
@@ -125,25 +133,19 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.insights_rounded,
-              size: 56,
-              color: theme.accent,
-            ),
+            Icon(Icons.insights_rounded, size: 56, color: theme.accent),
             const SizedBox(height: 16),
             Text(
               strings.analyticsEmptyTitle,
-              style: theme.uiStyle(20, theme.fg).copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: theme
+                  .uiStyle(20, theme.fg)
+                  .copyWith(fontWeight: FontWeight.w700),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
               strings.analyticsEmptySubtitle,
-              style: theme.uiStyle(14, theme.fgDim).copyWith(
-                height: 1.5,
-              ),
+              style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
               textAlign: TextAlign.center,
             ),
           ],
@@ -197,7 +199,10 @@ class _FormulaPicker extends StatelessWidget {
           ),
           items: [
             for (final item in OneRepMaxFormula.values)
-              DropdownMenuItem(value: item, child: Text(item.label)),
+              DropdownMenuItem(
+                value: item,
+                child: Text(strings.oneRepMaxFormulaName(item)),
+              ),
           ],
           onChanged: (value) {
             if (value != null) {
@@ -283,10 +288,9 @@ class _OverviewStatCard extends StatelessWidget {
           children: [
             Text(
               title,
-              style: theme.uiStyle(10, theme.fgMuted).copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+              style: theme
+                  .uiStyle(10, theme.fgMuted)
+                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.5),
             ),
             const SizedBox(height: 8),
             Text(
@@ -328,10 +332,9 @@ class _ExerciseSummaryCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   summary.exerciseName,
-                  style: theme.uiStyle(22, theme.fg).copyWith(
-                    fontWeight: FontWeight.w800,
-                    height: 1.05,
-                  ),
+                  style: theme
+                      .uiStyle(22, theme.fg)
+                      .copyWith(fontWeight: FontWeight.w800, height: 1.05),
                 ),
               ),
               if (summary.isStagnating)
@@ -415,7 +418,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 DashboardScreenHeader(
                   eyebrow: strings.exerciseDetails,
                   title: summary.exerciseName,
-                  subtitle: '${strings.activeFormula}: ${formula.label}',
+                  subtitle: strings.activeFormulaLabel(formula),
                 ),
                 const SizedBox(height: 20),
                 Wrap(
@@ -441,7 +444,10 @@ class _ExerciseDetailSheet extends StatelessWidget {
                       label: strings.bestSet,
                       value: estimatedBestSet == null
                           ? '—'
-                          : '${strings.kilograms(estimatedBestSet.weight)} x ${estimatedBestSet.reps}',
+                          : strings.setLoadAndReps(
+                              estimatedBestSet.weight,
+                              estimatedBestSet.reps,
+                            ),
                     ),
                   ],
                 ),
@@ -459,7 +465,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                             contentPadding: EdgeInsets.zero,
                             title: Text(strings.kilograms(point.value)),
                             subtitle: Text(
-                              '${strings.kilograms(point.weight)} x ${point.reps}',
+                              strings.setLoadAndReps(point.weight, point.reps),
                             ),
                           ),
                         )
@@ -506,7 +512,7 @@ class _ExerciseDetailSheet extends StatelessWidget {
                     for (final pr in summary.personalRecords)
                       _Pill(
                         theme: theme,
-                        label: pr,
+                        label: strings.localizedPersonalRecord(pr),
                         color: theme.accentDim,
                       ),
                   ],
@@ -540,16 +546,13 @@ class _MetricPill extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: theme.uiStyle(10, theme.fgMuted),
-          ),
+          Text(label, style: theme.uiStyle(10, theme.fgMuted)),
           const SizedBox(height: 2),
           Text(
             value,
-              style: theme.uiStyle(13, theme.fg).copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: theme
+                .uiStyle(13, theme.fg)
+                .copyWith(fontWeight: FontWeight.w700),
           ),
         ],
       ),
@@ -558,11 +561,7 @@ class _MetricPill extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({
-    required this.theme,
-    required this.label,
-    required this.color,
-  });
+  const _Pill({required this.theme, required this.label, required this.color});
 
   final FittinTheme theme;
   final String label;
@@ -579,9 +578,9 @@ class _Pill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: theme.uiStyle(11, theme.fg).copyWith(
-          fontWeight: FontWeight.w700,
-        ),
+        style: theme
+            .uiStyle(11, theme.fg)
+            .copyWith(fontWeight: FontWeight.w700),
       ),
     );
   }

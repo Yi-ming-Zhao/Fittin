@@ -29,7 +29,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
     final theme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       body: IndexedStack(
         index: _currentIndex,
         children: const [

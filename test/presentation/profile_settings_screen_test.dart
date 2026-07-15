@@ -29,6 +29,21 @@ void main() {
 
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Language'), findsOneWidget);
+    expect(
+      find.text('Account, language, weight tools, and interface preferences.'),
+      findsOneWidget,
+    );
+    expect(find.text('English interface'), findsOneWidget);
+
+    final cardMode = find.byKey(const ValueKey('recording-mode-card'));
+    await tester.scrollUntilVisible(
+      cardMode,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Card logger'), findsOneWidget);
+    expect(find.text('卡片记录'), findsNothing);
 
     await ProviderScope.containerOf(
       tester.element(find.byType(ProfileSettingsScreen)),
@@ -41,6 +56,8 @@ void main() {
       ).read(appLocaleProvider),
       AppLocale.zh,
     );
+    expect(find.text('卡片记录'), findsOneWidget);
+    expect(find.text('Card logger'), findsNothing);
   });
 
   testWidgets('profile settings exposes the set type guide entry', (

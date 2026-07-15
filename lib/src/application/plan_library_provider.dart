@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_instance_repository.dart';
 import 'package:fittin_v2/src/data/local/local_plan_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 
 class PlanLibraryItem {
   const PlanLibraryItem({required this.record, required this.isActive});
@@ -79,6 +80,7 @@ class PlanLibraryActionNotifier extends StateNotifier<PlanLibraryActionState> {
   Future<void> activateTemplate(
     StoredTemplateRecord record, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
   }) async {
     state = PlanLibraryActionState(
       isSwitching: true,
@@ -91,6 +93,7 @@ class PlanLibraryActionNotifier extends StateNotifier<PlanLibraryActionState> {
           .activateTemplate(
             record.template.id,
             trainingMaxProfile: trainingMaxProfile,
+            planStartLoadReview: planStartLoadReview,
           );
       _ref.invalidate(planLibraryItemsProvider);
       _ref.invalidate(templateLibraryProvider);

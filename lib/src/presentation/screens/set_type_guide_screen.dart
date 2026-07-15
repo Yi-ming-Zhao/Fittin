@@ -5,7 +5,8 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart' show FittinTheme;
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 
 final _setTypeGuideProvider = FutureProvider<String>((ref) async {
   final locale = ref.watch(appLocaleProvider);
@@ -25,7 +26,8 @@ class SetTypeGuideScreen extends ConsumerWidget {
     final guideAsync = ref.watch(_setTypeGuideProvider);
 
     return DashboardPageScaffold(
-      bottomPadding: 100,
+      bottomPadding: 24,
+      safeAreaBottom: true,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.profile,
@@ -43,7 +45,7 @@ class SetTypeGuideScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => DashboardSurfaceCard(
             radius: 32,
-            child: Text(error.toString()),
+            child: Text(strings.loadError(error)),
           ),
         ),
       ],
@@ -74,9 +76,9 @@ class _MarkdownLikeContent extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10),
               child: Text(
                 rawLine.substring(2),
-                style: theme.numStyle(28, theme.fg).copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: theme
+                    .numStyle(28, theme.fg)
+                    .copyWith(fontWeight: FontWeight.w900),
               ),
             )
           else if (rawLine.startsWith('- '))
@@ -108,9 +110,7 @@ class _MarkdownLikeContent extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 rawLine,
-                style: theme.uiStyle(15, theme.fg).copyWith(
-                  height: 1.5,
-                ),
+                style: theme.uiStyle(15, theme.fg).copyWith(height: 1.5),
               ),
             ),
       ],
@@ -126,18 +126,17 @@ class _MarkdownLikeContent extends StatelessWidget {
         children: [
           Text(
             '$numStr.',
-            style: theme.numStyle(20, theme.accent).copyWith(
-              fontWeight: FontWeight.w800,
-            ),
+            style: theme
+                .numStyle(20, theme.accent)
+                .copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               title,
-              style: theme.uiStyle(18, theme.fg).copyWith(
-                fontWeight: FontWeight.w800,
-                height: 1.2,
-              ),
+              style: theme
+                  .uiStyle(18, theme.fg)
+                  .copyWith(fontWeight: FontWeight.w800, height: 1.2),
             ),
           ),
         ],

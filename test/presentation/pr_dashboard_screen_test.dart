@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/presentation/screens/pr_dashboard_screen.dart';
+import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 
 import '../support/in_memory_database_repository.dart';
 
@@ -33,6 +34,26 @@ void main() {
       expect(find.text('Deadlift'), findsOneWidget);
       expect(find.text('Standing Barbell Press'), findsNothing);
 
+      await tester.drag(
+        find.byKey(const ValueKey('pr-lift-page-view')),
+        const Offset(-320, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('selected-chart-lift-label-Bench')),
+        findsOneWidget,
+      );
+
+      await tester.drag(
+        find.byKey(const ValueKey('pr-lift-page-view')),
+        const Offset(-320, 0),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('selected-chart-lift-label-Deadlift')),
+        findsOneWidget,
+      );
+
       await tester.tap(find.text('Actual PR'));
       await tester.pumpAndSettle();
 
@@ -52,26 +73,142 @@ void main() {
       ProviderScope(
         overrides: [
           databaseRepositoryProvider.overrideWithValue(repository),
-          prDashboardDataProvider.overrideWith((ref) => AsyncData(_fakeData())),
+          prDashboardDataProvider.overrideWith(
+            (ref) => AsyncData(_fakeData(chinese: true)),
+          ),
         ],
         child: const MaterialApp(home: PRDashboardScreen()),
       ),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('PR dashboard'), findsOneWidget);
-    expect(find.text('预估 1RM'), findsOneWidget);
+    expect(find.text('PR 仪表盘'), findsOneWidget);
+    expect(find.text('表现'), findsOneWidget);
+    expect(find.text('预估 1RM'), findsWidgets);
+    expect(find.text('深蹲'), findsWidgets);
+    expect(find.text('Competition Squat'), findsNothing);
+    final chart = tester.widget<InteractiveLineChart>(
+      find.byKey(const ValueKey('pr-interactive-chart-深蹲')),
+    );
+    expect(chart.unit, '公斤');
+    expect(find.text('PR dashboard'), findsNothing);
     expect(
       find.text('Peak strength benchmarks, derived and actual.'),
-      findsOneWidget,
+      findsNothing,
     );
+
+    final milestoneDate = find.text('3月28日');
+    await _scrollUntilBuiltAndVisible(
+      tester,
+      target: milestoneDate,
+      scrollable: _verticalScrollable(),
+    );
+    expect(milestoneDate, findsOneWidget);
+    expect(find.text('Mar 28'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
+
+  for (final viewport in const [Size(390, 926), Size(390, 568)]) {
+    testWidgets(
+      'Big Three, chart, and milestones remain reachable at ${viewport.width.toInt()}x${viewport.height.toInt()}',
+      (tester) async {
+        _setViewport(tester, viewport);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              databaseRepositoryProvider.overrideWithValue(
+                InMemoryDatabaseRepository(),
+              ),
+              prDashboardDataProvider.overrideWith(
+                (ref) => AsyncData(_fakeData()),
+              ),
+            ],
+            child: const MaterialApp(home: PRDashboardScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final squatTop = tester
+            .getTopLeft(find.byKey(const ValueKey('strength-card-squat')))
+            .dy;
+        expect(
+          tester
+              .getTopLeft(find.byKey(const ValueKey('strength-card-bench')))
+              .dy,
+          squatTop,
+        );
+        expect(
+          tester
+              .getTopLeft(find.byKey(const ValueKey('strength-card-deadlift')))
+              .dy,
+          squatTop,
+        );
+
+        final verticalScroll = _verticalScrollable();
+        final position = tester.state<ScrollableState>(verticalScroll).position;
+        expect(position.maxScrollExtent, greaterThan(0));
+
+        final chart = find.byKey(const ValueKey('pr-lift-page-view'));
+        await tester.scrollUntilVisible(chart, 220, scrollable: verticalScroll);
+        await tester.pump();
+        final chartRect = tester.getRect(chart);
+        expect(chartRect.top, lessThan(viewport.height));
+        expect(chartRect.bottom, greaterThan(0));
+
+        final milestones = find.byKey(const ValueKey('view-all-milestones'));
+        await tester.scrollUntilVisible(
+          milestones,
+          220,
+          scrollable: verticalScroll,
+        );
+        await tester.pump();
+        final milestoneRect = tester.getRect(milestones);
+        expect(milestoneRect.top, lessThan(viewport.height));
+        expect(milestoneRect.bottom, greaterThan(0));
+        expect(position.pixels, greaterThan(0));
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }
 
-PRDashboardData _fakeData() {
+void _setViewport(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Finder _verticalScrollable() {
+  return find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .first;
+}
+
+Future<void> _scrollUntilBuiltAndVisible(
+  WidgetTester tester, {
+  required Finder target,
+  required Finder scrollable,
+}) async {
+  for (var attempt = 0; attempt < 12; attempt++) {
+    if (target.evaluate().isNotEmpty) {
+      await tester.scrollUntilVisible(target, 220, scrollable: scrollable);
+      await tester.pump();
+      return;
+    }
+    await tester.drag(scrollable, const Offset(0, -260));
+    await tester.pump();
+  }
+}
+
+PRDashboardData _fakeData({bool chinese = false}) {
   final squat = _summary(
     id: 'squat',
-    name: 'Competition Squat',
+    name: chinese ? '深蹲' : 'Competition Squat',
     estimated: [
       _point(DateTime(2026, 3, 1), 127.9),
       _point(DateTime(2026, 3, 16), 139.3),
@@ -79,8 +216,8 @@ PRDashboardData _fakeData() {
     actual: [_point(DateTime(2026, 3, 10), 135.0, actual: true)],
   );
   final bench = _summary(
-    id: 'bench',
-    name: 'Bench Press',
+    id: 'bench_press',
+    name: chinese ? '卧推' : 'Bench Press',
     estimated: [
       _point(DateTime(2026, 3, 1), 79.1),
       _point(DateTime(2026, 3, 20), 82.4),
@@ -89,7 +226,7 @@ PRDashboardData _fakeData() {
   );
   final deadlift = _summary(
     id: 'deadlift',
-    name: 'Deadlift',
+    name: chinese ? '硬拉' : 'Deadlift',
     estimated: [
       _point(DateTime(2026, 3, 1), 145.0),
       _point(DateTime(2026, 3, 22), 150.7),
@@ -98,7 +235,7 @@ PRDashboardData _fakeData() {
   );
   final press = _summary(
     id: 'press',
-    name: 'Standing Barbell Press',
+    name: chinese ? '站姿杠铃推举' : 'Standing Barbell Press',
     estimated: [_point(DateTime(2026, 3, 11), 48.3)],
     actual: [],
   );

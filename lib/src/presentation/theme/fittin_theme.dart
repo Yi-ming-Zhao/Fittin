@@ -1,3 +1,4 @@
+import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -87,12 +88,12 @@ class FittinTheme {
   });
 
   TextStyle displayStyle([double? fontSize, Color? color]) => _font(
-        displayFontFamily,
-        fontSize ?? titleSize,
-        displayWeight,
-        color ?? fg,
-        letterSpacing: displayFontFamily.contains('Mono') ? -0.5 : -1,
-      );
+    displayFontFamily,
+    fontSize ?? titleSize,
+    displayWeight,
+    color ?? fg,
+    letterSpacing: displayFontFamily.contains('Mono') ? -0.5 : -1,
+  );
 
   TextStyle uiStyle([double? fontSize, Color? color, FontWeight? weight]) =>
       _font(
@@ -103,20 +104,15 @@ class FittinTheme {
       );
 
   TextStyle numStyle([double? fontSize, Color? color]) => _font(
-        numFontFamily,
-        fontSize ?? 16,
-        numWeight,
-        color ?? fg,
-        letterSpacing: numFontFamily.contains('Mono') ? -0.5 : -1.5,
-      );
+    numFontFamily,
+    fontSize ?? 16,
+    numWeight,
+    color ?? fg,
+    letterSpacing: numFontFamily.contains('Mono') ? -0.5 : -1.5,
+  );
 
-  TextStyle eyebrowStyle() => _font(
-        uiFontFamily,
-        10,
-        FontWeight.w500,
-        fgMuted,
-        letterSpacing: 1.8,
-      );
+  TextStyle eyebrowStyle() =>
+      _font(uiFontFamily, 10, FontWeight.w500, fgMuted, letterSpacing: 1.8);
 
   TextStyle _font(
     String family,
@@ -125,45 +121,45 @@ class FittinTheme {
     Color color, {
     double letterSpacing = 0,
   }) {
+    late final TextStyle style;
     if (family.contains('Fraunces')) {
-      return GoogleFonts.fraunces(
+      style = GoogleFonts.fraunces(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+    } else if (family.contains('JetBrains Mono')) {
+      style = GoogleFonts.jetBrainsMono(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+    } else if (family.contains('Instrument Serif')) {
+      style = GoogleFonts.instrumentSerif(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+    } else if (family.contains('Instrument Sans')) {
+      style = GoogleFonts.instrumentSans(
+        fontSize: size,
+        fontWeight: weight,
+        color: color,
+        letterSpacing: letterSpacing,
+      );
+    } else {
+      // Default: Inter
+      style = GoogleFonts.inter(
         fontSize: size,
         fontWeight: weight,
         color: color,
         letterSpacing: letterSpacing,
       );
     }
-    if (family.contains('JetBrains Mono')) {
-      return GoogleFonts.jetBrainsMono(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    }
-    if (family.contains('Instrument Serif')) {
-      return GoogleFonts.instrumentSerif(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    }
-    if (family.contains('Instrument Sans')) {
-      return GoogleFonts.instrumentSans(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    }
-    // Default: Inter
-    return GoogleFonts.inter(
-      fontSize: size,
-      fontWeight: weight,
-      color: color,
-      letterSpacing: letterSpacing,
-    );
+    return AppTypography.withCjkFallback(style);
   }
 
   /// Resolve a theme from a direction + optional tweaks

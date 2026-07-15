@@ -2,7 +2,7 @@
 
 Define advanced analytics views that help users interpret consistency, volume distribution, and training load over time.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Consistency Heatmap
 The system MUST provide a training consistency explorer that visualizes completed training sessions by day and lets the user switch between recent weekly, monthly, and active-plan-relative weekly views.
@@ -29,6 +29,17 @@ The consistency explorer MUST:
 - **THEN** the screen groups days into sequential week buckets counted from the active plan start
 - **AND** the labels make it clear which week of the active plan each row or segment represents.
 
+### Requirement: Navigable Historical Calendar
+The consistency experience MUST provide a real calendar with localized month/year heading, weekday labels, complete calendar-week rows, previous/next month navigation, a return-to-current-month action, and recorded-day selection across all available history.
+
+#### Scenario: User navigates beyond the recent month
+- **WHEN** the user moves to an earlier month containing completed workouts
+- **THEN** the calendar renders that calendar month, marks its actual recorded dates, and allows the user to open a marked day's records.
+
+#### Scenario: Month has leading or trailing days
+- **WHEN** a calendar month does not begin on the locale's first weekday or end on its last weekday
+- **THEN** the view renders aligned complete week rows with out-of-month dates visually distinguished rather than truncating the grid.
+
 ### Requirement: Muscle Volume Distribution
 The system MUST visualize weekly set volume per muscle group using horizontal progress bars.
 
@@ -38,11 +49,18 @@ The system MUST visualize weekly set volume per muscle group using horizontal pr
 - **AND** each bar shows the number of completed sets relative to a target (e.g., 9/10 sets).
 
 ### Requirement: Anatomical Load Visualization
-The system SHOULD include an anatomical human body diagram where muscle groups are highlighted based on their relative training load in the current training cycle.
+The system MUST include front and back anatomical human diagrams with individually addressable muscle regions highlighted from real completed-set volume in the selected period.
+
+The visualization MUST provide a localized legend, a no-data state, intensity normalization, and tap details naming the selected muscle and its completed-set count. It MUST distinguish at least chest, shoulders, biceps, triceps, upper back/lats, core, glutes, quadriceps, hamstrings, and calves without presenting a placeholder silhouette as completed data.
 
 #### Scenario: Quick scan of muscle focus
-- **WHEN** the user opens the training load tab
-- **THEN** an anatomical diagram displays variations in highlight intensity on specific muscle groups reflecting the volume distribution.
+- **WHEN** the user opens the training-load tab with completed workout data
+- **THEN** front and back diagrams highlight the exercised muscle regions at relative intensities calculated from actual volume
+- **AND** tapping a highlighted region identifies the muscle and the contributing completed-set count.
+
+#### Scenario: No categorized volume exists
+- **WHEN** the selected period has no completed sets mapped to canonical muscle groups
+- **THEN** the diagram remains anatomically visible but unhighlighted and presents a localized no-data explanation.
 
 ### Requirement: Consistency Day Drilldown
 The system MUST let the user open the concrete training record for a selected day directly from the consistency explorer.
@@ -59,7 +77,7 @@ The advanced analytics surface MUST present its labels, range controls, helper c
 - **WHEN** the app language is set to Chinese
 - **THEN** the advanced analytics screen renders its titles, range selectors, empty states, and consistency guidance in Chinese
 - **AND** switching back to English restores the corresponding English copy without changing the underlying analytics data.
-## Requirements
+
 ### Requirement: Editable Day Drilldown Records
 The system MUST let the user open a recorded day from the analytics drilldown, choose a single workout log from that day, and edit it without breaking the date-based navigation flow.
 
@@ -67,4 +85,3 @@ The system MUST let the user open a recorded day from the analytics drilldown, c
 - **WHEN** the user opens a recorded day from analytics and edits one workout log from that day
 - **THEN** returning to the day detail shows the corrected workout values
 - **AND** the analytics surfaces that derive from the edited log use the updated data on refresh.
-

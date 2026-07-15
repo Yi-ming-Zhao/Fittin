@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
@@ -86,8 +87,44 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Competition Squat'), findsWidgets);
+    expect(find.text('Squat'), findsWidgets);
+    expect(find.text('Competition Squat'), findsNothing);
     expect(find.text('Squat & Pull'), findsOneWidget);
+  });
+
+  testWidgets('dashboard hero uses canonical Chinese exercise and UI labels', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+    await repository.saveAppLocale(AppLocale.zh);
+    final container = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(repository),
+        todayWorkoutGatewayProvider.overrideWithValue(
+          _SwitchableTodayWorkoutGateway(
+            summary: fakeTodayWorkoutSummary,
+            template: fakePlanTemplate,
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: TodayWorkoutHeroCard())),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.text('下一次训练'), findsOneWidget);
+    expect(find.text('接下来'), findsOneWidget);
+    expect(find.text('深蹲'), findsWidgets);
+    expect(find.text('Next session'), findsNothing);
+    expect(find.text('Up next'), findsNothing);
+    expect(find.text('Squat'), findsNothing);
   });
 
   testWidgets('rapid taps open only one active session route', (

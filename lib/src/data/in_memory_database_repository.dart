@@ -12,6 +12,7 @@ import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 
@@ -390,6 +391,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   Future<StoredTrainingInstance> activateTemplate(
     String templateId, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
     String? ownerUserId,
   }) async {
     await ensureDefaultProgramSeeded();
@@ -424,10 +426,15 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       currentWorkoutIndex: 0,
       ownerUserId: ownerUserId,
       trainingMaxProfile: trainingMaxProfile,
-      engineState: buildInitialEngineState(template),
+      engineState: engineStateWithPlanStartLoadReview(
+        buildInitialEngineState(template),
+        planStartLoadReview,
+      ),
       states: buildStarterStatesForTemplate(
         template,
         trainingMaxProfile: trainingMaxProfile,
+        startingLoadOverridesKg:
+            planStartLoadReview?.confirmedOverridesKg ?? const {},
       ),
     );
     await saveInstance(instance);
