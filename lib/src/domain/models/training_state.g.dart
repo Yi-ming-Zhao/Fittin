@@ -99,6 +99,7 @@ _$WorkoutSessionStateImpl _$$WorkoutSessionStateImplFromJson(
       instanceId: json['instanceId'] as String,
       templateId: json['templateId'] as String,
       workoutId: json['workoutId'] as String,
+      scheduleToken: json['scheduleToken'] as String? ?? '',
       workoutName: json['workoutName'] as String,
       dayLabel: json['dayLabel'] as String,
       estimatedDurationMinutes:
@@ -116,6 +117,7 @@ Map<String, dynamic> _$$WorkoutSessionStateImplToJson(
       'instanceId': instance.instanceId,
       'templateId': instance.templateId,
       'workoutId': instance.workoutId,
+      'scheduleToken': instance.scheduleToken,
       'workoutName': instance.workoutName,
       'dayLabel': instance.dayLabel,
       'estimatedDurationMinutes': instance.estimatedDurationMinutes,

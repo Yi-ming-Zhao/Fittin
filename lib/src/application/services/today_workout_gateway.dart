@@ -4,6 +4,7 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/program_engine.dart';
+import 'package:uuid/uuid.dart';
 
 abstract class TodayWorkoutGateway {
   Future<PlanTemplate> loadActiveTemplate();
@@ -73,29 +74,53 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   @override
   Future<void> concludeWorkoutSession(WorkoutSessionState session) async {
     final context = await _loadContext();
-    final result =
-        ProgramEngineDispatcher.resolve(context.template.engineFamily).conclude(
-          template: context.template,
-          instance: context.instance,
-          session: session,
-          stateByExerciseId: context.stateByExerciseId,
-        );
+    final engine = ProgramEngineDispatcher.resolve(
+      context.template.engineFamily,
+    );
+    final scheduledSession = engine.buildSession(
+      template: context.template,
+      instance: context.instance,
+      workout: context.workout,
+      stateByExerciseId: context.stateByExerciseId,
+    );
+    if (!workoutSessionMatchesSchedule(session, scheduledSession)) {
+      throw StateError(
+        'This workout is no longer the active scheduled session. '
+        'Return Home and open the current workout.',
+      );
+    }
+
+    final result = engine.conclude(
+      template: context.template,
+      instance: context.instance,
+      session: session,
+      stateByExerciseId: context.stateByExerciseId,
+    );
 
     final postInstance = context.instance.copyWith(
       currentWorkoutIndex: result.nextWorkoutIndex,
       engineState: result.updatedEngineState,
       states: result.updatedStates,
     );
+    final logId = const Uuid().v5(
+      Namespace.url.value,
+      'fittin:workout-conclusion:${context.instance.instanceId}:'
+      '${scheduledSession.scheduleToken}',
+    );
+    final existingLog = await _repository.fetchWorkoutLogById(
+      logId,
+      ownerUserId: ownerUserId,
+    );
+    final completedAt = existingLog?.completedAt ?? DateTime.now();
 
     await _repository.logWorkout(
       WorkoutLog(
         instanceId: context.instance.instanceId,
         workoutId: session.workoutId,
-        logId:
-            '${context.instance.instanceId}_${session.workoutId}_${DateTime.now().millisecondsSinceEpoch}',
+        logId: logId,
         workoutName: session.workoutName,
         dayLabel: session.dayLabel,
-        completedAt: DateTime.now(),
+        completedAt: completedAt,
         exercises: result.logs,
         preConclusionSnapshot: _snapshotFromInstance(context.instance),
         postConclusionSnapshot: _snapshotFromInstance(postInstance),
@@ -141,6 +166,57 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       stateByExerciseId: stateByExerciseId,
     );
   }
+}
+
+bool workoutSessionMatchesSchedule(
+  WorkoutSessionState candidate,
+  WorkoutSessionState scheduled,
+) {
+  if (candidate.instanceId != scheduled.instanceId ||
+      candidate.templateId != scheduled.templateId ||
+      candidate.workoutId != scheduled.workoutId) {
+    return false;
+  }
+
+  if (candidate.scheduleToken.isNotEmpty &&
+      scheduled.scheduleToken.isNotEmpty &&
+      candidate.scheduleToken != scheduled.scheduleToken) {
+    return false;
+  }
+
+  if (candidate.exercises.length != scheduled.exercises.length) {
+    return false;
+  }
+  for (
+    var exerciseIndex = 0;
+    exerciseIndex < candidate.exercises.length;
+    exerciseIndex++
+  ) {
+    final candidateExercise = candidate.exercises[exerciseIndex];
+    final scheduledExercise = scheduled.exercises[exerciseIndex];
+    if (candidateExercise.id != scheduledExercise.id ||
+        candidateExercise.stageId != scheduledExercise.stageId ||
+        candidateExercise.sets.length != scheduledExercise.sets.length) {
+      return false;
+    }
+    for (
+      var setIndex = 0;
+      setIndex < candidateExercise.sets.length;
+      setIndex++
+    ) {
+      final candidateSet = candidateExercise.sets[setIndex];
+      final scheduledSet = scheduledExercise.sets[setIndex];
+      if (candidateSet.id != scheduledSet.id ||
+          candidateSet.role != scheduledSet.role ||
+          candidateSet.targetReps != scheduledSet.targetReps ||
+          candidateSet.targetWeight != scheduledSet.targetWeight ||
+          candidateSet.targetRpe != scheduledSet.targetRpe ||
+          candidateSet.isAmrap != scheduledSet.isAmrap) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 WorkoutProgressionSnapshot _snapshotFromInstance(

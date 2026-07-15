@@ -119,6 +119,182 @@ void main() {
     expect(workout.exercises.first.sets[1].isCompleted, false);
   });
 
+  testWidgets('short high velocity fling moves to the next set', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _flingCard(tester, const Offset(-28, 0));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.currentSetIndex, 1);
+    expect(harness.notifier.selectSetCalls, 1);
+  });
+
+  testWidgets('short high velocity fling moves to the previous set', (
+    WidgetTester tester,
+  ) async {
+    final firstExercise = fakeWorkoutSessionState.exercises.first;
+    final harness = await _pumpTrackedCardSession(
+      tester,
+      session: fakeWorkoutSessionState.copyWith(
+        exercises: [
+          firstExercise.copyWith(currentSetIndex: 1),
+          ...fakeWorkoutSessionState.exercises.skip(1),
+        ],
+      ),
+    );
+
+    await _flingCard(tester, const Offset(28, 0));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.currentSetIndex, 0);
+    expect(harness.notifier.selectSetCalls, 1);
+  });
+
+  testWidgets('short high velocity fling records the current set once', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _flingCard(tester, const Offset(0, -28));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 450));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.sets.first.isSkipped, false);
+    expect(harness.notifier.completeSetCalls, 1);
+  });
+
+  testWidgets('short high velocity fling skips the current set once', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _flingCard(tester, const Offset(0, 28));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.sets.first.isSkipped, true);
+    expect(workout.exercises.first.sets.first.isCompleted, false);
+    expect(harness.notifier.cancelSetCalls, 1);
+  });
+
+  testWidgets('short drag held before release is not treated as a fling', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+    final card = find.byKey(const ValueKey('active-set-card'));
+    final gesture = await tester.startGesture(tester.getCenter(card));
+    await gesture.moveBy(
+      const Offset(0, -28),
+      timeStamp: const Duration(milliseconds: 10),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    await gesture.up(timeStamp: const Duration(milliseconds: 510));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.sets.first.isCompleted, false);
+    expect(workout.exercises.first.currentSetIndex, 0);
+    expect(harness.notifier.completeSetCalls, 0);
+  });
+
+  testWidgets('locked vertical drag is not replaced by release velocity', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+    final card = find.byKey(const ValueKey('active-set-card'));
+    final gesture = await tester.startGesture(tester.getCenter(card));
+    await gesture.moveBy(
+      const Offset(0, -30),
+      timeStamp: const Duration(milliseconds: 5),
+    );
+    await gesture.moveBy(
+      const Offset(0, -20),
+      timeStamp: const Duration(milliseconds: 10),
+    );
+    await gesture.moveBy(
+      const Offset(100, 0),
+      timeStamp: const Duration(milliseconds: 20),
+    );
+    await gesture.up(timeStamp: const Duration(milliseconds: 21));
+    await tester.pump(const Duration(milliseconds: 220));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.currentSetIndex, 1);
+    expect(harness.notifier.completeSetCalls, 1);
+    expect(harness.notifier.selectSetCalls, 0);
+  });
+
+  testWidgets('up fling commits local completion within 200 milliseconds', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _dragCardWithoutSettling(tester, const Offset(0, -64));
+    await tester.pump(const Duration(milliseconds: 200));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.currentSetIndex, 1);
+    expect(harness.notifier.completeSetCalls, 1);
+  });
+
+  testWidgets('restarting completion animation does not drop swipe commands', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _dragCardWithoutSettling(tester, const Offset(0, -64));
+    await tester.pump(const Duration(milliseconds: 200));
+    await _dragCardWithoutSettling(tester, const Offset(0, -64));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 450));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(harness.notifier.completeSetCalls, 2);
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.sets[1].isCompleted, true);
+  });
+
+  testWidgets('one swipe dispatches exactly one completion command', (
+    WidgetTester tester,
+  ) async {
+    final harness = await _pumpTrackedCardSession(tester);
+
+    await _dragCardWithoutSettling(tester, const Offset(0, -64));
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(milliseconds: 450));
+
+    final workout = harness.container
+        .read(activeSessionProvider)
+        .activeWorkout!;
+    expect(harness.notifier.completeSetCalls, 1);
+    expect(workout.exercises.first.sets.first.isCompleted, true);
+    expect(workout.exercises.first.sets[1].isCompleted, false);
+  });
+
   testWidgets('card controls remain tappable with four-way pan gestures', (
     WidgetTester tester,
   ) async {
@@ -235,6 +411,103 @@ Future<void> _swipeCard(WidgetTester tester, Finder card, Offset offset) async {
     EnginePhase.sendSemanticsUpdate,
     const Duration(seconds: 3),
   );
+}
+
+Future<void> _flingCard(WidgetTester tester, Offset offset) {
+  return tester.fling(
+    find.byKey(const ValueKey('active-set-card')),
+    offset,
+    2400,
+  );
+}
+
+Future<void> _dragCardWithoutSettling(
+  WidgetTester tester,
+  Offset offset,
+) async {
+  final card = find.byKey(const ValueKey('active-set-card'));
+  final gesture = await tester.startGesture(tester.getCenter(card));
+  await gesture.moveBy(offset);
+  await tester.pump();
+  await gesture.up();
+}
+
+Future<_TrackedCardHarness> _pumpTrackedCardSession(
+  WidgetTester tester, {
+  WorkoutSessionState? session,
+}) async {
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final repository = InMemoryDatabaseRepository();
+  final container = ProviderContainer(
+    overrides: [
+      workoutRecordingModeProvider.overrideWith(
+        (ref) => WorkoutRecordingModeNotifier(
+          initialMode: WorkoutRecordingMode.card,
+          loadPersisted: false,
+        ),
+      ),
+      databaseRepositoryProvider.overrideWithValue(repository),
+      todayWorkoutGatewayProvider.overrideWithValue(
+        FakeTodayWorkoutGateway(session: session),
+      ),
+      activeSessionProvider.overrideWith(_TrackingActiveSessionNotifier.new),
+    ],
+  );
+  addTearDown(container.dispose);
+  await container.read(activeSessionProvider.notifier).startOrResumeSession();
+
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: const MaterialApp(home: ActiveSessionScreen()),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
+  expect(find.byKey(const ValueKey('active-set-card')), findsOneWidget);
+
+  return _TrackedCardHarness(
+    container,
+    container.read(activeSessionProvider.notifier)
+        as _TrackingActiveSessionNotifier,
+  );
+}
+
+class _TrackedCardHarness {
+  const _TrackedCardHarness(this.container, this.notifier);
+
+  final ProviderContainer container;
+  final _TrackingActiveSessionNotifier notifier;
+}
+
+class _TrackingActiveSessionNotifier extends ActiveSessionNotifier {
+  _TrackingActiveSessionNotifier(super.ref);
+
+  int selectSetCalls = 0;
+  int completeSetCalls = 0;
+  int cancelSetCalls = 0;
+
+  @override
+  void selectSet(int setIndex) {
+    selectSetCalls += 1;
+    super.selectSet(setIndex);
+  }
+
+  @override
+  void completeSet(int setIndex) {
+    completeSetCalls += 1;
+    super.completeSet(setIndex);
+  }
+
+  @override
+  void cancelSet(int setIndex) {
+    cancelSetCalls += 1;
+    super.cancelSet(setIndex);
+  }
 }
 
 Future<ProviderContainer> _sessionContainer(

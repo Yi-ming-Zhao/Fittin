@@ -40,7 +40,6 @@ final activeTemplateProvider = FutureProvider<PlanTemplate>((ref) async {
 final activeSessionProvider =
     StateNotifierProvider<ActiveSessionNotifier, SessionState>((ref) {
       ref.watch(currentUserIdProvider);
-      ref.watch(syncRefreshProvider);
       return ActiveSessionNotifier(ref);
     });
 
@@ -72,33 +71,71 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
   final Ref _ref;
   Future<void>? _restoreInFlight;
+  Future<void>? _startInFlight;
+  Future<bool>? _conclusionInFlight;
+  Future<void> _draftWriteTail = Future<void>.value();
+  bool _draftWritesOpen = true;
+  bool _restoreFailed = false;
 
-  Future<void> startOrResumeSession() async {
-    await _restoreInFlight;
-    if (state.activeWorkout != null) {
-      return;
+  Future<void> startOrResumeSession() {
+    final existing = _startInFlight;
+    if (existing != null) {
+      return existing;
     }
+    late final Future<void> operation;
+    operation = _startOrResumeSession().whenComplete(() {
+      if (identical(_startInFlight, operation)) {
+        _startInFlight = null;
+      }
+    });
+    _startInFlight = operation;
+    return operation;
+  }
 
-    state = state.copyWith(isLoading: true, clearError: true);
+  Future<void> _startOrResumeSession() async {
+    await _restoreInFlight;
+    var previousWorkout = state.activeWorkout;
 
     try {
-      final repository = _ref.read(databaseRepositoryProvider);
-      final ownerUserId = _ref.read(currentUserIdProvider);
-      var session = state.activeWorkout;
-      session ??= await _ref
+      if (_restoreFailed && previousWorkout == null) {
+        await _restorePersistedSession(background: false);
+        previousWorkout = state.activeWorkout;
+      }
+      state = state.copyWith(isLoading: true, clearError: true);
+      final scheduledSession = await _ref
           .read(todayWorkoutGatewayProvider)
           .loadTodayWorkoutSession();
-      unawaited(
-        repository.saveActiveSessionDraft(session, ownerUserId: ownerUserId),
-      );
-      state = SessionState(activeWorkout: session);
+      if (previousWorkout != null &&
+          workoutSessionMatchesSchedule(previousWorkout, scheduledSession)) {
+        final resumedWorkout = previousWorkout.scheduleToken.isEmpty
+            ? previousWorkout.copyWith(
+                scheduleToken: scheduledSession.scheduleToken,
+              )
+            : previousWorkout;
+        state = SessionState(activeWorkout: resumedWorkout);
+        if (!identical(resumedWorkout, previousWorkout)) {
+          _queueDraftSave(resumedWorkout);
+        }
+        return;
+      }
+
+      if (previousWorkout != null &&
+          previousWorkout.instanceId == scheduledSession.instanceId) {
+        await _discardDraft(previousWorkout.instanceId);
+      }
+      _draftWritesOpen = true;
+      _setActiveWorkout(scheduledSession, preserveLoading: false);
     } catch (error) {
-      state = SessionState(errorMessage: error.toString());
+      state = SessionState(
+        activeWorkout: previousWorkout,
+        errorMessage: error.toString(),
+      );
     }
   }
 
   Future<void> _restorePersistedSession({required bool background}) async {
     if (state.activeWorkout != null) {
+      _restoreFailed = false;
       return;
     }
     if (!background) {
@@ -107,6 +144,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
     try {
       final session = await _loadPersistedSession();
+      _restoreFailed = false;
       if (session == null || !mounted) {
         if (!background) {
           state = state.copyWith(isLoading: false);
@@ -115,10 +153,12 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       }
       state = SessionState(activeWorkout: session);
     } catch (error) {
+      _restoreFailed = true;
       if (!mounted || background) {
         return;
       }
       state = SessionState(errorMessage: error.toString());
+      rethrow;
     }
   }
 
@@ -139,7 +179,17 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     if (persistedDraft == null) {
       return null;
     }
-    if (persistedDraft.instanceId == activeInstance.instanceId) {
+    final scheduledSession = await _ref
+        .read(todayWorkoutGatewayProvider)
+        .loadTodayWorkoutSession();
+    if (workoutSessionMatchesSchedule(persistedDraft, scheduledSession)) {
+      if (persistedDraft.scheduleToken.isEmpty) {
+        final upgradedDraft = persistedDraft.copyWith(
+          scheduleToken: scheduledSession.scheduleToken,
+        );
+        _queueDraftSave(upgradedDraft);
+        return upgradedDraft;
+      }
       return persistedDraft;
     }
 
@@ -152,7 +202,10 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
   void selectExercise(int index) {
     final workout = state.activeWorkout;
-    if (workout == null || index < 0 || index >= workout.exercises.length) {
+    if (!_acceptsMutations ||
+        workout == null ||
+        index < 0 ||
+        index >= workout.exercises.length) {
       return;
     }
 
@@ -175,6 +228,9 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   }
 
   void selectSet(int setIndex) {
+    if (!_acceptsMutations) {
+      return;
+    }
     _updateCurrentExercise(
       (exercise) => exercise.copyWith(
         currentSetIndex: _clampSetIndex(setIndex, exercise.sets.length),
@@ -193,7 +249,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
   void updateWeight(int setIndex, double newWeight) {
     final workout = state.activeWorkout;
-    if (workout == null) {
+    if (!_acceptsMutations || workout == null) {
       return;
     }
 
@@ -261,7 +317,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
   void _resolveSet(int setIndex, {required bool completed}) {
     final workout = state.activeWorkout;
-    if (workout == null) {
+    if (!_acceptsMutations || workout == null) {
       return;
     }
 
@@ -322,18 +378,37 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     );
   }
 
-  Future<bool> concludeSession() async {
+  Future<bool> concludeSession() {
+    final existing = _conclusionInFlight;
+    if (existing != null) {
+      return existing;
+    }
+    late final Future<bool> operation;
+    operation = _concludeSession().whenComplete(() {
+      if (identical(_conclusionInFlight, operation)) {
+        _conclusionInFlight = null;
+      }
+    });
+    _conclusionInFlight = operation;
+    return operation;
+  }
+
+  Future<bool> _concludeSession() async {
     final workout = state.activeWorkout;
     if (workout == null) {
       return false;
     }
 
+    _draftWritesOpen = false;
     state = state.copyWith(isLoading: true, clearError: true);
+    var progressionCommitted = false;
 
     try {
+      await _draftWriteTail;
       await _ref
           .read(todayWorkoutGatewayProvider)
           .concludeWorkoutSession(workout);
+      progressionCommitted = true;
       final ownerUserId = _ref.read(currentUserIdProvider);
       await _ref
           .read(databaseRepositoryProvider)
@@ -351,10 +426,17 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       }
       return true;
     } catch (error) {
-      state = SessionState(
-        activeWorkout: workout,
-        errorMessage: error.toString(),
-      );
+      if (progressionCommitted) {
+        state = SessionState(errorMessage: error.toString());
+        _ref.invalidate(todayWorkoutSummaryProvider);
+      } else {
+        _draftWritesOpen = true;
+        state = SessionState(
+          activeWorkout: workout,
+          errorMessage: error.toString(),
+        );
+        _queueDraftSave(workout);
+      }
       return false;
     }
   }
@@ -368,7 +450,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     SessionSetState Function(SessionSetState current) update,
   ) {
     final workout = state.activeWorkout;
-    if (workout == null) {
+    if (!_acceptsMutations || workout == null) {
       return;
     }
 
@@ -396,7 +478,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     ExerciseSessionState Function(ExerciseSessionState exercise) update,
   ) {
     final workout = state.activeWorkout;
-    if (workout == null) {
+    if (!_acceptsMutations || workout == null) {
       return;
     }
     final exerciseIndex = workout.currentExerciseIndex;
@@ -417,13 +499,36 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
       activeWorkout: workout,
       clearError: true,
     );
-    final ownerUserId = _ref.read(currentUserIdProvider);
-    unawaited(
-      _ref
-          .read(databaseRepositoryProvider)
-          .saveActiveSessionDraft(workout, ownerUserId: ownerUserId),
-    );
+    _queueDraftSave(workout);
   }
+
+  void _queueDraftSave(WorkoutSessionState workout) {
+    if (!_draftWritesOpen) {
+      return;
+    }
+    final ownerUserId = _ref.read(currentUserIdProvider);
+    final repository = _ref.read(databaseRepositoryProvider);
+    final write = _draftWriteTail.then(
+      (_) =>
+          repository.saveActiveSessionDraft(workout, ownerUserId: ownerUserId),
+    );
+    _draftWriteTail = write.catchError((Object _, StackTrace __) {});
+  }
+
+  Future<void> _discardDraft(String instanceId) async {
+    _draftWritesOpen = false;
+    try {
+      await _draftWriteTail;
+      final ownerUserId = _ref.read(currentUserIdProvider);
+      await _ref
+          .read(databaseRepositoryProvider)
+          .clearActiveSessionDraft(instanceId, ownerUserId: ownerUserId);
+    } finally {
+      _draftWritesOpen = true;
+    }
+  }
+
+  bool get _acceptsMutations => !state.isLoading && _conclusionInFlight == null;
 
   ExerciseSessionState _withResolvedCurrentSet(ExerciseSessionState exercise) {
     if (exercise.sets.isEmpty) {

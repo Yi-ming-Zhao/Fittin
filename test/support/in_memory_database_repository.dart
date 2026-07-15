@@ -427,7 +427,14 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
                 '${logRecord.instanceId}_${logRecord.workoutId}_${logRecord.completedAt.millisecondsSinceEpoch}',
           )
         : logRecord;
-    _workoutLogs.add(resolvedLog);
+    final existingIndex = _workoutLogs.indexWhere(
+      (log) => log.logId == resolvedLog.logId,
+    );
+    if (existingIndex == -1) {
+      _workoutLogs.add(resolvedLog);
+    } else {
+      _workoutLogs[existingIndex] = resolvedLog;
+    }
   }
 
   @override

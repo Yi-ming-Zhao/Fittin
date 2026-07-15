@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +89,80 @@ void main() {
     expect(find.text('Competition Squat'), findsWidgets);
     expect(find.text('Squat & Pull'), findsOneWidget);
   });
+
+  testWidgets('rapid taps open only one active session route', (
+    WidgetTester tester,
+  ) async {
+    final gateway = _DelayedTodayWorkoutGateway(
+      summary: fakeTodayWorkoutSummary,
+      template: fakePlanTemplate,
+    );
+    final observer = _TrackingNavigatorObserver();
+    final container = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(
+          InMemoryDatabaseRepository(),
+        ),
+        todayWorkoutGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          navigatorObservers: [observer],
+          home: const Scaffold(body: TodayWorkoutHeroCard()),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.text('Start'));
+    await tester.tap(find.text('Start'));
+    await tester.pump();
+
+    expect(gateway.sessionLoadCalls, 1);
+    gateway.completeSession();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(observer.pushCount, 2);
+  });
+}
+
+class _TrackingNavigatorObserver extends NavigatorObserver {
+  int pushCount = 0;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    pushCount += 1;
+    super.didPush(route, previousRoute);
+  }
+}
+
+class _DelayedTodayWorkoutGateway extends _SwitchableTodayWorkoutGateway {
+  _DelayedTodayWorkoutGateway({
+    required super.summary,
+    required super.template,
+  });
+
+  final Completer<WorkoutSessionState> _session = Completer();
+  int sessionLoadCalls = 0;
+
+  @override
+  Future<WorkoutSessionState> loadTodayWorkoutSession() {
+    sessionLoadCalls += 1;
+    return _session.future;
+  }
+
+  void completeSession() {
+    if (!_session.isCompleted) {
+      _session.complete(fakeWorkoutSessionState);
+    }
+  }
 }
 
 class _SwitchableTodayWorkoutGateway implements TodayWorkoutGateway {

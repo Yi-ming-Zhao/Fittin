@@ -445,5 +445,31 @@ void main() {
         null,
       ]);
     });
+
+    test('schedule token advances when a fixed workout cycle completes', () {
+      const state = TrainingState(
+        workoutId: 'day1',
+        exerciseId: 'squat-day1',
+        exerciseName: 'Squat',
+        baseWeight: 100,
+        currentStageId: 'fixed-stage',
+      );
+      final before = StoredTrainingInstance(
+        instanceId: 'fixed-cycle-instance',
+        templateId: 'fixed-cycle-template',
+        currentWorkoutIndex: 0,
+        states: const [state],
+      );
+      final after = before.copyWith(
+        states: [
+          state.copyWith(history: const ['day1']),
+        ],
+      );
+
+      expect(
+        buildWorkoutScheduleToken(after),
+        isNot(buildWorkoutScheduleToken(before)),
+      );
+    });
   });
 }

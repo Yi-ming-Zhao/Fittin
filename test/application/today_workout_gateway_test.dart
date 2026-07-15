@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/rule_engine.dart';
 
+import '../support/fake_today_workout_gateway.dart';
 import '../support/in_memory_database_repository.dart';
 
 class _TrackingDatabaseRepository extends InMemoryDatabaseRepository {
@@ -20,6 +21,23 @@ class _TrackingDatabaseRepository extends InMemoryDatabaseRepository {
     String? deviceId,
   }) async {
     lastInstanceSyncStatus = syncStatus;
+    await super.saveInstance(data, syncStatus: syncStatus, deviceId: deviceId);
+  }
+}
+
+class _FailOnceInstanceSaveRepository extends InMemoryDatabaseRepository {
+  bool failNextInstanceSave = false;
+
+  @override
+  Future<void> saveInstance(
+    StoredTrainingInstance data, {
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    if (failNextInstanceSave) {
+      failNextInstanceSave = false;
+      throw StateError('temporary instance save failure');
+    }
     await super.saveInstance(data, syncStatus: syncStatus, deviceId: deviceId);
   }
 }
@@ -162,11 +180,7 @@ void main() {
         exercises: [
           firstExercise.copyWith(
             sets: [
-              firstSet.copyWith(
-                targetRpe: 8.0,
-                completedRpe: null,
-                isCompleted: true,
-              ),
+              firstSet.copyWith(completedRpe: 8.0, isCompleted: true),
               ...firstExercise.sets.skip(1),
             ],
           ),
@@ -193,4 +207,117 @@ void main() {
       expect(logs.single.exercises.first.sets.first.completedRpe, 8.0);
     },
   );
+
+  test(
+    'conclusion rejects a session after the active workout advanced',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      final template = await GzclpSeed.loadTemplate();
+      final originalInstance = StoredTrainingInstance(
+        instanceId: 'stale-session-instance',
+        templateId: template.id,
+        currentWorkoutIndex: 0,
+        states: GzclpSeed.buildStarterStates(template),
+      );
+      await repository.saveTemplate(template, isBuiltIn: true);
+      await repository.saveInstance(originalInstance);
+      await repository.saveActiveInstanceId(originalInstance.instanceId);
+      final gateway = DatabaseTodayWorkoutGateway(repository);
+      final staleSession = await gateway.loadTodayWorkoutSession();
+
+      await repository.saveInstance(
+        originalInstance.copyWith(currentWorkoutIndex: 1),
+      );
+
+      await expectLater(
+        gateway.concludeWorkoutSession(staleSession),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        (await repository.fetchInstance(
+          originalInstance.instanceId,
+        ))?.currentWorkoutIndex,
+        1,
+      );
+      expect(
+        await repository.fetchWorkoutLogs(originalInstance.instanceId),
+        isEmpty,
+      );
+    },
+  );
+
+  test('schedule matching still validates prescription for equal tokens', () {
+    final changedPrescription = fakeWorkoutSessionState.copyWith(
+      exercises: [
+        fakeWorkoutSessionState.exercises.first.copyWith(
+          sets: [
+            fakeWorkoutSessionState.exercises.first.sets.first.copyWith(
+              targetReps:
+                  fakeWorkoutSessionState
+                      .exercises
+                      .first
+                      .sets
+                      .first
+                      .targetReps +
+                  1,
+            ),
+            ...fakeWorkoutSessionState.exercises.first.sets.skip(1),
+          ],
+        ),
+        ...fakeWorkoutSessionState.exercises.skip(1),
+      ],
+    );
+
+    expect(
+      workoutSessionMatchesSchedule(
+        fakeWorkoutSessionState,
+        changedPrescription,
+      ),
+      isFalse,
+    );
+  });
+
+  test('conclusion retry upserts one deterministic workout log', () async {
+    final repository = _FailOnceInstanceSaveRepository();
+    final template = await GzclpSeed.loadTemplate();
+    final instance = StoredTrainingInstance(
+      instanceId: 'retry-conclusion-instance',
+      templateId: template.id,
+      currentWorkoutIndex: 0,
+      states: GzclpSeed.buildStarterStates(template),
+    );
+    await repository.saveTemplate(template, isBuiltIn: true);
+    await repository.saveInstance(instance);
+    await repository.saveActiveInstanceId(instance.instanceId);
+    final gateway = DatabaseTodayWorkoutGateway(repository);
+    final session = await gateway.loadTodayWorkoutSession();
+    repository.failNextInstanceSave = true;
+
+    await expectLater(
+      gateway.concludeWorkoutSession(session),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      await repository.fetchWorkoutLogs(instance.instanceId),
+      hasLength(1),
+    );
+    expect(
+      (await repository.fetchInstance(
+        instance.instanceId,
+      ))?.currentWorkoutIndex,
+      0,
+    );
+
+    await gateway.concludeWorkoutSession(session);
+
+    final logs = await repository.fetchWorkoutLogs(instance.instanceId);
+    expect(logs, hasLength(1));
+    expect(logs.single.logId, isNotEmpty);
+    expect(
+      (await repository.fetchInstance(
+        instance.instanceId,
+      ))?.currentWorkoutIndex,
+      1,
+    );
+  });
 }

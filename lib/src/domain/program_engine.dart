@@ -18,6 +18,31 @@ class ProgramEngineDispatcher {
   }
 }
 
+String buildWorkoutScheduleToken(StoredTrainingInstance instance) {
+  final engineEntries = instance.engineState.entries.toList()
+    ..sort((left, right) => left.key.compareTo(right.key));
+  final stateEntries = [...instance.states]
+    ..sort((left, right) {
+      final workoutComparison = left.workoutId.compareTo(right.workoutId);
+      return workoutComparison != 0
+          ? workoutComparison
+          : left.exerciseId.compareTo(right.exerciseId);
+    });
+  final trainingMaxEntries = instance.trainingMaxProfile.values.entries.toList()
+    ..sort((left, right) => left.key.compareTo(right.key));
+
+  return [
+    'workout=${instance.currentWorkoutIndex}',
+    for (final entry in engineEntries) '${entry.key}=${entry.value}',
+    for (final state in stateEntries)
+      '${state.workoutId}:${state.exerciseId}:${state.currentStageId}:'
+          '${state.baseWeight.toStringAsFixed(6)}:'
+          '${state.history.length}:${state.history.join(',')}',
+    for (final entry in trainingMaxEntries)
+      'tm:${entry.key}=${entry.value.toStringAsFixed(6)}',
+  ].join('|');
+}
+
 abstract class ProgramEngine {
   const ProgramEngine();
 
@@ -50,6 +75,7 @@ class LinearProgramEngine extends ProgramEngine {
       instanceId: instance.instanceId,
       templateId: template.id,
       workoutId: workout.id,
+      scheduleToken: buildWorkoutScheduleToken(instance),
       workoutName: workout.name,
       dayLabel: workout.dayLabel,
       estimatedDurationMinutes: workout.estimatedDurationMinutes,
@@ -120,6 +146,7 @@ class PeriodizedProgramEngine extends ProgramEngine {
       instanceId: instance.instanceId,
       templateId: template.id,
       workoutId: workout.id,
+      scheduleToken: buildWorkoutScheduleToken(instance),
       workoutName: workout.name,
       dayLabel: workout.dayLabel,
       estimatedDurationMinutes: workout.estimatedDurationMinutes,

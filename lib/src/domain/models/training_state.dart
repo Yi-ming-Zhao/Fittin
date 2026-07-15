@@ -64,6 +64,7 @@ class WorkoutSessionState with _$WorkoutSessionState {
     required String instanceId,
     required String templateId,
     required String workoutId,
+    @Default('') String scheduleToken,
     required String workoutName,
     required String dayLabel,
     required int estimatedDurationMinutes,

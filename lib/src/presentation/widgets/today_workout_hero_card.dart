@@ -14,13 +14,21 @@ import 'fittin_primitives.dart';
 import '../theme/fittin_theme.dart' show FittinTheme, FittinCardStyle;
 import '../../application/fittin_theme_provider.dart';
 
-class TodayWorkoutHeroCard extends ConsumerWidget {
+class TodayWorkoutHeroCard extends ConsumerStatefulWidget {
   const TodayWorkoutHeroCard({super.key, this.compact = false});
 
   final bool compact;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TodayWorkoutHeroCard> createState() =>
+      _TodayWorkoutHeroCardState();
+}
+
+class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
+  bool _openingSession = false;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = ref.watch(resolvedFittinThemeProvider);
     final sessionState = ref.watch(activeSessionProvider);
     final summaryAsync = ref.watch(todayWorkoutSummaryProvider);
@@ -38,45 +46,11 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
           ),
           summary: _localizedSummary(summary, template, ref),
           isResuming: sessionState.activeWorkout != null,
-          isLoading: sessionState.isLoading,
-          compact: compact,
-          onTap: () async {
-            await ref
-                .read(activeSessionProvider.notifier)
-                .startOrResumeSession();
-            if (!context.mounted) return;
-            final latestState = ref.read(activeSessionProvider);
-            if (latestState.errorMessage != null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(latestState.errorMessage!)),
-              );
-              return;
-            }
-            Navigator.of(context).push(
-              PageRouteBuilder(
-                transitionDuration: const Duration(milliseconds: 450),
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    const ActiveSessionScreen(),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                      final slideAnimation =
-                          Tween<Offset>(
-                            begin: const Offset(0.15, 0.0),
-                            end: Offset.zero,
-                          ).animate(
-                            CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutQuart,
-                            ),
-                          );
-                      return SlideTransition(
-                        position: slideAnimation,
-                        child: FadeTransition(opacity: animation, child: child),
-                      );
-                    },
-              ),
-            );
-          },
+          isLoading: sessionState.isLoading || _openingSession,
+          compact: widget.compact,
+          onTap: sessionState.isLoading || _openingSession
+              ? null
+              : _openSession,
           onShareTap: () async {
             try {
               final template = await ref.read(activeTemplateProvider.future);
@@ -94,13 +68,58 @@ class TodayWorkoutHeroCard extends ConsumerWidget {
             }
           },
         ),
-        loading: () => _LoadingCard(theme: theme, compact: compact),
+        loading: () => _LoadingCard(theme: theme, compact: widget.compact),
         error: (error, _) =>
             _ErrorCard(theme: theme, message: error.toString()),
       ),
-      loading: () => _LoadingCard(theme: theme, compact: compact),
+      loading: () => _LoadingCard(theme: theme, compact: widget.compact),
       error: (error, _) => _ErrorCard(theme: theme, message: error.toString()),
     );
+  }
+
+  Future<void> _openSession() async {
+    if (_openingSession) {
+      return;
+    }
+    setState(() => _openingSession = true);
+    try {
+      await ref.read(activeSessionProvider.notifier).startOrResumeSession();
+      if (!mounted) return;
+      final latestState = ref.read(activeSessionProvider);
+      if (latestState.errorMessage != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(latestState.errorMessage!)));
+        return;
+      }
+      await Navigator.of(context).push<void>(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 450),
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const ActiveSessionScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final slideAnimation =
+                Tween<Offset>(
+                  begin: const Offset(0.15, 0.0),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutQuart,
+                  ),
+                );
+            return SlideTransition(
+              position: slideAnimation,
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          },
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _openingSession = false);
+      }
+    }
   }
 }
 
@@ -140,7 +159,7 @@ class _FittinWorkoutCard extends StatelessWidget {
   final bool isResuming;
   final bool isLoading;
   final bool compact;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final Future<void> Function() onShareTap;
 
   @override

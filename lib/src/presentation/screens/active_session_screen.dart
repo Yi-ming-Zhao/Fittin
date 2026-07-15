@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
@@ -114,7 +116,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           )
         : null;
 
-    return DashboardPageScaffold(
+    final page = DashboardPageScaffold(
       scrollable: false,
       extendBody: false,
       safeAreaBottom: true,
@@ -297,6 +299,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
         ),
       ],
     );
+    return AbsorbPointer(absorbing: sessionState.isLoading, child: page);
   }
 
   Future<void> _confirmAndConclude({
@@ -360,12 +363,9 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     );
   }
 
-  Future<void> _handleCompleteSet(
-    ActiveSessionNotifier notifier,
-    int setIndex,
-  ) async {
-    await _completionController.forward(from: 0);
+  void _handleCompleteSet(ActiveSessionNotifier notifier, int setIndex) {
     notifier.completeSet(setIndex);
+    unawaited(_completionController.forward(from: 0));
   }
 
   Future<void> _openWeightTools({
@@ -998,9 +998,16 @@ class _CardSetStack extends StatefulWidget {
 
 class _CardSetStackState extends State<_CardSetStack> {
   static const _commitDistance = 56.0;
-  static const _axisLockDistance = 10.0;
+  static const _commitVelocity = 700.0;
+  static const _axisLockDistance = 18.0;
+  static const _axisDominance = 1.15;
+  static const _flyOutDuration = Duration(milliseconds: 140);
   Offset _dragOffset = Offset.zero;
   _CardDragAxis? _dragAxis;
+  Duration? _pointerDownAt;
+  Duration? _pointerUpAt;
+  Offset? _pointerDownPosition;
+  Offset? _pointerUpPosition;
   bool _animate = false;
   bool _committing = false;
 
@@ -1024,7 +1031,7 @@ class _CardSetStackState extends State<_CardSetStack> {
       0,
     )..rotateZ(_dragOffset.dx / 1650);
 
-    return LayoutBuilder(
+    final stack = LayoutBuilder(
       builder: (context, constraints) {
         const bottomReveal = 20.0;
         return Stack(
@@ -1116,9 +1123,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                 child: GestureDetector(
                   key: const ValueKey('active-set-card'),
                   behavior: HitTestBehavior.opaque,
-                  onPanStart: _committing
-                      ? null
-                      : (_) => setState(() => _animate = false),
+                  onPanStart: _committing ? null : _startDrag,
                   onPanUpdate: _committing ? null : _updateDrag,
                   onPanEnd: _committing ? null : _resolveDrag,
                   onPanCancel: _committing ? null : _resetDrag,
@@ -1404,17 +1409,22 @@ class _CardSetStackState extends State<_CardSetStack> {
         );
       },
     );
+    return Listener(
+      onPointerDown: _trackPointerDown,
+      onPointerUp: _trackPointerUp,
+      child: stack,
+    );
+  }
+
+  void _startDrag(DragStartDetails _) {
+    setState(() {
+      _animate = false;
+    });
   }
 
   void _updateDrag(DragUpdateDetails details) {
     final candidate = _dragOffset + details.delta;
-    final axis =
-        _dragAxis ??
-        (candidate.distance >= _axisLockDistance
-            ? (candidate.dx.abs() >= candidate.dy.abs()
-                  ? _CardDragAxis.horizontal
-                  : _CardDragAxis.vertical)
-            : null);
+    final axis = _dragAxis ?? _dominantAxis(candidate, _axisLockDistance);
     setState(() {
       _animate = false;
       _dragAxis = axis;
@@ -1427,29 +1437,48 @@ class _CardSetStackState extends State<_CardSetStack> {
   }
 
   Future<void> _resolveDrag(DragEndDetails details) async {
-    final velocity = details.velocity.pixelsPerSecond;
-    final axis =
-        _dragAxis ??
-        (_dragOffset.dx.abs() >= _dragOffset.dy.abs()
-            ? _CardDragAxis.horizontal
-            : _CardDragAxis.vertical);
-    final projected = axis == _CardDragAxis.horizontal
-        ? _dragOffset.dx + velocity.dx * 0.06
-        : _dragOffset.dy + velocity.dy * 0.06;
-    final commits = projected.abs() >= _commitDistance;
+    final recognizerVelocity = details.velocity.pixelsPerSecond;
+    final trackedVelocity = _trackedVelocity();
+    final velocity = Offset(
+      trackedVelocity.dx.abs() > recognizerVelocity.dx.abs()
+          ? trackedVelocity.dx
+          : recognizerVelocity.dx,
+      trackedVelocity.dy.abs() > recognizerVelocity.dy.abs()
+          ? trackedVelocity.dy
+          : recognizerVelocity.dy,
+    );
+    final distanceAxis = _dominantAxis(_dragOffset, 0);
+    final velocityAxis = _dominantAxis(velocity, _commitVelocity);
+    final axis = _dragAxis ?? velocityAxis ?? distanceAxis;
+    if (axis == null) {
+      _resetDrag();
+      return;
+    }
+    final distance = axis == _CardDragAxis.horizontal
+        ? _dragOffset.dx
+        : _dragOffset.dy;
+    final axisVelocity = axis == _CardDragAxis.horizontal
+        ? velocity.dx
+        : velocity.dy;
+    final commits =
+        distance.abs() >= _commitDistance ||
+        axisVelocity.abs() >= _commitVelocity;
+    final directionValue = distance.abs() >= _commitDistance
+        ? distance
+        : axisVelocity;
     final action = switch (axis) {
       _CardDragAxis.horizontal =>
-        projected < 0 ? widget.onNextSet : widget.onPreviousSet,
+        directionValue < 0 ? widget.onNextSet : widget.onPreviousSet,
       _CardDragAxis.vertical =>
-        projected < 0 ? widget.onComplete : widget.onCancel,
+        directionValue < 0 ? widget.onComplete : widget.onCancel,
     };
     if (!commits || action == null) {
       _resetDrag();
       return;
     }
     final direction = axis == _CardDragAxis.horizontal
-        ? Offset(projected.sign, 0)
-        : Offset(0, projected.sign);
+        ? Offset(directionValue.sign, 0)
+        : Offset(0, directionValue.sign);
     final screenSize = MediaQuery.sizeOf(context);
     setState(() {
       _committing = true;
@@ -1459,15 +1488,72 @@ class _CardSetStackState extends State<_CardSetStack> {
         direction.dy * screenSize.height,
       );
     });
-    await Future<void>.delayed(const Duration(milliseconds: 180));
     action();
+    await Future<void>.delayed(_flyOutDuration);
     if (!mounted) return;
     setState(() {
       _dragOffset = Offset.zero;
       _dragAxis = null;
+      _clearPointerTracking();
       _animate = false;
       _committing = false;
     });
+  }
+
+  Offset _trackedVelocity() {
+    final startedAt = _pointerDownAt;
+    final endedAt = _pointerUpAt;
+    final startPosition = _pointerDownPosition;
+    final endPosition = _pointerUpPosition;
+    if (startedAt == null ||
+        endedAt == null ||
+        startPosition == null ||
+        endPosition == null) {
+      return Offset.zero;
+    }
+    final elapsedMicros = (endedAt - startedAt).inMicroseconds;
+    if (elapsedMicros <= 0) {
+      return Offset.zero;
+    }
+    final elapsedSeconds = elapsedMicros / Duration.microsecondsPerSecond;
+    return (endPosition - startPosition) / elapsedSeconds;
+  }
+
+  void _trackPointerDown(PointerDownEvent event) {
+    if (_committing) {
+      return;
+    }
+    _pointerDownAt = event.timeStamp;
+    _pointerUpAt = null;
+    _pointerDownPosition = event.position;
+    _pointerUpPosition = null;
+  }
+
+  void _trackPointerUp(PointerUpEvent event) {
+    _pointerUpAt = event.timeStamp;
+    _pointerUpPosition = event.position;
+  }
+
+  void _clearPointerTracking() {
+    _pointerDownAt = null;
+    _pointerUpAt = null;
+    _pointerDownPosition = null;
+    _pointerUpPosition = null;
+  }
+
+  _CardDragAxis? _dominantAxis(Offset value, double minimumMagnitude) {
+    final horizontal = value.dx.abs();
+    final vertical = value.dy.abs();
+    if (horizontal < minimumMagnitude && vertical < minimumMagnitude) {
+      return null;
+    }
+    if (horizontal > vertical * _axisDominance) {
+      return _CardDragAxis.horizontal;
+    }
+    if (vertical > horizontal * _axisDominance) {
+      return _CardDragAxis.vertical;
+    }
+    return null;
   }
 
   void _resetDrag() {
@@ -1475,6 +1561,7 @@ class _CardSetStackState extends State<_CardSetStack> {
       _animate = true;
       _dragOffset = Offset.zero;
       _dragAxis = null;
+      _clearPointerTracking();
     });
   }
 }

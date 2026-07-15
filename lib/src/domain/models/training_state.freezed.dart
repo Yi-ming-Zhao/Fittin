@@ -994,6 +994,7 @@ mixin _$WorkoutSessionState {
   String get instanceId => throw _privateConstructorUsedError;
   String get templateId => throw _privateConstructorUsedError;
   String get workoutId => throw _privateConstructorUsedError;
+  String get scheduleToken => throw _privateConstructorUsedError;
   String get workoutName => throw _privateConstructorUsedError;
   String get dayLabel => throw _privateConstructorUsedError;
   int get estimatedDurationMinutes => throw _privateConstructorUsedError;
@@ -1017,6 +1018,7 @@ abstract class $WorkoutSessionStateCopyWith<$Res> {
       {String instanceId,
       String templateId,
       String workoutId,
+      String scheduleToken,
       String workoutName,
       String dayLabel,
       int estimatedDurationMinutes,
@@ -1040,6 +1042,7 @@ class _$WorkoutSessionStateCopyWithImpl<$Res, $Val extends WorkoutSessionState>
     Object? instanceId = null,
     Object? templateId = null,
     Object? workoutId = null,
+    Object? scheduleToken = null,
     Object? workoutName = null,
     Object? dayLabel = null,
     Object? estimatedDurationMinutes = null,
@@ -1058,6 +1061,10 @@ class _$WorkoutSessionStateCopyWithImpl<$Res, $Val extends WorkoutSessionState>
       workoutId: null == workoutId
           ? _value.workoutId
           : workoutId // ignore: cast_nullable_to_non_nullable
+              as String,
+      scheduleToken: null == scheduleToken
+          ? _value.scheduleToken
+          : scheduleToken // ignore: cast_nullable_to_non_nullable
               as String,
       workoutName: null == workoutName
           ? _value.workoutName
@@ -1095,6 +1102,7 @@ abstract class _$$WorkoutSessionStateImplCopyWith<$Res>
       {String instanceId,
       String templateId,
       String workoutId,
+      String scheduleToken,
       String workoutName,
       String dayLabel,
       int estimatedDurationMinutes,
@@ -1116,6 +1124,7 @@ class __$$WorkoutSessionStateImplCopyWithImpl<$Res>
     Object? instanceId = null,
     Object? templateId = null,
     Object? workoutId = null,
+    Object? scheduleToken = null,
     Object? workoutName = null,
     Object? dayLabel = null,
     Object? estimatedDurationMinutes = null,
@@ -1134,6 +1143,10 @@ class __$$WorkoutSessionStateImplCopyWithImpl<$Res>
       workoutId: null == workoutId
           ? _value.workoutId
           : workoutId // ignore: cast_nullable_to_non_nullable
+              as String,
+      scheduleToken: null == scheduleToken
+          ? _value.scheduleToken
+          : scheduleToken // ignore: cast_nullable_to_non_nullable
               as String,
       workoutName: null == workoutName
           ? _value.workoutName
@@ -1166,6 +1179,7 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
       {required this.instanceId,
       required this.templateId,
       required this.workoutId,
+      this.scheduleToken = '',
       required this.workoutName,
       required this.dayLabel,
       required this.estimatedDurationMinutes,
@@ -1182,6 +1196,9 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
   final String templateId;
   @override
   final String workoutId;
+  @override
+  @JsonKey()
+  final String scheduleToken;
   @override
   final String workoutName;
   @override
@@ -1202,7 +1219,7 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
 
   @override
   String toString() {
-    return 'WorkoutSessionState(instanceId: $instanceId, templateId: $templateId, workoutId: $workoutId, workoutName: $workoutName, dayLabel: $dayLabel, estimatedDurationMinutes: $estimatedDurationMinutes, exercises: $exercises, currentExerciseIndex: $currentExerciseIndex)';
+    return 'WorkoutSessionState(instanceId: $instanceId, templateId: $templateId, workoutId: $workoutId, scheduleToken: $scheduleToken, workoutName: $workoutName, dayLabel: $dayLabel, estimatedDurationMinutes: $estimatedDurationMinutes, exercises: $exercises, currentExerciseIndex: $currentExerciseIndex)';
   }
 
   @override
@@ -1216,6 +1233,8 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
                 other.templateId == templateId) &&
             (identical(other.workoutId, workoutId) ||
                 other.workoutId == workoutId) &&
+            (identical(other.scheduleToken, scheduleToken) ||
+                other.scheduleToken == scheduleToken) &&
             (identical(other.workoutName, workoutName) ||
                 other.workoutName == workoutName) &&
             (identical(other.dayLabel, dayLabel) ||
@@ -1236,6 +1255,7 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
       instanceId,
       templateId,
       workoutId,
+      scheduleToken,
       workoutName,
       dayLabel,
       estimatedDurationMinutes,
@@ -1262,6 +1282,7 @@ abstract class _WorkoutSessionState implements WorkoutSessionState {
       {required final String instanceId,
       required final String templateId,
       required final String workoutId,
+      final String scheduleToken,
       required final String workoutName,
       required final String dayLabel,
       required final int estimatedDurationMinutes,
@@ -1277,6 +1298,8 @@ abstract class _WorkoutSessionState implements WorkoutSessionState {
   String get templateId;
   @override
   String get workoutId;
+  @override
+  String get scheduleToken;
   @override
   String get workoutName;
   @override
