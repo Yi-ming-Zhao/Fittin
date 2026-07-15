@@ -51,4 +51,4 @@
 - [x] 7.2 Add English/Chinese screen tests that fail on representative leftover wrong-language copy.
 - [x] 7.3 Run code generation if required, format, targeted tests, full Flutter tests, Flutter analyze, Web build, and signed/release Android build checks.
 - [x] 7.4 Perform iterative visual inspection at Android tall-phone and shorter mobile-browser viewports, capture evidence, and correct overflow, blank space, density, hit targets, and gesture conflicts.
-- [ ] 7.5 Audit every numbered objective against code, tests, and rendered evidence; then synchronize the 241 checkout, push, and monitor CI before marking the change complete.
+- [x] 7.5 Audit every numbered objective against code, tests, and rendered evidence; then synchronize the 241 checkout, push, and monitor CI before marking the change complete.
