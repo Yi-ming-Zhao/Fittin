@@ -150,7 +150,7 @@ class SetDefinition with _$SetDefinition {
     double? targetRpe,
     @Default(false) bool isAmrap,
     @Default(SetKinds.working) String kind,
-    @Default(SetTypes.straightSet) String setType,
+    @Default('') String setType,
   }) = _SetDefinition;
 
   factory SetDefinition.fromJson(Map<String, dynamic> json) =>

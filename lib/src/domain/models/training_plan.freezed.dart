@@ -1773,7 +1773,7 @@ class _$SetDefinitionImpl implements _SetDefinition {
       this.targetRpe,
       this.isAmrap = false,
       this.kind = SetKinds.working,
-      this.setType = SetTypes.straightSet});
+      this.setType = ''});
 
   factory _$SetDefinitionImpl.fromJson(Map<String, dynamic> json) =>
       _$$SetDefinitionImplFromJson(json);

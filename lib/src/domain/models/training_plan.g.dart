@@ -172,7 +172,7 @@ _$SetDefinitionImpl _$$SetDefinitionImplFromJson(Map<String, dynamic> json) =>
       targetRpe: (json['targetRpe'] as num?)?.toDouble(),
       isAmrap: json['isAmrap'] as bool? ?? false,
       kind: json['kind'] as String? ?? SetKinds.working,
-      setType: json['setType'] as String? ?? SetTypes.straightSet,
+      setType: json['setType'] as String? ?? '',
     );
 
 Map<String, dynamic> _$$SetDefinitionImplToJson(_$SetDefinitionImpl instance) =>

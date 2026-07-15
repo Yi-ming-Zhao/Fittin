@@ -125,9 +125,12 @@ List<ConsistencySection> _buildRecentWeekSections(
   const weekCount = 8;
   final currentWeekStart = _startOfWeek(_normalizeDate(now));
   return List.generate(weekCount, (index) {
-    final start = currentWeekStart.subtract(Duration(days: 7 * (weekCount - 1 - index)));
+    final start = _addCalendarDays(
+      currentWeekStart,
+      -7 * (weekCount - 1 - index),
+    );
     final days = List.generate(7, (dayIndex) {
-      final date = start.add(Duration(days: dayIndex));
+      final date = _addCalendarDays(start, dayIndex);
       return _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
     });
     return ConsistencySection(
@@ -151,9 +154,9 @@ List<ConsistencySection> _buildMonthSections(
       ((gridEnd.difference(gridStart).inDays + 1) / 7).ceil();
 
   return List.generate(totalWeeks, (index) {
-    final start = gridStart.add(Duration(days: index * 7));
+    final start = _addCalendarDays(gridStart, index * 7);
     final days = List.generate(7, (dayIndex) {
-      final date = start.add(Duration(days: dayIndex));
+      final date = _addCalendarDays(start, dayIndex);
       final record = _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
       return ConsistencyDayRecord(
         date: record.date,
@@ -181,7 +184,7 @@ List<ConsistencySection> _buildPlanSections(
       ConsistencySection(
         label: 'W1',
         days: List.generate(7, (index) {
-          final date = anchor.add(Duration(days: index));
+          final date = _addCalendarDays(anchor, index);
           return ConsistencyDayRecord(
             date: date,
             logs: const [],
@@ -197,12 +200,15 @@ List<ConsistencySection> _buildPlanSections(
   final earliestLogDate = byDay.keys.reduce((a, b) => a.isBefore(b) ? a : b);
   final anchor = _startOfWeek(_normalizeDate(planStart ?? earliestLogDate));
   final end = _normalizeDate(now);
-  final totalWeeks = math.max(1, ((end.difference(anchor).inDays) / 7).floor() + 1);
+  final totalWeeks = math.max(
+    1,
+    (_calendarDayDifference(anchor, end) / 7).floor() + 1,
+  );
 
   return List.generate(totalWeeks, (weekIndex) {
-    final start = anchor.add(Duration(days: weekIndex * 7));
+    final start = _addCalendarDays(anchor, weekIndex * 7);
     final days = List.generate(7, (dayIndex) {
-      final date = start.add(Duration(days: dayIndex));
+      final date = _addCalendarDays(start, dayIndex);
       final record = _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
       return ConsistencyDayRecord(
         date: record.date,
@@ -271,13 +277,22 @@ double _workoutVolume(WorkoutLog log) {
 DateTime _normalizeDate(DateTime date) => DateTime(date.year, date.month, date.day);
 
 DateTime _startOfWeek(DateTime date) =>
-    date.subtract(Duration(days: date.weekday - DateTime.monday));
+    _addCalendarDays(date, -(date.weekday - DateTime.monday));
 
 DateTime _endOfWeek(DateTime date) =>
-    _startOfWeek(date).add(const Duration(days: 6));
+    _addCalendarDays(_startOfWeek(date), 6);
+
+DateTime _addCalendarDays(DateTime date, int days) =>
+    DateTime(date.year, date.month, date.day + days);
+
+int _calendarDayDifference(DateTime start, DateTime end) => DateTime.utc(
+  end.year,
+  end.month,
+  end.day,
+).difference(DateTime.utc(start.year, start.month, start.day)).inDays;
 
 String _weekLabel(DateTime start) {
-  final end = start.add(const Duration(days: 6));
+  final end = _addCalendarDays(start, 6);
   return '${start.month}/${start.day} - ${end.month}/${end.day}';
 }
 
