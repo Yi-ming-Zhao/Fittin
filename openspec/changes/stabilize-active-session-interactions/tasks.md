@@ -30,4 +30,4 @@
 - [x] 5.3 Validate OpenSpec and run a mobile long-screen interaction smoke check with rapid taps and flicks.
 - [x] 5.4 Commit and push the scoped change, then verify GitHub CI.
 - [x] 5.5 Preserve existing remote work, fast-forward `/data/zhaoyiming/Fittin` on `241-dhg` to the pushed commit, and verify the backend services and health without an unnecessary client-only restart.
-- [ ] 5.6 Publish the production Web bundle to the Alibaba Cloud ECS release root, atomically activate it, and verify the public app and phone-sized interactions.
+- [x] 5.6 Publish the production Web bundle to the Alibaba Cloud ECS release root, atomically activate it, and verify the public app and phone-sized interactions.
