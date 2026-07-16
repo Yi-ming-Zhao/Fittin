@@ -43,5 +43,5 @@
 
 - [x] 7.1 Bump the app to `1.0.9+16` and generate release notes that document themes and adaptive layouts.
 - [x] 7.2 Commit and push the scoped implementation, then wait for Flutter and backend CI to pass.
-- [ ] 7.3 Publish signed tag `v1.0.9` and verify APK/AAB assets, checksums, version metadata, and the stable Android signer.
+- [x] 7.3 Publish tag `v1.0.9` with signed APK/AAB assets and verify checksums, version metadata, and the stable Android signer.
 - [ ] 7.4 Synchronize the 241 repository, deploy the web build directly to Alibaba Cloud, and verify public assets, API health, nginx headers, and rollback metadata.
