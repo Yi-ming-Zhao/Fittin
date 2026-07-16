@@ -264,7 +264,23 @@ jobs:
             aab_output="${aab_outputs[0]}"
           fi
           echo "Using AAB output: $aab_output"
-          jarsigner -verify -strict "$aab_output"
+          jarsigner -verify "$aab_output"
+          actual_aab_signer_sha256="$(
+            keytool -printcert -jarfile "$aab_output" -rfc \
+              | openssl x509 -outform DER \
+              | sha256sum \
+              | awk '{print $1}'
+          )"
+          if [[ ! "$actual_aab_signer_sha256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Unable to read a valid SHA-256 signer digest from the AAB."
+            exit 1
+          fi
+          if [[ "$actual_aab_signer_sha256" != "$EXPECTED_ANDROID_SIGNER_SHA256" ]]; then
+            echo "Built AAB signer: $actual_aab_signer_sha256"
+            echo "Expected signer:  $EXPECTED_ANDROID_SIGNER_SHA256"
+            echo "Built AAB does not match the stable Fittin signer."
+            exit 1
+          fi
           cp "$aab_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
 

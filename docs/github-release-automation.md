@@ -78,7 +78,8 @@ The generated GitHub Release notes include the backend URL baked into the web bu
 Current behavior:
 
 - all four Android signing secrets are required; a tagged build fails if any one is absent
-- the workflow verifies the keystore and built APK against Fittin's fixed release certificate SHA-256
+- the workflow verifies the keystore, built APK, and built AAB against Fittin's fixed release certificate SHA-256
+- AAB integrity uses normal `jarsigner -verify`; its signer certificate is then decoded and compared by DER digest, avoiding `-strict` warning-only failures while still rejecting invalid or unexpected signatures
 - there is no debug-signing fallback and an existing GitHub Release cannot be replaced
 
 ### Required secrets for repository-backed signing
