@@ -19,4 +19,5 @@
 - `openspec validate add-premium-themes-and-adaptive-layout --strict`: valid
 - `git diff --check`: clean
 - Production web build: succeeded against `https://fittin.hammerscholar.net/api`
-- Backend tests, exact-SHA GitHub CI, release signing/assets, and public deployment remain tracked in `tasks.md` until their remote checks complete
+- Exact-SHA GitHub CI: commit `716eeb21e3bd498f0b64c3782c3bc74072bbc652`, run [29514041519](https://github.com/Yi-ming-Zhao/Fittin/actions/runs/29514041519); Flutter 3.41 analysis/tests and backend tests all passed
+- Release signing/assets and public deployment remain tracked in `tasks.md` until their remote checks complete

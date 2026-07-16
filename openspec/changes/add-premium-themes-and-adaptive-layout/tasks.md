@@ -31,7 +31,7 @@
 - [x] 5.2 Add Settings widget tests for bilingual appearance content, preview reachability, and live selection.
 - [x] 5.3 Add real app-shell geometry tests at 390x926 and 390x568 for Today and Body, including bottom navigation clearance.
 - [x] 5.4 Update chart, anatomy, active-session, and existing theme regression tests for semantic palettes.
-- [ ] 5.5 Run formatting, static analysis, the full Flutter test suite, backend tests, and strict OpenSpec validation.
+- [x] 5.5 Run formatting, static analysis, the full Flutter test suite, backend tests, and strict OpenSpec validation.
 
 ## 6. Visual QA And Specification Sync
 
@@ -42,6 +42,6 @@
 ## 7. Release And Deployment
 
 - [x] 7.1 Bump the app to `1.0.9+16` and generate release notes that document themes and adaptive layouts.
-- [ ] 7.2 Commit and push the scoped implementation, then wait for Flutter and backend CI to pass.
+- [x] 7.2 Commit and push the scoped implementation, then wait for Flutter and backend CI to pass.
 - [ ] 7.3 Publish signed tag `v1.0.9` and verify APK/AAB assets, checksums, version metadata, and the stable Android signer.
 - [ ] 7.4 Synchronize the 241 repository, deploy the web build directly to Alibaba Cloud, and verify public assets, API health, nginx headers, and rollback metadata.
