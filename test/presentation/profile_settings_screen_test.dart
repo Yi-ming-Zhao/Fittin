@@ -222,12 +222,8 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester
-            .getSemantics(espresso)
-            .getSemanticsData()
-            .flagsCollection
-            .isSelected,
-        isTrue,
+        tester.getSemantics(espresso),
+        containsSemantics(hasSelectedState: true, isSelected: true),
       );
       semantics.dispose();
     },
