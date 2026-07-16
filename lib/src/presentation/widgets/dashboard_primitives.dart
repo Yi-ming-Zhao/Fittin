@@ -17,6 +17,7 @@ class DashboardPageScaffold extends StatelessWidget {
     this.extendBody = false,
     this.scrollable = true,
     this.safeAreaBottom = false,
+    this.maxContentWidth = 430,
   });
 
   final List<Widget> children;
@@ -26,6 +27,7 @@ class DashboardPageScaffold extends StatelessWidget {
   final bool extendBody;
   final bool scrollable;
   final bool safeAreaBottom;
+  final double maxContentWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -44,7 +46,7 @@ class DashboardPageScaffold extends StatelessWidget {
                 colors: [
                   fittinTheme.bgDeep,
                   fittinTheme.bg,
-                  Color.lerp(fittinTheme.bg, Colors.black, 0.25)!,
+                  Color.lerp(fittinTheme.bg, fittinTheme.bgDeep, 0.48)!,
                 ],
               ),
             ),
@@ -52,7 +54,7 @@ class DashboardPageScaffold extends StatelessWidget {
               bottom: safeAreaBottom,
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 430),
+                  constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: scrollable
                       ? ListView(
                           padding: EdgeInsets.fromLTRB(
@@ -308,7 +310,7 @@ class DashboardStatCard extends StatelessWidget {
   }
 }
 
-class DashboardControlTile extends StatelessWidget {
+class DashboardControlTile extends ConsumerWidget {
   const DashboardControlTile({
     super.key,
     required this.label,
@@ -323,16 +325,14 @@ class DashboardControlTile extends StatelessWidget {
   final bool accent;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(resolvedFittinThemeProvider);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
-        color: Colors.white.withValues(alpha: accent ? 0.1 : 0.05),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: accent ? 0.14 : 0.06),
-        ),
+        color: accent ? theme.accentDim : theme.surface,
+        border: Border.all(color: accent ? theme.borderHi : theme.border),
       ),
       child: Row(
         children: [
@@ -342,20 +342,19 @@ class DashboardControlTile extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.48),
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: theme
+                      .uiStyle(12, theme.fgMuted)
+                      .copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   value,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: accent
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurface,
-                  ),
+                  style: theme
+                      .uiStyle(21)
+                      .copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: accent ? theme.accent : theme.fg,
+                      ),
                 ),
               ],
             ),
@@ -398,12 +397,8 @@ class PremiumPrimaryButton extends StatelessWidget {
       child: FilledButton.icon(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(62),
-          backgroundColor: Color.lerp(
-            theme.colorScheme.primary,
-            Colors.white,
-            0.16,
-          ),
-          foregroundColor: Colors.black,
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.colorScheme.onPrimary,
           shape: const StadiumBorder(),
           textStyle: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w800,
@@ -449,8 +444,10 @@ class GlassActionButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              color: Colors.white.withValues(alpha: 0.08),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.7,
+              ),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -463,7 +460,7 @@ class GlassActionButton extends StatelessWidget {
                   label,
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ],

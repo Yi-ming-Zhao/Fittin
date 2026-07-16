@@ -8,10 +8,9 @@ import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
-
-const _anatomyWarmLow = Color(0xFF6E3E34);
-const _anatomyWarmHigh = Color(0xFFFFA14D);
 
 enum _AnatomySide { front, back }
 
@@ -63,10 +62,10 @@ class _AnatomyLoadMapState extends ConsumerState<AnatomyLoadMap> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: _anatomyWarmLow.withValues(alpha: 0.22),
+                    color: theme.loadLow.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
-                      color: _anatomyWarmHigh.withValues(alpha: 0.3),
+                      color: theme.loadHigh.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
@@ -92,6 +91,7 @@ class _AnatomyLoadMapState extends ConsumerState<AnatomyLoadMap> {
                   children: [
                     Expanded(
                       child: _AnatomyDiagram(
+                        theme: theme,
                         key: const ValueKey('anatomy-front-diagram'),
                         side: _AnatomySide.front,
                         sideLabel: strings.anatomyFront,
@@ -104,6 +104,7 @@ class _AnatomyLoadMapState extends ConsumerState<AnatomyLoadMap> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: _AnatomyDiagram(
+                        theme: theme,
                         key: const ValueKey('anatomy-back-diagram'),
                         side: _AnatomySide.back,
                         sideLabel: strings.anatomyBack,
@@ -119,23 +120,26 @@ class _AnatomyLoadMapState extends ConsumerState<AnatomyLoadMap> {
             },
           ),
           const SizedBox(height: 14),
-          _IntensityLegend(strings: strings),
+          _IntensityLegend(theme: theme, strings: strings),
           const SizedBox(height: 14),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             child: !widget.overview.hasData
                 ? _AnatomyMessage(
+                    theme: theme,
                     key: const ValueKey('anatomy-no-data'),
                     icon: Icons.info_outline_rounded,
                     text: strings.anatomyNoData,
                   )
                 : _selectedMuscle == null
                 ? _AnatomyMessage(
+                    theme: theme,
                     key: const ValueKey('anatomy-tap-hint'),
                     icon: Icons.touch_app_outlined,
                     text: strings.anatomyTapHint,
                   )
                 : _SelectedMuscleDetail(
+                    theme: theme,
                     key: ValueKey('anatomy-detail-${_selectedMuscle!.name}'),
                     muscle: _selectedMuscle!,
                     load: selectedLoad,
@@ -157,6 +161,7 @@ class _AnatomyLoadMapState extends ConsumerState<AnatomyLoadMap> {
 class _AnatomyDiagram extends StatelessWidget {
   const _AnatomyDiagram({
     super.key,
+    required this.theme,
     required this.side,
     required this.sideLabel,
     required this.strings,
@@ -166,6 +171,7 @@ class _AnatomyDiagram extends StatelessWidget {
   });
 
   final _AnatomySide side;
+  final FittinTheme theme;
   final String sideLabel;
   final AppStrings strings;
   final Map<ExerciseMuscle, double> intensityByMuscle;
@@ -183,7 +189,7 @@ class _AnatomyDiagram extends StatelessWidget {
         Text(
           sideLabel,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.62),
+            color: theme.fgDim,
             fontWeight: FontWeight.w800,
             letterSpacing: 0.8,
           ),
@@ -217,6 +223,12 @@ class _AnatomyDiagram extends StatelessWidget {
                       noContributionLabel: strings.muscleNoContribution,
                       textDirection: Directionality.of(context),
                       onSelected: onSelected,
+                      anatomyBase: theme.anatomyBase,
+                      anatomyStroke: theme.anatomyStroke,
+                      anatomyInactive: theme.anatomyInactive,
+                      anatomySelected: theme.anatomySelected,
+                      loadLow: theme.loadLow,
+                      loadHigh: theme.loadHigh,
                     ),
                     size: Size.infinite,
                   ),
@@ -231,14 +243,15 @@ class _AnatomyDiagram extends StatelessWidget {
 }
 
 class _IntensityLegend extends StatelessWidget {
-  const _IntensityLegend({required this.strings});
+  const _IntensityLegend({required this.theme, required this.strings});
 
+  final FittinTheme theme;
   final AppStrings strings;
 
   @override
   Widget build(BuildContext context) {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
-      color: Colors.white.withValues(alpha: 0.55),
+      color: theme.fgMuted,
       fontWeight: FontWeight.w700,
     );
     return Semantics(
@@ -263,8 +276,8 @@ class _IntensityLegend extends StatelessWidget {
               height: 8,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                gradient: const LinearGradient(
-                  colors: [_anatomyWarmLow, _anatomyWarmHigh],
+                gradient: LinearGradient(
+                  colors: [theme.loadLow, theme.loadHigh],
                 ),
               ),
             ),
@@ -278,8 +291,14 @@ class _IntensityLegend extends StatelessWidget {
 }
 
 class _AnatomyMessage extends StatelessWidget {
-  const _AnatomyMessage({super.key, required this.icon, required this.text});
+  const _AnatomyMessage({
+    super.key,
+    required this.theme,
+    required this.icon,
+    required this.text,
+  });
 
+  final FittinTheme theme;
   final IconData icon;
   final String text;
 
@@ -289,21 +308,20 @@ class _AnatomyMessage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.035),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: theme.border),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 17, color: Colors.white.withValues(alpha: 0.5)),
+          Icon(icon, size: 17, color: theme.fgMuted),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.58),
-                height: 1.35,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: theme.fgDim, height: 1.35),
             ),
           ),
         ],
@@ -315,11 +333,13 @@ class _AnatomyMessage extends StatelessWidget {
 class _SelectedMuscleDetail extends StatelessWidget {
   const _SelectedMuscleDetail({
     super.key,
+    required this.theme,
     required this.muscle,
     required this.load,
     required this.strings,
   });
 
+  final FittinTheme theme;
   final ExerciseMuscle muscle;
   final MuscleLoadData? load;
   final AppStrings strings;
@@ -327,7 +347,7 @@ class _SelectedMuscleDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final intensity = load?.normalizedIntensity ?? 0;
-    final color = _highlightColor(intensity);
+    final color = _highlightColor(theme.loadLow, theme.loadHigh, intensity);
     return Semantics(
       liveRegion: true,
       label: strings.anatomyRegionDetailSemantics(
@@ -365,7 +385,7 @@ class _SelectedMuscleDetail extends StatelessWidget {
                   Text(
                     strings.muscleName(muscle),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
+                      color: theme.fg,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -377,9 +397,9 @@ class _SelectedMuscleDetail extends StatelessWidget {
                             load!.weightedCompletedSets,
                             load!.contributingCompletedSets,
                           ),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.58),
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: theme.fgDim),
                   ),
                 ],
               ),
@@ -400,6 +420,12 @@ class _AnatomyPainter extends CustomPainter {
     required this.noContributionLabel,
     required this.textDirection,
     required this.onSelected,
+    required this.anatomyBase,
+    required this.anatomyStroke,
+    required this.anatomyInactive,
+    required this.anatomySelected,
+    required this.loadLow,
+    required this.loadHigh,
   });
 
   final _AnatomySide side;
@@ -409,6 +435,12 @@ class _AnatomyPainter extends CustomPainter {
   final String noContributionLabel;
   final TextDirection textDirection;
   final ValueChanged<ExerciseMuscle> onSelected;
+  final Color anatomyBase;
+  final Color anatomyStroke;
+  final Color anatomyInactive;
+  final Color anatomySelected;
+  final Color loadLow;
+  final Color loadHigh;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -418,10 +450,10 @@ class _AnatomyPainter extends CustomPainter {
     canvas.scale(fit.scale);
 
     final basePaint = Paint()
-      ..color = const Color(0xFF292624)
+      ..color = anatomyBase
       ..style = PaintingStyle.fill;
     final baseStroke = Paint()
-      ..color = Colors.white.withValues(alpha: 0.15)
+      ..color = anatomyStroke
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.1 / fit.scale;
     final base = _AnatomyGeometry.bodyPath(side);
@@ -435,8 +467,10 @@ class _AnatomyPainter extends CustomPainter {
         region.path,
         Paint()
           ..color = intensity <= 0
-              ? Colors.white.withValues(alpha: 0.045)
+              ? anatomyInactive
               : _highlightColor(
+                  loadLow,
+                  loadHigh,
                   intensity,
                 ).withValues(alpha: 0.45 + intensity * 0.5)
           ..style = PaintingStyle.fill,
@@ -445,8 +479,8 @@ class _AnatomyPainter extends CustomPainter {
         region.path,
         Paint()
           ..color = selected
-              ? const Color(0xFFFFD6A6)
-              : Colors.white.withValues(alpha: intensity > 0 ? 0.2 : 0.08)
+              ? anatomySelected
+              : anatomyStroke.withValues(alpha: intensity > 0 ? 0.8 : 0.42)
           ..style = PaintingStyle.stroke
           ..strokeWidth = (selected ? 1.7 : 0.7) / fit.scale,
       );
@@ -458,7 +492,7 @@ class _AnatomyPainter extends CustomPainter {
 
   void _paintBodyLandmarks(Canvas canvas, double scale) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.09)
+      ..color = anatomyStroke.withValues(alpha: 0.58)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 0.7 / scale;
     canvas.drawLine(const Offset(60, 44), const Offset(60, 139), paint);
@@ -499,6 +533,12 @@ class _AnatomyPainter extends CustomPainter {
   bool shouldRepaint(covariant _AnatomyPainter oldDelegate) {
     return oldDelegate.side != side ||
         oldDelegate.selectedMuscle != selectedMuscle ||
+        oldDelegate.anatomyBase != anatomyBase ||
+        oldDelegate.anatomyStroke != anatomyStroke ||
+        oldDelegate.anatomyInactive != anatomyInactive ||
+        oldDelegate.anatomySelected != anatomySelected ||
+        oldDelegate.loadLow != loadLow ||
+        oldDelegate.loadHigh != loadHigh ||
         !mapEquals(oldDelegate.intensityByMuscle, intensityByMuscle);
   }
 
@@ -867,6 +907,6 @@ Path _polygon(List<Offset> points) {
   return path..close();
 }
 
-Color _highlightColor(double intensity) {
-  return Color.lerp(_anatomyWarmLow, _anatomyWarmHigh, intensity.clamp(0, 1))!;
+Color _highlightColor(Color low, Color high, double intensity) {
+  return Color.lerp(low, high, intensity.clamp(0, 1))!;
 }

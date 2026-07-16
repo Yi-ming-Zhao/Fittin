@@ -497,14 +497,6 @@ class InteractiveLineChartPainter extends CustomPainter {
   final DatedChartSelection? selection;
   final ValueChanged<DatedChartSelection>? onPointSelected;
 
-  static const _seriesPalette = <Color>[
-    Color(0xFFD4734A),
-    Color(0xFFD8AA55),
-    Color(0xFFB87AA8),
-    Color(0xFF817FA8),
-    Color(0xFFF3ECE0),
-  ];
-
   @visibleForTesting
   InteractiveLineChartLayout layoutFor(Size size) {
     final flattened = <DatedChartSelection>[];
@@ -1115,8 +1107,7 @@ Color _seriesColor(
   if (seriesIndex <= 0) {
     return theme.chartStroke;
   }
-  return InteractiveLineChartPainter._seriesPalette[seriesIndex %
-      InteractiveLineChartPainter._seriesPalette.length];
+  return theme.chartSeries[seriesIndex % theme.chartSeries.length];
 }
 
 extension<T> on Iterable<T> {

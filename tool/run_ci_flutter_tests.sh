@@ -9,4 +9,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$REPO_ROOT"
 
-flutter test
+# Native Isar tests share process-level resources. Serial execution keeps the
+# complete suite deterministic on local machines and GitHub runners.
+flutter test --no-pub --concurrency=1

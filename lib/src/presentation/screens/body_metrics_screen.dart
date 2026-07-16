@@ -33,43 +33,62 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
 
     return Scaffold(
       backgroundColor: fittinTheme.bg,
-      body: metricsAsync.when(
-        data: (metrics) {
-          final screenState = _BodyMetricsScreenState.fromMetrics(metrics);
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final safeContentHeight =
+              constraints.maxHeight - MediaQuery.paddingOf(context).top;
+          final compact = safeContentHeight < 720;
+          final topPadding = compact ? 28.0 : 44.0;
+          final majorGap = compact ? 18.0 : 28.0;
+          final sectionGap = compact ? 14.0 : 18.0;
 
-          return DashboardPageScaffold(
-            bottomPadding: 24,
-            children: [
-              DashboardScreenHeader(
-                eyebrow: strings.composition,
-                title: strings.bodyMetrics,
-                subtitle: strings.bodyMetricsSubtitle,
-              ),
-              const SizedBox(height: 24),
-              _buildHeroCard(
-                context,
-                fittinTheme,
-                metrics,
-                screenState,
-                strings,
-              ),
-              const SizedBox(height: 16),
-              DashboardSectionLabel(label: strings.currentSnapshot),
-              const SizedBox(height: 16),
-              _buildMetricGrid(context, fittinTheme, metrics, strings),
-              if (screenState == _BodyMetricsScreenState.populated) ...[
-                const SizedBox(height: 16),
-                _buildCheckInCta(context, fittinTheme, strings),
-              ],
-              const SizedBox(height: 24),
-              DashboardSectionLabel(label: strings.measurementLog),
-              const SizedBox(height: 16),
-              _buildHistoryList(context, fittinTheme, metrics, strings),
-            ],
+          return metricsAsync.when(
+            data: (metrics) {
+              final screenState = _BodyMetricsScreenState.fromMetrics(metrics);
+
+              return DashboardPageScaffold(
+                maxContentWidth: 640,
+                topPadding: topPadding,
+                bottomPadding: compact ? 20 : 32,
+                children: [
+                  DashboardScreenHeader(
+                    eyebrow: strings.composition,
+                    title: strings.bodyMetrics,
+                    subtitle: strings.bodyMetricsSubtitle,
+                  ),
+                  SizedBox(height: majorGap),
+                  _buildHeroCard(
+                    context,
+                    fittinTheme,
+                    metrics,
+                    screenState,
+                    strings,
+                    chartHeight: compact ? 216 : 250,
+                  ),
+                  SizedBox(height: sectionGap),
+                  DashboardSectionLabel(label: strings.currentSnapshot),
+                  SizedBox(height: sectionGap),
+                  _buildMetricGrid(context, fittinTheme, metrics, strings),
+                  if (screenState == _BodyMetricsScreenState.populated) ...[
+                    SizedBox(height: sectionGap),
+                    _buildCheckInCta(context, fittinTheme, strings),
+                  ],
+                  SizedBox(height: majorGap),
+                  DashboardSectionLabel(label: strings.measurementLog),
+                  SizedBox(height: sectionGap),
+                  _buildHistoryList(context, fittinTheme, metrics, strings),
+                ],
+              );
+            },
+            loading: () =>
+                _BodyMetricsLoadState(strings: strings, topPadding: topPadding),
+            error: (error, _) => _BodyMetricsLoadState(
+              strings: strings,
+              topPadding: topPadding,
+              message: strings.loadError(error),
+            ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(strings.loadError(e))),
       ),
     );
   }
@@ -79,8 +98,9 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
     FittinTheme theme,
     List<BodyMetric> metrics,
     _BodyMetricsScreenState screenState,
-    AppStrings strings,
-  ) {
+    AppStrings strings, {
+    required double chartHeight,
+  }) {
     final weightedMetrics = metrics
         .where((metric) => metric.weightKg != null)
         .toList();
@@ -91,6 +111,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
         weightedMetrics,
         screenState,
         strings,
+        chartHeight: chartHeight,
       );
     }
 
@@ -114,8 +135,9 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
     FittinTheme theme,
     List<BodyMetric> weightedMetrics,
     _BodyMetricsScreenState screenState,
-    AppStrings strings,
-  ) {
+    AppStrings strings, {
+    required double chartHeight,
+  }) {
     final chronological = [...weightedMetrics]
       ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
     final latestMetric = chronological.last;
@@ -215,7 +237,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
             emptySemanticsFormatter: strings.chartEmptySemantics,
             summarySemanticsFormatter: strings.chartSummarySemantics,
             pointLabelFormatter: strings.chartPointLabel,
-            height: 250,
+            height: chartHeight,
           ),
           const SizedBox(height: 10),
           Row(
@@ -245,45 +267,70 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 520;
-        return GridView.count(
-          crossAxisCount: isWide ? 3 : 3,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: isWide ? 1.15 : 0.95,
+        final isWide = MediaQuery.sizeOf(context).width >= 520;
+        final bodyFatCard = _MetricCard(
+          key: const ValueKey('body-metric-card-body-fat'),
+          theme: theme,
+          strings: strings,
+          label: strings.bodyFat,
+          latestValue: latest?.bodyFatPercent,
+          previousValue: _findPreviousComparable(
+            metrics,
+            (metric) => metric.bodyFatPercent,
+          ),
+          unit: strings.percentUnit,
+        );
+        final waistCard = _MetricCard(
+          key: const ValueKey('body-metric-card-waist'),
+          theme: theme,
+          strings: strings,
+          label: strings.waist,
+          latestValue: latest?.waistCm,
+          previousValue: _findPreviousComparable(
+            metrics,
+            (metric) => metric.waistCm,
+          ),
+          unit: strings.centimeterUnit,
+        );
+        final checkInsCard = _MetricCard(
+          key: const ValueKey('body-metric-card-check-ins'),
+          theme: theme,
+          strings: strings,
+          label: strings.checkIns,
+          latestValue: metrics.isEmpty ? null : metrics.length.toDouble(),
+          previousValue: null,
+          unit: '',
+        );
+
+        if (isWide) {
+          return SizedBox(
+            height: 144,
+            child: Row(
+              children: [
+                Expanded(child: bodyFatCard),
+                const SizedBox(width: 10),
+                Expanded(child: waistCard),
+                const SizedBox(width: 10),
+                Expanded(child: checkInsCard),
+              ],
+            ),
+          );
+        }
+
+        return Column(
           children: [
-            _MetricCard(
-              theme: theme,
-              strings: strings,
-              label: strings.bodyFat,
-              latestValue: latest?.bodyFatPercent,
-              previousValue: _findPreviousComparable(
-                metrics,
-                (metric) => metric.bodyFatPercent,
+            SizedBox(
+              height: 148,
+              child: Row(
+                children: [
+                  Expanded(child: bodyFatCard),
+                  const SizedBox(width: 10),
+                  Expanded(child: waistCard),
+                ],
               ),
-              unit: strings.percentUnit,
             ),
-            _MetricCard(
-              theme: theme,
-              strings: strings,
-              label: strings.waist,
-              latestValue: latest?.waistCm,
-              previousValue: _findPreviousComparable(
-                metrics,
-                (metric) => metric.waistCm,
-              ),
-              unit: strings.centimeterUnit,
-            ),
-            _MetricCard(
-              theme: theme,
-              strings: strings,
-              label: strings.checkIns,
-              latestValue: metrics.isEmpty ? null : metrics.length.toDouble(),
-              previousValue: null,
-              unit: '',
-            ),
+            const SizedBox(height: 10),
+            SizedBox(width: double.infinity, height: 120, child: checkInsCard),
           ],
         );
       },
@@ -418,16 +465,19 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _MetricTextField(
+                  theme: theme,
                   controller: weightController,
                   label: strings.weightKgLabel,
                 ),
                 const SizedBox(height: 12),
                 _MetricTextField(
+                  theme: theme,
                   controller: bodyFatController,
                   label: strings.bodyFatLabel,
                 ),
                 const SizedBox(height: 12),
                 _MetricTextField(
+                  theme: theme,
                   controller: waistController,
                   label: strings.waistCmLabel,
                 ),
@@ -482,6 +532,45 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
           ],
         );
       },
+    );
+  }
+}
+
+class _BodyMetricsLoadState extends StatelessWidget {
+  const _BodyMetricsLoadState({
+    required this.strings,
+    required this.topPadding,
+    this.message,
+  });
+
+  final AppStrings strings;
+  final double topPadding;
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    return DashboardPageScaffold(
+      maxContentWidth: 640,
+      topPadding: topPadding,
+      children: [
+        DashboardScreenHeader(
+          eyebrow: strings.composition,
+          title: strings.bodyMetrics,
+          subtitle: strings.bodyMetricsSubtitle,
+        ),
+        const SizedBox(height: 28),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: message == null
+              ? const SizedBox(
+                  key: ValueKey('body-metrics-loading'),
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(message!, key: const ValueKey('body-metrics-error')),
+        ),
+      ],
     );
   }
 }
@@ -547,7 +636,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
             height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.06),
+              color: theme.accentDim,
             ),
             alignment: Alignment.center,
             child: Icon(Icons.timeline_rounded, color: theme.accent, size: 19),
@@ -591,6 +680,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
 
 class _MetricCard extends StatelessWidget {
   const _MetricCard({
+    super.key,
     required this.theme,
     required this.strings,
     required this.label,
@@ -715,7 +805,7 @@ class _HistoryEntry extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: recordedItems
-                        .map((item) => _HistoryPill(label: item))
+                        .map((item) => _HistoryPill(theme: theme, label: item))
                         .toList(),
                   ),
                 ],
@@ -744,8 +834,9 @@ class _HistoryEntry extends StatelessWidget {
 }
 
 class _HistoryPill extends StatelessWidget {
-  const _HistoryPill({required this.label});
+  const _HistoryPill({required this.theme, required this.label});
 
+  final FittinTheme theme;
   final String label;
 
   @override
@@ -754,13 +845,13 @@ class _HistoryPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: theme.surfaceHi,
+        border: Border.all(color: theme.borderSubtle),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Colors.white.withValues(alpha: 0.72),
+          color: theme.fgDim,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -769,8 +860,13 @@ class _HistoryPill extends StatelessWidget {
 }
 
 class _MetricTextField extends StatelessWidget {
-  const _MetricTextField({required this.controller, required this.label});
+  const _MetricTextField({
+    required this.theme,
+    required this.controller,
+    required this.label,
+  });
 
+  final FittinTheme theme;
   final TextEditingController controller;
   final String label;
 
@@ -780,7 +876,7 @@ class _MetricTextField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       decoration: InputDecoration(labelText: label),
-      style: const TextStyle(color: Colors.white),
+      style: TextStyle(color: theme.fg),
     );
   }
 }

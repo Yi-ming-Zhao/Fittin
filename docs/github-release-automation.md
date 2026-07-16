@@ -42,7 +42,10 @@ Current CI coverage:
 - `tool/run_ci_flutter_tests.sh`
 - `cd backend && go test ./...`
 
-The Flutter CI suite is intentionally a curated stable subset of the repository test suite. It covers the application layer, data layer, selected domain tests, and the About, settings, and theme-palette widget tests that pass consistently on Linux GitHub runners.
+The Flutter CI command runs the complete repository test suite serially. Native
+Isar tests share process-level resources, so `--concurrency=1` prevents
+nondeterministic database setup contention on local machines and Linux GitHub
+runners.
 
 ## Release Assets
 

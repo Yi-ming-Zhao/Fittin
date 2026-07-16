@@ -51,9 +51,10 @@ class _WorkoutRecordDetailScreenState
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
     final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
+    final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
         bottomPadding: 24,
         safeAreaBottom: true,
@@ -104,7 +105,7 @@ class _WorkoutRecordDetailScreenState
                               label: Text(strings.delete),
                               style: _recordActionStyle(
                                 context,
-                                foregroundColor: const Color(0xFFE7A09B),
+                                foregroundColor: fittinTheme.danger,
                               ),
                             ),
                           ],
@@ -115,7 +116,7 @@ class _WorkoutRecordDetailScreenState
                     Text(
                       '${log.dayLabel} · ${_timeLabel(log.completedAt)}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.6),
+                        color: fittinTheme.fgDim,
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -158,7 +159,7 @@ class _WorkoutRecordDetailScreenState
                         _workoutVolume(log),
                       ),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.54),
+                        color: fittinTheme.fgMuted,
                       ),
                     ),
                   ],
@@ -175,7 +176,7 @@ class _WorkoutRecordDetailScreenState
     final updated = await showModalBottomSheet<WorkoutLog>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
+      backgroundColor: ref.read(resolvedFittinThemeProvider).bg,
       builder: (context) => _WorkoutLogEditorSheet(
         log: log,
         strings: AppStrings.of(context, ref),
@@ -216,10 +217,11 @@ class _WorkoutRecordDetailScreenState
 
   ButtonStyle _recordActionStyle(
     BuildContext context, {
-    Color foregroundColor = Colors.white,
+    Color? foregroundColor,
   }) {
+    final scheme = Theme.of(context).colorScheme;
     return TextButton.styleFrom(
-      foregroundColor: foregroundColor,
+      foregroundColor: foregroundColor ?? scheme.onSurface,
       textStyle: Theme.of(
         context,
       ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -227,9 +229,9 @@ class _WorkoutRecordDetailScreenState
       visualDensity: VisualDensity.compact,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+        side: BorderSide(color: scheme.outlineVariant),
       ),
-      backgroundColor: Colors.white.withValues(alpha: 0.05),
+      backgroundColor: scheme.surfaceContainerHighest,
     );
   }
 
@@ -249,7 +251,7 @@ class _WorkoutRecordDetailScreenState
             key: const ValueKey('confirm-delete-workout'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFE7A09B),
+              foregroundColor: Theme.of(context).colorScheme.error,
             ),
             child: Text(strings.delete),
           ),

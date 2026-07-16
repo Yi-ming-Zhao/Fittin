@@ -10,14 +10,20 @@ class MuscleVolumeData {
     required this.label,
     required this.currentSets,
     required this.targetSets,
-    this.color = const Color(0xFF999933),
+    required this.color,
   });
 }
 
 class MuscleDistributionPainter extends CustomPainter {
   final List<MuscleVolumeData> data;
+  final Color labelColor;
+  final Color trackColor;
 
-  MuscleDistributionPainter({required this.data});
+  MuscleDistributionPainter({
+    required this.data,
+    required this.labelColor,
+    required this.trackColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -27,8 +33,8 @@ class MuscleDistributionPainter extends CustomPainter {
     const spacing = 26.0;
     const textSpace = 90.0;
 
-    final labelStyle = const TextStyle(
-      color: Colors.white54,
+    final labelStyle = TextStyle(
+      color: labelColor,
       fontSize: 11,
       fontWeight: FontWeight.w600,
       letterSpacing: 0.5,
@@ -51,10 +57,7 @@ class MuscleDistributionPainter extends CustomPainter {
         Rect.fromLTWH(textSpace, y, barWidth, barHeight),
         const Radius.circular(7),
       );
-      canvas.drawRRect(
-        barRect,
-        Paint()..color = Colors.white.withValues(alpha: 0.04),
-      );
+      canvas.drawRRect(barRect, Paint()..color = trackColor);
 
       // Muted categorical color, kept flat so magnitude remains the focus.
       final progress = (entry.currentSets / entry.targetSets).clamp(0.0, 1.5);
@@ -97,6 +100,8 @@ class MuscleDistributionPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant MuscleDistributionPainter oldDelegate) {
-    return oldDelegate.data != data;
+    return oldDelegate.data != data ||
+        oldDelegate.labelColor != labelColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }

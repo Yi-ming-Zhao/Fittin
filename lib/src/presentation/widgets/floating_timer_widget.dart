@@ -42,7 +42,7 @@ class FloatingTimerWidgetState extends State<FloatingTimerWidget> {
           border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: colorScheme.shadow.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),

@@ -4,6 +4,8 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/domain/starting_load_estimator.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinPaletteId;
 
 class AppStrings {
   const AppStrings(this.locale);
@@ -536,6 +538,58 @@ class AppStrings {
       isChinese ? '英语界面' : 'English interface';
   String get chineseLanguageSubtitle =>
       isChinese ? '中文界面' : 'Chinese interface';
+  String get appearanceSection => isChinese ? '外观' : 'APPEARANCE';
+  String get appearanceDescription => isChinese
+      ? '一套完整主题会同时更新背景、卡片、文字、线条、图表和操作反馈。'
+      : 'One complete theme updates backgrounds, cards, text, lines, charts, and interaction feedback together.';
+  String get appearanceCompareHint => isChinese
+      ? '横向滑动比较全部 5 套配色。'
+      : 'Swipe horizontally to compare all five palettes.';
+  String get obsidianBrassPalette => isChinese ? '黑曜黄铜' : 'Obsidian Brass';
+  String get obsidianBrassPaletteDescription => isChinese
+      ? '深邃黑色、温润黄铜，以克制的紫色平衡。'
+      : 'Refined black, warm brass, and a restrained violet counterpoint.';
+  String get midnightCobaltPalette => isChinese ? '午夜钴蓝' : 'Midnight Cobalt';
+  String get midnightCobaltPaletteDescription => isChinese
+      ? '精密深蓝、清冽钴光，搭配柔和的紫色数据重点。'
+      : 'Precision navy, clear cobalt light, and a soft violet data accent.';
+  String get bordeauxVelvetPalette => isChinese ? '波尔多丝绒' : 'Bordeaux Velvet';
+  String get bordeauxVelvetPaletteDescription => isChinese
+      ? '深酒红、粉雾玫瑰与安静的香槟金。'
+      : 'Deep oxblood, powdered rose, and quiet champagne.';
+  String get porcelainInkPalette => isChinese ? '瓷白墨韵' : 'Porcelain Ink';
+  String get porcelainInkPaletteDescription => isChinese
+      ? '温暖瓷白、果断墨色，以朱砂红留下印记。'
+      : 'Warm porcelain, decisive ink, and a vermilion signature.';
+  String get espressoEmberPalette => isChinese ? '浓缩余烬' : 'Espresso Ember';
+  String get espressoEmberPaletteDescription => isChinese
+      ? '烘焙咖啡、余烬橙色，搭配低饱和薰衣草紫。'
+      : 'Roasted espresso, ember orange, and muted lavender.';
+  String paletteName(FittinPaletteId paletteId) => switch (paletteId) {
+    FittinPaletteId.obsidianBrass => obsidianBrassPalette,
+    FittinPaletteId.midnightCobalt => midnightCobaltPalette,
+    FittinPaletteId.bordeauxVelvet => bordeauxVelvetPalette,
+    FittinPaletteId.porcelainInk => porcelainInkPalette,
+    FittinPaletteId.espressoEmber => espressoEmberPalette,
+  };
+  String paletteDescription(FittinPaletteId paletteId) => switch (paletteId) {
+    FittinPaletteId.obsidianBrass => obsidianBrassPaletteDescription,
+    FittinPaletteId.midnightCobalt => midnightCobaltPaletteDescription,
+    FittinPaletteId.bordeauxVelvet => bordeauxVelvetPaletteDescription,
+    FittinPaletteId.porcelainInk => porcelainInkPaletteDescription,
+    FittinPaletteId.espressoEmber => espressoEmberPaletteDescription,
+  };
+  String palettePreviewSemantics(String paletteName, {required bool selected}) {
+    if (isChinese) {
+      return selected ? '$paletteName 主题预览，已选择' : '$paletteName 主题预览，双击应用';
+    }
+    return selected
+        ? '$paletteName theme preview, selected'
+        : '$paletteName theme preview, double tap to apply';
+  }
+
+  String selectedPaletteLabel(String paletteName) =>
+      isChinese ? '当前外观：$paletteName' : 'Current appearance: $paletteName';
   String get workoutLoggingSection => isChinese ? '训练记录方式' : 'WORKOUT LOGGING';
   String get cardLogger => isChinese ? '卡片记录' : 'Card logger';
   String get cardLoggerSubtitle => isChinese

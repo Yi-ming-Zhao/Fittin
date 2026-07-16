@@ -5,7 +5,7 @@ class StrengthLevelRing extends StatelessWidget {
   final double percentage; // 0.0 to 1.0
   final double size;
   final double strokeWidth;
-  final Color baseColor;
+  final Color? baseColor;
   final Color activeColor;
 
   const StrengthLevelRing({
@@ -13,7 +13,7 @@ class StrengthLevelRing extends StatelessWidget {
     required this.percentage,
     this.size = 120,
     this.strokeWidth = 12,
-    this.baseColor = Colors.white12,
+    this.baseColor,
     required this.activeColor,
   });
 
@@ -26,7 +26,8 @@ class StrengthLevelRing extends StatelessWidget {
         painter: _StrengthRingPainter(
           percentage: percentage,
           strokeWidth: strokeWidth,
-          baseColor: baseColor,
+          baseColor:
+              baseColor ?? Theme.of(context).colorScheme.surfaceContainerHigh,
           activeColor: activeColor,
         ),
         child: Center(
@@ -37,15 +38,15 @@ class StrengthLevelRing extends StatelessWidget {
                 '${(percentage * 100).toInt()}%',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 'Overall Level',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: Colors.white54),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -92,13 +93,7 @@ class _StrengthRingPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.butt;
 
-    canvas.drawArc(
-      rect,
-      -pi / 2,
-      2 * pi * percentage,
-      false,
-      activePaint,
-    );
+    canvas.drawArc(rect, -pi / 2, 2 * pi * percentage, false, activePaint);
   }
 
   @override

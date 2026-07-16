@@ -4,17 +4,16 @@
 TBD - created by archiving change fittin-redesign. Update Purpose after archive.
 ## Requirements
 ### Requirement: Shared Screen Primitives
-The system MUST provide a shared set of design primitives so redesigned screens use consistent cards, typography, controls, and data displays.
+The system MUST provide shared design primitives so screens use consistent cards, typography, controls, data displays, overlays, and interaction states. Those primitives MUST consume semantic theme roles and MUST NOT depend on literal black, white, or per-screen accent values for themeable presentation.
 
 #### Scenario: Screen uses shared primitives
-- **WHEN** a redesigned surface renders cards, headings, controls, deltas, chips, or charts
+- **WHEN** a surface renders cards, headings, controls, deltas, chips, overlays, or charts
 - **THEN** those elements use common primitives instead of bespoke per-screen implementations
-- **AND** those primitives accept theme input for consistent styling across screens.
+- **AND** the primitives update coherently when the selected palette changes.
 
 ### Requirement: Reusable Navigation And Chart Primitives
-The system MUST include reusable primitives for bottom navigation and lightweight progress visualizations.
+The system MUST include reusable primitives for bottom navigation and lightweight progress visualizations, and their normal, selected, pressed, focused, and disabled states MUST resolve from semantic tokens.
 
 #### Scenario: Screen renders navigation and compact charts
-- **WHEN** a redesigned screen needs tab navigation, sparklines, step charts, or progress rings
-- **THEN** it uses shared primitives with consistent motion, spacing, and visual language.
-
+- **WHEN** a screen needs tab navigation, sparklines, step charts, or progress rings
+- **THEN** it uses shared primitives with consistent motion, spacing, state feedback, and palette-aware visual language.

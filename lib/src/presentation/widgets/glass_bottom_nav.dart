@@ -184,10 +184,10 @@ class _LegacyNav extends StatelessWidget {
           child: Container(
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
+              color: theme.colorScheme.surface.withValues(alpha: 0.82),
               borderRadius: BorderRadius.circular(40),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: theme.colorScheme.outlineVariant,
                 width: 1,
               ),
             ),

@@ -42,6 +42,8 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final isCompact = constraints.maxHeight < 720;
+                final sectionGap = isCompact ? 6.0 : 16.0;
                 final content = Column(
                   children: [
                     homeDataAsync.when(
@@ -55,16 +57,17 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                       loading: () => _FittinTopMetaRowSkeleton(theme: theme),
                       error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
                     ),
-                    const SizedBox(height: 6),
-                    const TodayWorkoutHeroCard(compact: true),
-                    const SizedBox(height: 6),
+                    SizedBox(height: sectionGap),
+                    TodayWorkoutHeroCard(compact: isCompact),
+                    SizedBox(height: sectionGap),
                     homeDataAsync.when(
                       data: (data) => _AtAGlanceSection(
                         data: data,
                         strings: strings,
                         theme: theme,
+                        compact: isCompact,
                       ),
-                      loading: () => const _HomeOverviewSkeleton(),
+                      loading: () => _HomeOverviewSkeleton(compact: isCompact),
                       error: (error, _) => _isMissingActivePlanError(error)
                           ? const SizedBox.shrink()
                           : _HomeOverviewError(
@@ -79,7 +82,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                   theme.pad,
                   20,
                 );
-                if (constraints.maxHeight >= 720) {
+                if (!isCompact) {
                   return Padding(padding: padding, child: content);
                 }
                 return SingleChildScrollView(padding: padding, child: content);
@@ -109,7 +112,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       context: context,
       barrierDismissible: true,
       barrierLabel: AppStrings.of(context, ref).trainingMilestones,
-      barrierColor: Colors.black.withValues(alpha: 0.5),
+      barrierColor: ref.read(resolvedFittinThemeProvider).scrim,
       transitionDuration: const Duration(milliseconds: 220),
       pageBuilder: (dialogContext, _, __) {
         final strings = AppStrings.of(dialogContext, ref);
@@ -298,11 +301,13 @@ class _AtAGlanceSection extends StatelessWidget {
     required this.data,
     required this.strings,
     required this.theme,
+    required this.compact,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +322,7 @@ class _AtAGlanceSection extends StatelessWidget {
                 data: data,
                 strings: strings,
                 theme: theme,
+                compact: compact,
               ),
             ),
             const SizedBox(width: 10),
@@ -325,16 +331,23 @@ class _AtAGlanceSection extends StatelessWidget {
                 data: data,
                 strings: strings,
                 theme: theme,
+                compact: compact,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        _ActivityCard(data: data, strings: strings, theme: theme),
-        const SizedBox(height: 6),
+        SizedBox(height: compact ? 6 : 16),
+        _ActivityCard(
+          data: data,
+          strings: strings,
+          theme: theme,
+          compact: compact,
+        ),
+        SizedBox(height: compact ? 6 : 16),
         _QuickActionsCard(
           theme: theme,
           strings: strings,
+          compact: compact,
           onOpenPlans: () {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PlanLibraryScreen()),
@@ -356,17 +369,19 @@ class _CycleProgressCard extends StatelessWidget {
     required this.data,
     required this.strings,
     required this.theme,
+    required this.compact,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       key: const ValueKey('today-cycle-card'),
-      height: 144,
+      height: compact ? 144 : 168,
       child: FittinCard(
         theme: theme,
         style: FittinCardStyle.glass,
@@ -429,11 +444,13 @@ class _HighlightLiftCard extends StatefulWidget {
     required this.data,
     required this.strings,
     required this.theme,
+    required this.compact,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
+  final bool compact;
 
   @override
   State<_HighlightLiftCard> createState() => _HighlightLiftCardState();
@@ -465,7 +482,7 @@ class _HighlightLiftCardState extends State<_HighlightLiftCard> {
 
     return SizedBox(
       key: const ValueKey('today-e1rm-card'),
-      height: 144,
+      height: widget.compact ? 144 : 168,
       child: FittinCard(
         theme: widget.theme,
         style: FittinCardStyle.glass,
@@ -593,7 +610,17 @@ class _HomeE1rmPage extends StatelessWidget {
         key: ValueKey('home-e1rm-content-$canonicalId'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FittinEyebrow(theme, strings.liftEstimatedOneRepMax(liftLabel)),
+          SizedBox(
+            width: double.infinity,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: FittinEyebrow(
+                theme,
+                strings.liftEstimatedOneRepMax(liftLabel),
+              ),
+            ),
+          ),
           const SizedBox(height: 4),
           if (value == null)
             Expanded(
@@ -646,11 +673,13 @@ class _ActivityCard extends StatelessWidget {
     required this.data,
     required this.strings,
     required this.theme,
+    required this.compact,
   });
 
   final HomeDashboardData data;
   final AppStrings strings;
   final FittinTheme theme;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -682,7 +711,7 @@ class _ActivityCard extends StatelessWidget {
       },
       child: SizedBox(
         key: const ValueKey('today-activity-card'),
-        height: 74,
+        height: compact ? 74 : 90,
         child: historyCount == 0
             ? Center(
                 child: Text(
@@ -749,12 +778,14 @@ class _QuickActionsCard extends StatelessWidget {
     required this.strings,
     required this.onOpenPlans,
     required this.onOpenPr,
+    required this.compact,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
   final VoidCallback onOpenPlans;
   final VoidCallback onOpenPr;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -782,11 +813,11 @@ class _QuickActionsCard extends StatelessWidget {
           padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: actions.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 10,
             crossAxisSpacing: 10,
-            childAspectRatio: 3.1,
+            mainAxisExtent: compact ? 56 : 68,
           ),
           itemBuilder: (context, index) {
             final action = actions[index];
@@ -821,7 +852,7 @@ class _QuickActionsCard extends StatelessWidget {
   }
 }
 
-class _NotificationMilestoneTile extends StatelessWidget {
+class _NotificationMilestoneTile extends ConsumerWidget {
   const _NotificationMilestoneTile({
     required this.strings,
     required this.milestone,
@@ -833,7 +864,8 @@ class _NotificationMilestoneTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(resolvedFittinThemeProvider);
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -845,10 +877,10 @@ class _NotificationMilestoneTile extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
+                color: theme.surfaceHi,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.workspace_premium, size: 18),
+              child: Icon(Icons.workspace_premium, size: 18, color: theme.fg),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -869,9 +901,9 @@ class _NotificationMilestoneTile extends StatelessWidget {
                           : strings.estimatedType,
                       milestone.value,
                     ),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.6),
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: theme.fgDim),
                   ),
                 ],
               ),
@@ -879,9 +911,9 @@ class _NotificationMilestoneTile extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               strings.shortMonthDay(milestone.date),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.45),
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: theme.fgMuted),
             ),
           ],
         ),
@@ -891,7 +923,9 @@ class _NotificationMilestoneTile extends StatelessWidget {
 }
 
 class _HomeOverviewSkeleton extends StatelessWidget {
-  const _HomeOverviewSkeleton();
+  const _HomeOverviewSkeleton({required this.compact});
+
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -905,19 +939,19 @@ class _HomeOverviewSkeleton extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: card(height: 142)),
+            Expanded(child: card(height: compact ? 142 : 168)),
             const SizedBox(width: 10),
-            Expanded(child: card(height: 142)),
+            Expanded(child: card(height: compact ? 142 : 168)),
           ],
         ),
-        const SizedBox(height: 10),
-        card(height: 104),
-        const SizedBox(height: 8),
+        SizedBox(height: compact ? 10 : 16),
+        card(height: compact ? 104 : 124),
+        SizedBox(height: compact ? 8 : 16),
         Row(
           children: [
-            Expanded(child: card(height: 52)),
+            Expanded(child: card(height: compact ? 52 : 72)),
             const SizedBox(width: 10),
-            Expanded(child: card(height: 52)),
+            Expanded(child: card(height: compact ? 52 : 72)),
           ],
         ),
       ],
@@ -936,7 +970,7 @@ class _HomeOverviewError extends StatelessWidget {
   }
 }
 
-class NestedProgressRings extends StatelessWidget {
+class NestedProgressRings extends ConsumerWidget {
   const NestedProgressRings({
     super.key,
     required this.outerProgress,
@@ -951,7 +985,8 @@ class NestedProgressRings extends StatelessWidget {
   final String centerLabel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = ref.watch(resolvedFittinThemeProvider);
     return SizedBox(
       width: size,
       height: size,
@@ -959,7 +994,9 @@ class NestedProgressRings extends StatelessWidget {
         painter: _NestedProgressRingsPainter(
           outerProgress: outerProgress,
           innerProgress: innerProgress,
-          primaryColor: Theme.of(context).colorScheme.primary,
+          primaryColor: theme.accent,
+          secondaryColor: theme.chartSeries[1],
+          trackColor: theme.chartGrid,
         ),
         child: Center(
           child: Padding(
@@ -969,7 +1006,7 @@ class NestedProgressRings extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.w700,
-                color: Colors.white.withValues(alpha: 0.88),
+                color: theme.fg,
                 height: 1.35,
               ),
             ),
@@ -985,11 +1022,15 @@ class _NestedProgressRingsPainter extends CustomPainter {
     required this.outerProgress,
     required this.innerProgress,
     required this.primaryColor,
+    required this.secondaryColor,
+    required this.trackColor,
   });
 
   final double outerProgress;
   final double innerProgress;
   final Color primaryColor;
+  final Color secondaryColor;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1008,7 +1049,7 @@ class _NestedProgressRingsPainter extends CustomPainter {
       radius: (size.width / 2) - 28,
       progress: innerProgress,
       strokeWidth: 10,
-      color: Colors.white,
+      color: secondaryColor,
     );
   }
 
@@ -1021,7 +1062,7 @@ class _NestedProgressRingsPainter extends CustomPainter {
     required Color color,
   }) {
     final trackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
+      ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
@@ -1053,6 +1094,8 @@ class _NestedProgressRingsPainter extends CustomPainter {
   bool shouldRepaint(covariant _NestedProgressRingsPainter oldDelegate) {
     return oldDelegate.outerProgress != outerProgress ||
         oldDelegate.innerProgress != innerProgress ||
-        oldDelegate.primaryColor != primaryColor;
+        oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.secondaryColor != secondaryColor ||
+        oldDelegate.trackColor != trackColor;
   }
 }

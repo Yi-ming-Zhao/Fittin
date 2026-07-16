@@ -4,6 +4,8 @@ import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/calendar_month.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
+    show FittinTheme;
 import 'package:fittin_v2/src/presentation/screens/workout_record_detail_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/anatomy_load_map.dart';
 import 'package:fittin_v2/src/presentation/widgets/chart_container.dart';
@@ -58,7 +60,7 @@ class _AdvancedAnalyticsScreenState
               },
             ),
             const SizedBox(height: 24),
-            _buildVolumeDistribution(context, strings, data),
+            _buildVolumeDistribution(context, strings, data, fittinTheme),
             const SizedBox(height: 32),
             AnatomyLoadMap(overview: data.muscleLoad),
             const SizedBox(height: 80),
@@ -74,8 +76,28 @@ class _AdvancedAnalyticsScreenState
     BuildContext context,
     AppStrings strings,
     AdvancedAnalyticsData data,
+    FittinTheme theme,
   ) {
-    final volumeData = data.volumeData(labelFor: strings.muscleName);
+    final loads = data.muscleLoad.loads.take(5).toList(growable: false);
+    final maximum = loads.fold<double>(
+      0,
+      (value, load) => load.weightedCompletedSets > value
+          ? load.weightedCompletedSets
+          : value,
+    );
+    final volumeData = [
+      for (final load in loads)
+        MuscleVolumeData(
+          label: strings.muscleName(load.muscle),
+          currentSets: load.weightedCompletedSets,
+          targetSets: maximum,
+          color: Color.lerp(
+            theme.loadLow,
+            theme.loadHigh,
+            load.normalizedIntensity.clamp(0, 1),
+          )!,
+        ),
+    ];
     return ChartContainer(
       title: strings.muscleTrainingLoad,
       height: 220,
@@ -91,7 +113,11 @@ class _AdvancedAnalyticsScreenState
                   strings.muscleLoadChartEntry(item.label, item.currentSets),
               ]),
               child: CustomPaint(
-                painter: MuscleDistributionPainter(data: volumeData),
+                painter: MuscleDistributionPainter(
+                  data: volumeData,
+                  labelColor: theme.chartLabel,
+                  trackColor: theme.chartGrid,
+                ),
                 size: Size.infinite,
               ),
             ),
@@ -117,6 +143,7 @@ class _ConsistencyExplorer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
     final sections = data.sectionsByRange[range] ?? const [];
     final calendar = CalendarMonthBuilder().build(
       focusedMonth: selectedMonth.focusedMonth,
@@ -150,9 +177,9 @@ class _ConsistencyExplorer extends ConsumerWidget {
               children: [
                 Text(
                   strings.consistencyHint,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.6),
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: theme.fgDim),
                 ),
                 const SizedBox(height: 14),
                 _DayHeader(strings: strings),
@@ -399,14 +426,15 @@ class _RangeSelector extends ConsumerWidget {
   }
 }
 
-class _DayHeader extends StatelessWidget {
+class _DayHeader extends ConsumerWidget {
   const _DayHeader({required this.strings});
 
   final AppStrings strings;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final labels = strings.calendarWeekdayInitials;
+    final theme = ref.watch(resolvedFittinThemeProvider);
     return Row(
       children: [
         const SizedBox(width: 74),
@@ -416,7 +444,7 @@ class _DayHeader extends StatelessWidget {
               child: Text(
                 labels[index],
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.44),
+                  color: theme.fgMuted,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -437,6 +465,7 @@ class _WeekRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
     final planWeekIndex = section.days.isEmpty
         ? null
         : section.days.first.planWeekIndex;
@@ -451,7 +480,7 @@ class _WeekRow extends ConsumerWidget {
           child: Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
+              color: theme.fgDim,
               fontWeight: FontWeight.w700,
             ),
           ),

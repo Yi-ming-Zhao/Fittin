@@ -19,6 +19,38 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  <meta id="fittin-theme-color" name="theme-color" content="#090806">
+
+  <style>
+    :root {
+      --fittin-launch-background: #090806;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--fittin-launch-background);
+    }
+  </style>
+  <script>
+    (() => {
+      try {
+        const stored = localStorage.getItem('flutter.fittin.appearance.palette');
+        const palette = stored === null ? null : JSON.parse(stored);
+        const background = palette === 'porcelainInk' ? '#F3EEE5' : '#090806';
+        document.documentElement.style.setProperty(
+          '--fittin-launch-background',
+          background,
+        );
+        document
+          .getElementById('fittin-theme-color')
+          ?.setAttribute('content', background);
+      } catch (_) {
+        // Keep the warm-black default when local storage is unavailable.
+      }
+    })();
+  </script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">

@@ -310,7 +310,7 @@ class _WeightToolsSettingsCardState
             showModalBottomSheet<void>(
               context: context,
               isScrollControlled: true,
-              backgroundColor: Colors.black,
+              backgroundColor: fittinTheme.bg,
               builder: (_) => const WeightToolsSheet(),
             );
           },
@@ -340,8 +340,8 @@ class _ResultCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        color: theme.surface,
+        border: Border.all(color: theme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

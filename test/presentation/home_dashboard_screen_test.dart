@@ -10,6 +10,7 @@ import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/presentation/screens/home_dashboard_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/step_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
 
 import '../support/fake_today_workout_gateway.dart';
 import '../support/in_memory_database_repository.dart';
@@ -177,6 +178,18 @@ void main() {
       await tester.pumpAndSettle();
 
       final pager = find.byKey(const ValueKey('home-e1rm-pager'));
+      expect(
+        tester
+            .widget<TodayWorkoutHeroCard>(find.byType(TodayWorkoutHeroCard))
+            .compact,
+        isTrue,
+      );
+      final compactCycleHeight = tester
+          .getSize(find.byKey(const ValueKey('today-cycle-card')))
+          .height;
+      final compactActivityHeight = tester
+          .getSize(find.byKey(const ValueKey('today-activity-card')))
+          .height;
       await tester.ensureVisible(pager);
       expect(tester.takeException(), isNull);
       expect(find.text('Squat e1RM'), findsOneWidget);
@@ -191,6 +204,7 @@ void main() {
 
       await tester.drag(pager, const Offset(-130, 0));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(find.text('Bench e1RM'), findsOneWidget);
       expect(
         tester
@@ -204,6 +218,7 @@ void main() {
 
       await tester.drag(pager, const Offset(-130, 0));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(find.text('Deadlift e1RM'), findsOneWidget);
       expect(
         tester
@@ -217,6 +232,7 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('home-e1rm-indicator-squat')));
       await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
       expect(find.text('Squat e1RM'), findsOneWidget);
       expect(
         tester
@@ -232,6 +248,22 @@ void main() {
       tester.view.physicalSize = const Size(390, 926);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .widget<TodayWorkoutHeroCard>(find.byType(TodayWorkoutHeroCard))
+            .compact,
+        isFalse,
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey('today-cycle-card'))).height,
+        greaterThan(compactCycleHeight),
+      );
+      expect(
+        tester
+            .getSize(find.byKey(const ValueKey('today-activity-card')))
+            .height,
+        greaterThan(compactActivityHeight),
+      );
       expect(
         tester
             .getBottomRight(find.byKey(const ValueKey('today-quick-action-1')))

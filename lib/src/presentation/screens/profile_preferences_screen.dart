@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/home_dashboard_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 
@@ -31,6 +32,7 @@ class _ProfilePreferencesScreenState
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
     final preference = ref.watch(homeDisplayNamePreferenceProvider);
     final currentValue = preference.valueOrNull ?? '';
     if (_controller.text != currentValue) {
@@ -41,7 +43,7 @@ class _ProfilePreferencesScreenState
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: theme.bg,
       body: DashboardPageScaffold(
         bottomPadding: 40,
         children: [
@@ -59,16 +61,14 @@ class _ProfilePreferencesScreenState
               children: [
                 Text(
                   strings.displayName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: theme
+                      .uiStyle(16, theme.fg)
+                      .copyWith(fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   strings.homeDisplayNameHint,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
+                  style: theme.uiStyle(14, theme.fgDim),
                 ),
                 const SizedBox(height: 18),
                 TextField(

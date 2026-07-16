@@ -264,6 +264,7 @@ jobs:
             aab_output="${aab_outputs[0]}"
           fi
           echo "Using AAB output: $aab_output"
+          jarsigner -verify -strict "$aab_output"
           cp "$aab_output" \
             "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.aab_name }}"
 
@@ -285,6 +286,7 @@ jobs:
       - name: Generate checksums and release notes
         run: |
           set -euo pipefail
+          notes_source="$GITHUB_WORKSPACE/docs/release-notes-${RELEASE_TAG}.md"
           cd "${{ steps.meta.outputs.release_dir }}"
           shopt -s nullglob
           assets=( *.apk *.aab *.zip )
@@ -293,8 +295,20 @@ jobs:
           else
             : > "${{ steps.meta.outputs.sha_name }}"
           fi
-          cat > release-notes.md <<EOF
+          if [[ -f "$notes_source" ]]; then
+            cp "$notes_source" release-notes.md
+          else
+            cat > release-notes.md <<EOF
           Release ${RELEASE_TAG}
+
+          Android upgrade note:
+          - v1.0.6 is the first release using the stable signer.
+          - If v1.0.5 or earlier is installed, sync or back up first, uninstall it, then install v1.0.6 once.
+          EOF
+          fi
+          cat >> release-notes.md <<EOF
+
+          ## Build assets
 
           Included assets:
           - $(if [[ -f "${{ steps.meta.outputs.apk_name }}" ]]; then echo "${{ steps.meta.outputs.apk_name }}"; else echo "${{ steps.meta.outputs.apk_name }} (missing)"; fi)
@@ -311,10 +325,6 @@ jobs:
 
           Android signing mode:
           - stable repository release signing
-
-          Android upgrade note:
-          - v1.0.6 is the first release using the stable signer.
-          - If v1.0.5 or earlier is installed, sync or back up first, uninstall it, then install v1.0.6 once.
           EOF
 
       - name: Confirm release tag still points to this commit

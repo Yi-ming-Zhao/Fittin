@@ -42,7 +42,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: fittinTheme.bg,
       body: dataAsync.when(
         data: (data) {
           return DashboardPageScaffold(
@@ -497,7 +497,7 @@ class _MilestoneTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
+                color: theme.surface,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_rounded, color: theme.accent, size: 20),
@@ -509,27 +509,22 @@ class _MilestoneTile extends StatelessWidget {
                 children: [
                   Text(
                     milestone.exerciseName,
-                    style: const TextStyle(
+                    style: TextStyle(
+                      color: theme.fg,
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
                   ),
                   Text(
                     valueLabel,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: theme.fgDim, fontSize: 13),
                   ),
                 ],
               ),
             ),
             Text(
               dateLabel,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.3),
-                fontSize: 12,
-              ),
+              style: TextStyle(color: theme.fgMuted, fontSize: 12),
             ),
           ],
         ),
@@ -571,7 +566,7 @@ class _MilestoneHistoryScreenState
     final filtered = widget.milestones.where(_matchesFilters).toList();
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
         children: [
           DashboardScreenHeader(

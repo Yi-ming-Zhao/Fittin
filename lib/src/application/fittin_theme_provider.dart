@@ -1,98 +1,41 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Global Fittin theme state — direction + tweaks
-class FittinThemeState {
-  final FittinDirection direction;
-  final FittinAccent accent;
-  final FittinBg bg;
-  final FittinTypeFamily typeFamily;
-  final FittinChartStyle chartStyle;
-  final FittinCardStyle cardStyle;
-  final FittinDensity density;
-
-  const FittinThemeState({
-    this.direction = FittinDirection.editorial,
-    this.accent = FittinAccent.bone,
-    this.bg = FittinBg.trueBlack,
-    this.typeFamily = FittinTypeFamily.neutral,
-    this.chartStyle = FittinChartStyle.smooth,
-    this.cardStyle = FittinCardStyle.bordered,
-    this.density = FittinDensity.compact,
-  });
-
-  FittinThemeState copyWith({
-    FittinDirection? direction,
-    FittinAccent? accent,
-    FittinBg? bg,
-    FittinTypeFamily? typeFamily,
-    FittinChartStyle? chartStyle,
-    FittinCardStyle? cardStyle,
-    FittinDensity? density,
-  }) {
-    return FittinThemeState(
-      direction: direction ?? this.direction,
-      accent: accent ?? this.accent,
-      bg: bg ?? this.bg,
-      typeFamily: typeFamily ?? this.typeFamily,
-      chartStyle: chartStyle ?? this.chartStyle,
-      cardStyle: cardStyle ?? this.cardStyle,
-      density: density ?? this.density,
-    );
-  }
-}
+/// Shared preference instance loaded before the production ProviderScope.
+///
+/// The nullable fallback keeps isolated widget tests usable; production always
+/// overrides this provider in `main` so theme restoration is synchronous.
+final fittinThemePreferencesProvider = Provider<SharedPreferences?>((ref) {
+  return null;
+});
 
 final fittinThemeProvider =
-    StateNotifierProvider<FittinThemeNotifier, FittinThemeState>((ref) {
-      return FittinThemeNotifier();
+    StateNotifierProvider<FittinThemeNotifier, FittinPaletteId>((ref) {
+      return FittinThemeNotifier(
+        preferences: ref.watch(fittinThemePreferencesProvider),
+      );
     });
 
-class FittinThemeNotifier extends StateNotifier<FittinThemeState> {
-  FittinThemeNotifier() : super(const FittinThemeState());
+class FittinThemeNotifier extends StateNotifier<FittinPaletteId> {
+  FittinThemeNotifier({SharedPreferences? preferences})
+    : _preferences = preferences,
+      super(
+        FittinPaletteRegistry.decode(preferences?.getString(preferencesKey)),
+      );
 
-  void setDirection(FittinDirection direction) {
-    state = state.copyWith(direction: direction);
-  }
+  static const String preferencesKey = 'fittin.appearance.palette';
 
-  void setAccent(FittinAccent accent) {
-    state = state.copyWith(accent: accent);
-  }
+  final SharedPreferences? _preferences;
 
-  void setBg(FittinBg bg) {
-    state = state.copyWith(bg: bg);
-  }
-
-  void setTypeFamily(FittinTypeFamily typeFamily) {
-    state = state.copyWith(typeFamily: typeFamily);
-  }
-
-  void setChartStyle(FittinChartStyle style) {
-    state = state.copyWith(chartStyle: style);
-  }
-
-  void setCardStyle(FittinCardStyle style) {
-    state = state.copyWith(cardStyle: style);
-  }
-
-  void setDensity(FittinDensity density) {
-    state = state.copyWith(density: density);
-  }
-
-  void applyState(FittinThemeState newState) {
-    state = newState;
+  /// Applies immediately, then persists without delaying visible feedback.
+  Future<void> setPalette(FittinPaletteId paletteId) async {
+    state = paletteId;
+    await _preferences?.setString(preferencesKey, paletteId.storageKey);
   }
 }
 
-/// Derived provider that resolves the actual FittinTheme from state
+/// Resolved semantic tokens used by all product surfaces and Material theme.
 final resolvedFittinThemeProvider = Provider<FittinTheme>((ref) {
-  final s = ref.watch(fittinThemeProvider);
-  return FittinTheme.resolve(
-    direction: s.direction,
-    accent: s.accent,
-    bg: s.bg,
-    typeFamily: s.typeFamily,
-    chart: s.chartStyle,
-    card: s.cardStyle,
-    density: s.density,
-  );
+  return FittinPaletteRegistry.themeOf(ref.watch(fittinThemeProvider));
 });

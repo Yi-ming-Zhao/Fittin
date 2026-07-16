@@ -68,16 +68,7 @@ void main() {
       data.muscleLoad.forMuscle(ExerciseMuscle.quadriceps)!.normalizedIntensity,
       1,
     );
-    expect(
-      data
-          .volumeData(
-            labelFor: (muscle) =>
-                muscle == ExerciseMuscle.quadriceps ? '股四头肌' : muscle.name,
-          )
-          .first
-          .label,
-      '股四头肌',
-    );
+    expect(data.muscleLoad.loads.first.muscle, ExerciseMuscle.quadriceps);
     expect(data.recordedDates, [
       DateTime(2026, 3, 2),
       DateTime(2026, 3, 4),

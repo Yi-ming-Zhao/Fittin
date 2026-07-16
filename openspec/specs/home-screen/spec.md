@@ -19,11 +19,12 @@ The home screen MUST summarize short-horizon performance and activity signals wi
 - **AND** it provides quick actions for switching plans or opening deeper progress views.
 
 ### Requirement: Viewport-Filling Home Composition
-The home dashboard MUST fill the usable mobile viewport through responsive spacing and flexible content while keeping bottom navigation clear on both Android app and mobile web.
+The Today dashboard MUST fill the usable mobile viewport through a bounded relaxed composition on tall devices and a compact scrollable composition on short devices while keeping bottom navigation clear. The relaxed composition MUST increase meaningful card space and section rhythm rather than inserting one oversized blank region.
 
 #### Scenario: Home opens at different mobile heights
-- **WHEN** the home dashboard opens at supported narrow widths with different usable heights
-- **THEN** its content reaches the navigation region without a fixed blank footer and remains scrollable when the shorter viewport cannot contain it.
+- **WHEN** Today opens at a 390x926 or 390x568 app-shell viewport
+- **THEN** the tall viewport renders the relaxed workout, KPI, activity, and quick-action composition with balanced vertical distribution
+- **AND** the short viewport renders one vertical compact scroll with every action reachable and no bottom-navigation overlap.
 
 ### Requirement: Swipe-Selectable Big Three E1RM
 The home e1RM module MUST present Squat, Bench Press, and Deadlift as a horizontally swipeable, page-indicated selection while preserving tap access and localized lift names.

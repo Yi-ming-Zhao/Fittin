@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,6 +42,51 @@ void main() {
     expect(find.text('Add first measurement'), findsOneWidget);
     expect(find.text('Add measurement'), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('body loading and error states stay top anchored', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(390, 926));
+    final pendingRepository = _PendingProgressRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: const ValueKey('body-loading-scope'),
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(pendingRepository),
+        ],
+        child: const MaterialApp(home: BodyMetricsScreen()),
+      ),
+    );
+    await tester.pump();
+
+    final loading = find.byKey(const ValueKey('body-metrics-loading'));
+    expect(loading, findsOneWidget);
+    expect(tester.getCenter(loading).dy, lessThan(926 / 2));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        key: const ValueKey('body-error-scope'),
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(
+            _ThrowingProgressRepository(),
+          ),
+        ],
+        child: const MaterialApp(home: BodyMetricsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final error = find.byKey(const ValueKey('body-metrics-error'));
+    expect(error, findsOneWidget);
+    expect(tester.getCenter(error).dy, lessThan(926 / 2));
   });
 
   testWidgets(
@@ -202,6 +249,28 @@ void main() {
 
         expect(find.text('Body Metrics'), findsOneWidget);
         expect(find.byKey(const ValueKey('body-weight-chart')), findsOneWidget);
+        final chart = tester.widget<InteractiveLineChart>(
+          find.byKey(const ValueKey('body-weight-chart')),
+        );
+        expect(chart.height, viewport.height >= 720 ? 250 : 216);
+
+        await _scrollUntilBuiltAndVisible(
+          tester,
+          target: find.byKey(const ValueKey('body-metric-card-check-ins')),
+          scrollable: _verticalScrollable(),
+        );
+        final bodyFatRect = tester.getRect(
+          find.byKey(const ValueKey('body-metric-card-body-fat')),
+        );
+        final waistRect = tester.getRect(
+          find.byKey(const ValueKey('body-metric-card-waist')),
+        );
+        final checkInsRect = tester.getRect(
+          find.byKey(const ValueKey('body-metric-card-check-ins')),
+        );
+        expect(bodyFatRect.top, closeTo(waistRect.top, 0.1));
+        expect(checkInsRect.top, greaterThan(bodyFatRect.bottom));
+        expect(checkInsRect.width, greaterThan(bodyFatRect.width * 1.9));
         final verticalScroll = _verticalScrollable();
         final position = tester.state<ScrollableState>(verticalScroll).position;
         expect(position.maxScrollExtent, greaterThan(0));
@@ -221,6 +290,88 @@ void main() {
       },
     );
   }
+
+  testWidgets('body compact breakpoint uses safe content height', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(390, 740));
+    final progressRepository = InMemoryProgressRepository();
+    await progressRepository.saveBodyMetric(
+      BodyMetric(
+        metricId: 'safe-height-body',
+        timestamp: DateTime(2026, 3, 18),
+        weightKg: 79.2,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(progressRepository),
+        ],
+        child: const MaterialApp(
+          home: MediaQuery(
+            data: MediaQueryData(padding: EdgeInsets.only(top: 32)),
+            child: BodyMetricsScreen(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final chart = tester.widget<InteractiveLineChart>(
+      find.byKey(const ValueKey('body-weight-chart')),
+    );
+    expect(chart.height, 216);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('body metrics uses three columns at the 520px breakpoint', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(520, 926));
+    final progressRepository = InMemoryProgressRepository();
+    await progressRepository.saveBodyMetric(
+      BodyMetric(
+        metricId: 'wide-body-1',
+        timestamp: DateTime(2026, 3, 18),
+        weightKg: 79.2,
+        bodyFatPercent: 19.5,
+        waistCm: 88,
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(progressRepository),
+        ],
+        child: const MaterialApp(home: BodyMetricsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final bodyFatRect = tester.getRect(
+      find.byKey(const ValueKey('body-metric-card-body-fat')),
+    );
+    final waistRect = tester.getRect(
+      find.byKey(const ValueKey('body-metric-card-waist')),
+    );
+    final checkInsRect = tester.getRect(
+      find.byKey(const ValueKey('body-metric-card-check-ins')),
+    );
+    expect(bodyFatRect.top, closeTo(waistRect.top, 0.1));
+    expect(bodyFatRect.top, closeTo(checkInsRect.top, 0.1));
+    expect(bodyFatRect.width, closeTo(waistRect.width, 0.1));
+    expect(waistRect.width, closeTo(checkInsRect.width, 0.1));
+    expect(tester.takeException(), isNull);
+  });
 }
 
 void _setViewport(WidgetTester tester, Size size) {
@@ -252,5 +403,25 @@ Future<void> _scrollUntilBuiltAndVisible(
     }
     await tester.drag(scrollable, const Offset(0, -260));
     await tester.pump();
+  }
+}
+
+class _PendingProgressRepository extends ProgressRepository {
+  _PendingProgressRepository() : super();
+
+  final Completer<List<BodyMetric>> _completer = Completer<List<BodyMetric>>();
+
+  @override
+  Future<List<BodyMetric>> fetchBodyMetrics({String? ownerUserId}) {
+    return _completer.future;
+  }
+}
+
+class _ThrowingProgressRepository extends ProgressRepository {
+  _ThrowingProgressRepository() : super();
+
+  @override
+  Future<List<BodyMetric>> fetchBodyMetrics({String? ownerUserId}) {
+    return Future<List<BodyMetric>>.error(StateError('body load failed'));
   }
 }

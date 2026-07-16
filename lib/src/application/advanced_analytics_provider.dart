@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
@@ -9,7 +8,6 @@ import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
-import 'package:fittin_v2/src/presentation/widgets/charts/muscle_distribution_painter.dart';
 
 enum ConsistencyRange { week, month, plan }
 
@@ -102,28 +100,6 @@ class AdvancedAnalyticsData {
   final Map<ConsistencyRange, List<ConsistencySection>> sectionsByRange;
   final MuscleLoadOverview muscleLoad;
   final Map<DateTime, ConsistencyDayRecord> dayRecords;
-
-  List<MuscleVolumeData> volumeData({
-    required String Function(ExerciseMuscle muscle) labelFor,
-  }) {
-    if (muscleLoad.loads.isEmpty) {
-      return const [];
-    }
-    final maxLoad = muscleLoad.loads
-        .map((load) => load.weightedCompletedSets)
-        .reduce(math.max);
-    return muscleLoad.loads
-        .take(5)
-        .map(
-          (load) => MuscleVolumeData(
-            label: labelFor(load.muscle),
-            currentSets: load.weightedCompletedSets,
-            targetSets: maxLoad,
-            color: _warmMuscleColor(load.normalizedIntensity),
-          ),
-        )
-        .toList(growable: false);
-  }
 
   List<DateTime> get recordedDates =>
       dayRecords.keys.toList(growable: false)..sort();
@@ -454,12 +430,4 @@ int _calendarDayDifference(DateTime start, DateTime end) => DateTime.utc(
 String _weekLabel(DateTime start) {
   final end = _addCalendarDays(start, 6);
   return '${start.month}/${start.day} - ${end.month}/${end.day}';
-}
-
-Color _warmMuscleColor(double intensity) {
-  return Color.lerp(
-    const Color(0xFF8C4A37),
-    const Color(0xFFFFB15A),
-    intensity.clamp(0, 1),
-  )!;
 }

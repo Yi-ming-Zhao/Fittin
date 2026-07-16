@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_settings_screen.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/in_memory_database_repository.dart';
@@ -73,12 +75,163 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -700));
-    await tester.pumpAndSettle();
     final guideButton = find.byKey(const ValueKey('open-set-type-guide'));
+    await tester.scrollUntilVisible(
+      guideButton,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     expect(guideButton, findsOneWidget);
     expect(find.text('Training Set Guide'), findsOneWidget);
   });
+
+  testWidgets('appearance section localizes its complete theme description', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final preferences = await SharedPreferences.getInstance();
+    final repository = InMemoryDatabaseRepository();
+    final semantics = tester.ensureSemantics();
+    await tester.binding.setSurfaceSize(const Size(390, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          fittinThemePreferencesProvider.overrideWithValue(preferences),
+        ],
+        child: const MaterialApp(home: ProfileSettingsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final appearanceHeading = find.text('APPEARANCE');
+    await tester.scrollUntilVisible(
+      appearanceHeading,
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('APPEARANCE'), findsOneWidget);
+    expect(
+      find.text(
+        'One complete theme updates backgrounds, cards, text, lines, charts, and interaction feedback together.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Current appearance: Obsidian Brass'), findsOneWidget);
+    expect(
+      find.text('Swipe horizontally to compare all five palettes.'),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel('Obsidian Brass theme preview, selected'),
+      findsOneWidget,
+    );
+
+    await ProviderScope.containerOf(
+      tester.element(find.byType(ProfileSettingsScreen)),
+    ).read(appLocaleProvider.notifier).setLocale(AppLocale.zh);
+    await tester.pumpAndSettle();
+
+    expect(find.text('外观'), findsOneWidget);
+    expect(find.text('一套完整主题会同时更新背景、卡片、文字、线条、图表和操作反馈。'), findsOneWidget);
+    expect(find.text('当前外观：黑曜黄铜'), findsOneWidget);
+    expect(find.text('横向滑动比较全部 5 套配色。'), findsOneWidget);
+    expect(find.bySemanticsLabel('黑曜黄铜 主题预览，已选择'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets(
+    'all appearance previews are reachable and select live at 390px',
+    (WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final repository = InMemoryDatabaseRepository();
+      final semantics = tester.ensureSemantics();
+      await tester.binding.setSurfaceSize(const Size(390, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            fittinThemePreferencesProvider.overrideWithValue(preferences),
+          ],
+          child: const MaterialApp(home: ProfileSettingsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final paletteList = find.byKey(const ValueKey('appearance-palette-list'));
+      await tester.scrollUntilVisible(
+        paletteList,
+        220,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      final horizontalScrollable = find.descendant(
+        of: paletteList,
+        matching: find.byType(Scrollable),
+      );
+
+      for (final paletteId in FittinPaletteRegistry.ids) {
+        final preview = find.byKey(
+          ValueKey('appearance-palette-${paletteId.storageKey}'),
+        );
+        await tester.scrollUntilVisible(
+          preview,
+          180,
+          scrollable: horizontalScrollable,
+          maxScrolls: 10,
+        );
+        await tester.pumpAndSettle();
+
+        final rect = tester.getRect(preview);
+        expect(rect.width, greaterThanOrEqualTo(48));
+        expect(rect.height, greaterThanOrEqualTo(48));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(390));
+      }
+
+      final context = tester.element(find.byType(ProfileSettingsScreen));
+      final container = ProviderScope.containerOf(context);
+      final before = container.read(resolvedFittinThemeProvider);
+      final espresso = find.byKey(
+        ValueKey(
+          'appearance-palette-${FittinPaletteId.espressoEmber.storageKey}',
+        ),
+      );
+      await tester.tap(espresso);
+      await tester.pumpAndSettle();
+
+      expect(
+        container.read(fittinThemeProvider),
+        FittinPaletteId.espressoEmber,
+      );
+      expect(
+        container.read(resolvedFittinThemeProvider).accent,
+        isNot(before.accent),
+      );
+      expect(find.text('Current appearance: Espresso Ember'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Espresso Ember theme preview, selected'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getSemantics(espresso)
+            .getSemanticsData()
+            .flagsCollection
+            .isSelected,
+        isTrue,
+      );
+      semantics.dispose();
+    },
+  );
 
   testWidgets('profile settings opens the account screen', (
     WidgetTester tester,
@@ -188,9 +341,11 @@ void main() {
     );
     await tester.scrollUntilVisible(
       traditional,
-      220,
+      300,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(traditional);
+    await tester.pumpAndSettle();
     await tester.tap(traditional);
     await tester.pumpAndSettle();
 

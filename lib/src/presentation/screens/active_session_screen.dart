@@ -13,6 +13,7 @@ import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
+import 'package:fittin_v2/src/presentation/theme/domain_color_palettes.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
@@ -239,6 +240,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                       : null,
                 )
               : _TraditionalSetLogger(
+                  theme: fittinTheme,
                   strings: strings,
                   setIndex: resolvedSetIndex,
                   totalSets: currentExercise.sets.length,
@@ -294,6 +296,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
         ),
         const SizedBox(height: 10),
         _SetProgressRail(
+          theme: fittinTheme,
           strings: strings,
           sets: currentExercise.sets,
           activeIndex: resolvedSetIndex,
@@ -395,7 +398,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.black,
+      backgroundColor: ref.read(resolvedFittinThemeProvider).bg,
       builder: (_) => WeightToolsSheet(
         initialWeight: weight,
         initialUnit: unit,
@@ -663,6 +666,7 @@ class _SessionHeader extends StatelessWidget {
         ),
         if (canSwitchUnit)
           _HeaderTextButton(
+            theme: theme,
             key: const ValueKey('session-unit-toggle'),
             label: displayUnit == LoadUnits.kg ? 'KG' : 'LB',
             tooltip: strings.switchWeightUnit(
@@ -672,6 +676,7 @@ class _SessionHeader extends StatelessWidget {
           ),
         const SizedBox(width: 6),
         _HeaderIconButton(
+          theme: theme,
           key: const ValueKey('session-weight-tools'),
           icon: Icons.calculate_outlined,
           tooltip: strings.weightTools,
@@ -679,6 +684,7 @@ class _SessionHeader extends StatelessWidget {
         ),
         const SizedBox(width: 6),
         _ExerciseSwitchMenu(
+          theme: theme,
           strings: strings,
           exercises: exercises,
           activeIndex: activeExerciseIndex,
@@ -693,12 +699,14 @@ class _SessionHeader extends StatelessWidget {
 class _HeaderTextButton extends StatelessWidget {
   const _HeaderTextButton({
     super.key,
+    required this.theme,
     required this.label,
     required this.tooltip,
     required this.onTap,
   });
 
   final String label;
+  final FittinTheme theme;
   final String tooltip;
   final VoidCallback onTap;
 
@@ -715,7 +723,7 @@ class _HeaderTextButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: theme.border),
           ),
           child: Text(
             label,
@@ -733,12 +741,14 @@ class _HeaderTextButton extends StatelessWidget {
 class _HeaderIconButton extends StatelessWidget {
   const _HeaderIconButton({
     super.key,
+    required this.theme,
     required this.icon,
     required this.tooltip,
     required this.onTap,
   });
 
   final IconData icon;
+  final FittinTheme theme;
   final String tooltip;
   final VoidCallback onTap;
 
@@ -754,7 +764,7 @@ class _HeaderIconButton extends StatelessWidget {
           height: 38,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: theme.border),
           ),
           child: Icon(icon, size: 18),
         ),
@@ -765,6 +775,7 @@ class _HeaderIconButton extends StatelessWidget {
 
 class _SetProgressRail extends StatelessWidget {
   const _SetProgressRail({
+    required this.theme,
     required this.strings,
     required this.sets,
     required this.activeIndex,
@@ -772,6 +783,7 @@ class _SetProgressRail extends StatelessWidget {
   });
 
   final AppStrings strings;
+  final FittinTheme theme;
   final List<SessionSetState> sets;
   final int activeIndex;
   final ValueChanged<int> onSelect;
@@ -803,16 +815,14 @@ class _SetProgressRail extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(99),
                       color: sets[index].isCompleted
-                          ? Colors.white.withValues(alpha: 0.9)
+                          ? theme.setCompleted
                           : sets[index].isSkipped
-                          ? const Color(0xFFB77A70).withValues(alpha: 0.7)
+                          ? theme.setSkipped
                           : index == activeIndex
-                          ? Colors.white.withValues(alpha: 0.38)
-                          : Colors.white.withValues(alpha: 0.1),
+                          ? theme.setCurrent
+                          : theme.setUpcoming,
                       border: index == activeIndex
-                          ? Border.all(
-                              color: Colors.white.withValues(alpha: 0.52),
-                            )
+                          ? Border.all(color: theme.focusRing)
                           : null,
                     ),
                   ),
@@ -829,6 +839,7 @@ class _SetProgressRail extends StatelessWidget {
 
 class _TraditionalSetLogger extends StatelessWidget {
   const _TraditionalSetLogger({
+    required this.theme,
     required this.strings,
     required this.setIndex,
     required this.totalSets,
@@ -849,6 +860,7 @@ class _TraditionalSetLogger extends StatelessWidget {
   });
 
   final AppStrings strings;
+  final FittinTheme theme;
   final int setIndex;
   final int totalSets;
   final SessionSetState currentSet;
@@ -868,7 +880,7 @@ class _TraditionalSetLogger extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final materialTheme = Theme.of(context);
     return DashboardSurfaceCard(
       key: const ValueKey('traditional-set-logger'),
       highlight: true,
@@ -880,8 +892,8 @@ class _TraditionalSetLogger extends StatelessWidget {
             children: [
               Text(
                 strings.setPosition(setIndex + 1, totalSets),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.56),
+                style: materialTheme.textTheme.labelMedium?.copyWith(
+                  color: theme.fgDim,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 0.8,
                 ),
@@ -894,7 +906,7 @@ class _TraditionalSetLogger extends StatelessWidget {
                   displayTargetWeight,
                   displayUnit,
                 ),
-                style: theme.textTheme.labelMedium?.copyWith(
+                style: materialTheme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -905,6 +917,7 @@ class _TraditionalSetLogger extends StatelessWidget {
             children: [
               Expanded(
                 child: _CardMetric(
+                  theme: theme,
                   label: strings.completedRepsLabel,
                   value: '${currentSet.completedReps}',
                   onDecrease: onDecreaseReps,
@@ -920,6 +933,7 @@ class _TraditionalSetLogger extends StatelessWidget {
                   onTap: onEditWeight,
                   borderRadius: BorderRadius.circular(20),
                   child: _CardMetric(
+                    theme: theme,
                     label: displayUnit == LoadUnits.kg ? 'KG' : 'LB',
                     value: _formatWeightValue(displayWeight),
                     onDecrease: onDecreaseWeight,
@@ -941,21 +955,21 @@ class _TraditionalSetLogger extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                color: Colors.white.withValues(alpha: 0.05),
+                color: theme.surface,
               ),
               child: Row(
                 children: [
                   Text(
                     strings.performedRpe,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.5),
+                    style: materialTheme.textTheme.labelSmall?.copyWith(
+                      color: theme.fgMuted,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                   const Spacer(),
                   Text(
                     '${currentSet.completedRpe ?? currentSet.targetRpe ?? '—'}',
-                    style: theme.textTheme.titleMedium?.copyWith(
+                    style: materialTheme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -973,6 +987,7 @@ class _TraditionalSetLogger extends StatelessWidget {
           ] else
             const Spacer(),
           _AnimatedCheckButton(
+            theme: theme,
             key: const ValueKey('complete-current-set'),
             controller: completionController,
             onTap: onComplete,
@@ -1065,8 +1080,10 @@ class _CardSetStackState extends State<_CardSetStack> {
     final downProgress = (_dragOffset.dy / _commitDistance).clamp(0.0, 1.0);
     final isVertical = _dragOffset.dy.abs() > _dragOffset.dx.abs();
     final activeColor = isVertical
-        ? (_dragOffset.dy < 0 ? widget.theme.accent : const Color(0xFFB77A70))
-        : widget.theme.fgDim;
+        ? (_dragOffset.dy < 0
+              ? widget.theme.gestureLog
+              : widget.theme.gestureSkip)
+        : widget.theme.gestureNavigate;
     final transform = Matrix4.translationValues(
       _dragOffset.dx,
       _dragOffset.dy + (_dragOffset.dx.abs() / 42).clamp(0, 5),
@@ -1100,7 +1117,8 @@ class _CardSetStackState extends State<_CardSetStack> {
                         child: _GestureStamp(
                           label: widget.strings.previousSetAction,
                           icon: Icons.arrow_forward_rounded,
-                          color: widget.theme.fgDim,
+                          color: widget.theme.gestureNavigate,
+                          backgroundColor: widget.theme.bgDeep,
                         ),
                       ),
                     ),
@@ -1111,7 +1129,8 @@ class _CardSetStackState extends State<_CardSetStack> {
                         child: _GestureStamp(
                           label: widget.strings.nextSetAction,
                           icon: Icons.arrow_back_rounded,
-                          color: widget.theme.fgDim,
+                          color: widget.theme.gestureNavigate,
+                          backgroundColor: widget.theme.bgDeep,
                         ),
                       ),
                     ),
@@ -1122,7 +1141,8 @@ class _CardSetStackState extends State<_CardSetStack> {
                         child: _GestureStamp(
                           label: widget.strings.skipSetAction,
                           icon: Icons.keyboard_arrow_down_rounded,
-                          color: const Color(0xFFB77A70),
+                          color: widget.theme.gestureSkip,
+                          backgroundColor: widget.theme.bgDeep,
                         ),
                       ),
                     ),
@@ -1133,7 +1153,8 @@ class _CardSetStackState extends State<_CardSetStack> {
                         child: _GestureStamp(
                           label: widget.strings.logSetAction,
                           icon: Icons.check_rounded,
-                          color: widget.theme.accent,
+                          color: widget.theme.gestureLog,
+                          backgroundColor: widget.theme.bgDeep,
                         ),
                       ),
                     ),
@@ -1156,6 +1177,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                 child: Transform.rotate(
                   angle: depth.isEven ? -0.014 * depth : 0.012 * depth,
                   child: _StackBackCard(
+                    theme: widget.theme,
                     strings: widget.strings,
                     set: widget.upcomingSets[depth - 1],
                     setNumber: widget.setIndex + depth + 1,
@@ -1215,7 +1237,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.42),
+                          color: widget.theme.shadowStrong,
                           blurRadius: 30,
                           offset: const Offset(0, 16),
                         ),
@@ -1277,6 +1299,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                           children: [
                             Expanded(
                               child: _CardMetric(
+                                theme: widget.theme,
                                 label: widget.strings.completedRepsLabel,
                                 value: '${widget.currentSet.completedReps}',
                                 onDecrease: widget.onDecreaseReps,
@@ -1401,6 +1424,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                               Align(
                                 alignment: Alignment.center,
                                 child: _AnimatedCheckButton(
+                                  theme: widget.theme,
                                   key: const ValueKey('complete-current-set'),
                                   controller: widget.completionController,
                                   onTap: widget.onComplete,
@@ -1414,10 +1438,8 @@ class _CardSetStackState extends State<_CardSetStack> {
                                   key: const ValueKey('cancel-current-set'),
                                   tooltip: widget.strings.skipCurrentSet,
                                   style: IconButton.styleFrom(
-                                    backgroundColor: const Color(
-                                      0xFFB77A70,
-                                    ).withValues(alpha: 0.2),
-                                    foregroundColor: const Color(0xFFE7B8B0),
+                                    backgroundColor: widget.theme.dangerSubtle,
+                                    foregroundColor: widget.theme.danger,
                                   ),
                                   onPressed: widget.onCancel,
                                   icon: const Icon(Icons.redo_rounded),
@@ -1698,6 +1720,7 @@ class _CardGestureCompass extends StatelessWidget {
 
 class _StackBackCard extends StatelessWidget {
   const _StackBackCard({
+    required this.theme,
     required this.strings,
     required this.set,
     required this.setNumber,
@@ -1706,6 +1729,7 @@ class _StackBackCard extends StatelessWidget {
   });
 
   final AppStrings strings;
+  final FittinTheme theme;
   final SessionSetState set;
   final int setNumber;
   final String displayUnit;
@@ -1717,9 +1741,9 @@ class _StackBackCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(18, 12, 18, 0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(30),
-        color: const Color(0xFF17191C),
+        color: theme.surfaceSolid,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08 * emphasis),
+          color: theme.border.withValues(alpha: emphasis.clamp(0.2, 1.0)),
         ),
       ),
       child: Row(
@@ -1728,7 +1752,7 @@ class _StackBackCard extends StatelessWidget {
           Text(
             strings.setNumber(setNumber),
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.34 * emphasis),
+              color: theme.fgMuted.withValues(alpha: emphasis.clamp(0.2, 1.0)),
               fontWeight: FontWeight.w800,
               letterSpacing: 0.8,
             ),
@@ -1740,7 +1764,7 @@ class _StackBackCard extends StatelessWidget {
               displayUnit,
             ),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.42 * emphasis),
+              color: theme.fgDim.withValues(alpha: emphasis.clamp(0.2, 1.0)),
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -1752,6 +1776,7 @@ class _StackBackCard extends StatelessWidget {
 
 class _CardMetric extends StatelessWidget {
   const _CardMetric({
+    required this.theme,
     required this.label,
     required this.value,
     required this.onDecrease,
@@ -1762,6 +1787,7 @@ class _CardMetric extends StatelessWidget {
   });
 
   final String label;
+  final FittinTheme theme;
   final String value;
   final VoidCallback? onDecrease;
   final VoidCallback onIncrease;
@@ -1771,11 +1797,11 @@ class _CardMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final materialTheme = Theme.of(context);
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
+        color: theme.surface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -1792,15 +1818,15 @@ class _CardMetric extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: theme.textTheme.headlineMedium?.copyWith(
+                  style: materialTheme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1.5,
                   ),
                 ),
                 Text(
                   label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.5),
+                  style: materialTheme.textTheme.labelSmall?.copyWith(
+                    color: theme.fgMuted,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -1876,11 +1902,13 @@ class _GestureStamp extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.color,
+    required this.backgroundColor,
   });
 
   final String label;
   final IconData icon;
   final Color color;
+  final Color backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1888,7 +1916,7 @@ class _GestureStamp extends StatelessWidget {
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.72),
+        color: backgroundColor.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color),
       ),
@@ -2014,21 +2042,31 @@ class _BarbellGraphic extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Color.lerp(spec.color, Colors.white, 0.14)!,
+                              Color.lerp(
+                                spec.color,
+                                OlympicEquipmentPalette.labelLight,
+                                0.14,
+                              )!,
                               spec.color,
-                              Color.lerp(spec.color, Colors.black, 0.2)!,
+                              Color.lerp(
+                                spec.color,
+                                OlympicEquipmentPalette.labelDark,
+                                0.2,
+                              )!,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(
                             (spec.width * 0.22).clamp(1.5, 3),
                           ),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: OlympicEquipmentPalette.labelLight
+                                .withValues(alpha: 0.18),
                             width: 0.7,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.35),
+                              color: OlympicEquipmentPalette.labelDark
+                                  .withValues(alpha: 0.35),
                               blurRadius: 3 * hardwareScale,
                               offset: Offset(0, 1.5 * hardwareScale),
                             ),
@@ -2043,7 +2081,8 @@ class _BarbellGraphic extends StatelessWidget {
                               bottom: 2 * hardwareScale,
                               child: Container(
                                 width: 0.8 * hardwareScale,
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: OlympicEquipmentPalette.labelLight
+                                    .withValues(alpha: 0.2),
                               ),
                             ),
                             Center(
@@ -2078,14 +2117,15 @@ class _BarbellGraphic extends StatelessWidget {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Color(0xFF74797D),
-                              Color(0xFFD6D9DB),
-                              Color(0xFF676C70),
+                              OlympicEquipmentPalette.shaftMid,
+                              OlympicEquipmentPalette.sleeveLight,
+                              OlympicEquipmentPalette.sleeveDark,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(99),
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.16),
+                            color: OlympicEquipmentPalette.labelLight
+                                .withValues(alpha: 0.16),
                             width: 0.6,
                           ),
                         ),
@@ -2111,9 +2151,9 @@ class _BarbellGraphic extends StatelessWidget {
                                     begin: Alignment.topCenter,
                                     end: Alignment.bottomCenter,
                                     colors: [
-                                      Color(0xFF5E6367),
-                                      Color(0xFFE1E3E4),
-                                      Color(0xFF555A5E),
+                                      OlympicEquipmentPalette.shaftDark,
+                                      OlympicEquipmentPalette.shaftLight,
+                                      OlympicEquipmentPalette.shaftDark,
                                     ],
                                   ),
                                   borderRadius: BorderRadius.circular(99),
@@ -2187,7 +2227,7 @@ class _BarbellGraphic extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.52),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 8,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.35,
@@ -2219,7 +2259,7 @@ class _BarbellCenterSpan extends StatelessWidget {
       return Container(
         width: width * scale,
         height: 10 * scale,
-        color: Colors.white.withValues(alpha: opacity),
+        color: OlympicEquipmentPalette.labelLight.withValues(alpha: opacity),
       );
     }
 
@@ -2277,8 +2317,8 @@ _BarbellPlateVisualSpec _plateVisualSpec({
             _ => 5,
           } *
           widthScale,
-      color: const Color(0xFF858B90),
-      labelColor: const Color(0xFF111315),
+      color: OlympicEquipmentPalette.changePlate,
+      labelColor: OlympicEquipmentPalette.labelDark,
     );
   }
 
@@ -2291,13 +2331,13 @@ _BarbellPlateVisualSpec _plateVisualSpec({
     _ => 160.0,
   };
   final color = switch (weight) {
-    25 => const Color(0xFFB94A48),
-    20 => const Color(0xFF416F9F),
-    15 => const Color(0xFFC3A74A),
-    10 => const Color(0xFF4E7A45),
-    5 => const Color(0xFFD8D5CC),
-    2.5 => const Color(0xFF292A2C),
-    _ => const Color(0xFFA7ADB2),
+    25 => OlympicEquipmentPalette.plate25,
+    20 => OlympicEquipmentPalette.plate20,
+    15 => OlympicEquipmentPalette.plate15,
+    10 => OlympicEquipmentPalette.plate10,
+    5 => OlympicEquipmentPalette.plate5,
+    2.5 => OlympicEquipmentPalette.plate2_5,
+    _ => OlympicEquipmentPalette.plateNeutral,
   };
   final darkLabel = weight == 15 || weight == 5 || weight <= 1.25;
   return _BarbellPlateVisualSpec(
@@ -2316,7 +2356,9 @@ _BarbellPlateVisualSpec _plateVisualSpec({
         } *
         widthScale,
     color: color,
-    labelColor: darkLabel ? const Color(0xFF17191B) : Colors.white,
+    labelColor: darkLabel
+        ? OlympicEquipmentPalette.labelDark
+        : OlympicEquipmentPalette.labelLight,
   );
 }
 
@@ -2348,10 +2390,16 @@ class _BarbellCollar extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: 2 * scale),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF777C80), Color(0xFFD4D7D9), Color(0xFF6B7074)],
+          colors: [
+            OlympicEquipmentPalette.shaftMid,
+            OlympicEquipmentPalette.sleeveLight,
+            OlympicEquipmentPalette.sleeveDark,
+          ],
         ),
         borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(
+          color: OlympicEquipmentPalette.labelLight.withValues(alpha: 0.2),
+        ),
       ),
     );
   }
@@ -2370,7 +2418,7 @@ class _BarbellShoulder extends StatelessWidget {
       height: height,
       margin: EdgeInsets.symmetric(horizontal: 2 * scale),
       decoration: BoxDecoration(
-        color: const Color(0xFFBFC3C6),
+        color: OlympicEquipmentPalette.collar,
         borderRadius: BorderRadius.circular(2),
       ),
     );
@@ -2380,6 +2428,7 @@ class _BarbellShoulder extends StatelessWidget {
 class _AnimatedCheckButton extends StatelessWidget {
   const _AnimatedCheckButton({
     super.key,
+    required this.theme,
     required this.controller,
     required this.onTap,
     required this.semanticLabel,
@@ -2387,6 +2436,7 @@ class _AnimatedCheckButton extends StatelessWidget {
   });
 
   final AnimationController controller;
+  final FittinTheme theme;
   final VoidCallback onTap;
   final String semanticLabel;
   final double size;
@@ -2418,23 +2468,23 @@ class _AnimatedCheckButton extends StatelessWidget {
                 height: size,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(24),
-                  color: Colors.white.withValues(
-                    alpha: 0.08 + glow.value * 0.12,
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.14),
-                  ),
+                  color: Color.lerp(theme.surface, theme.accentDim, glow.value),
+                  border: Border.all(color: theme.borderHi),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.white.withValues(
-                        alpha: 0.1 + glow.value * 0.22,
+                      color: theme.accent.withValues(
+                        alpha: 0.08 + glow.value * 0.24,
                       ),
                       blurRadius: 26,
                       spreadRadius: 1,
                     ),
                   ],
                 ),
-                child: Icon(Icons.check_rounded, size: size * 0.43),
+                child: Icon(
+                  Icons.check_rounded,
+                  size: size * 0.43,
+                  color: theme.accent,
+                ),
               ),
             );
           },
@@ -2446,6 +2496,7 @@ class _AnimatedCheckButton extends StatelessWidget {
 
 class _ExerciseSwitchMenu extends StatelessWidget {
   const _ExerciseSwitchMenu({
+    required this.theme,
     required this.strings,
     required this.exercises,
     required this.activeIndex,
@@ -2454,6 +2505,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
   });
 
   final AppStrings strings;
+  final FittinTheme theme;
   final List<ExerciseSessionState> exercises;
   final int activeIndex;
   final String Function(ExerciseSessionState) localizedExercise;
@@ -2464,7 +2516,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(
         popupMenuTheme: PopupMenuThemeData(
-          color: const Color(0xFF101216),
+          color: theme.surfaceSolid,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(22),
           ),
@@ -2496,8 +2548,8 @@ class _ExerciseSwitchMenu extends StatelessWidget {
           height: 42,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            color: Colors.white.withValues(alpha: 0.06),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            color: theme.surface,
+            border: Border.all(color: theme.border),
           ),
           child: const Icon(Icons.swap_vert_rounded),
         ),
@@ -2545,7 +2597,7 @@ class _ExerciseMenuItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
                 color: active
                     ? theme.colorScheme.primary.withValues(alpha: 0.2)
-                    : Colors.white.withValues(alpha: 0.06),
+                    : theme.colorScheme.surfaceContainerHighest,
               ),
               child: Text(
                 '$completed/$total',

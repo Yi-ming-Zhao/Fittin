@@ -11,6 +11,7 @@ import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.da
 import 'package:fittin_v2/src/presentation/screens/milestone_exercise_settings_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/appearance_palette_picker.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
@@ -104,6 +105,10 @@ class ProfileSettingsScreen extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(label: strings.appearanceSection),
+        const SizedBox(height: 10),
+        const AppearancePalettePicker(),
         const SizedBox(height: 24),
         DashboardSectionLabel(label: strings.workoutLoggingSection),
         const SizedBox(height: 10),

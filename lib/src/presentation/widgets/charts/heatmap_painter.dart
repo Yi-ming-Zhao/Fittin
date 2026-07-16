@@ -3,11 +3,15 @@ import 'package:flutter/material.dart';
 class HeatmapPainter extends CustomPainter {
   final Map<DateTime, double> activityData; // Date -> Intensity (0..1)
   final Color activeColor;
+  final Color baseColor;
+  final Color peakColor;
   final int daysToShow;
 
   HeatmapPainter({
     required this.activityData,
-    this.activeColor = const Color(0xFFB69B72),
+    required this.activeColor,
+    required this.baseColor,
+    required this.peakColor,
     this.daysToShow = 91, // 13 weeks
   });
 
@@ -16,7 +20,7 @@ class HeatmapPainter extends CustomPainter {
     const columns = 13;
     const rows = 7;
     const spacing = 3.0;
-    
+
     final itemWidth = (size.width - (columns - 1) * spacing) / columns;
     final itemHeight = (size.height - (rows - 1) * spacing) / rows;
     final double side = itemWidth < itemHeight ? itemWidth : itemHeight;
@@ -26,7 +30,7 @@ class HeatmapPainter extends CustomPainter {
     final startDate = now.subtract(Duration(days: daysToShow - 1));
 
     final basePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04)
+      ..color = baseColor
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < daysToShow; i++) {
@@ -48,17 +52,22 @@ class HeatmapPainter extends CustomPainter {
       if (intensity > 0) {
         // Base cell fill with intensity-driven opacity
         final activePaint = Paint()
-          ..color = activeColor.withValues(alpha: 0.15 + 0.85 * intensity.clamp(0.0, 1.0))
+          ..color = activeColor.withValues(
+            alpha: 0.15 + 0.85 * intensity.clamp(0.0, 1.0),
+          )
           ..style = PaintingStyle.fill;
         canvas.drawRRect(rect, activePaint);
-        
+
         // Neon outer glow for active days
         if (intensity > 0.4) {
           canvas.drawRRect(
             rect,
             Paint()
               ..color = activeColor.withValues(alpha: 0.15 * intensity)
-              ..maskFilter = MaskFilter.blur(BlurStyle.outer, 3.0 + intensity * 3.0),
+              ..maskFilter = MaskFilter.blur(
+                BlurStyle.outer,
+                3.0 + intensity * 3.0,
+              ),
           );
         }
 
@@ -67,7 +76,7 @@ class HeatmapPainter extends CustomPainter {
           canvas.drawRRect(
             rect,
             Paint()
-              ..color = Colors.white.withValues(alpha: 0.15)
+              ..color = peakColor
               ..maskFilter = const MaskFilter.blur(BlurStyle.inner, 2),
           );
         }
@@ -79,6 +88,9 @@ class HeatmapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant HeatmapPainter oldDelegate) {
-    return oldDelegate.activityData != activityData;
+    return oldDelegate.activityData != activityData ||
+        oldDelegate.activeColor != activeColor ||
+        oldDelegate.baseColor != baseColor ||
+        oldDelegate.peakColor != peakColor;
   }
 }

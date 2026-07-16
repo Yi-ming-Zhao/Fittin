@@ -9,6 +9,7 @@ import 'package:fittin_v2/src/application/services/export_service.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
+import 'package:fittin_v2/src/presentation/theme/domain_color_palettes.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
@@ -54,11 +55,11 @@ class ShareScreen extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: ExportPalette.canvas,
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.26),
+                      color: ExportPalette.ink.withValues(alpha: 0.26),
                       blurRadius: 30,
                       offset: const Offset(0, 18),
                     ),
@@ -68,14 +69,14 @@ class ShareScreen extends ConsumerWidget {
                   data: sharePayload,
                   version: QrVersions.auto,
                   size: 260,
-                  backgroundColor: Colors.white,
+                  backgroundColor: ExportPalette.qrBackground,
                   eyeStyle: const QrEyeStyle(
                     eyeShape: QrEyeShape.circle,
-                    color: Colors.black87,
+                    color: ExportPalette.qrForeground,
                   ),
                   dataModuleStyle: const QrDataModuleStyle(
                     dataModuleShape: QrDataModuleShape.circle,
-                    color: Colors.black87,
+                    color: ExportPalette.qrForeground,
                   ),
                 ),
               ),

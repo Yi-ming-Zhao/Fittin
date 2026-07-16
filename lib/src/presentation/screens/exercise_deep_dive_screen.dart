@@ -22,7 +22,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     final strings = AppStrings.of(context, ref);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
         children: [
           Row(

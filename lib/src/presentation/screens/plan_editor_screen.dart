@@ -828,7 +828,9 @@ class _ExerciseEditorCard extends StatelessWidget {
           Text(
             strings.planEditorDeferredLoadHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.68),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.68),
             ),
           ),
           const SizedBox(height: 16),
