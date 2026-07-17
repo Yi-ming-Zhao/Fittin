@@ -61,6 +61,9 @@ void main() {
         );
         expect(_contrast(theme.chartAxis, theme.bg), greaterThanOrEqualTo(3));
         expect(_contrast(theme.accent, theme.bg), greaterThanOrEqualTo(3));
+        if (id == FittinPaletteId.porcelainInk) {
+          expect(_contrast(theme.fgMuted, theme.bg), greaterThanOrEqualTo(4.5));
+        }
       });
 
       test('${id.storageKey} contains no cyan or teal theme colors', () {
@@ -118,37 +121,40 @@ void main() {
     expect(ExportPalette.qrBackground, Colors.white);
   });
 
-  test(
-    'native and web launch surfaces avoid a platform-default white flash',
-    () {
-      final androidColor = File(
-        'android/app/src/main/res/values/colors.xml',
-      ).readAsStringSync();
-      final androidLaunch = File(
-        'android/app/src/main/res/drawable/launch_background.xml',
-      ).readAsStringSync();
-      final android31 = File(
-        'android/app/src/main/res/values-v31/styles.xml',
-      ).readAsStringSync();
-      final iosLaunch = File(
-        'ios/Runner/Base.lproj/LaunchScreen.storyboard',
-      ).readAsStringSync();
-      final iosMain = File(
-        'ios/Runner/Base.lproj/Main.storyboard',
-      ).readAsStringSync();
-      final webIndex = File('web/index.html').readAsStringSync();
+  test('native and web launch surfaces avoid a platform-default white flash', () {
+    final androidColor = File(
+      'android/app/src/main/res/values/colors.xml',
+    ).readAsStringSync();
+    final androidLaunch = File(
+      'android/app/src/main/res/drawable/launch_background.xml',
+    ).readAsStringSync();
+    final android31 = File(
+      'android/app/src/main/res/values-v31/styles.xml',
+    ).readAsStringSync();
+    final iosLaunch = File(
+      'ios/Runner/Base.lproj/LaunchScreen.storyboard',
+    ).readAsStringSync();
+    final iosMain = File(
+      'ios/Runner/Base.lproj/Main.storyboard',
+    ).readAsStringSync();
+    final webIndex = File('web/index.html').readAsStringSync();
 
-      expect(androidColor, contains('#090806'));
-      expect(androidLaunch, contains('@color/launch_background'));
-      expect(android31, contains('android:windowSplashScreenBackground'));
-      expect(iosLaunch, contains('red="0.03529411765"'));
-      expect(iosMain, contains('red="0.03529411765"'));
-      expect(webIndex, contains('flutter.fittin.appearance.palette'));
-      expect(webIndex, contains("palette === 'porcelainInk'"));
-      expect(webIndex, contains('#F3EEE5'));
-      expect(webIndex, contains('#090806'));
-    },
-  );
+    expect(androidColor, contains('#090806'));
+    expect(androidLaunch, contains('@color/launch_background'));
+    expect(android31, contains('android:windowSplashScreenBackground'));
+    expect(iosLaunch, contains('red="0.03529411765"'));
+    expect(iosMain, contains('red="0.03529411765"'));
+    expect(webIndex, contains('flutter.fittin.appearance.palette'));
+    for (final theme in FittinPaletteRegistry.entries.values) {
+      expect(webIndex, contains(theme.paletteId.storageKey));
+      expect(
+        webIndex.toUpperCase(),
+        contains(
+          '#${theme.bg.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+        ),
+      );
+    }
+  });
 }
 
 Map<String, Color> _materialColorRoles(ColorScheme scheme) => {

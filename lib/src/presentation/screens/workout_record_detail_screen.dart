@@ -138,7 +138,11 @@ class _WorkoutRecordDetailScreenState
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${strings.completedSets}: ${set.completedReps}/${set.targetReps}${set.targetRpe == null ? '' : ' · target RPE ${_formatOptionalRpe(set.targetRpe)}'}${set.completedRpe == null ? '' : ' · RPE ${_formatOptionalRpe(set.completedRpe)}'}',
+                                  '${set.isSkipped
+                                      ? strings.setStatusSkipped
+                                      : set.isCompleted
+                                      ? strings.setStatusCompleted
+                                      : strings.setStatusPending} · ${set.completedReps}/${set.targetReps}${set.targetRpe == null ? '' : ' · target RPE ${_formatOptionalRpe(set.targetRpe)}'}${set.completedRpe == null ? '' : ' · RPE ${_formatOptionalRpe(set.completedRpe)}'}',
                                 ),
                               ),
                               Text(
@@ -329,6 +333,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                 targetRpe: set.targetRpe,
                 isAmrap: set.isAmrap,
                 completed: set.isCompleted,
+                skipped: set.isSkipped,
                 repsController: TextEditingController(
                   text: '${set.completedReps}',
                 ),
@@ -470,7 +475,11 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
                             Expanded(
                               child: TextField(
                                 controller: exercise.sets[index].rpeController,
@@ -484,14 +493,32 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Checkbox(
-                              value: exercise.sets[index].completed,
-                              onChanged: (value) {
-                                setState(() {
-                                  exercise.sets[index].completed =
-                                      value ?? false;
-                                });
-                              },
+                            Expanded(
+                              child: CheckboxListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                dense: true,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: Text(
+                                  exercise.sets[index].completed
+                                      ? strings.setStatusCompleted
+                                      : exercise.sets[index].skipped
+                                      ? strings.setStatusSkipped
+                                      : strings.setStatusPending,
+                                ),
+                                value: exercise.sets[index].completed,
+                                onChanged: (value) {
+                                  setState(() {
+                                    exercise.sets[index].completed =
+                                        value ?? false;
+                                    if (value == true) {
+                                      exercise.sets[index].skipped = false;
+                                    }
+                                  });
+                                },
+                              ),
                             ),
                           ],
                         ),
@@ -558,6 +585,29 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
       return;
     }
 
+    for (final exercise in _exercises) {
+      for (final set in exercise.sets) {
+        final reps = int.tryParse(set.repsController.text.trim());
+        final weight = double.tryParse(set.weightController.text.trim());
+        final rawRpe = set.rpeController.text.trim();
+        final rpe = rawRpe.isEmpty ? null : double.tryParse(rawRpe);
+        final invalid =
+            reps == null ||
+            reps < 0 ||
+            weight == null ||
+            !weight.isFinite ||
+            weight < 0 ||
+            (rawRpe.isNotEmpty &&
+                (rpe == null || !rpe.isFinite || rpe < 0 || rpe > 10));
+        if (invalid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(strings.invalidWorkoutSetValues)),
+          );
+          return;
+        }
+      }
+    }
+
     final exercises = [
       for (final exercise in _exercises)
         ExerciseLog(
@@ -571,11 +621,10 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
               SetLog(
                 role: set.role,
                 targetReps: set.targetReps,
-                completedReps:
-                    int.tryParse(set.repsController.text.trim()) ?? 0,
+                completedReps: int.parse(set.repsController.text.trim()),
                 targetWeight: set.targetWeight,
                 weight: convertWeight(
-                  double.tryParse(set.weightController.text.trim()) ?? 0,
+                  double.parse(set.weightController.text.trim()),
                   exercise.displayLoadUnit,
                   LoadUnits.kg,
                 ),
@@ -583,6 +632,7 @@ class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
                 completedRpe: double.tryParse(set.rpeController.text.trim()),
                 isAmrap: set.isAmrap,
                 isCompleted: set.completed,
+                isSkipped: set.skipped && !set.completed,
               ),
           ],
         ),
@@ -620,6 +670,7 @@ class _EditableSetState {
     required this.targetRpe,
     required this.isAmrap,
     required this.completed,
+    required this.skipped,
     required this.repsController,
     required this.weightController,
     required this.rpeController,
@@ -631,6 +682,7 @@ class _EditableSetState {
   final double? targetRpe;
   final bool isAmrap;
   bool completed;
+  bool skipped;
   final TextEditingController repsController;
   final TextEditingController weightController;
   final TextEditingController rpeController;

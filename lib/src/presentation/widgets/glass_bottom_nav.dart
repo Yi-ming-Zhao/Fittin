@@ -97,38 +97,46 @@ class _FittinTabItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        decoration: BoxDecoration(
-          color: isActive ? theme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isActive ? theme.accentInk : theme.fgDim,
-              ),
-              const SizedBox(height: 2),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme
-                      .uiStyle(10, isActive ? theme.accentInk : theme.fgDim)
-                      .copyWith(
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.6,
-                      ),
+    return Semantics(
+      button: true,
+      selected: isActive,
+      label: label,
+      excludeSemantics: true,
+      child: Material(
+        color: isActive ? theme.accent : Colors.transparent,
+        borderRadius: BorderRadius.circular(999),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          splashColor: isActive
+              ? theme.accentInk.withValues(alpha: 0.12)
+              : theme.accent.withValues(alpha: 0.12),
+          highlightColor: theme.fg.withValues(alpha: 0.05),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 17,
+                  color: isActive ? theme.accentInk : theme.fgDim,
                 ),
-              ),
-            ],
+                const SizedBox(height: 1),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme
+                        .uiStyle(10, isActive ? theme.accentInk : theme.fgDim)
+                        .copyWith(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.6,
+                        ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

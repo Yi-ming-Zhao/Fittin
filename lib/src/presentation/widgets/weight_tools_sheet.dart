@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
     show FittinTheme;
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/barbell_plate_preview.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 const _kilogramUnitOption = LoadUnits.kg;
@@ -58,7 +59,10 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final kgBarWeight = ref.watch(kgBarWeightProvider);
     final lbBarWeight = ref.watch(lbBarWeightProvider);
-    final rawInput = double.tryParse(_controller.text.trim()) ?? 0;
+    final parsedInput = double.tryParse(_controller.text.trim());
+    final isValidInput =
+        parsedInput != null && parsedInput.isFinite && parsedInput > 0;
+    final rawInput = isValidInput ? parsedInput : 0.0;
     final convertedValue = convertWeight(
       rawInput,
       _unit,
@@ -134,6 +138,9 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                 ),
                 decoration: InputDecoration(
                   labelText: strings.weightToolsInputLabel,
+                  errorText: _controller.text.trim().isNotEmpty && !isValidInput
+                      ? strings.enterValidLoad
+                      : null,
                   suffixText: _unit == LoadUnits.kg
                       ? strings.kilogramSymbol
                       : strings.poundSymbol,
@@ -160,6 +167,12 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                 label: strings.plateLoading,
                 value: _plateBreakdownLabel(strings, breakdown),
                 dimmed: !breakdown.exact,
+                visual: BarbellPlatePreview(
+                  breakdown: breakdown,
+                  semanticLabel: strings.barbellPlateSemantics(
+                    _plateBreakdownLabel(strings, breakdown),
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               Row(
@@ -174,10 +187,12 @@ class _WeightToolsSheetState extends ConsumerState<WeightToolsSheet> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: FilledButton(
-                        onPressed: () {
-                          widget.onApply?.call(rawInput, _unit);
-                          Navigator.of(context).pop();
-                        },
+                        onPressed: !isValidInput
+                            ? null
+                            : () {
+                                widget.onApply?.call(rawInput, _unit);
+                                Navigator.of(context).pop();
+                              },
                         child: Text(strings.useForCurrentSet),
                       ),
                     ),
@@ -326,12 +341,14 @@ class _ResultCard extends StatelessWidget {
     required this.label,
     required this.value,
     this.dimmed = false,
+    this.visual,
   });
 
   final FittinTheme theme;
   final String label;
   final String value;
   final bool dimmed;
+  final Widget? visual;
 
   @override
   Widget build(BuildContext context) {
@@ -352,6 +369,7 @@ class _ResultCard extends StatelessWidget {
                 .uiStyle(12, theme.fgMuted)
                 .copyWith(fontWeight: FontWeight.w700),
           ),
+          if (visual != null) ...[const SizedBox(height: 8), visual!],
           const SizedBox(height: 8),
           Text(
             value,

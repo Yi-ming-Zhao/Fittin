@@ -164,9 +164,8 @@ class DashboardBackButton extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: theme.fgDim,
         padding: EdgeInsets.zero,
-        minimumSize: const Size(40, 40),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
+        minimumSize: const Size(44, 44),
+        tapTargetSize: MaterialTapTargetSize.padded,
         alignment: Alignment.centerLeft,
       ),
       icon: Icon(Icons.chevron_left_rounded, size: 18, color: theme.fgDim),

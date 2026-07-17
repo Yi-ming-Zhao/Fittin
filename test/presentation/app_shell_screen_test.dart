@@ -60,6 +60,10 @@ void main() {
     expect(find.textContaining('TSA Intermediate Approach 2.0'), findsNothing);
     expect(find.textContaining('55 mins'), findsOneWidget);
     expect(find.textContaining('3×6+'), findsNothing);
+    expect(
+      tester.getSemantics(find.byKey(const ValueKey('nav-plan-library'))).label,
+      'PLANS',
+    );
 
     await tester.tap(find.byKey(const ValueKey('nav-plan-library')));
     await tester.pump();

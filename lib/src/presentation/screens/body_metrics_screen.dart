@@ -80,12 +80,17 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                 ],
               );
             },
-            loading: () =>
-                _BodyMetricsLoadState(strings: strings, topPadding: topPadding),
+            loading: () => _BodyMetricsLoadState(
+              strings: strings,
+              theme: fittinTheme,
+              topPadding: topPadding,
+            ),
             error: (error, _) => _BodyMetricsLoadState(
               strings: strings,
+              theme: fittinTheme,
               topPadding: topPadding,
               message: strings.loadError(error),
+              onRetry: () => ref.read(bodyMetricsProvider.notifier).reload(),
             ),
           );
         },
@@ -344,7 +349,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
   ) {
     return DashboardSurfaceCard(
       radius: theme.radius,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Expanded(
@@ -469,7 +474,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                   controller: weightController,
                   label: strings.weightKgLabel,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 _MetricTextField(
                   theme: theme,
                   controller: bodyFatController,
@@ -539,13 +544,17 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
 class _BodyMetricsLoadState extends StatelessWidget {
   const _BodyMetricsLoadState({
     required this.strings,
+    required this.theme,
     required this.topPadding,
     this.message,
+    this.onRetry,
   });
 
   final AppStrings strings;
+  final FittinTheme theme;
   final double topPadding;
   final String? message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -559,16 +568,48 @@ class _BodyMetricsLoadState extends StatelessWidget {
           subtitle: strings.bodyMetricsSubtitle,
         ),
         const SizedBox(height: 28),
-        Align(
-          alignment: Alignment.centerLeft,
+        DashboardSurfaceCard(
+          radius: 26,
+          padding: const EdgeInsets.all(20),
           child: message == null
-              ? const SizedBox(
-                  key: ValueKey('body-metrics-loading'),
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+              ? Row(
+                  key: const ValueKey('body-metrics-loading'),
+                  children: [
+                    SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.accent,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        strings.startupPreparing,
+                        style: theme.uiStyle(14, theme.fgDim),
+                      ),
+                    ),
+                  ],
                 )
-              : Text(message!, key: const ValueKey('body-metrics-error')),
+              : Column(
+                  key: const ValueKey('body-metrics-error'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(message!, style: theme.uiStyle(14, theme.fgDim)),
+                    if (onRetry != null) ...[
+                      const SizedBox(height: 16),
+                      FittinBtn(
+                        theme,
+                        strings.retry,
+                        key: const ValueKey('retry-body-metrics'),
+                        size: 'sm',
+                        icon: Icons.refresh_rounded,
+                        onPressed: onRetry,
+                      ),
+                    ],
+                  ],
+                ),
         ),
       ],
     );
@@ -626,7 +667,7 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
     return DashboardSurfaceCard(
       key: const ValueKey('body-empty-hero'),
       radius: 24,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       highlight: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,14 +694,14 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
                       .uiStyle(16, theme.fg)
                       .copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   body,
                   style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 FittinBtn(
                   theme,
                   actionLabel,

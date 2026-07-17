@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/plan_library_provider.dart';
 
@@ -18,17 +19,28 @@ extension AppLocaleX on AppLocale {
   }
 }
 
-final appLocaleProvider =
-    StateNotifierProvider<AppLocaleNotifier, AppLocale>((ref) {
-      return AppLocaleNotifier(ref);
-    });
+final appLocaleProvider = StateNotifierProvider<AppLocaleNotifier, AppLocale>((
+  ref,
+) {
+  return AppLocaleNotifier(ref);
+});
 
 class AppLocaleNotifier extends StateNotifier<AppLocale> {
-  AppLocaleNotifier(this._ref) : super(AppLocale.en) {
-    _load();
+  AppLocaleNotifier(
+    this._ref, {
+    AppLocale? initialLocale,
+    SharedPreferences? preferences,
+  }) : _preferences = preferences,
+       super(initialLocale ?? AppLocale.en) {
+    if (initialLocale == null) {
+      _load();
+    }
   }
 
   final Ref _ref;
+  final SharedPreferences? _preferences;
+
+  static const storageKey = 'fittin.appearance.locale';
 
   Future<void> _load() async {
     final repository = _ref.read(databaseRepositoryProvider);
@@ -44,6 +56,7 @@ class AppLocaleNotifier extends StateNotifier<AppLocale> {
     }
     state = locale;
     await _ref.read(databaseRepositoryProvider).saveAppLocale(locale);
+    await _preferences?.setString(storageKey, locale.code);
     _ref.invalidate(planLibraryItemsProvider);
     _ref.invalidate(todayWorkoutSummaryProvider);
     _ref.invalidate(activeTemplateProvider);

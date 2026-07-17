@@ -31,4 +31,31 @@ void main() {
       expect(restored.exerciseDefinitionId, 'bench_press');
     });
   });
+
+  group('SetLog skipped state', () {
+    test('legacy JSON defaults skipped state to false', () {
+      final set = SetLog.fromJson({
+        'role': 'work',
+        'targetReps': 5,
+        'completedReps': 0,
+        'targetWeight': 100.0,
+        'weight': 100.0,
+      });
+
+      expect(set.isSkipped, isFalse);
+    });
+
+    test('new JSON preserves skipped state', () {
+      const set = SetLog(
+        role: 'work',
+        targetReps: 5,
+        completedReps: 0,
+        targetWeight: 100,
+        weight: 100,
+        isSkipped: true,
+      );
+
+      expect(SetLog.fromJson(set.toJson()).isSkipped, isTrue);
+    });
+  });
 }

@@ -28,6 +28,21 @@ class AppStrings {
   String get navBody => isChinese ? '身体' : 'BODY';
   String get navMe => isChinese ? '我的' : 'ME';
 
+  String get startupPreparing =>
+      isChinese ? '正在准备训练空间' : 'Preparing your training space';
+  String get startupPreparingDetail => isChinese
+      ? '正在恢复计划、训练记录与最新进度。'
+      : 'Restoring your plan, workout history, and latest progress.';
+  String get startupLoadingSemantics =>
+      isChinese ? 'Fittin 正在加载' : 'Fittin is loading';
+  String get startupLoadFailed =>
+      isChinese ? '暂时无法完成加载' : 'Fittin could not finish loading';
+  String get startupLoadFailedDetail => isChinese
+      ? '请检查网络后重试；本地数据仍可用时，也可以先离线进入。'
+      : 'Try again after checking your connection, or continue with local data when available.';
+  String get retry => isChinese ? '重试' : 'Retry';
+  String get continueLocally => isChinese ? '离线进入' : 'Continue locally';
+
   String get planLibrary => isChinese ? '计划库' : 'Plan Library';
   String get trainingPlans => isChinese ? '训练计划' : 'Training plans';
   String get trainingPlansSubtitle => isChinese
@@ -164,6 +179,14 @@ class AppStrings {
   String get enterValidMax => isChinese ? '请输入有效重量' : 'Enter a valid max';
   String get todayWorkout => isChinese ? '今日训练' : 'TODAY\'S WORKOUT';
   String get sharePlan => isChinese ? '分享计划' : 'Share plan';
+  String get planTooLargeForQr => isChinese
+      ? '这个计划内容较多，无法放进单个二维码。'
+      : 'This plan is too detailed for a single QR code.';
+  String get planTooLargeForQrDetail => isChinese
+      ? '你可以复制计划数据，通过消息发送给另一台设备。'
+      : 'Copy the plan data and send it to the other device instead.';
+  String get copyPlanData => isChinese ? '复制计划数据' : 'Copy plan data';
+  String get planDataCopied => isChinese ? '计划数据已复制' : 'Plan data copied';
   String get resume => isChinese ? '继续训练' : 'Resume';
   String get start => isChinese ? '开始训练' : 'Start';
   String get nextSession => isChinese ? '下一次训练' : 'Next session';
@@ -171,6 +194,12 @@ class AppStrings {
   String get upNext => isChinese ? '接下来' : 'Up next';
   String get unableToLoadWorkout =>
       isChinese ? '无法载入训练' : 'Unable to load workout';
+  String get chooseTrainingPlan =>
+      isChinese ? '选择一个训练计划' : 'Choose a training plan';
+  String get chooseTrainingPlanDetail => isChinese
+      ? '从计划库选择并启动计划后，下一次训练会显示在这里。'
+      : 'Select and start a plan from the library to see your next workout here.';
+  String get browsePlans => isChinese ? '浏览计划' : 'Browse plans';
   String mins(int minutes) => isChinese ? '$minutes 分钟' : '$minutes mins';
   String dayMinutes(String dayLabel, int minutes) =>
       isChinese ? '$dayLabel · $minutes 分钟' : '$dayLabel • $minutes mins';
@@ -504,6 +533,9 @@ class AppStrings {
       : 'Sign in to sync your plans, workouts, and progress across devices';
   String get signedOut => isChinese ? '未登录' : 'Signed out';
   String get signedIn => isChinese ? '已登录' : 'Signed in';
+  String get restoringAccount => isChinese ? '正在恢复账户…' : 'Restoring account…';
+  String get accountUnavailable =>
+      isChinese ? '账户状态暂不可用' : 'Account status unavailable';
   String get signedInNoEmail => isChinese ? '已登录账户' : 'Signed-in account';
   String get signIn => isChinese ? '登录' : 'Sign In';
   String get createAccount => isChinese ? '创建账户' : 'Create Account';
@@ -1177,6 +1209,9 @@ class AppStrings {
       isChinese ? '目标 RPE $value' : 'Target RPE $value';
   String get invalidDateTime =>
       isChinese ? '请输入有效的日期和时间。' : 'Enter a valid date and time.';
+  String get invalidWorkoutSetValues => isChinese
+      ? '请检查组数、重量和 RPE：次数与重量不能为负数，RPE 必须在 0–10 之间。'
+      : 'Check set values: reps and weight cannot be negative, and RPE must be between 0 and 10.';
   String get noActivePlan => isChinese
       ? '当前没有激活的训练计划，请先去计划库开始。'
       : 'No active training plan instance. Open Plan Library to start one.';

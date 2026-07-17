@@ -95,6 +95,7 @@ _$SetLogImpl _$$SetLogImplFromJson(Map<String, dynamic> json) => _$SetLogImpl(
       completedRpe: (json['completedRpe'] as num?)?.toDouble(),
       isAmrap: json['isAmrap'] as bool? ?? false,
       isCompleted: json['isCompleted'] as bool? ?? false,
+      isSkipped: json['isSkipped'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$$SetLogImplToJson(_$SetLogImpl instance) =>
@@ -108,4 +109,5 @@ Map<String, dynamic> _$$SetLogImplToJson(_$SetLogImpl instance) =>
       'completedRpe': instance.completedRpe,
       'isAmrap': instance.isAmrap,
       'isCompleted': instance.isCompleted,
+      'isSkipped': instance.isSkipped,
     };

@@ -367,6 +367,7 @@ ExerciseLog _exerciseLogFromSession({
               : set.completedRpe,
           isAmrap: set.isAmrap,
           isCompleted: set.isCompleted,
+          isSkipped: set.isSkipped,
         ),
     ],
   );

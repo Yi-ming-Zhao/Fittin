@@ -68,11 +68,11 @@ class WorkoutRecordingModeNotifier extends StateNotifier<WorkoutRecordingMode> {
     }
   }
 
-  static const _storageKey = 'workout_recording_mode';
+  static const storageKey = 'workout_recording_mode';
 
   Future<void> _load() async {
     final preferences = await SharedPreferences.getInstance();
-    final stored = preferences.getString(_storageKey);
+    final stored = preferences.getString(storageKey);
     state = stored == WorkoutRecordingMode.traditional.name
         ? WorkoutRecordingMode.traditional
         : WorkoutRecordingMode.card;
@@ -81,7 +81,7 @@ class WorkoutRecordingModeNotifier extends StateNotifier<WorkoutRecordingMode> {
   Future<void> update(WorkoutRecordingMode mode) async {
     state = mode;
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_storageKey, mode.name);
+    await preferences.setString(storageKey, mode.name);
   }
 }
 

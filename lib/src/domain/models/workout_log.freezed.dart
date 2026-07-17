@@ -905,6 +905,7 @@ mixin _$SetLog {
   double? get completedRpe => throw _privateConstructorUsedError;
   bool get isAmrap => throw _privateConstructorUsedError;
   bool get isCompleted => throw _privateConstructorUsedError;
+  bool get isSkipped => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
   @JsonKey(ignore: true)
@@ -925,7 +926,8 @@ abstract class $SetLogCopyWith<$Res> {
       double? targetRpe,
       double? completedRpe,
       bool isAmrap,
-      bool isCompleted});
+      bool isCompleted,
+      bool isSkipped});
 }
 
 /// @nodoc
@@ -950,6 +952,7 @@ class _$SetLogCopyWithImpl<$Res, $Val extends SetLog>
     Object? completedRpe = freezed,
     Object? isAmrap = null,
     Object? isCompleted = null,
+    Object? isSkipped = null,
   }) {
     return _then(_value.copyWith(
       role: null == role
@@ -988,6 +991,10 @@ class _$SetLogCopyWithImpl<$Res, $Val extends SetLog>
           ? _value.isCompleted
           : isCompleted // ignore: cast_nullable_to_non_nullable
               as bool,
+      isSkipped: null == isSkipped
+          ? _value.isSkipped
+          : isSkipped // ignore: cast_nullable_to_non_nullable
+              as bool,
     ) as $Val);
   }
 }
@@ -1008,7 +1015,8 @@ abstract class _$$SetLogImplCopyWith<$Res> implements $SetLogCopyWith<$Res> {
       double? targetRpe,
       double? completedRpe,
       bool isAmrap,
-      bool isCompleted});
+      bool isCompleted,
+      bool isSkipped});
 }
 
 /// @nodoc
@@ -1031,6 +1039,7 @@ class __$$SetLogImplCopyWithImpl<$Res>
     Object? completedRpe = freezed,
     Object? isAmrap = null,
     Object? isCompleted = null,
+    Object? isSkipped = null,
   }) {
     return _then(_$SetLogImpl(
       role: null == role
@@ -1069,6 +1078,10 @@ class __$$SetLogImplCopyWithImpl<$Res>
           ? _value.isCompleted
           : isCompleted // ignore: cast_nullable_to_non_nullable
               as bool,
+      isSkipped: null == isSkipped
+          ? _value.isSkipped
+          : isSkipped // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -1085,7 +1098,8 @@ class _$SetLogImpl implements _SetLog {
       this.targetRpe,
       this.completedRpe,
       this.isAmrap = false,
-      this.isCompleted = false});
+      this.isCompleted = false,
+      this.isSkipped = false});
 
   factory _$SetLogImpl.fromJson(Map<String, dynamic> json) =>
       _$$SetLogImplFromJson(json);
@@ -1110,10 +1124,13 @@ class _$SetLogImpl implements _SetLog {
   @override
   @JsonKey()
   final bool isCompleted;
+  @override
+  @JsonKey()
+  final bool isSkipped;
 
   @override
   String toString() {
-    return 'SetLog(role: $role, targetReps: $targetReps, completedReps: $completedReps, targetWeight: $targetWeight, weight: $weight, targetRpe: $targetRpe, completedRpe: $completedRpe, isAmrap: $isAmrap, isCompleted: $isCompleted)';
+    return 'SetLog(role: $role, targetReps: $targetReps, completedReps: $completedReps, targetWeight: $targetWeight, weight: $weight, targetRpe: $targetRpe, completedRpe: $completedRpe, isAmrap: $isAmrap, isCompleted: $isCompleted, isSkipped: $isSkipped)';
   }
 
   @override
@@ -1135,13 +1152,16 @@ class _$SetLogImpl implements _SetLog {
                 other.completedRpe == completedRpe) &&
             (identical(other.isAmrap, isAmrap) || other.isAmrap == isAmrap) &&
             (identical(other.isCompleted, isCompleted) ||
-                other.isCompleted == isCompleted));
+                other.isCompleted == isCompleted) &&
+            (identical(other.isSkipped, isSkipped) ||
+                other.isSkipped == isSkipped));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, role, targetReps, completedReps,
-      targetWeight, weight, targetRpe, completedRpe, isAmrap, isCompleted);
+      targetWeight, weight, targetRpe, completedRpe, isAmrap, isCompleted,
+      isSkipped);
 
   @JsonKey(ignore: true)
   @override
@@ -1167,7 +1187,8 @@ abstract class _SetLog implements SetLog {
       final double? targetRpe,
       final double? completedRpe,
       final bool isAmrap,
-      final bool isCompleted}) = _$SetLogImpl;
+      final bool isCompleted,
+      final bool isSkipped}) = _$SetLogImpl;
 
   factory _SetLog.fromJson(Map<String, dynamic> json) = _$SetLogImpl.fromJson;
 
@@ -1189,6 +1210,8 @@ abstract class _SetLog implements SetLog {
   bool get isAmrap;
   @override
   bool get isCompleted;
+  @override
+  bool get isSkipped;
   @override
   @JsonKey(ignore: true)
   _$$SetLogImplCopyWith<_$SetLogImpl> get copyWith =>

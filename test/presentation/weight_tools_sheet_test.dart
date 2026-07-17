@@ -62,6 +62,47 @@ void main() {
     expect(appliedValue, 100);
     expect(appliedUnit, LoadUnits.lbs);
   });
+
+  testWidgets('invalid weight cannot be applied as a zero load', (
+    tester,
+  ) async {
+    double? appliedValue;
+    await _pumpWeightTools(
+      tester,
+      WeightToolsSheet(
+        initialWeight: 100,
+        showApplyButton: true,
+        onApply: (value, unit) => appliedValue = value,
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField).first, 'not-a-weight');
+    await tester.pump();
+    final applyLabel = find.text('Use for Set');
+    await tester.ensureVisible(applyLabel);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.ancestor(of: applyLabel, matching: find.byType(FilledButton)),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(appliedValue, isNull);
+  });
+
+  testWidgets('plate loading includes a visual barbell preview', (
+    tester,
+  ) async {
+    await _pumpWeightTools(tester, const WeightToolsSheet(initialWeight: 100));
+
+    expect(
+      find.byKey(const ValueKey('weight-tools-barbell-preview')),
+      findsOneWidget,
+    );
+  });
 }
 
 Future<void> _pumpWeightTools(WidgetTester tester, Widget weightTools) async {

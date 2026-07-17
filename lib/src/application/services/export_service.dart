@@ -64,10 +64,14 @@ class ExportService {
       return compacted;
     }
     if (value is List) {
-      return [
-        for (final item in value)
-          if (_compactJson(item) != null) _compactJson(item),
-      ];
+      final compacted = <Object?>[];
+      for (final item in value) {
+        final compactItem = _compactJson(item);
+        if (compactItem != null) {
+          compacted.add(compactItem);
+        }
+      }
+      return compacted;
     }
     return value;
   }

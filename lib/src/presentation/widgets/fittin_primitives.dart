@@ -139,20 +139,33 @@ class FittinChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? theme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          border: active ? null : Border.all(color: theme.border, width: 0.5),
-        ),
-        child: Text(
-          label,
-          style: theme
-              .uiStyle(12, active ? theme.accentInk : theme.fgDim)
-              .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1),
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(999),
+      side: active
+          ? BorderSide.none
+          : BorderSide(color: theme.border, width: 0.5),
+    );
+    return Semantics(
+      button: true,
+      selected: active,
+      child: Material(
+        color: active ? theme.accent : Colors.transparent,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: shape,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 44),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Text(
+              label,
+              style: theme
+                  .uiStyle(12, active ? theme.accentInk : theme.fgDim)
+                  .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1),
+            ),
+          ),
         ),
       ),
     );
@@ -268,34 +281,50 @@ class FittinBtn extends StatelessWidget {
       border = BorderSide(color: theme.borderHi, width: 0.5);
     }
 
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: _pad,
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(999),
-          border: border != null ? Border.fromBorderSide(border) : null,
-        ),
-        child: Row(
-          mainAxisSize: block ? MainAxisSize.max : MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: size == 'sm' ? 12 : 14, color: fg),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme
-                    .uiStyle(size == 'sm' ? 12 : 14, fg)
-                    .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1),
-              ),
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(999),
+      side: border ?? BorderSide.none,
+    );
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      child: Material(
+        color: bg,
+        shape: shape,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: shape,
+          child: Container(
+            constraints: BoxConstraints(
+              minWidth: 44,
+              minHeight: size == 'sm' ? 44 : 48,
             ),
-          ],
+            padding: _pad,
+            child: Row(
+              mainAxisSize: block ? MainAxisSize.max : MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: size == 'sm' ? 14 : 16, color: fg),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme
+                        .uiStyle(size == 'sm' ? 12 : 14, fg)
+                        .copyWith(
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.1,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

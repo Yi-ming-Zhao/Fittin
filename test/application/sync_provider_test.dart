@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,6 +55,17 @@ class _FailingAfterHydrationSyncService implements SyncService {
   }
 }
 
+class _ControlledSyncService implements SyncService {
+  final Completer<void> completion = Completer<void>();
+  int calls = 0;
+
+  @override
+  Future<void> synchronize() async {
+    calls += 1;
+    await completion.future;
+  }
+}
+
 void main() {
   test('successful synchronization refreshes cached data providers', () async {
     final service = _SuccessfulSyncService();
@@ -96,6 +109,62 @@ void main() {
       );
     },
   );
+
+  test('concurrent synchronization callers await the same operation', () async {
+    final service = _ControlledSyncService();
+    final container = ProviderContainer(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('sync-user'),
+        syncServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final first = container
+        .read(syncControllerProvider.notifier)
+        .synchronize(hydrate: true);
+    final second = container
+        .read(syncControllerProvider.notifier)
+        .synchronize(hydrate: true);
+    var secondCompleted = false;
+    unawaited(second.whenComplete(() => secondCompleted = true));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(service.calls, 1);
+    expect(secondCompleted, isFalse);
+
+    service.completion.complete();
+    await Future.wait([first, second]);
+
+    expect(secondCompleted, isTrue);
+    expect(container.read(syncControllerProvider).stage, SyncStage.synced);
+  });
+
+  test('signed-out generation ignores completion from the old user', () async {
+    final testUserIdProvider = StateProvider<String?>((ref) => 'old-user');
+    final service = _ControlledSyncService();
+    final container = ProviderContainer(
+      overrides: [
+        currentUserIdProvider.overrideWith(
+          (ref) => ref.watch(testUserIdProvider),
+        ),
+        syncServiceProvider.overrideWithValue(service),
+      ],
+    );
+    addTearDown(container.dispose);
+    final controller = container.read(syncControllerProvider.notifier);
+
+    final oldSync = controller.synchronize(hydrate: true);
+    await Future<void>.delayed(Duration.zero);
+    container.read(testUserIdProvider.notifier).state = null;
+    controller.clearForSignedOutUser();
+    service.completion.complete();
+    await oldSync;
+
+    expect(container.read(syncControllerProvider).stage, SyncStage.idle);
+    expect(container.read(syncControllerProvider).activeUserId, isNull);
+    expect(container.read(syncRefreshProvider), 0);
+  });
 
   testWidgets(
     'sync lifecycle gate hydrates restored sessions and syncs on resume',

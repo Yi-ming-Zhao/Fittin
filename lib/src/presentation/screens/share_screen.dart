@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -16,6 +17,8 @@ import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 class ShareScreen extends ConsumerWidget {
   const ShareScreen({super.key, required this.planTemplate});
 
+  static const _maxQrBytePayload = 2953;
+
   final PlanTemplate planTemplate;
 
   @override
@@ -26,6 +29,13 @@ class ShareScreen extends ConsumerWidget {
     final sharePayload = ExportService.exportTemplateToSharePayload(
       planTemplate,
     );
+    final qrValidation = sharePayload.length <= _maxQrBytePayload
+        ? QrValidator.validate(
+            data: sharePayload,
+            version: QrVersions.auto,
+            errorCorrectionLevel: QrErrorCorrectLevel.L,
+          )
+        : null;
     final canPop = Navigator.of(context).canPop();
 
     return DashboardPageScaffold(
@@ -52,34 +62,92 @@ class ShareScreen extends ConsumerWidget {
                     .copyWith(height: 1.45),
               ),
               const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: ExportPalette.canvas,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ExportPalette.ink.withValues(alpha: 0.26),
-                      blurRadius: 30,
-                      offset: const Offset(0, 18),
+              if (qrValidation?.isValid ?? false)
+                Container(
+                  key: const ValueKey('plan-share-qr'),
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: ExportPalette.canvas,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: ExportPalette.ink.withValues(alpha: 0.26),
+                        blurRadius: 30,
+                        offset: const Offset(0, 18),
+                      ),
+                    ],
+                  ),
+                  child: QrImageView.withQr(
+                    qr: qrValidation!.qrCode!,
+                    size: 260,
+                    backgroundColor: ExportPalette.qrBackground,
+                    eyeStyle: const QrEyeStyle(
+                      eyeShape: QrEyeShape.circle,
+                      color: ExportPalette.qrForeground,
                     ),
-                  ],
-                ),
-                child: QrImageView(
-                  data: sharePayload,
-                  version: QrVersions.auto,
-                  size: 260,
-                  backgroundColor: ExportPalette.qrBackground,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.circle,
-                    color: ExportPalette.qrForeground,
+                    dataModuleStyle: const QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.circle,
+                      color: ExportPalette.qrForeground,
+                    ),
                   ),
-                  dataModuleStyle: const QrDataModuleStyle(
-                    dataModuleShape: QrDataModuleShape.circle,
-                    color: ExportPalette.qrForeground,
+                )
+              else
+                Container(
+                  key: const ValueKey('plan-share-too-large'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: fittinTheme.surfaceHi,
+                    borderRadius: BorderRadius.circular(26),
+                    border: Border.all(color: fittinTheme.border),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.data_object_rounded,
+                        color: fittinTheme.accent,
+                        size: 30,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        strings.planTooLargeForQr,
+                        textAlign: TextAlign.center,
+                        style: fittinTheme.uiStyle(
+                          16,
+                          fittinTheme.fg,
+                          FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        strings.planTooLargeForQrDetail,
+                        textAlign: TextAlign.center,
+                        style: fittinTheme
+                            .uiStyle(13, fittinTheme.fgDim)
+                            .copyWith(height: 1.45),
+                      ),
+                      const SizedBox(height: 16),
+                      FittinBtn(
+                        fittinTheme,
+                        strings.copyPlanData,
+                        key: const ValueKey('copy-plan-share-payload'),
+                        icon: Icons.copy_rounded,
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: sharePayload),
+                          );
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(strings.planDataCopied),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ),
               const SizedBox(height: 18),
               Text(
                 strings.payloadSize(sharePayload.length),

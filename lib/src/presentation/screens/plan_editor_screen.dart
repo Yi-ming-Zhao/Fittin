@@ -1560,7 +1560,7 @@ class _SlotChip extends StatelessWidget {
   }
 }
 
-class _DraftTextField extends StatelessWidget {
+class _DraftTextField extends StatefulWidget {
   const _DraftTextField({
     required this.label,
     required this.value,
@@ -1574,21 +1574,48 @@ class _DraftTextField extends StatelessWidget {
   final int maxLines;
 
   @override
+  State<_DraftTextField> createState() => _DraftTextFieldState();
+}
+
+class _DraftTextFieldState extends State<_DraftTextField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DraftTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && _controller.text != widget.value) {
+      _controller.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController(text: value);
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
     return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      decoration: _inputDecoration(context, label),
-      onChanged: onChanged,
+      controller: _controller,
+      focusNode: _focusNode,
+      maxLines: widget.maxLines,
+      decoration: _inputDecoration(context, widget.label),
+      onChanged: widget.onChanged,
     );
   }
 }
 
-class _DraftIntField extends StatelessWidget {
+class _DraftIntField extends StatefulWidget {
   const _DraftIntField({
     required this.label,
     required this.value,
@@ -1600,21 +1627,49 @@ class _DraftIntField extends StatelessWidget {
   final ValueChanged<int> onChanged;
 
   @override
+  State<_DraftIntField> createState() => _DraftIntFieldState();
+}
+
+class _DraftIntFieldState extends State<_DraftIntField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value.toString());
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DraftIntField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextText = widget.value.toString();
+    if (!_focusNode.hasFocus && _controller.text != nextText) {
+      _controller.text = nextText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController(text: value.toString());
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
     return TextField(
-      controller: controller,
+      controller: _controller,
+      focusNode: _focusNode,
       keyboardType: TextInputType.number,
-      decoration: _inputDecoration(context, label),
-      onChanged: (value) => onChanged(int.tryParse(value) ?? 0),
+      decoration: _inputDecoration(context, widget.label),
+      onChanged: (value) => widget.onChanged(int.tryParse(value) ?? 0),
     );
   }
 }
 
-class _DraftDoubleField extends StatelessWidget {
+class _DraftDoubleField extends StatefulWidget {
   const _DraftDoubleField({
     required this.label,
     required this.value,
@@ -1626,16 +1681,44 @@ class _DraftDoubleField extends StatelessWidget {
   final ValueChanged<double> onChanged;
 
   @override
+  State<_DraftDoubleField> createState() => _DraftDoubleFieldState();
+}
+
+class _DraftDoubleFieldState extends State<_DraftDoubleField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value.toString());
+    _focusNode = FocusNode();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DraftDoubleField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextText = widget.value.toString();
+    if (!_focusNode.hasFocus && _controller.text != nextText) {
+      _controller.text = nextText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController(text: value.toString());
-    controller.selection = TextSelection.collapsed(
-      offset: controller.text.length,
-    );
     return TextField(
-      controller: controller,
+      controller: _controller,
+      focusNode: _focusNode,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: _inputDecoration(context, label),
-      onChanged: (value) => onChanged(double.tryParse(value) ?? 0),
+      decoration: _inputDecoration(context, widget.label),
+      onChanged: (value) => widget.onChanged(double.tryParse(value) ?? 0),
     );
   }
 }

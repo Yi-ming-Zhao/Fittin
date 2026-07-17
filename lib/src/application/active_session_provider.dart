@@ -42,6 +42,10 @@ final activeTemplateProvider = FutureProvider<PlanTemplate>((ref) async {
   return gateway.loadActiveTemplate();
 });
 
+bool isMissingActivePlanError(Object error) {
+  return error.toString().contains('No active training plan instance');
+}
+
 final activeSessionProvider =
     StateNotifierProvider<ActiveSessionNotifier, SessionState>((ref) {
       ref.watch(currentUserIdProvider);

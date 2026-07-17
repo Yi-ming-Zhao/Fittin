@@ -65,6 +65,7 @@ class SetLog with _$SetLog {
     double? completedRpe,
     @Default(false) bool isAmrap,
     @Default(false) bool isCompleted,
+    @Default(false) bool isSkipped,
   }) = _SetLog;
 
   factory SetLog.fromJson(Map<String, dynamic> json) => _$SetLogFromJson(json);

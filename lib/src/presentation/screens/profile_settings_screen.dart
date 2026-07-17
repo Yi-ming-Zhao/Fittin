@@ -27,7 +27,12 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final locale = ref.watch(appLocaleProvider);
     final notifier = ref.read(appLocaleProvider.notifier);
-    final authUser = ref.watch(authStateProvider).valueOrNull;
+    final authState = ref.watch(authStateProvider);
+    final accountLabel = authState.when(
+      data: (user) => user?.email ?? strings.signedOut,
+      loading: () => strings.restoringAccount,
+      error: (_, __) => strings.accountUnavailable,
+    );
     final recordingMode = ref.watch(workoutRecordingModeProvider);
 
     return DashboardPageScaffold(
@@ -51,7 +56,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      authUser?.email ?? strings.signedOut,
+                      accountLabel,
                       style: fittinTheme
                           .displayStyle(18, fittinTheme.fg)
                           .copyWith(height: 1.1),

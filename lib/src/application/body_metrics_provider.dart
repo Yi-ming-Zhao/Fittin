@@ -29,6 +29,8 @@ class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
     }
   }
 
+  Future<void> reload() => _load();
+
   Future<void> addMetric({
     double? weight,
     double? bodyFat,

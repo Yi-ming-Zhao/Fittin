@@ -191,6 +191,7 @@ class LocalWorkoutLogRepository {
             weight: log.sets[index].weight,
             isAmrap: log.sets[index].isAmrap,
             isCompleted: log.sets[index].isCompleted,
+            isSkipped: log.sets[index].isSkipped,
           ),
       ],
     );

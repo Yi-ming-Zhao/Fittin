@@ -15,6 +15,7 @@ import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/share_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/plan_start_load_review_dialog.dart';
@@ -118,6 +119,31 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                     }
                   },
                 ),
+                FittinChip(
+                  fittinTheme,
+                  strings.scanPlanQr,
+                  key: const ValueKey('import-plan-qr'),
+                  onTap: () async {
+                    final imported = await Navigator.of(context)
+                        .push<PlanTemplate>(
+                          MaterialPageRoute(
+                            builder: (_) => const QRScannerScreen(),
+                          ),
+                        );
+                    if (!context.mounted || imported == null) return;
+                    ref.invalidate(planLibraryItemsProvider);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          strings.importedTemplate(
+                            localizedTemplateName(imported, locale),
+                          ),
+                        ),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -216,6 +242,8 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                         const SizedBox(height: 12),
                         Text(
                           localizedTemplateDescription(record.template, locale),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
                           style: fittinTheme
                               .uiStyle(13, fittinTheme.fgDim)
                               .copyWith(height: 1.45),
@@ -277,10 +305,71 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
           ],
         );
       },
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) =>
-          Scaffold(body: Center(child: Text(strings.loadError(error)))),
+      loading: () => DashboardPageScaffold(
+        bottomPadding: 24,
+        children: [
+          DashboardScreenHeader(
+            eyebrow: strings.planLibrary,
+            title: strings.trainingPlans,
+            subtitle: strings.trainingPlansSubtitle,
+          ),
+          const SizedBox(height: 24),
+          DashboardSurfaceCard(
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: fittinTheme.accent,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    strings.startupPreparing,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+      error: (error, _) => DashboardPageScaffold(
+        bottomPadding: 24,
+        children: [
+          DashboardScreenHeader(
+            eyebrow: strings.planLibrary,
+            title: strings.trainingPlans,
+            subtitle: strings.trainingPlansSubtitle,
+          ),
+          const SizedBox(height: 24),
+          DashboardSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.loadError(error),
+                  style: fittinTheme.uiStyle(14, fittinTheme.fgDim),
+                ),
+                const SizedBox(height: 16),
+                FittinBtn(
+                  fittinTheme,
+                  strings.retry,
+                  key: const ValueKey('retry-plan-library'),
+                  size: 'sm',
+                  icon: Icons.refresh_rounded,
+                  onPressed: () => ref.invalidate(planLibraryItemsProvider),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -378,62 +467,70 @@ class _PlanDetailScreen extends ConsumerWidget {
       bottomPadding: 24,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DashboardBackButton(
               theme: theme,
               onPressed: () => Navigator.of(context).pop(),
             ),
-            const Spacer(),
-            FittinBtn(
-              theme,
-              strings.edit,
-              variant: 'secondary',
-              size: 'sm',
-              icon: Icons.edit_rounded,
-              onPressed: () async {
-                await Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PlanEditorScreen(templateId: template.id),
-                  ),
-                );
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
             const SizedBox(width: 8),
-            FittinBtn(
-              theme,
-              strings.switchPlan,
-              size: 'sm',
-              icon: Icons.play_arrow_rounded,
-              onPressed: () async {
-                final trainingMaxProfile = await _resolveTrainingMaxProfile(
-                  context,
-                  record,
-                );
-                if (!context.mounted || trainingMaxProfile == null) {
-                  return;
-                }
-                PlanStartLoadReview? loadReview;
-                if (record.instanceCount == 0) {
-                  loadReview = await _resolvePlanStartLoadReview(
-                    context,
-                    ref,
-                    record,
-                  );
-                  if (!context.mounted || loadReview == null) {
-                    return;
-                  }
-                }
-                await ref
-                    .read(planLibraryActionProvider.notifier)
-                    .activateTemplate(
-                      record,
-                      trainingMaxProfile: trainingMaxProfile,
-                      planStartLoadReview: loadReview,
-                    );
-              },
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FittinBtn(
+                    theme,
+                    strings.edit,
+                    variant: 'secondary',
+                    size: 'sm',
+                    icon: Icons.edit_rounded,
+                    onPressed: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              PlanEditorScreen(templateId: template.id),
+                        ),
+                      );
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                  ),
+                  FittinBtn(
+                    theme,
+                    strings.switchPlan,
+                    size: 'sm',
+                    icon: Icons.play_arrow_rounded,
+                    onPressed: () async {
+                      final trainingMaxProfile =
+                          await _resolveTrainingMaxProfile(context, record);
+                      if (!context.mounted || trainingMaxProfile == null) {
+                        return;
+                      }
+                      PlanStartLoadReview? loadReview;
+                      if (record.instanceCount == 0) {
+                        loadReview = await _resolvePlanStartLoadReview(
+                          context,
+                          ref,
+                          record,
+                        );
+                        if (!context.mounted || loadReview == null) {
+                          return;
+                        }
+                      }
+                      await ref
+                          .read(planLibraryActionProvider.notifier)
+                          .activateTemplate(
+                            record,
+                            trainingMaxProfile: trainingMaxProfile,
+                            planStartLoadReview: loadReview,
+                          );
+                    },
+                  ),
+                ],
+              ),
             ),
           ],
         ),

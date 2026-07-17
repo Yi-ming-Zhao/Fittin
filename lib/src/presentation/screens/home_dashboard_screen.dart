@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/home_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
@@ -43,7 +44,11 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isCompact = constraints.maxHeight < 720;
-                final sectionGap = isCompact ? 6.0 : 16.0;
+                final roomyProgress = ((constraints.maxHeight - 880) / 46)
+                    .clamp(0.0, 1.0);
+                final sectionGap = isCompact
+                    ? 6.0
+                    : 16.0 + (24.0 * roomyProgress);
                 final content = Column(
                   children: [
                     homeDataAsync.when(
@@ -68,7 +73,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                         compact: isCompact,
                       ),
                       loading: () => _HomeOverviewSkeleton(compact: isCompact),
-                      error: (error, _) => _isMissingActivePlanError(error)
+                      error: (error, _) => isMissingActivePlanError(error)
                           ? const SizedBox.shrink()
                           : _HomeOverviewError(
                               message: strings.loadError(error),
@@ -78,7 +83,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 );
                 final padding = EdgeInsets.fromLTRB(
                   theme.pad,
-                  16,
+                  isCompact ? 16 : 16 + (8 * roomyProgress),
                   theme.pad,
                   20,
                 );
@@ -207,10 +212,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       },
     );
   }
-}
-
-bool _isMissingActivePlanError(Object error) {
-  return error.toString().contains('No active training plan instance');
 }
 
 class _FittinTopMetaRow extends StatelessWidget {

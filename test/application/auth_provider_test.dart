@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
@@ -67,4 +70,112 @@ void main() {
       );
     },
   );
+
+  test('session restore is single-flight across concurrent callers', () async {
+    final store = InMemoryAuthSessionStore();
+    await store.saveAccessToken('stored-token');
+    final response = Completer<http.Response>();
+    var requestCount = 0;
+    final repository = BackendAuthRepository(
+      baseUrl: 'https://api.example.test',
+      sessionStore: store,
+      httpClient: MockClient((request) {
+        requestCount += 1;
+        return response.future;
+      }),
+    );
+
+    final first = repository.currentUser();
+    final second = repository.currentUser();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(requestCount, 1);
+    response.complete(
+      http.Response(
+        '{"accessToken":"stored-token","user":{"id":"user-1","email":"user@example.test"}}',
+        200,
+      ),
+    );
+
+    expect((await first)?.id, 'user-1');
+    expect((await second)?.id, 'user-1');
+    expect(requestCount, 1);
+  });
+
+  test(
+    'transient session restore failures preserve the stored token',
+    () async {
+      final store = InMemoryAuthSessionStore();
+      await store.saveAccessToken('stored-token');
+      final repository = BackendAuthRepository(
+        baseUrl: 'https://api.example.test',
+        sessionStore: store,
+        httpClient: MockClient((request) async => http.Response('', 503)),
+      );
+
+      await expectLater(repository.currentUser(), throwsA(isA<StateError>()));
+
+      expect(await store.loadAccessToken(), 'stored-token');
+    },
+  );
+
+  test(
+    'transient session restore keeps the cached user scope available',
+    () async {
+      final store = InMemoryAuthSessionStore();
+      await store.saveAccessToken('stored-token');
+      await store.saveCachedUser(
+        const CachedAuthUser(id: 'offline-user', email: 'offline@example.test'),
+      );
+      final repository = BackendAuthRepository(
+        baseUrl: 'https://api.example.test',
+        sessionStore: store,
+        httpClient: MockClient((request) async => http.Response('', 503)),
+      );
+
+      final user = await repository.currentUser();
+
+      expect(user?.id, 'offline-user');
+      expect(await store.loadAccessToken(), 'stored-token');
+    },
+  );
+
+  test(
+    'legacy JWT restores its user scope during an offline upgrade',
+    () async {
+      String segment(Map<String, Object> value) =>
+          base64Url.encode(utf8.encode(jsonEncode(value))).replaceAll('=', '');
+      final token =
+          '${segment({'alg': 'HS256', 'typ': 'JWT'})}.'
+          '${segment({'sub': 'legacy-user', 'email': 'legacy@example.test'})}.'
+          'signature';
+      final store = InMemoryAuthSessionStore();
+      await store.saveAccessToken(token);
+      final repository = BackendAuthRepository(
+        baseUrl: 'https://api.example.test',
+        sessionStore: store,
+        httpClient: MockClient((request) async => http.Response('', 503)),
+      );
+
+      final user = await repository.currentUser();
+
+      expect(user?.id, 'legacy-user');
+      expect((await store.loadCachedUser())?.id, 'legacy-user');
+    },
+  );
+
+  test('unauthorized session restore clears the stored token', () async {
+    final store = InMemoryAuthSessionStore();
+    await store.saveAccessToken('expired-token');
+    await store.saveCachedUser(const CachedAuthUser(id: 'expired-user'));
+    final repository = BackendAuthRepository(
+      baseUrl: 'https://api.example.test',
+      sessionStore: store,
+      httpClient: MockClient((request) async => http.Response('', 401)),
+    );
+
+    expect(await repository.currentUser(), isNull);
+    expect(await store.loadAccessToken(), isNull);
+    expect(await store.loadCachedUser(), isNull);
+  });
 }

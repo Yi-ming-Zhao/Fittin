@@ -691,7 +691,7 @@ final _porcelainInk = FittinTheme(
   surfaceSelected: const Color(0xFFF2DED7),
   fg: const Color(0xFF211D19),
   fgDim: const Color(0xFF514A43),
-  fgMuted: const Color(0xFF766D64),
+  fgMuted: const Color(0xFF746A61),
   fgFaint: const Color(0xFF938A81),
   fgInverse: const Color(0xFFFFFFFF),
   borderSubtle: const Color(0xFFDDD3C5),

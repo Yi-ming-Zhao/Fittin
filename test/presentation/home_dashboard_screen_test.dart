@@ -43,7 +43,9 @@ void main() {
     },
   );
 
-  testWidgets('missing plan error is shown only once', (tester) async {
+  testWidgets('missing plan shows a stable plan selection action', (
+    tester,
+  ) async {
     final repository = InMemoryDatabaseRepository();
     final fakeGateway = FakeTodayWorkoutGateway();
     final failure = StateError(
@@ -65,7 +67,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Unable to load. Please try again.'), findsOneWidget);
+    expect(find.text('Choose a training plan'), findsOneWidget);
+    expect(find.byKey(const ValueKey('choose-training-plan')), findsOneWidget);
+    expect(find.text('Unable to load workout'), findsNothing);
     expect(
       find.textContaining('No active training plan instance'),
       findsNothing,

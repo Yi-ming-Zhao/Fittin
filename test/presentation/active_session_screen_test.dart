@@ -388,6 +388,35 @@ void main() {
     expect(find.text('Enter Weight'), findsOneWidget);
   });
 
+  testWidgets('traditional logger can skip the current set', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final container = await _sessionContainer(WorkoutRecordingMode.traditional);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ActiveSessionScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .getSize(find.byKey(const ValueKey('session-set-progress-0')))
+          .height,
+      greaterThanOrEqualTo(44),
+    );
+    await tester.tap(find.byKey(const ValueKey('cancel-current-set')));
+    await tester.pump();
+
+    final workout = container.read(activeSessionProvider).activeWorkout!;
+    expect(workout.exercises.first.sets.first.isSkipped, isTrue);
+  });
+
   testWidgets('barbell graphic uses stable calibrated plate identities', (
     WidgetTester tester,
   ) async {

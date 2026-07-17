@@ -47,9 +47,7 @@ class BackendAuthRepository implements AuthRepository {
     http.Client? httpClient,
   }) : _baseUrl = baseUrl,
        _sessionStore = sessionStore,
-       _httpClient = httpClient ?? http.Client() {
-    unawaited(_restoreSession());
-  }
+       _httpClient = httpClient ?? http.Client();
 
   final String _baseUrl;
   final AuthSessionStore _sessionStore;
@@ -59,6 +57,7 @@ class BackendAuthRepository implements AuthRepository {
 
   AuthUser? _currentUser;
   String? _accessToken;
+  Future<void>? _restoreSessionInFlight;
 
   @override
   Stream<AuthUser?> authStateChanges() async* {
@@ -143,11 +142,26 @@ class BackendAuthRepository implements AuthRepository {
     );
     final payload = _decodeJson(response);
     _ensureSuccess(response, payload);
-    final user = _persistSession(payload);
-    return user;
+    return _persistSession(payload);
   }
 
-  Future<void> _restoreSession() async {
+  Future<void> _restoreSession() {
+    final existing = _restoreSessionInFlight;
+    if (existing != null) {
+      return existing;
+    }
+
+    late final Future<void> operation;
+    operation = _performSessionRestore().whenComplete(() {
+      if (identical(_restoreSessionInFlight, operation)) {
+        _restoreSessionInFlight = null;
+      }
+    });
+    _restoreSessionInFlight = operation;
+    return operation;
+  }
+
+  Future<void> _performSessionRestore() async {
     final storedToken = _accessToken ?? await _sessionStore.loadAccessToken();
     if (storedToken == null || storedToken.isEmpty) {
       return;
@@ -157,16 +171,35 @@ class BackendAuthRepository implements AuthRepository {
       Uri.parse('$_baseUrl/v1/auth/session'),
       token: storedToken,
     );
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    if (response.statusCode == 401 || response.statusCode == 403) {
       _currentUser = null;
       _accessToken = null;
       await _sessionStore.clear();
       _controller.add(null);
       return;
     }
+    if (_isTransientSessionStatus(response.statusCode)) {
+      final storedUser =
+          await _sessionStore.loadCachedUser() ??
+          _cachedUserFromAccessToken(storedToken);
+      if (storedUser != null) {
+        _accessToken = storedToken;
+        _currentUser = _authUserFromCache(storedUser);
+        await _sessionStore.saveCachedUser(storedUser);
+        _controller.add(_currentUser);
+        return;
+      }
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError(
+        response.statusCode >= 500
+            ? backendUnavailableMessage
+            : 'Session restore failed with status ${response.statusCode}.',
+      );
+    }
 
     final payload = _decodeJson(response);
-    _persistSession(payload, fallbackToken: storedToken);
+    await _persistSession(payload, fallbackToken: storedToken);
   }
 
   Future<http.Response> _postJson(
@@ -208,10 +241,10 @@ class BackendAuthRepository implements AuthRepository {
     }
   }
 
-  AuthUser _persistSession(
+  Future<AuthUser> _persistSession(
     Map<String, dynamic> payload, {
     String? fallbackToken,
-  }) {
+  }) async {
     final token =
         payload['accessToken'] as String? ??
         payload['access_token'] as String? ??
@@ -231,9 +264,55 @@ class BackendAuthRepository implements AuthRepository {
 
     _accessToken = token;
     _currentUser = user;
-    unawaited(_sessionStore.saveAccessToken(token));
+    await _sessionStore.saveAccessToken(token);
+    await _sessionStore.saveCachedUser(_cachedAuthUser(user));
     _controller.add(user);
     return user;
+  }
+
+  bool _isTransientSessionStatus(int statusCode) {
+    return statusCode == 408 || statusCode == 429 || statusCode >= 500;
+  }
+
+  CachedAuthUser? _cachedUserFromAccessToken(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) {
+      return null;
+    }
+    try {
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      if (payload is! Map<String, dynamic>) {
+        return null;
+      }
+      final id = payload['sub'] as String?;
+      if (id == null || id.isEmpty) {
+        return null;
+      }
+      final email = payload['email'] as String?;
+      return CachedAuthUser(id: id, email: email, displayName: email);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  CachedAuthUser _cachedAuthUser(AuthUser user) {
+    return CachedAuthUser(
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      isAnonymous: user.isAnonymous,
+    );
+  }
+
+  AuthUser _authUserFromCache(CachedAuthUser user) {
+    return AuthUser(
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      isAnonymous: user.isAnonymous,
+    );
   }
 
   Map<String, String> _headers({String? token}) {

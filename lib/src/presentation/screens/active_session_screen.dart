@@ -292,6 +292,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   ),
                   onComplete: () =>
                       _handleCompleteSet(notifier, resolvedSetIndex),
+                  onCancel: () => notifier.cancelSet(resolvedSetIndex),
                 ),
         ),
         const SizedBox(height: 10),
@@ -718,8 +719,8 @@ class _HeaderTextButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 38,
-          height: 38,
+          width: 44,
+          height: 44,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
@@ -760,8 +761,8 @@ class _HeaderIconButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          width: 38,
-          height: 38,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: theme.border),
@@ -791,7 +792,7 @@ class _SetProgressRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 28,
+      height: 44,
       child: Row(
         children: [
           for (var index = 0; index < sets.length; index++) ...[
@@ -809,21 +810,23 @@ class _SetProgressRail extends StatelessWidget {
                   key: ValueKey('session-set-progress-$index'),
                   onTap: () => onSelect(index),
                   borderRadius: BorderRadius.circular(99),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    height: 6,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(99),
-                      color: sets[index].isCompleted
-                          ? theme.setCompleted
-                          : sets[index].isSkipped
-                          ? theme.setSkipped
-                          : index == activeIndex
-                          ? theme.setCurrent
-                          : theme.setUpcoming,
-                      border: index == activeIndex
-                          ? Border.all(color: theme.focusRing)
-                          : null,
+                  child: Center(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      height: 6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(99),
+                        color: sets[index].isCompleted
+                            ? theme.setCompleted
+                            : sets[index].isSkipped
+                            ? theme.setSkipped
+                            : index == activeIndex
+                            ? theme.setCurrent
+                            : theme.setUpcoming,
+                        border: index == activeIndex
+                            ? Border.all(color: theme.focusRing)
+                            : null,
+                      ),
                     ),
                   ),
                 ),
@@ -857,6 +860,7 @@ class _TraditionalSetLogger extends StatelessWidget {
     required this.onEditWeight,
     required this.onEditRpe,
     required this.onComplete,
+    required this.onCancel,
   });
 
   final AppStrings strings;
@@ -877,6 +881,7 @@ class _TraditionalSetLogger extends StatelessWidget {
   final VoidCallback onEditWeight;
   final VoidCallback onEditRpe;
   final VoidCallback onComplete;
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -986,13 +991,37 @@ class _TraditionalSetLogger extends StatelessWidget {
             ),
           ] else
             const Spacer(),
-          _AnimatedCheckButton(
-            theme: theme,
-            key: const ValueKey('complete-current-set'),
-            controller: completionController,
-            onTap: onComplete,
-            size: 58,
-            semanticLabel: strings.logCurrentSet,
+          SizedBox(
+            height: 58,
+            child: Stack(
+              children: [
+                Align(
+                  alignment: Alignment.center,
+                  child: _AnimatedCheckButton(
+                    theme: theme,
+                    key: const ValueKey('complete-current-set'),
+                    controller: completionController,
+                    onTap: onComplete,
+                    size: 58,
+                    semanticLabel: strings.logCurrentSet,
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton.filledTonal(
+                    key: const ValueKey('cancel-current-set'),
+                    tooltip: strings.skipCurrentSet,
+                    style: IconButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      backgroundColor: theme.dangerSubtle,
+                      foregroundColor: theme.danger,
+                    ),
+                    onPressed: onCancel,
+                    icon: const Icon(Icons.redo_rounded),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1797,7 +1826,6 @@ class _CardMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final materialTheme = Theme.of(context);
     return Container(
       height: height,
       decoration: BoxDecoration(
@@ -1818,17 +1846,19 @@ class _CardMetric extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: materialTheme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.5,
-                  ),
+                  style: theme
+                      .displayStyle(28, theme.fg)
+                      .copyWith(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -1.5,
+                        height: 1,
+                      ),
                 ),
                 Text(
                   label,
-                  style: materialTheme.textTheme.labelSmall?.copyWith(
-                    color: theme.fgMuted,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: theme
+                      .uiStyle(10, theme.fgMuted, FontWeight.w800)
+                      .copyWith(height: 1),
                 ),
               ],
             ),
