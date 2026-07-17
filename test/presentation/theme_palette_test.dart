@@ -144,6 +144,9 @@ void main() {
     expect(android31, contains('android:windowSplashScreenBackground'));
     expect(iosLaunch, contains('red="0.03529411765"'));
     expect(iosMain, contains('red="0.03529411765"'));
+    expect(webIndex, contains('name="viewport"'));
+    expect(webIndex, contains('width=device-width'));
+    expect(webIndex, contains('viewport-fit=cover'));
     expect(webIndex, contains('flutter.fittin.appearance.palette'));
     for (final theme in FittinPaletteRegistry.entries.values) {
       expect(webIndex, contains(theme.paletteId.storageKey));

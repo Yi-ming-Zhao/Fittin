@@ -258,4 +258,44 @@ void main() {
     expect(find.byKey(const ValueKey('startup-barbell-mark')), findsOneWidget);
     pending.complete(const AppStartupReadiness());
   });
+
+  for (final viewport in const [Size(390, 926), Size(390, 568)]) {
+    testWidgets(
+      'startup content remains centered at ${viewport.width.toInt()}x${viewport.height.toInt()}',
+      (tester) async {
+        tester.view.physicalSize = viewport;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final pending = Completer<AppStartupReadiness>();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              databaseRepositoryProvider.overrideWithValue(
+                InMemoryDatabaseRepository(),
+              ),
+              appStartupReadinessProvider.overrideWith((ref) => pending.future),
+            ],
+            child: const MaterialApp(
+              home: MediaQuery(
+                data: MediaQueryData(disableAnimations: true),
+                child: AppStartupGate(child: SizedBox()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final content = tester.getRect(
+          find.byKey(const ValueKey('startup-content')),
+        );
+        expect(content.center.dy, closeTo(viewport.height / 2, 1));
+        expect(content.left, greaterThanOrEqualTo(24));
+        expect(content.right, lessThanOrEqualTo(viewport.width - 24));
+
+        pending.complete(const AppStartupReadiness());
+      },
+    );
+  }
 }

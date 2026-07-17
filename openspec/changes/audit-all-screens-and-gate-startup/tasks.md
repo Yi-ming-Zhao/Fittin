@@ -25,7 +25,7 @@
 
 - [x] 4.1 Add startup tests for restored user, signed-out user, hydration failure with readable local data, timeout/error recovery, Retry, Continue locally, and reduced motion.
 - [x] 4.2 Add or update geometry, semantics, localization, no-plan, and error-state tests for every accepted interface fix.
-- [ ] 4.3 Run formatting, Flutter analysis, the full deterministic Flutter suite, backend tests, `git diff --check`, and strict OpenSpec validation.
+- [x] 4.3 Run formatting, Flutter analysis, the full deterministic Flutter suite, backend tests, `git diff --check`, and strict OpenSpec validation.
 
 ## 5. Production Visual Verification
 

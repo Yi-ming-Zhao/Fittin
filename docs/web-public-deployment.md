@@ -118,7 +118,8 @@ tool/update_public_web.sh
 The update script:
 
 1. pulls with `git pull --ff-only` unless `--no-pull` is supplied;
-2. creates the Flutter Web release with an explicit backend URL;
+2. creates the Flutter Web release with an explicit backend URL and
+   precompresses text, JavaScript, and WASM assets for nginx `gzip_static`;
 3. uploads a timestamped archive to the ECS;
 4. atomically repoints `/home/wsf/nginx-fittin/current`;
 5. validates and reloads nginx;
@@ -133,6 +134,24 @@ tool/update_public_web.sh --build-only
 # Publish a working tree that has already been reviewed
 tool/update_public_web.sh --no-pull
 ```
+
+If the default release filesystem is under pressure, keep the nginx entry
+symlink stable while moving only new immutable releases to another persistent
+filesystem:
+
+```bash
+ECS_RELEASE_ROOT=/var/www/fittin/releases \
+ECS_CURRENT_LINK=/home/wsf/nginx-fittin/current \
+tool/update_public_web.sh --no-pull
+```
+
+The previous target printed by the script remains the rollback path even when
+the release root changes.
+
+The Fittin nginx server block enables `gzip_static` and `Vary:
+Accept-Encoding`. Verify `Content-Encoding: gzip` for `main.dart.js` after
+publishing; an uncompressed multi-megabyte Flutter bundle materially delays the
+first frame on mobile networks.
 
 SSH may prompt interactively. Do not add the ECS password to the script or an environment file tracked by Git.
 

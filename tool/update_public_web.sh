@@ -12,6 +12,7 @@ BACKEND_URL="${BACKEND_URL:-$PUBLIC_ORIGIN/api}"
 BACKEND_API_KEY="${BACKEND_API_KEY:-}"
 ECS_TARGET="${ECS_TARGET:-wsf@39.103.152.153}"
 ECS_RELEASE_ROOT="${ECS_RELEASE_ROOT:-/home/wsf/nginx-fittin/releases}"
+ECS_CURRENT_LINK="${ECS_CURRENT_LINK:-${ECS_RELEASE_ROOT%/releases}/current}"
 BUILD_ONLY=0
 PULL_FIRST=1
 
@@ -25,6 +26,7 @@ Defaults:
   BACKEND_URL=<PUBLIC_ORIGIN>/api
   ECS_TARGET=wsf@39.103.152.153
   ECS_RELEASE_ROOT=/home/wsf/nginx-fittin/releases
+  ECS_CURRENT_LINK=<ECS_RELEASE_ROOT without /releases>/current
 
 The script never stores SSH or API credentials. SSH may prompt interactively.
 The Alibaba Cloud nginx/NPS bootstrap must be completed once before deploying.
@@ -72,7 +74,7 @@ release_id="$(date -u +%Y%m%dT%H%M%SZ)"
 archive="$(mktemp -t fittin-web.XXXXXX.tar.gz)"
 trap 'rm -f "$archive"' EXIT
 
-COPYFILE_DISABLE=1 tar -C "$REPO_ROOT/build/web" -czf "$archive" .
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$REPO_ROOT/build/web" -czf "$archive" .
 
 echo "==> Uploading release $release_id to $ECS_TARGET"
 ssh -t "$ECS_TARGET" \
@@ -88,13 +90,13 @@ rm -f "$release_dir/web.tar.gz"
 REMOTE
 previous_release="$(
   ssh "$ECS_TARGET" \
-    "readlink -f '${ECS_RELEASE_ROOT%/releases}/current' 2>/dev/null || true"
+    "readlink -f '$ECS_CURRENT_LINK' 2>/dev/null || true"
 )"
 if [[ -n "$previous_release" ]]; then
   echo "Previous release for rollback: $previous_release"
 fi
 ssh -t "$ECS_TARGET" \
-  "sudo nginx -t && sudo ln -sfn '$ECS_RELEASE_ROOT/$release_id' '${ECS_RELEASE_ROOT%/releases}/current' && sudo nginx -s reload"
+  "sudo nginx -t && sudo ln -sfn '$ECS_RELEASE_ROOT/$release_id' '$ECS_CURRENT_LINK' && sudo nginx -s reload"
 
 echo "==> Public smoke checks"
 curl -fsSI --max-time 20 "$PUBLIC_ORIGIN/"

@@ -27,13 +27,22 @@ import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SharedPreferences? preferences;
-  try {
-    preferences = await SharedPreferences.getInstance();
-  } catch (_) {
-    // The themed recovery screen remains available if preferences fail again.
-  }
+  final preferences = await loadInitialPreferences();
   runApp(FittinBootstrapHost(initialPreferences: preferences));
+}
+
+const initialPreferencesTimeout = Duration(seconds: 2);
+
+Future<SharedPreferences?> loadInitialPreferences({
+  Future<SharedPreferences> Function()? loader,
+  Duration timeout = initialPreferencesTimeout,
+}) async {
+  try {
+    return await (loader ?? SharedPreferences.getInstance)().timeout(timeout);
+  } catch (_) {
+    // Start the Flutter recovery surface even when browser storage stalls.
+    return null;
+  }
 }
 
 class _FittinBootstrapDependencies {
@@ -58,7 +67,8 @@ Future<_FittinBootstrapDependencies> _initializeApp({
   ValueChanged<AppLocale>? onLocaleReady,
 }) async {
   final preferences =
-      initialPreferences ?? await SharedPreferences.getInstance();
+      initialPreferences ??
+      await SharedPreferences.getInstance().timeout(initialPreferencesTimeout);
   onPreferencesReady?.call(preferences);
   final persistence = await createLocalPersistence();
   final initialLocale = await persistence.databaseRepository.fetchAppLocale();

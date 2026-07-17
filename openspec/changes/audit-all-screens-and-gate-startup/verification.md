@@ -20,9 +20,18 @@
 ## Automated verification
 
 - `flutter analyze --no-pub`: no issues.
-- Full deterministic Flutter suite after the final visual and race-condition iteration: 314 tests passed serially.
+- Full deterministic Flutter suite after the final visual, startup, and race-condition iteration: 318 tests passed serially.
 - Palette guards: five complete palettes meet contrast requirements and contain no cyan or teal theme colors.
 - Production Web build: succeeded against `https://fittin.hammerscholar.net/api`.
 - Android resource build: debug APK compiled successfully with the native launch mark.
+
+## Public mobile startup iteration
+
+- Real mobile emulation exposed a missing viewport declaration that desktop-sized browser emulation did not reproduce. The production document now resolves to a true 390px CSS viewport at both 390x926 and 390x568.
+- The HTML barbell remains until the real Flutter first-frame signal. Initial preference restoration is bounded to two seconds so a stalled browser store cannot prevent Flutter from rendering its own recovery surface.
+- The bundled first-party CJK fallback was reduced from 10,540,376 bytes to a 265,832-byte app-copy subset; uncommon user-entered glyphs retain platform/Flutter fallback.
+- Alibaba Cloud nginx now serves precompressed static assets: the observed JavaScript response fell from 3,883,583 bytes to about 1.09 MB, and CanvasKit WASM from 5,678,018 bytes to about 2.14 MB.
+- Final fresh-context public checks completed the first Flutter frame at 20.8s and 29.9s on the unusually slow local proxy path. Both scenarios retained the barbell gate until readiness, resolved to a 390px viewport, removed the HTML gate only after a Flutter view existed, and had no console errors, page errors, failed requests, HTTP error responses, horizontal overflow, or false plan-loading failure copy.
+- The Flutter readiness composition was visually rechecked after its centering fix and remained centered at both target heights; automated geometry tests guard the same relationship.
 
 CI, signed artifacts, checksums, signer verification, public deployment, and exact release URLs are appended after the exact-SHA release workflow completes.

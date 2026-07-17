@@ -88,22 +88,21 @@ class _StartupSplashScreenState extends State<StartupSplashScreen>
       key: const ValueKey('startup-splash'),
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: math.max(theme.pad, 24),
-                vertical: 24,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: math.max(0, constraints.maxHeight - 48),
+        child: CustomScrollView(
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: math.max(theme.pad, 24),
+                  vertical: 24,
                 ),
                 child: Center(
                   child: ConstrainedBox(
+                    key: const ValueKey('startup-content'),
                     constraints: const BoxConstraints(maxWidth: 360),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         AnimatedBuilder(
                           animation: _controller,
@@ -185,8 +184,8 @@ class _StartupSplashScreenState extends State<StartupSplashScreen>
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

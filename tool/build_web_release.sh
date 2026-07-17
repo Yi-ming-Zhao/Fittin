@@ -75,6 +75,17 @@ index_path.write_text(index_updated)
 print(f"Injected bootstrap/main cache-busting query: v={version}")
 PY
 
+echo "==> Precompressing web assets for nginx gzip_static"
+while IFS= read -r -d '' asset; do
+  gzip -9 -k -f "$asset"
+done < <(
+  find build/web -type f \
+    \( -name '*.html' -o -name '*.js' -o -name '*.wasm' \
+       -o -name '*.css' -o -name '*.json' -o -name '*.svg' \
+       -o -name '*.txt' \) \
+    -size +1024c -print0
+)
+
 cat <<'EOF'
 
 Build complete.

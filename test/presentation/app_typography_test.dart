@@ -4,15 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('bundles the CJK fallback font for offline rendering', (
+  testWidgets('bundles the compact CJK fallback font for offline UI copy', (
     tester,
   ) async {
-    final font = await rootBundle.load('assets/fonts/NotoSansSC-Regular.ttf');
+    final font = await rootBundle.load('assets/fonts/NotoSansSC-AppSubset.ttf');
     final license = await rootBundle.loadString(
       'assets/fonts/OFL-NotoSansSC.txt',
     );
 
-    expect(font.lengthInBytes, 10540376);
+    expect(font.lengthInBytes, inInclusiveRange(200000, 500000));
     expect(license, contains('SIL OPEN FONT LICENSE Version 1.1'));
   });
 
