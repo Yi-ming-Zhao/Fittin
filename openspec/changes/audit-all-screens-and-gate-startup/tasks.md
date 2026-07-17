@@ -36,5 +36,5 @@
 ## 6. Release And Deployment
 
 - [x] 6.1 Bump to the next patch/build version and document startup readiness plus audited interface fixes in bilingual release notes.
-- [ ] 6.2 Commit and push the scoped change, wait for exact-SHA CI, publish signed Android and Web assets, and independently verify version, checksums, and stable signer.
-- [ ] 6.3 Synchronize 241 and deploy the Web artifact directly to Alibaba Cloud when access is available, retaining rollback metadata and verifying public mobile behavior.
+- [x] 6.2 Commit and push the scoped change, wait for exact-SHA CI, publish signed Android and Web assets, and independently verify version, checksums, and stable signer.
+- [x] 6.3 Synchronize 241 and deploy the Web artifact directly to Alibaba Cloud when access is available, retaining rollback metadata and verifying public mobile behavior.
