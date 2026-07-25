@@ -45,7 +45,7 @@ void main() {
   });
 
   test(
-    'backend auth converts socket client failures into release guidance',
+    'backend auth converts socket client failures into unavailable guidance',
     () async {
       final repository = BackendAuthRepository(
         baseUrl: 'http://127.0.0.1:8081',
@@ -70,6 +70,49 @@ void main() {
       );
     },
   );
+
+  test('HTML gateway failures become an unavailable message', () async {
+    final repository = BackendAuthRepository(
+      baseUrl: 'https://api.example.test',
+      sessionStore: InMemoryAuthSessionStore(),
+      httpClient: MockClient(
+        (request) async => http.Response(
+          '<html><h1>502 Bad Gateway</h1></html>',
+          502,
+          headers: {'content-type': 'text/html'},
+        ),
+      ),
+    );
+
+    await expectLater(
+      repository.signIn(email: 'user@test.dev', password: 'password123'),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          backendUnavailableMessage,
+        ),
+      ),
+    );
+  });
+
+  test('auth controller removes the Bad state prefix', () async {
+    final controller = AuthController(
+      UnavailableAuthRepository('Authentication is temporarily unavailable.'),
+    );
+    addTearDown(controller.dispose);
+
+    final success = await controller.signIn(
+      email: 'user@test.dev',
+      password: 'password123',
+    );
+
+    expect(success, isFalse);
+    expect(
+      controller.state.errorMessage,
+      'Authentication is temporarily unavailable.',
+    );
+  });
 
   test('session restore is single-flight across concurrent callers', () async {
     final store = InMemoryAuthSessionStore();

@@ -8,9 +8,8 @@ import 'package:fittin_v2/src/application/auth_session_store.dart';
 import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 
 const backendUnavailableMessage =
-    'Backend service is unavailable. For Web/Android release builds, pass '
-    '--dart-define=BACKEND_URL=https://api.yimelo.cc. For local development, '
-    'start the backend or provide BACKEND_URL explicitly.';
+    'Service temporarily unavailable. Please try again. '
+    'Your local training data is safe.';
 
 class AuthUser {
   const AuthUser({
@@ -140,8 +139,19 @@ class BackendAuthRepository implements AuthRepository {
       Uri.parse('$_baseUrl$path'),
       body: {'email': email, 'password': password},
     );
-    final payload = _decodeJson(response);
-    _ensureSuccess(response, payload);
+    final payload = _tryDecodeJson(response);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (_isTransientSessionStatus(response.statusCode)) {
+        throw StateError(backendUnavailableMessage);
+      }
+      _ensureSuccess(response, payload ?? const {});
+    }
+    if (payload == null) {
+      throw StateError(
+        'Authentication service returned an invalid response. '
+        'Please try again.',
+      );
+    }
     return _persistSession(payload);
   }
 
@@ -323,6 +333,17 @@ class BackendAuthRepository implements AuthRepository {
   }
 
   Map<String, dynamic> _decodeJson(http.Response response) {
+    final payload = _tryDecodeJson(response);
+    if (payload != null) {
+      return payload;
+    }
+    throw StateError(
+      'Authentication service returned an invalid response. '
+      'Please try again.',
+    );
+  }
+
+  Map<String, dynamic>? _tryDecodeJson(http.Response response) {
     if (response.body.isEmpty) {
       return const {};
     }
@@ -330,12 +351,12 @@ class BackendAuthRepository implements AuthRepository {
     try {
       decoded = jsonDecode(response.body);
     } on FormatException {
-      throw StateError('Backend auth response was not valid JSON.');
+      return null;
     }
     if (decoded is Map<String, dynamic>) {
       return decoded;
     }
-    throw StateError('Backend auth response must be a JSON object.');
+    return null;
   }
 
   void _ensureSuccess(http.Response response, Map<String, dynamic> payload) {
@@ -536,6 +557,9 @@ class AuthController extends StateNotifier<AuthControllerState> {
     if (_isBackendConnectionError(error) ||
         message.contains('ClientException')) {
       return backendUnavailableMessage;
+    }
+    if (error is StateError) {
+      return error.message.toString();
     }
     if (message.startsWith('StateError: ')) {
       return message.substring('StateError: '.length);
