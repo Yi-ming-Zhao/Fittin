@@ -126,14 +126,24 @@ ssh -t "$ECS_TARGET" \
 activated=1
 
 echo "==> Public smoke checks"
-curl_retry=(--retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 20)
-curl -fsSI "${curl_retry[@]}" "$PUBLIC_ORIGIN/"
-curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/api/readyz"
-curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/version.json" \
+retry_curl() {
+	local attempt
+	for attempt in 1 2 3 4 5; do
+		if curl "$@"; then
+			return 0
+		fi
+		sleep 2
+	done
+	return 1
+}
+curl_timeout=(--connect-timeout 10 --max-time 20)
+retry_curl -fsSI "${curl_timeout[@]}" "$PUBLIC_ORIGIN/"
+retry_curl -fsS "${curl_timeout[@]}" "$PUBLIC_ORIGIN/api/readyz"
+retry_curl -fsS "${curl_timeout[@]}" "$PUBLIC_ORIGIN/version.json" \
   | grep -Fq "\"version\":\"$expected_version\""
-curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/flutter_bootstrap.js" \
+retry_curl -fsS "${curl_timeout[@]}" "$PUBLIC_ORIGIN/flutter_bootstrap.js" \
   | grep -Fq "main.dart.js?v="
-curl -fsSI "${curl_retry[@]}" "$PUBLIC_ORIGIN/main.dart.js"
+retry_curl -fsSI "${curl_timeout[@]}" "$PUBLIC_ORIGIN/main.dart.js"
 
 activated=0
 
