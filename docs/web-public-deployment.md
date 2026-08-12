@@ -158,7 +158,8 @@ its first frame. The launch loader performs a versioned, one-time refresh of the
 cached CanvasKit full and Chromium WASM responses before bootstrap so unchanged binaries cannot retain
 the previous incorrect response header in either the Service Worker or browser
 HTTP cache. It replaces only that engine response and does not clear IndexedDB,
-authentication state, preferences, or local training data.
+authentication state, preferences, or local training data. Browsers without an
+existing Worker or stale CanvasKit entry skip the migration download.
 
 SSH may prompt interactively. Do not add the ECS password to the script or an environment file tracked by Git.
 

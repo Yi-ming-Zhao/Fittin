@@ -137,18 +137,26 @@
       };
 
       const prepareWebRuntime = async () => {
-        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v3';
+        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v4';
         try {
           if (localStorage.getItem(migrationKey) === 'done') return;
           if ('caches' in window) {
             const flutterCache = await caches.open('flutter-app-cache');
+            const hasServiceWorkerController =
+              navigator.serviceWorker?.controller != null;
             const wasmPaths = [
               'canvaskit/canvaskit.wasm',
               'canvaskit/chromium/canvaskit.wasm',
             ];
             for (const wasmPath of wasmPaths) {
+              const cachedResponse = await flutterCache.match(wasmPath);
+              const cachedContentType =
+                cachedResponse?.headers.get('content-type') ?? '';
+              if (cachedContentType.startsWith('application/wasm')) continue;
+              if (!cachedResponse && !hasServiceWorkerController) continue;
+
               const wasmResponse = await fetch(
-                `${wasmPath}?fittin-mime-migration=v3`,
+                `${wasmPath}?fittin-mime-migration=v4`,
                 { cache: 'reload' },
               );
               const contentType = wasmResponse.headers.get('content-type') ?? '';
