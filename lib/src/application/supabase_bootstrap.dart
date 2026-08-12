@@ -41,8 +41,9 @@ Future<SupabaseBootstrapState> initializeSupabase({
   bool? isWebOverride,
 }) async {
   final url = configuredUrl ?? const String.fromEnvironment('BACKEND_URL');
-  final apiKey =
-      configuredAnonKey ?? const String.fromEnvironment('BACKEND_API_KEY');
+  // Retained only for source compatibility with older test/bootstrap callers.
+  // Authentication uses user bearer tokens; no shared key is compiled into apps.
+  final apiKey = configuredAnonKey ?? '';
   final targetPlatform = targetPlatformOverride ?? defaultTargetPlatform;
   final isWebRuntime = isWebOverride ?? kIsWeb;
 

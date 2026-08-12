@@ -24,13 +24,15 @@ func TestHandleRootReturnsServiceMetadata(t *testing.T) {
 }
 
 func TestWithCORSPermitsPublicWebOrigin(t *testing.T) {
-	server := &Server{}
+	server := &Server{cfg: Config{AllowedOrigins: map[string]bool{
+		"https://fittin.hammerscholar.net": true,
+	}}}
 	handler := server.withCORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	}))
 
 	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-	request.Header.Set("Origin", "https://fittin.yimelo.cc")
+	request.Header.Set("Origin", "https://fittin.hammerscholar.net")
 	recorder := httptest.NewRecorder()
 
 	handler.ServeHTTP(recorder, request)
@@ -38,19 +40,21 @@ func TestWithCORSPermitsPublicWebOrigin(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", recorder.Code)
 	}
-	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "https://fittin.yimelo.cc" {
+	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "https://fittin.hammerscholar.net" {
 		t.Fatalf("expected allow-origin header for public web origin, got %q", got)
 	}
 }
 
 func TestWithCORSHandlesPreflight(t *testing.T) {
-	server := &Server{}
+	server := &Server{cfg: Config{AllowedOrigins: map[string]bool{
+		"https://fittin.hammerscholar.net": true,
+	}}}
 	handler := server.withCORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t.Fatal("wrapped handler should not run for preflight")
 	}))
 
 	request := httptest.NewRequest(http.MethodOptions, "/healthz", nil)
-	request.Header.Set("Origin", "https://fittin.yimelo.cc")
+	request.Header.Set("Origin", "https://fittin.hammerscholar.net")
 	request.Header.Set("Access-Control-Request-Method", http.MethodGet)
 	recorder := httptest.NewRecorder()
 
@@ -58,6 +62,88 @@ func TestWithCORSHandlesPreflight(t *testing.T) {
 
 	if recorder.Code != http.StatusNoContent {
 		t.Fatalf("expected 204, got %d", recorder.Code)
+	}
+}
+
+func TestWithCORSRejectsLegacyOrigin(t *testing.T) {
+	server := &Server{cfg: Config{AllowedOrigins: map[string]bool{
+		"https://fittin.hammerscholar.net": true,
+	}}}
+	handler := server.withCORS(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+	}))
+	request := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	request.Header.Set("Origin", "https://fittin.yimelo.cc")
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, request)
+	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected legacy origin to be rejected, got %q", got)
+	}
+}
+
+func TestSafeStoragePathRejectsTraversal(t *testing.T) {
+	root := t.TempDir()
+	if _, err := safeStoragePath(root, "../../outside.jpg"); err == nil {
+		t.Fatal("expected traversal path to be rejected")
+	}
+	path, err := safeStoragePath(root, "users/user-123/photo.jpg")
+	if err != nil {
+		t.Fatalf("expected safe path, got %v", err)
+	}
+	if !strings.HasPrefix(path, root) {
+		t.Fatalf("safe path escaped root: %s", path)
+	}
+}
+
+func TestNormalizeEmail(t *testing.T) {
+	if got := normalizeEmail("  Person@Example.COM "); got != "person@example.com" {
+		t.Fatalf("unexpected normalized email: %q", got)
+	}
+}
+
+func TestClientIPAddressTrustsOnlyLoopbackProxy(t *testing.T) {
+	proxied := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-in", nil)
+	proxied.RemoteAddr = "127.0.0.1:43120"
+	proxied.Header.Set("X-Real-IP", "203.0.113.7")
+	if got := clientIPAddress(proxied); got != "203.0.113.7" {
+		t.Fatalf("expected trusted proxy client IP, got %q", got)
+	}
+
+	direct := httptest.NewRequest(http.MethodPost, "/v1/auth/sign-in", nil)
+	direct.RemoteAddr = "198.51.100.4:43120"
+	direct.Header.Set("X-Real-IP", "203.0.113.7")
+	if got := clientIPAddress(direct); got != "198.51.100.4" {
+		t.Fatalf("expected direct peer IP, got %q", got)
+	}
+}
+
+func TestNormalizeProgressPhotoRowBindsStorageToOwner(t *testing.T) {
+	spec := syncTableSpecs["progress_photos"]
+	photoID := "3f5b1d64-4549-4dd7-a808-0de15af47f48"
+	row := map[string]any{
+		"id":           photoID,
+		"version":      1,
+		"storage_path": "users/user-123/progress_photos/" + photoID + "/original.jpg",
+	}
+	if _, err := normalizeSyncRow(spec, row, "user-123"); err != nil {
+		t.Fatalf("expected owner-bound photo path, got %v", err)
+	}
+
+	row["storage_path"] = "users/other-user/progress_photos/" + photoID + "/original.jpg"
+	if _, err := normalizeSyncRow(spec, row, "user-123"); err == nil {
+		t.Fatal("expected cross-owner photo path to be rejected")
+	}
+}
+
+func TestNormalizeSyncRowRequiresPositiveIntegralVersion(t *testing.T) {
+	spec := syncTableSpecs["plans"]
+	base := map[string]any{"id": "plan-1", "version": 1.5}
+	if _, err := normalizeSyncRow(spec, base, "user-123"); err == nil {
+		t.Fatal("expected fractional version to be rejected")
+	}
+	base["version"] = 0
+	if _, err := normalizeSyncRow(spec, base, "user-123"); err == nil {
+		t.Fatal("expected non-positive version to be rejected")
 	}
 }
 

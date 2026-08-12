@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
- 
+
 class ChartContainer extends StatelessWidget {
   const ChartContainer({
     super.key,
@@ -11,12 +11,12 @@ class ChartContainer extends StatelessWidget {
     this.height = 240,
     this.headerAction,
   });
- 
+
   final Widget child;
   final String? title;
   final double height;
   final Widget? headerAction;
- 
+
   @override
   Widget build(BuildContext context) {
     return Consumer(

@@ -33,6 +33,7 @@ class WebDatabaseRepository extends DatabaseRepository {
   static const _homeDisplayNameKey = 'home-display-name';
   static const _homeMilestonesLastSeenAtKey = 'home-milestones-last-seen-at';
   static const _activeSessionDraftKey = 'active-session-draft';
+  static const _syncCursorKey = 'sync-cursor';
 
   final WebLocalStore store;
 
@@ -241,6 +242,29 @@ class WebDatabaseRepository extends DatabaseRepository {
       'updatedAt': serializeStoredDateTime(DateTime.now()),
     };
     await store.putRecord(WebStoreNames.appState, key, doc);
+  }
+
+  @override
+  Future<DateTime?> fetchSyncCursor(String ownerUserId, String table) async {
+    final doc = await store.getRecord(
+      WebStoreNames.appState,
+      '$_syncCursorKey:$ownerUserId:$table',
+    );
+    return parseStoredDateTime(doc?['cursor']);
+  }
+
+  @override
+  Future<void> saveSyncCursor(
+    String ownerUserId,
+    String table,
+    DateTime value,
+  ) async {
+    final key = '$_syncCursorKey:$ownerUserId:$table';
+    await store.putRecord(WebStoreNames.appState, key, {
+      'stateKey': key,
+      'cursor': serializeStoredDateTime(value.toUtc()),
+      'updatedAt': serializeStoredDateTime(DateTime.now()),
+    });
   }
 
   @override
@@ -561,6 +585,27 @@ class WebDatabaseRepository extends DatabaseRepository {
       operationType: SyncOperationTypes.upsert,
       syncStatus: resolvedSyncStatus,
     );
+  }
+
+  @override
+  Future<void> saveRemoteInstance(StoredTrainingInstance data) async {
+    final doc = <String, dynamic>{
+      'instanceId': data.instanceId,
+      'templateId': data.templateId,
+      'currentStatesJson': data.states.map((state) => state.toJson()).toList(),
+      'trainingMaxProfileJson': data.trainingMaxProfile.toJson(),
+      'engineStateJson': data.engineState,
+      'currentWorkoutIndex': data.currentWorkoutIndex,
+      'ownerUserId': data.ownerUserId,
+      'createdAt': serializeStoredDateTime(data.createdAt),
+      'lastModifiedAt': serializeStoredDateTime(data.updatedAt),
+      'deletedAt': serializeStoredDateTime(data.deletedAt),
+      'lastSyncedAt': serializeStoredDateTime(data.lastSyncedAt),
+      'version': data.version,
+      'syncStatusKey': data.syncStatus,
+      'lastModifiedByDeviceId': data.lastModifiedByDeviceId,
+    };
+    await store.putRecord(WebStoreNames.instances, data.instanceId, doc);
   }
 
   @override

@@ -63,7 +63,6 @@ The web archive contains the built `build/web` directory and uses the same relea
 The workflow builds the web artifact with:
 
 - repository variable `RELEASE_BACKEND_URL`
-- optional repository secret `RELEASE_BACKEND_API_KEY`
 
 If `RELEASE_BACKEND_URL` is not configured, the workflow falls back to:
 

@@ -1,4 +1,0 @@
- bucket_id | name | owner | created_at | updated_at 
------------+------+-------+------------+------------
-(0 rows)
-

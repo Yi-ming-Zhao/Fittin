@@ -8,8 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 const _latestReleaseEndpoint =
     'https://api.github.com/repos/Yi-ming-Zhao/Fittin/releases/latest';
+const _firstPartyReleaseEndpoint =
+    'https://fittin.hammerscholar.net/releases/latest.json';
 final appReleasesPageUri = Uri.parse(
-  'https://github.com/Yi-ming-Zhao/Fittin/releases/latest',
+  'https://fittin.hammerscholar.net/releases/',
 );
 
 class AppReleaseInfo {
@@ -26,6 +28,71 @@ class AppReleaseInfo {
 
 abstract interface class AppUpdateSource {
   Future<AppReleaseInfo> fetchLatestRelease();
+}
+
+class FirstPartyAppUpdateSource implements AppUpdateSource {
+  FirstPartyAppUpdateSource({http.Client? client})
+    : _client = client ?? http.Client(),
+      _ownsClient = client == null;
+
+  final http.Client _client;
+  final bool _ownsClient;
+
+  @override
+  Future<AppReleaseInfo> fetchLatestRelease() async {
+    final response = await _client
+        .get(Uri.parse(_firstPartyReleaseEndpoint))
+        .timeout(const Duration(seconds: 12));
+    if (response.statusCode != 200) {
+      throw const AppUpdateException('Unable to load the latest release.');
+    }
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      throw const AppUpdateException('The release response was invalid.');
+    }
+    if (decoded is! Map<String, dynamic>) {
+      throw const AppUpdateException('The release response was invalid.');
+    }
+    final versionValue = decoded['version'];
+    final releasePageValue = decoded['releasePageUrl'];
+    final apkValue = decoded['androidApkUrl'];
+    if (versionValue is! String || releasePageValue is! String) {
+      throw const AppUpdateException('The release response was incomplete.');
+    }
+    final version = _normalizeVersion(versionValue);
+    if (!RegExp(r'^\d+(?:\.\d+)*$').hasMatch(version)) {
+      throw const AppUpdateException('The release version was invalid.');
+    }
+    return AppReleaseInfo(
+      version: version,
+      releasePageUrl: _validatedFirstPartyUrl(releasePageValue),
+      androidApkUrl: apkValue is String && apkValue.isNotEmpty
+          ? _validatedFirstPartyUrl(apkValue)
+          : null,
+    );
+  }
+
+  void close() {
+    if (_ownsClient) _client.close();
+  }
+}
+
+class FallbackAppUpdateSource implements AppUpdateSource {
+  const FallbackAppUpdateSource(this.primary, this.fallback);
+
+  final AppUpdateSource primary;
+  final AppUpdateSource fallback;
+
+  @override
+  Future<AppReleaseInfo> fetchLatestRelease() async {
+    try {
+      return await primary.fetchLatestRelease();
+    } catch (_) {
+      return fallback.fetchLatestRelease();
+    }
+  }
 }
 
 class GitHubAppUpdateSource implements AppUpdateSource {
@@ -166,6 +233,17 @@ Uri _validatedGitHubUrl(String value, {required String requiredPathPrefix}) {
   return uri;
 }
 
+Uri _validatedFirstPartyUrl(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      uri.host != 'fittin.hammerscholar.net' ||
+      !uri.path.startsWith('/releases/')) {
+    throw const AppUpdateException('The release link was invalid.');
+  }
+  return uri;
+}
+
 final appPackageInfoProvider = FutureProvider<PackageInfo>(
   (ref) => PackageInfo.fromPlatform(),
 );
@@ -175,9 +253,13 @@ final appPlatformProvider = Provider<TargetPlatform?>(
 );
 
 final appUpdateSourceProvider = Provider<AppUpdateSource>((ref) {
-  final source = GitHubAppUpdateSource();
-  ref.onDispose(source.close);
-  return source;
+  final firstParty = FirstPartyAppUpdateSource();
+  final github = GitHubAppUpdateSource();
+  ref.onDispose(() {
+    firstParty.close();
+    github.close();
+  });
+  return FallbackAppUpdateSource(firstParty, github);
 });
 
 typedef ExternalUrlLauncher = Future<bool> Function(Uri uri);

@@ -35,9 +35,7 @@ class FittinRing extends StatelessWidget {
           theme: theme,
           strokeWidth: strokeWidth,
         ),
-        child: child != null
-            ? Center(child: child)
-            : null,
+        child: child != null ? Center(child: child) : null,
       ),
     );
   }

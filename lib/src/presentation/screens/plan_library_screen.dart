@@ -183,6 +183,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
                           ),
                         ),
                       );
+                      if (!mounted) return;
                       ref.invalidate(planLibraryItemsProvider);
                     },
                     padding: const EdgeInsets.all(20),

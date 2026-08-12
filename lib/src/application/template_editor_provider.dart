@@ -447,7 +447,8 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
       exerciseIndex,
       stageIndex,
       setIndex,
-      (set) => set.copyWith(targetRpe: value == null ? null : _normalizeRpe(value)),
+      (set) =>
+          set.copyWith(targetRpe: value == null ? null : _normalizeRpe(value)),
     );
   }
 

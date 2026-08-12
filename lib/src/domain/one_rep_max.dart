@@ -51,8 +51,7 @@ double? estimateOneRepMax({
   final value = switch (formula) {
     OneRepMaxFormula.epley => weight * (1 + reps / 30),
     OneRepMaxFormula.brzycki => reps >= 37 ? null : weight * 36 / (37 - reps),
-    OneRepMaxFormula.landers =>
-      weight / (1.013 - 0.0267123 * reps),
+    OneRepMaxFormula.landers => weight / (1.013 - 0.0267123 * reps),
     OneRepMaxFormula.lombardi => weight * math.pow(reps, 0.1),
     OneRepMaxFormula.mayhew =>
       weight / (0.522 + 0.419 * math.pow(math.e, -0.055 * reps)),

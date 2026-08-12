@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/body_metrics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
+import 'package:fittin_v2/src/domain/models/progress_photo.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_card.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
+import 'package:fittin_v2/src/presentation/widgets/local_photo_image.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
     show FittinTheme;
 
@@ -28,6 +31,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
   @override
   Widget build(BuildContext context) {
     final metricsAsync = ref.watch(bodyMetricsProvider);
+    final photosAsync = ref.watch(progressPhotosProvider);
     final strings = AppStrings.of(context, ref);
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
 
@@ -69,6 +73,15 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                   DashboardSectionLabel(label: strings.currentSnapshot),
                   SizedBox(height: sectionGap),
                   _buildMetricGrid(context, fittinTheme, metrics, strings),
+                  SizedBox(height: majorGap),
+                  DashboardSectionLabel(label: strings.progressPhotos),
+                  SizedBox(height: sectionGap),
+                  _buildProgressPhotos(
+                    context,
+                    fittinTheme,
+                    strings,
+                    photosAsync,
+                  ),
                   if (screenState == _BodyMetricsScreenState.populated) ...[
                     SizedBox(height: sectionGap),
                     _buildCheckInCta(context, fittinTheme, strings),
@@ -96,6 +109,121 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildProgressPhotos(
+    BuildContext context,
+    FittinTheme theme,
+    AppStrings strings,
+    AsyncValue<List<ProgressPhoto>> photosAsync,
+  ) {
+    return photosAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => DashboardSurfaceCard(
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Expanded(child: Text(strings.loadError(error))),
+            TextButton(
+              onPressed: () =>
+                  ref.read(progressPhotosProvider.notifier).reload(),
+              child: Text(strings.retry),
+            ),
+          ],
+        ),
+      ),
+      data: (photos) => DashboardSurfaceCard(
+        radius: 24,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    photos.length >= 2
+                        ? strings.photoComparison
+                        : strings.noProgressPhotos,
+                    style: theme.uiStyle(12, theme.fgDim),
+                  ),
+                ),
+                FittinBtn(
+                  theme,
+                  strings.addProgressPhoto,
+                  size: 'sm',
+                  icon: Icons.add_a_photo_rounded,
+                  onPressed: () => _pickProgressPhoto(context, theme, strings),
+                ),
+              ],
+            ),
+            if (photos.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 180,
+                child: Row(
+                  children: [
+                    for (final photo in photos.take(2)) ...[
+                      if (photo != photos.first) const SizedBox(width: 10),
+                      Expanded(
+                        child: _ProgressPhotoTile(
+                          photo: photo,
+                          theme: theme,
+                          onDelete: () => ref
+                              .read(progressPhotosProvider.notifier)
+                              .deletePhoto(photo.photoId),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickProgressPhoto(
+    BuildContext context,
+    FittinTheme theme,
+    AppStrings strings,
+  ) async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: theme.surface,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded),
+                title: Text(strings.chooseFromGallery),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+              ),
+              ListTile(
+                leading: const Icon(Icons.camera_alt_rounded),
+                title: Text(strings.takePhoto),
+                onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (source == null) return;
+    try {
+      await ref.read(progressPhotosProvider.notifier).addPhoto(source: source);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 
   Widget _buildHeroCard(
@@ -441,102 +569,195 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
     );
   }
 
-  void _showAddMetricDialog(BuildContext context, FittinTheme theme) {
+  Future<void> _showAddMetricDialog(
+    BuildContext context,
+    FittinTheme theme,
+  ) async {
     final container = ProviderScope.containerOf(context);
     final weightController = TextEditingController();
     final bodyFatController = TextEditingController();
     final waistController = TextEditingController();
     final noteController = TextEditingController();
+    String? validationError;
+    var isSaving = false;
 
-    showDialog<void>(
+    await showDialog<void>(
       context: context,
       builder: (dialogContext) {
         final strings = AppStrings.fromLocale(
           container.read(appLocaleProvider),
         );
-        return AlertDialog(
-          backgroundColor: theme.surface,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(theme.radius),
-            side: BorderSide(color: theme.border),
-          ),
-          title: Text(
-            strings.addMeasurementTitle,
-            style: theme.displayStyle(22, theme.fg),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _MetricTextField(
-                  theme: theme,
-                  controller: weightController,
-                  label: strings.weightKgLabel,
-                ),
-                const SizedBox(height: 10),
-                _MetricTextField(
-                  theme: theme,
-                  controller: bodyFatController,
-                  label: strings.bodyFatLabel,
-                ),
-                const SizedBox(height: 12),
-                _MetricTextField(
-                  theme: theme,
-                  controller: waistController,
-                  label: strings.waistCmLabel,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: noteController,
-                  minLines: 2,
-                  maxLines: 3,
-                  decoration: InputDecoration(labelText: strings.noteOptional),
-                  style: theme.uiStyle(14, theme.fg),
-                ),
-              ],
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            backgroundColor: theme.surface,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(theme.radius),
+              side: BorderSide(color: theme.border),
             ),
-          ),
-          actions: [
-            FittinBtn(
-              theme,
-              strings.cancel,
-              size: 'sm',
-              variant: 'secondary',
-              onPressed: () => Navigator.pop(dialogContext),
+            title: Text(
+              strings.addMeasurementTitle,
+              style: theme.displayStyle(22, theme.fg),
             ),
-            FittinBtn(
-              theme,
-              strings.save,
-              size: 'sm',
-              onPressed: () {
-                final weight = double.tryParse(weightController.text);
-                final bodyFat = double.tryParse(bodyFatController.text);
-                final waist = double.tryParse(waistController.text);
-                final note = noteController.text.trim();
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _MetricTextField(
+                    theme: theme,
+                    controller: weightController,
+                    label: strings.weightKgLabel,
+                  ),
+                  const SizedBox(height: 10),
+                  _MetricTextField(
+                    theme: theme,
+                    controller: bodyFatController,
+                    label: strings.bodyFatLabel,
+                  ),
+                  const SizedBox(height: 12),
+                  _MetricTextField(
+                    theme: theme,
+                    controller: waistController,
+                    label: strings.waistCmLabel,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: noteController,
+                    minLines: 2,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: strings.noteOptional,
+                    ),
+                    style: theme.uiStyle(14, theme.fg),
+                  ),
+                  if (validationError != null) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      validationError!,
+                      style: theme.uiStyle(12, theme.danger),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              FittinBtn(
+                theme,
+                strings.cancel,
+                size: 'sm',
+                variant: 'secondary',
+                onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+              ),
+              FittinBtn(
+                theme,
+                strings.save,
+                size: 'sm',
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        final weight = double.tryParse(weightController.text);
+                        final bodyFat = double.tryParse(bodyFatController.text);
+                        final waist = double.tryParse(waistController.text);
+                        final note = noteController.text.trim();
 
-                if (weight == null &&
-                    bodyFat == null &&
-                    waist == null &&
-                    note.isEmpty) {
-                  Navigator.pop(dialogContext);
-                  return;
-                }
-
-                container
-                    .read(bodyMetricsProvider.notifier)
-                    .addMetric(
-                      weight: weight,
-                      bodyFat: bodyFat,
-                      waist: waist,
-                      note: note.isEmpty ? null : note,
-                    );
-                Navigator.pop(dialogContext);
-              },
-            ),
-          ],
+                        setDialogState(() {
+                          isSaving = true;
+                          validationError = null;
+                        });
+                        try {
+                          await container
+                              .read(bodyMetricsProvider.notifier)
+                              .addMetric(
+                                weight: weight,
+                                bodyFat: bodyFat,
+                                waist: waist,
+                                note: note.isEmpty ? null : note,
+                              );
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext);
+                          }
+                        } catch (error) {
+                          if (!dialogContext.mounted) return;
+                          final message = error is ArgumentError
+                              ? error.message.toString()
+                              : (strings.isChinese
+                                    ? '保存失败，请检查输入或稍后重试。'
+                                    : 'Save failed. Check the values and try again.');
+                          setDialogState(() {
+                            isSaving = false;
+                            validationError = message;
+                          });
+                        }
+                      },
+              ),
+            ],
+          ),
         );
       },
+    );
+    weightController.dispose();
+    bodyFatController.dispose();
+    waistController.dispose();
+    noteController.dispose();
+  }
+}
+
+class _ProgressPhotoTile extends StatelessWidget {
+  const _ProgressPhotoTile({
+    required this.photo,
+    required this.theme,
+    required this.onDelete,
+  });
+
+  final ProgressPhoto photo;
+  final FittinTheme theme;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          ColoredBox(
+            color: theme.surfaceHi,
+            child: buildLocalPhotoImage(
+              photo.filePath,
+              errorWidget: Center(
+                child: Icon(Icons.broken_image_outlined, color: theme.fgMuted),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.bgDeep.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  '${photo.timestamp.month}/${photo.timestamp.day}',
+                  style: theme.uiStyle(10, theme.fg, FontWeight.w700),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 6,
+            top: 6,
+            child: IconButton.filledTonal(
+              visualDensity: VisualDensity.compact,
+              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline_rounded, size: 17),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

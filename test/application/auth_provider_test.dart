@@ -96,6 +96,46 @@ void main() {
     );
   });
 
+  test('sign-in normalizes email before sending it to the backend', () async {
+    Map<String, dynamic>? requestBody;
+    final repository = BackendAuthRepository(
+      baseUrl: 'https://api.example.test',
+      sessionStore: InMemoryAuthSessionStore(),
+      httpClient: MockClient((request) async {
+        requestBody = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response(
+          '{"accessToken":"token","user":{"id":"user-1","email":"person@example.com"}}',
+          200,
+        );
+      }),
+    );
+
+    await repository.signIn(
+      email: '  Person@Example.COM ',
+      password: 'existing-password',
+    );
+
+    expect(requestBody?['email'], 'person@example.com');
+  });
+
+  test('sign-up rejects short passwords before a network request', () async {
+    var requests = 0;
+    final repository = BackendAuthRepository(
+      baseUrl: 'https://api.example.test',
+      sessionStore: InMemoryAuthSessionStore(),
+      httpClient: MockClient((request) async {
+        requests += 1;
+        return http.Response('{}', 500);
+      }),
+    );
+
+    await expectLater(
+      repository.signUp(email: 'person@example.com', password: 'short'),
+      throwsA(isA<StateError>()),
+    );
+    expect(requests, 0);
+  });
+
   test('auth controller removes the Bad state prefix', () async {
     final controller = AuthController(
       UnavailableAuthRepository('Authentication is temporarily unavailable.'),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/services/export_service.dart';
@@ -48,4 +49,17 @@ void main() {
       expect(imported, template);
     },
   );
+
+  test('rejects gzip payloads that expand beyond the import limit', () {
+    final compressed = gzip.encode(
+      utf8.encode('A' * (ExportService.maxDecodedBytes + 1)),
+    );
+    final payload =
+        '${ExportService.sharePrefix}${base64UrlEncode(compressed)}';
+
+    expect(
+      () => ExportService.importTemplateFromSharePayload(payload),
+      throwsA(isA<FormatException>()),
+    );
+  });
 }

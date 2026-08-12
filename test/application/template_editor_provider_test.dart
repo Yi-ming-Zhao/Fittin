@@ -68,24 +68,30 @@ void main() {
           .resolvedSetType,
       SetTypes.amrapSet,
     );
-    expect(saved.template.workouts.first.exercises.first.loadUnit, LoadUnits.lbs);
+    expect(
+      saved.template.workouts.first.exercises.first.loadUnit,
+      LoadUnits.lbs,
+    );
     expect(saved.template.resolvedScheduleMode, PlanScheduleModes.linear);
     expect(state.infoMessage, 'Saved as a new template copy.');
   });
 
-  test('loading a periodized built-in template normalizes editor metadata', () async {
-    final notifier = container!.read(templateEditorProvider.notifier);
-    await notifier.loadTemplate(JackedAndTanSeed.templateId);
+  test(
+    'loading a periodized built-in template normalizes editor metadata',
+    () async {
+      final notifier = container!.read(templateEditorProvider.notifier);
+      await notifier.loadTemplate(JackedAndTanSeed.templateId);
 
-    final state = container!.read(templateEditorProvider);
-    final draft = state.draft!;
+      final state = container!.read(templateEditorProvider);
+      final draft = state.draft!;
 
-    expect(draft.resolvedScheduleMode, PlanScheduleModes.periodized);
-    expect(
-      draft.workouts.first.exercises.first.stages.first.sets.first.setType,
-      isNotEmpty,
-    );
-  });
+      expect(draft.resolvedScheduleMode, PlanScheduleModes.periodized);
+      expect(
+        draft.workouts.first.exercises.first.stages.first.sets.first.setType,
+        isNotEmpty,
+      );
+    },
+  );
 
   test('invalid drafts are blocked from saving', () async {
     final notifier = container!.read(templateEditorProvider.notifier);
@@ -100,19 +106,22 @@ void main() {
     expect(state.errorMessage, 'Template name is required.');
   });
 
-  test('editor persists equipment type, target rpe, and training max mapping', () async {
-    final notifier = container!.read(templateEditorProvider.notifier);
-    notifier.createBlankTemplate();
+  test(
+    'editor persists equipment type, target rpe, and training max mapping',
+    () async {
+      final notifier = container!.read(templateEditorProvider.notifier);
+      notifier.createBlankTemplate();
 
-    notifier.updateExerciseEquipmentType(0, 0, EquipmentTypes.barbell);
-    notifier.updateExerciseTrainingMaxLift(0, 0, 'bench');
-    notifier.updateSetTargetRpe(0, 0, 0, 1, 7.5);
+      notifier.updateExerciseEquipmentType(0, 0, EquipmentTypes.barbell);
+      notifier.updateExerciseTrainingMaxLift(0, 0, 'bench');
+      notifier.updateSetTargetRpe(0, 0, 0, 1, 7.5);
 
-    final draft = container!.read(templateEditorProvider).draft!;
-    final exercise = draft.workouts.first.exercises.first;
+      final draft = container!.read(templateEditorProvider).draft!;
+      final exercise = draft.workouts.first.exercises.first;
 
-    expect(exercise.equipmentType, EquipmentTypes.barbell);
-    expect(exercise.trainingMaxLift, 'bench');
-    expect(exercise.stages.first.sets[1].targetRpe, 7.5);
-  });
+      expect(exercise.equipmentType, EquipmentTypes.barbell);
+      expect(exercise.trainingMaxLift, 'bench');
+      expect(exercise.stages.first.sets[1].targetRpe, 7.5);
+    },
+  );
 }

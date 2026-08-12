@@ -122,7 +122,7 @@ tool/start_local_backend.sh
 http://127.0.0.1:8081
 ```
 
-当前项目会优先使用显式传入的 `BACKEND_URL` / `BACKEND_API_KEY`。如果未提供，桌面/本地开发运行可以在本地后端实际可达时回退到 `http://127.0.0.1:8081`。
+当前项目会优先使用显式传入的 `BACKEND_URL`。如果未提供，桌面/本地开发运行可以在本地后端实际可达时回退到 `http://127.0.0.1:8081`。鉴权只使用登录后得到的用户会话令牌，不向客户端编译共享密钥。
 
 Android APK/AAB 构建不能依赖这个本地回退，因为设备里的 `127.0.0.1` 指向手机自身。构建 Android app 版本时必须显式传入公网可达的后端地址：
 
@@ -183,7 +183,7 @@ Flutter Web 客户端通过阿里云直连发布到 `fittin.hammerscholar.net`�
 这份文档覆盖：
 
 - release 构建命令
-- `BACKEND_URL` / `BACKEND_API_KEY` 注入方式
+- `BACKEND_URL` 注入方式
 - 阿里云 nginx 静态托管与版本化发布
 - NPS 到 `241-dhg` 后端的 `/api` 反向代理
 - TLS、smoke checks 与旧 Cloudflare Tunnel 下线步骤

@@ -34,11 +34,15 @@ migrate_working_dir/
 /coverage/
 .local/
 cert.pem
-.deploy/*.log
+.deploy/
+/android/build/
 
 # Local deployment credentials
 wsf_passwd.txt
 zhaoyiming@10.108.17.241
+*.sql.gz
+*migration_export*.tar.gz
+*database_export*
 
 # Symbolication related
 app.*.symbols

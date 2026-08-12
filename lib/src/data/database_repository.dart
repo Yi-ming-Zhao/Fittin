@@ -34,6 +34,7 @@ class DatabaseRepository {
   static const _homeDisplayNameKey = 'home-display-name';
   static const _homeMilestonesLastSeenAtKey = 'home-milestones-last-seen-at';
   static const _activeSessionDraftKey = 'active-session-draft';
+  static const _syncCursorKey = 'sync-cursor';
   final Isar? _isar;
 
   Isar? get isar => _isar;
@@ -195,24 +196,35 @@ class DatabaseRepository {
     return fetchTemplate(instance.templateId);
   }
 
-  Future<PlanTemplate> importSharedTemplate(PlanTemplate template) async {
+  Future<PlanTemplate> importSharedTemplate(
+    PlanTemplate template, {
+    String? ownerUserId,
+  }) async {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
     final importedTemplate = template.copyWith(
       id: '${_slugifyTemplateId(template.id)}-imported-$timestamp',
       name: '${template.name} (Imported)',
       description: '${template.description}\nImported via QR sharing.',
     );
-    await saveTemplate(importedTemplate, sourceTemplateId: template.id);
+    await saveTemplate(
+      importedTemplate,
+      sourceTemplateId: template.id,
+      ownerUserId: ownerUserId,
+    );
     return importedTemplate;
   }
 
   Future<StoredTemplateRecord> saveEditedTemplate({
     required PlanTemplate draft,
     String? originalTemplateId,
+    String? ownerUserId,
   }) async {
     final existing = originalTemplateId == null
         ? null
-        : await fetchStoredTemplate(originalTemplateId);
+        : await fetchStoredTemplate(
+            originalTemplateId,
+            ownerUserId: ownerUserId,
+          );
     final shouldFork =
         existing == null || existing.isBuiltIn || existing.instanceCount > 0;
 
@@ -232,9 +244,13 @@ class DatabaseRepository {
       templateToSave,
       isBuiltIn: false,
       sourceTemplateId: sourceTemplateId,
+      ownerUserId: ownerUserId,
     );
 
-    return (await fetchStoredTemplate(templateToSave.id))!;
+    return (await fetchStoredTemplate(
+      templateToSave.id,
+      ownerUserId: ownerUserId,
+    ))!;
   }
 
   Future<String?> fetchActiveInstanceId() async {
@@ -292,6 +308,24 @@ class DatabaseRepository {
     await _database.writeTxn(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
+  }
+
+  Future<DateTime?> fetchSyncCursor(String ownerUserId, String table) async {
+    final value = await _fetchStringState(
+      '$_syncCursorKey:$ownerUserId:$table',
+    );
+    return value == null ? null : DateTime.tryParse(value)?.toUtc();
+  }
+
+  Future<void> saveSyncCursor(
+    String ownerUserId,
+    String table,
+    DateTime value,
+  ) {
+    return _saveStringState(
+      '$_syncCursorKey:$ownerUserId:$table',
+      value.toUtc().toIso8601String(),
+    );
   }
 
   Future<AppLocale> fetchAppLocale() async {
@@ -572,6 +606,28 @@ class DatabaseRepository {
     String? syncStatus,
     String? deviceId,
   }) async {
+    await _saveInstance(
+      data,
+      syncStatus: syncStatus,
+      deviceId: deviceId,
+      preserveRemoteVersion: false,
+    );
+  }
+
+  Future<void> saveRemoteInstance(StoredTrainingInstance data) async {
+    await _saveInstance(
+      data,
+      syncStatus: data.syncStatus,
+      preserveRemoteVersion: true,
+    );
+  }
+
+  Future<void> _saveInstance(
+    StoredTrainingInstance data, {
+    required bool preserveRemoteVersion,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
     final encodedStates = data.states
         .map((state) => jsonEncode(state.toJson()))
         .toList();
@@ -587,12 +643,15 @@ class DatabaseRepository {
       ..engineStateJson = jsonEncode(data.engineState)
       ..currentWorkoutIndex = data.currentWorkoutIndex
       ..ownerUserId = data.ownerUserId ?? existing?.ownerUserId
-      ..createdAt = existing?.createdAt ?? DateTime.now()
-      ..lastModifiedAt = DateTime.now()
+      ..createdAt = preserveRemoteVersion
+          ? data.createdAt
+          : existing?.createdAt ?? DateTime.now()
+      ..lastModifiedAt = preserveRemoteVersion ? data.updatedAt : DateTime.now()
       ..deletedAt = data.deletedAt
       ..lastSyncedAt = data.lastSyncedAt
-      ..version =
-          (existing?.version ?? data.version) + (existing == null ? 0 : 1)
+      ..version = preserveRemoteVersion
+          ? data.version
+          : (existing?.version ?? data.version) + (existing == null ? 0 : 1)
       ..syncStatusKey =
           syncStatus ??
           (data.syncStatus.isEmpty

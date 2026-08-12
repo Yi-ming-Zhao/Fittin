@@ -202,7 +202,7 @@ class _FittinBootstrapHostState extends State<FittinBootstrapHost> {
             );
           }),
         authSessionStoreProvider.overrideWithValue(
-          SharedPreferencesAuthSessionStore(dependencies.preferences),
+          PlatformAuthSessionStore(dependencies.preferences),
         ),
         fittinThemePreferencesProvider.overrideWithValue(
           dependencies.preferences,

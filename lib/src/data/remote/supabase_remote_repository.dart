@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'package:fittin_v2/src/data/models/body_metric_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/remote/local_file_reader.dart';
+import 'package:fittin_v2/src/data/remote/progress_photo_cache.dart';
 import 'package:fittin_v2/src/data/remote/supabase_serializers.dart';
 
 final supabaseRemoteRepositoryProvider = Provider<SupabaseRemoteRepository>((
@@ -19,10 +21,13 @@ final supabaseRemoteRepositoryProvider = Provider<SupabaseRemoteRepository>((
   if (!bootstrap.isConfigured) {
     return SupabaseRemoteRepository.unavailable();
   }
-  return SupabaseRemoteRepository.http(
+  final repository = SupabaseRemoteRepository.http(
     baseUrl: bootstrap.url,
-    accessTokenLoader: () => ref.read(authRepositoryProvider).currentAccessToken(),
+    accessTokenLoader: () =>
+        ref.read(authRepositoryProvider).currentAccessToken(),
   );
+  ref.onDispose(repository.dispose);
+  return repository;
 });
 
 typedef AccessTokenLoader = Future<String?> Function();
@@ -31,7 +36,8 @@ class SupabaseRemoteRepository {
   SupabaseRemoteRepository.unavailable()
     : _baseUrl = null,
       _httpClient = null,
-      _accessTokenLoader = null;
+      _accessTokenLoader = null,
+      _ownsClient = false;
 
   SupabaseRemoteRepository.http({
     required String baseUrl,
@@ -39,13 +45,22 @@ class SupabaseRemoteRepository {
     http.Client? httpClient,
   }) : _baseUrl = baseUrl,
        _httpClient = httpClient ?? http.Client(),
-       _accessTokenLoader = accessTokenLoader;
+       _accessTokenLoader = accessTokenLoader,
+       _ownsClient = httpClient == null;
 
   final String? _baseUrl;
   final http.Client? _httpClient;
   final AccessTokenLoader? _accessTokenLoader;
+  final bool _ownsClient;
+  static const requestTimeout = Duration(seconds: 12);
 
   bool get isAvailable => _baseUrl != null;
+
+  void dispose() {
+    if (_ownsClient) {
+      _httpClient?.close();
+    }
+  }
 
   String get _requireBaseUrl {
     final baseUrl = _baseUrl;
@@ -64,10 +79,7 @@ class SupabaseRemoteRepository {
   }
 
   Future<void> upsertPlan(TemplateCollection collection) async {
-    await upsertRow(
-      table: 'plans',
-      row: planRowFromCollection(collection),
-    );
+    await upsertRow(table: 'plans', row: planRowFromCollection(collection));
   }
 
   Future<void> upsertInstance(StoredTrainingInstance instance) async {
@@ -105,15 +117,10 @@ class SupabaseRemoteRepository {
     request.fields['userId'] = userId;
     request.fields['photoId'] = photoId;
     request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: '$photoId.jpg',
-      ),
+      http.MultipartFile.fromBytes('file', bytes, filename: '$photoId.jpg'),
     );
 
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    final response = await _sendMultipart(request);
     final payload = _decodeJson(response);
     _ensureSuccess(response, payload);
     final storagePath = payload['storagePath'] as String?;
@@ -121,6 +128,24 @@ class SupabaseRemoteRepository {
       throw StateError('Backend file upload did not return storagePath.');
     }
     return storagePath;
+  }
+
+  Future<List<int>> downloadProgressPhoto(String photoId) async {
+    final headers = await _headers(contentType: false);
+    final response = await _guardRequest(
+      () => _requireClient.get(
+        Uri.parse('$_requireBaseUrl/v1/files/progress-photos/$photoId'),
+        headers: headers,
+      ),
+    );
+    final payload = _decodeJson(response);
+    _ensureSuccess(response, payload);
+    return response.bodyBytes;
+  }
+
+  Future<String> downloadProgressPhotoToLocal(String photoId) async {
+    final bytes = await downloadProgressPhoto(photoId);
+    return cacheProgressPhotoBytes(photoId, bytes);
   }
 
   Future<void> upsertProgressPhotoMetadata({
@@ -133,10 +158,23 @@ class SupabaseRemoteRepository {
     );
   }
 
-  Future<void> deleteById({required String table, required String id}) async {
-    final response = await _requireClient.delete(
-      Uri.parse('$_requireBaseUrl/v1/sync/$table/$id'),
-      headers: await _headers(),
+  Future<void> deleteById({
+    required String table,
+    required String id,
+    int? version,
+    String? deviceId,
+  }) async {
+    final headers = await _headers();
+    final response = await _guardRequest(
+      () => _requireClient.delete(
+        Uri.parse('$_requireBaseUrl/v1/sync/$table/$id').replace(
+          queryParameters: {
+            if (version != null) 'version': '$version',
+            if (deviceId != null && deviceId.isNotEmpty) 'deviceId': deviceId,
+          },
+        ),
+        headers: headers,
+      ),
     );
     _ensureSuccess(response, _decodeJson(response));
   }
@@ -145,10 +183,13 @@ class SupabaseRemoteRepository {
     required String table,
     required Map<String, dynamic> row,
   }) async {
-    final response = await _requireClient.post(
-      Uri.parse('$_requireBaseUrl/v1/sync/upsert/$table'),
-      headers: await _headers(),
-      body: jsonEncode(row),
+    final headers = await _headers();
+    final response = await _guardRequest(
+      () => _requireClient.post(
+        Uri.parse('$_requireBaseUrl/v1/sync/upsert/$table'),
+        headers: headers,
+        body: jsonEncode(row),
+      ),
     );
     _ensureSuccess(response, _decodeJson(response));
   }
@@ -159,32 +200,53 @@ class SupabaseRemoteRepository {
     String timestampColumn = 'updated_at',
     DateTime? since,
   }) async {
-    final uri = Uri.parse(
-      '$_requireBaseUrl/v1/sync/$table',
-    ).replace(
-      queryParameters: {
-        'userId': userId,
-        'timestampColumn': timestampColumn,
-        if (since != null) 'since': since.toUtc().toIso8601String(),
-      },
-    );
-    final response = await _requireClient.get(uri, headers: await _headers());
-    final payload = _decodeJson(response);
-    _ensureSuccess(response, payload);
-    final rows = payload['rows'];
-    if (rows is! List) {
-      return const [];
-    }
-    return rows
-        .cast<Map>()
-        .map((row) => row.cast<String, dynamic>())
-        .toList();
+    final results = <Map<String, dynamic>>[];
+    String? cursorUpdatedAt;
+    String? cursorId;
+    do {
+      final uri = Uri.parse('$_requireBaseUrl/v1/sync/$table').replace(
+        queryParameters: {
+          'userId': userId,
+          'timestampColumn': timestampColumn,
+          'limit': '200',
+          if (since != null) 'since': since.toUtc().toIso8601String(),
+          if (cursorUpdatedAt != null) 'cursorUpdatedAt': cursorUpdatedAt,
+          if (cursorId != null) 'cursorId': cursorId,
+        },
+      );
+      final headers = await _headers();
+      final response = await _guardRequest(
+        () => _requireClient.get(uri, headers: headers),
+      );
+      final payload = _decodeJson(response);
+      _ensureSuccess(response, payload);
+      final rows = payload['rows'];
+      if (rows is List) {
+        results.addAll(
+          rows.cast<Map>().map((row) => row.cast<String, dynamic>()),
+        );
+      }
+      final nextCursor = payload['nextCursor'];
+      if (payload['hasMore'] == true && nextCursor is Map) {
+        cursorUpdatedAt = nextCursor['updatedAt'] as String?;
+        cursorId = nextCursor['id'] as String?;
+        if (cursorUpdatedAt == null || cursorId == null) {
+          throw const RemoteRepositoryException(
+            'Backend returned an invalid sync cursor.',
+          );
+        }
+      } else {
+        cursorUpdatedAt = null;
+        cursorId = null;
+      }
+    } while (cursorUpdatedAt != null);
+    return results;
   }
 
-  Future<Map<String, String>> _headers() async {
+  Future<Map<String, String>> _headers({bool contentType = true}) async {
     final token = await _accessTokenLoader?.call();
     return {
-      'Content-Type': 'application/json',
+      if (contentType) 'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
   }
@@ -193,7 +255,12 @@ class SupabaseRemoteRepository {
     if (response.body.isEmpty) {
       return const {};
     }
-    final decoded = jsonDecode(response.body);
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } on FormatException {
+      return const {};
+    }
     if (decoded is Map<String, dynamic>) {
       return decoded;
     }
@@ -208,6 +275,60 @@ class SupabaseRemoteRepository {
         payload['error'] as String? ??
         payload['message'] as String? ??
         'Backend request failed with status ${response.statusCode}.';
-    throw StateError(message);
+    throw RemoteRepositoryException(
+      message,
+      statusCode: response.statusCode,
+      code: payload['code'] as String?,
+    );
   }
+
+  Future<http.Response> _guardRequest(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      return await request().timeout(requestTimeout);
+    } on TimeoutException {
+      throw const RemoteRepositoryException(
+        'Backend request timed out. Your local changes are still queued.',
+        code: 'request_timeout',
+      );
+    } on http.ClientException {
+      throw const RemoteRepositoryException(
+        'Backend is unreachable. Your local changes are still queued.',
+        code: 'network_unavailable',
+      );
+    }
+  }
+
+  Future<http.Response> _sendMultipart(http.MultipartRequest request) async {
+    try {
+      final streamed = await _requireClient
+          .send(request)
+          .timeout(requestTimeout);
+      return await http.Response.fromStream(streamed).timeout(requestTimeout);
+    } on TimeoutException {
+      throw const RemoteRepositoryException(
+        'Photo upload timed out. It will be retried.',
+        code: 'request_timeout',
+      );
+    } on http.ClientException {
+      throw const RemoteRepositoryException(
+        'Backend is unreachable. The photo remains local.',
+        code: 'network_unavailable',
+      );
+    }
+  }
+}
+
+class RemoteRepositoryException implements Exception {
+  const RemoteRepositoryException(this.message, {this.statusCode, this.code});
+
+  final String message;
+  final int? statusCode;
+  final String? code;
+
+  bool get isConflict => statusCode == 409 || code == 'sync_conflict';
+
+  @override
+  String toString() => message;
 }

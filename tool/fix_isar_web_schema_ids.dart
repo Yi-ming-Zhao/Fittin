@@ -5,12 +5,13 @@ import 'dart:typed_data';
 import 'package:xxh3/xxh3.dart';
 
 const _maxSafeJsInteger = 9007199254740991;
-final _schemaFiles = Directory('lib/src/data/models')
-    .listSync()
-    .whereType<File>()
-    .where((file) => file.path.endsWith('.g.dart'))
-    .toList()
-  ..sort((a, b) => a.path.compareTo(b.path));
+final _schemaFiles =
+    Directory('lib/src/data/models')
+        .listSync()
+        .whereType<File>()
+        .where((file) => file.path.endsWith('.g.dart'))
+        .toList()
+      ..sort((a, b) => a.path.compareTo(b.path));
 
 final _collectionPattern = RegExp(
   r"(const\s+\w+\s*=\s*(?:CollectionSchema|Schema)\(\s*name: r'([^']+)',\s*id: )(-?\d{16,})",
@@ -103,7 +104,9 @@ void main(List<String> args) {
   }
 
   if (checkOnly) {
-    stdout.writeln('All generated Isar schema ids already match $modeLabel mode.');
+    stdout.writeln(
+      'All generated Isar schema ids already match $modeLabel mode.',
+    );
     return;
   }
 

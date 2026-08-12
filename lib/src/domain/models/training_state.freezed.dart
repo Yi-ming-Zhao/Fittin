@@ -12,7 +12,8 @@ part of 'training_state.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 TrainingState _$TrainingStateFromJson(Map<String, dynamic> json) {
   return _TrainingState.fromJson(json);
@@ -36,16 +37,18 @@ mixin _$TrainingState {
 /// @nodoc
 abstract class $TrainingStateCopyWith<$Res> {
   factory $TrainingStateCopyWith(
-          TrainingState value, $Res Function(TrainingState) then) =
-      _$TrainingStateCopyWithImpl<$Res, TrainingState>;
+    TrainingState value,
+    $Res Function(TrainingState) then,
+  ) = _$TrainingStateCopyWithImpl<$Res, TrainingState>;
   @useResult
-  $Res call(
-      {String workoutId,
-      String exerciseId,
-      String exerciseName,
-      double baseWeight,
-      String currentStageId,
-      List<String> history});
+  $Res call({
+    String workoutId,
+    String exerciseId,
+    String exerciseName,
+    double baseWeight,
+    String currentStageId,
+    List<String> history,
+  });
 }
 
 /// @nodoc
@@ -68,32 +71,35 @@ class _$TrainingStateCopyWithImpl<$Res, $Val extends TrainingState>
     Object? currentStageId = null,
     Object? history = null,
   }) {
-    return _then(_value.copyWith(
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseName: null == exerciseName
-          ? _value.exerciseName
-          : exerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      baseWeight: null == baseWeight
-          ? _value.baseWeight
-          : baseWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      currentStageId: null == currentStageId
-          ? _value.currentStageId
-          : currentStageId // ignore: cast_nullable_to_non_nullable
-              as String,
-      history: null == history
-          ? _value.history
-          : history // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            workoutId: null == workoutId
+                ? _value.workoutId
+                : workoutId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exerciseId: null == exerciseId
+                ? _value.exerciseId
+                : exerciseId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exerciseName: null == exerciseName
+                ? _value.exerciseName
+                : exerciseName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            baseWeight: null == baseWeight
+                ? _value.baseWeight
+                : baseWeight // ignore: cast_nullable_to_non_nullable
+                      as double,
+            currentStageId: null == currentStageId
+                ? _value.currentStageId
+                : currentStageId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            history: null == history
+                ? _value.history
+                : history // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -101,17 +107,19 @@ class _$TrainingStateCopyWithImpl<$Res, $Val extends TrainingState>
 abstract class _$$TrainingStateImplCopyWith<$Res>
     implements $TrainingStateCopyWith<$Res> {
   factory _$$TrainingStateImplCopyWith(
-          _$TrainingStateImpl value, $Res Function(_$TrainingStateImpl) then) =
-      __$$TrainingStateImplCopyWithImpl<$Res>;
+    _$TrainingStateImpl value,
+    $Res Function(_$TrainingStateImpl) then,
+  ) = __$$TrainingStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String workoutId,
-      String exerciseId,
-      String exerciseName,
-      double baseWeight,
-      String currentStageId,
-      List<String> history});
+  $Res call({
+    String workoutId,
+    String exerciseId,
+    String exerciseName,
+    double baseWeight,
+    String currentStageId,
+    List<String> history,
+  });
 }
 
 /// @nodoc
@@ -119,8 +127,9 @@ class __$$TrainingStateImplCopyWithImpl<$Res>
     extends _$TrainingStateCopyWithImpl<$Res, _$TrainingStateImpl>
     implements _$$TrainingStateImplCopyWith<$Res> {
   __$$TrainingStateImplCopyWithImpl(
-      _$TrainingStateImpl _value, $Res Function(_$TrainingStateImpl) _then)
-      : super(_value, _then);
+    _$TrainingStateImpl _value,
+    $Res Function(_$TrainingStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -132,46 +141,48 @@ class __$$TrainingStateImplCopyWithImpl<$Res>
     Object? currentStageId = null,
     Object? history = null,
   }) {
-    return _then(_$TrainingStateImpl(
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseName: null == exerciseName
-          ? _value.exerciseName
-          : exerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      baseWeight: null == baseWeight
-          ? _value.baseWeight
-          : baseWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      currentStageId: null == currentStageId
-          ? _value.currentStageId
-          : currentStageId // ignore: cast_nullable_to_non_nullable
-              as String,
-      history: null == history
-          ? _value._history
-          : history // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-    ));
+    return _then(
+      _$TrainingStateImpl(
+        workoutId: null == workoutId
+            ? _value.workoutId
+            : workoutId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exerciseId: null == exerciseId
+            ? _value.exerciseId
+            : exerciseId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exerciseName: null == exerciseName
+            ? _value.exerciseName
+            : exerciseName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        baseWeight: null == baseWeight
+            ? _value.baseWeight
+            : baseWeight // ignore: cast_nullable_to_non_nullable
+                  as double,
+        currentStageId: null == currentStageId
+            ? _value.currentStageId
+            : currentStageId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        history: null == history
+            ? _value._history
+            : history // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$TrainingStateImpl implements _TrainingState {
-  const _$TrainingStateImpl(
-      {required this.workoutId,
-      required this.exerciseId,
-      required this.exerciseName,
-      required this.baseWeight,
-      required this.currentStageId,
-      final List<String> history = const []})
-      : _history = history;
+  const _$TrainingStateImpl({
+    required this.workoutId,
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.baseWeight,
+    required this.currentStageId,
+    final List<String> history = const [],
+  }) : _history = history;
 
   factory _$TrainingStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$TrainingStateImplFromJson(json);
@@ -221,13 +232,14 @@ class _$TrainingStateImpl implements _TrainingState {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      workoutId,
-      exerciseId,
-      exerciseName,
-      baseWeight,
-      currentStageId,
-      const DeepCollectionEquality().hash(_history));
+    runtimeType,
+    workoutId,
+    exerciseId,
+    exerciseName,
+    baseWeight,
+    currentStageId,
+    const DeepCollectionEquality().hash(_history),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -237,20 +249,19 @@ class _$TrainingStateImpl implements _TrainingState {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$TrainingStateImplToJson(
-      this,
-    );
+    return _$$TrainingStateImplToJson(this);
   }
 }
 
 abstract class _TrainingState implements TrainingState {
-  const factory _TrainingState(
-      {required final String workoutId,
-      required final String exerciseId,
-      required final String exerciseName,
-      required final double baseWeight,
-      required final String currentStageId,
-      final List<String> history}) = _$TrainingStateImpl;
+  const factory _TrainingState({
+    required final String workoutId,
+    required final String exerciseId,
+    required final String exerciseName,
+    required final double baseWeight,
+    required final String currentStageId,
+    final List<String> history,
+  }) = _$TrainingStateImpl;
 
   factory _TrainingState.fromJson(Map<String, dynamic> json) =
       _$TrainingStateImpl.fromJson;
@@ -300,21 +311,23 @@ mixin _$SessionSetState {
 /// @nodoc
 abstract class $SessionSetStateCopyWith<$Res> {
   factory $SessionSetStateCopyWith(
-          SessionSetState value, $Res Function(SessionSetState) then) =
-      _$SessionSetStateCopyWithImpl<$Res, SessionSetState>;
+    SessionSetState value,
+    $Res Function(SessionSetState) then,
+  ) = _$SessionSetStateCopyWithImpl<$Res, SessionSetState>;
   @useResult
-  $Res call(
-      {String id,
-      String role,
-      int targetReps,
-      int completedReps,
-      double targetWeight,
-      double weight,
-      double? targetRpe,
-      double? completedRpe,
-      bool isAmrap,
-      bool isCompleted,
-      bool isSkipped});
+  $Res call({
+    String id,
+    String role,
+    int targetReps,
+    int completedReps,
+    double targetWeight,
+    double weight,
+    double? targetRpe,
+    double? completedRpe,
+    bool isAmrap,
+    bool isCompleted,
+    bool isSkipped,
+  });
 }
 
 /// @nodoc
@@ -342,75 +355,80 @@ class _$SessionSetStateCopyWithImpl<$Res, $Val extends SessionSetState>
     Object? isCompleted = null,
     Object? isSkipped = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as String,
-      targetReps: null == targetReps
-          ? _value.targetReps
-          : targetReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      completedReps: null == completedReps
-          ? _value.completedReps
-          : completedReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      targetWeight: null == targetWeight
-          ? _value.targetWeight
-          : targetWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      weight: null == weight
-          ? _value.weight
-          : weight // ignore: cast_nullable_to_non_nullable
-              as double,
-      targetRpe: freezed == targetRpe
-          ? _value.targetRpe
-          : targetRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      completedRpe: freezed == completedRpe
-          ? _value.completedRpe
-          : completedRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      isAmrap: null == isAmrap
-          ? _value.isAmrap
-          : isAmrap // ignore: cast_nullable_to_non_nullable
-              as bool,
-      isCompleted: null == isCompleted
-          ? _value.isCompleted
-          : isCompleted // ignore: cast_nullable_to_non_nullable
-              as bool,
-      isSkipped: null == isSkipped
-          ? _value.isSkipped
-          : isSkipped // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            role: null == role
+                ? _value.role
+                : role // ignore: cast_nullable_to_non_nullable
+                      as String,
+            targetReps: null == targetReps
+                ? _value.targetReps
+                : targetReps // ignore: cast_nullable_to_non_nullable
+                      as int,
+            completedReps: null == completedReps
+                ? _value.completedReps
+                : completedReps // ignore: cast_nullable_to_non_nullable
+                      as int,
+            targetWeight: null == targetWeight
+                ? _value.targetWeight
+                : targetWeight // ignore: cast_nullable_to_non_nullable
+                      as double,
+            weight: null == weight
+                ? _value.weight
+                : weight // ignore: cast_nullable_to_non_nullable
+                      as double,
+            targetRpe: freezed == targetRpe
+                ? _value.targetRpe
+                : targetRpe // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            completedRpe: freezed == completedRpe
+                ? _value.completedRpe
+                : completedRpe // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            isAmrap: null == isAmrap
+                ? _value.isAmrap
+                : isAmrap // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            isCompleted: null == isCompleted
+                ? _value.isCompleted
+                : isCompleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            isSkipped: null == isSkipped
+                ? _value.isSkipped
+                : isSkipped // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$SessionSetStateImplCopyWith<$Res>
     implements $SessionSetStateCopyWith<$Res> {
-  factory _$$SessionSetStateImplCopyWith(_$SessionSetStateImpl value,
-          $Res Function(_$SessionSetStateImpl) then) =
-      __$$SessionSetStateImplCopyWithImpl<$Res>;
+  factory _$$SessionSetStateImplCopyWith(
+    _$SessionSetStateImpl value,
+    $Res Function(_$SessionSetStateImpl) then,
+  ) = __$$SessionSetStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String role,
-      int targetReps,
-      int completedReps,
-      double targetWeight,
-      double weight,
-      double? targetRpe,
-      double? completedRpe,
-      bool isAmrap,
-      bool isCompleted,
-      bool isSkipped});
+  $Res call({
+    String id,
+    String role,
+    int targetReps,
+    int completedReps,
+    double targetWeight,
+    double weight,
+    double? targetRpe,
+    double? completedRpe,
+    bool isAmrap,
+    bool isCompleted,
+    bool isSkipped,
+  });
 }
 
 /// @nodoc
@@ -418,8 +436,9 @@ class __$$SessionSetStateImplCopyWithImpl<$Res>
     extends _$SessionSetStateCopyWithImpl<$Res, _$SessionSetStateImpl>
     implements _$$SessionSetStateImplCopyWith<$Res> {
   __$$SessionSetStateImplCopyWithImpl(
-      _$SessionSetStateImpl _value, $Res Function(_$SessionSetStateImpl) _then)
-      : super(_value, _then);
+    _$SessionSetStateImpl _value,
+    $Res Function(_$SessionSetStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -436,70 +455,73 @@ class __$$SessionSetStateImplCopyWithImpl<$Res>
     Object? isCompleted = null,
     Object? isSkipped = null,
   }) {
-    return _then(_$SessionSetStateImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      role: null == role
-          ? _value.role
-          : role // ignore: cast_nullable_to_non_nullable
-              as String,
-      targetReps: null == targetReps
-          ? _value.targetReps
-          : targetReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      completedReps: null == completedReps
-          ? _value.completedReps
-          : completedReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      targetWeight: null == targetWeight
-          ? _value.targetWeight
-          : targetWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      weight: null == weight
-          ? _value.weight
-          : weight // ignore: cast_nullable_to_non_nullable
-              as double,
-      targetRpe: freezed == targetRpe
-          ? _value.targetRpe
-          : targetRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      completedRpe: freezed == completedRpe
-          ? _value.completedRpe
-          : completedRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      isAmrap: null == isAmrap
-          ? _value.isAmrap
-          : isAmrap // ignore: cast_nullable_to_non_nullable
-              as bool,
-      isCompleted: null == isCompleted
-          ? _value.isCompleted
-          : isCompleted // ignore: cast_nullable_to_non_nullable
-              as bool,
-      isSkipped: null == isSkipped
-          ? _value.isSkipped
-          : isSkipped // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ));
+    return _then(
+      _$SessionSetStateImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        role: null == role
+            ? _value.role
+            : role // ignore: cast_nullable_to_non_nullable
+                  as String,
+        targetReps: null == targetReps
+            ? _value.targetReps
+            : targetReps // ignore: cast_nullable_to_non_nullable
+                  as int,
+        completedReps: null == completedReps
+            ? _value.completedReps
+            : completedReps // ignore: cast_nullable_to_non_nullable
+                  as int,
+        targetWeight: null == targetWeight
+            ? _value.targetWeight
+            : targetWeight // ignore: cast_nullable_to_non_nullable
+                  as double,
+        weight: null == weight
+            ? _value.weight
+            : weight // ignore: cast_nullable_to_non_nullable
+                  as double,
+        targetRpe: freezed == targetRpe
+            ? _value.targetRpe
+            : targetRpe // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        completedRpe: freezed == completedRpe
+            ? _value.completedRpe
+            : completedRpe // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        isAmrap: null == isAmrap
+            ? _value.isAmrap
+            : isAmrap // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        isCompleted: null == isCompleted
+            ? _value.isCompleted
+            : isCompleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        isSkipped: null == isSkipped
+            ? _value.isSkipped
+            : isSkipped // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$SessionSetStateImpl implements _SessionSetState {
-  const _$SessionSetStateImpl(
-      {required this.id,
-      required this.role,
-      required this.targetReps,
-      required this.completedReps,
-      required this.targetWeight,
-      required this.weight,
-      this.targetRpe,
-      this.completedRpe,
-      this.isAmrap = false,
-      this.isCompleted = false,
-      this.isSkipped = false});
+  const _$SessionSetStateImpl({
+    required this.id,
+    required this.role,
+    required this.targetReps,
+    required this.completedReps,
+    required this.targetWeight,
+    required this.weight,
+    this.targetRpe,
+    this.completedRpe,
+    this.isAmrap = false,
+    this.isCompleted = false,
+    this.isSkipped = false,
+  });
 
   factory _$SessionSetStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$SessionSetStateImplFromJson(json);
@@ -563,47 +585,49 @@ class _$SessionSetStateImpl implements _SessionSetState {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      role,
-      targetReps,
-      completedReps,
-      targetWeight,
-      weight,
-      targetRpe,
-      completedRpe,
-      isAmrap,
-      isCompleted,
-      isSkipped);
+    runtimeType,
+    id,
+    role,
+    targetReps,
+    completedReps,
+    targetWeight,
+    weight,
+    targetRpe,
+    completedRpe,
+    isAmrap,
+    isCompleted,
+    isSkipped,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$SessionSetStateImplCopyWith<_$SessionSetStateImpl> get copyWith =>
       __$$SessionSetStateImplCopyWithImpl<_$SessionSetStateImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SessionSetStateImplToJson(
-      this,
-    );
+    return _$$SessionSetStateImplToJson(this);
   }
 }
 
 abstract class _SessionSetState implements SessionSetState {
-  const factory _SessionSetState(
-      {required final String id,
-      required final String role,
-      required final int targetReps,
-      required final int completedReps,
-      required final double targetWeight,
-      required final double weight,
-      final double? targetRpe,
-      final double? completedRpe,
-      final bool isAmrap,
-      final bool isCompleted,
-      final bool isSkipped}) = _$SessionSetStateImpl;
+  const factory _SessionSetState({
+    required final String id,
+    required final String role,
+    required final int targetReps,
+    required final int completedReps,
+    required final double targetWeight,
+    required final double weight,
+    final double? targetRpe,
+    final double? completedRpe,
+    final bool isAmrap,
+    final bool isCompleted,
+    final bool isSkipped,
+  }) = _$SessionSetStateImpl;
 
   factory _SessionSetState.fromJson(Map<String, dynamic> json) =
       _$SessionSetStateImpl.fromJson;
@@ -661,26 +685,30 @@ mixin _$ExerciseSessionState {
 
 /// @nodoc
 abstract class $ExerciseSessionStateCopyWith<$Res> {
-  factory $ExerciseSessionStateCopyWith(ExerciseSessionState value,
-          $Res Function(ExerciseSessionState) then) =
-      _$ExerciseSessionStateCopyWithImpl<$Res, ExerciseSessionState>;
+  factory $ExerciseSessionStateCopyWith(
+    ExerciseSessionState value,
+    $Res Function(ExerciseSessionState) then,
+  ) = _$ExerciseSessionStateCopyWithImpl<$Res, ExerciseSessionState>;
   @useResult
-  $Res call(
-      {String id,
-      String exerciseId,
-      String exerciseName,
-      String tier,
-      int restSeconds,
-      String stageId,
-      String displayLoadUnit,
-      bool showsPlateBreakdown,
-      int currentSetIndex,
-      List<SessionSetState> sets});
+  $Res call({
+    String id,
+    String exerciseId,
+    String exerciseName,
+    String tier,
+    int restSeconds,
+    String stageId,
+    String displayLoadUnit,
+    bool showsPlateBreakdown,
+    int currentSetIndex,
+    List<SessionSetState> sets,
+  });
 }
 
 /// @nodoc
-class _$ExerciseSessionStateCopyWithImpl<$Res,
-        $Val extends ExerciseSessionState>
+class _$ExerciseSessionStateCopyWithImpl<
+  $Res,
+  $Val extends ExerciseSessionState
+>
     implements $ExerciseSessionStateCopyWith<$Res> {
   _$ExerciseSessionStateCopyWithImpl(this._value, this._then);
 
@@ -703,79 +731,85 @@ class _$ExerciseSessionStateCopyWithImpl<$Res,
     Object? currentSetIndex = null,
     Object? sets = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseName: null == exerciseName
-          ? _value.exerciseName
-          : exerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      tier: null == tier
-          ? _value.tier
-          : tier // ignore: cast_nullable_to_non_nullable
-              as String,
-      restSeconds: null == restSeconds
-          ? _value.restSeconds
-          : restSeconds // ignore: cast_nullable_to_non_nullable
-              as int,
-      stageId: null == stageId
-          ? _value.stageId
-          : stageId // ignore: cast_nullable_to_non_nullable
-              as String,
-      displayLoadUnit: null == displayLoadUnit
-          ? _value.displayLoadUnit
-          : displayLoadUnit // ignore: cast_nullable_to_non_nullable
-              as String,
-      showsPlateBreakdown: null == showsPlateBreakdown
-          ? _value.showsPlateBreakdown
-          : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
-              as bool,
-      currentSetIndex: null == currentSetIndex
-          ? _value.currentSetIndex
-          : currentSetIndex // ignore: cast_nullable_to_non_nullable
-              as int,
-      sets: null == sets
-          ? _value.sets
-          : sets // ignore: cast_nullable_to_non_nullable
-              as List<SessionSetState>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exerciseId: null == exerciseId
+                ? _value.exerciseId
+                : exerciseId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exerciseName: null == exerciseName
+                ? _value.exerciseName
+                : exerciseName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            tier: null == tier
+                ? _value.tier
+                : tier // ignore: cast_nullable_to_non_nullable
+                      as String,
+            restSeconds: null == restSeconds
+                ? _value.restSeconds
+                : restSeconds // ignore: cast_nullable_to_non_nullable
+                      as int,
+            stageId: null == stageId
+                ? _value.stageId
+                : stageId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            displayLoadUnit: null == displayLoadUnit
+                ? _value.displayLoadUnit
+                : displayLoadUnit // ignore: cast_nullable_to_non_nullable
+                      as String,
+            showsPlateBreakdown: null == showsPlateBreakdown
+                ? _value.showsPlateBreakdown
+                : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            currentSetIndex: null == currentSetIndex
+                ? _value.currentSetIndex
+                : currentSetIndex // ignore: cast_nullable_to_non_nullable
+                      as int,
+            sets: null == sets
+                ? _value.sets
+                : sets // ignore: cast_nullable_to_non_nullable
+                      as List<SessionSetState>,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$ExerciseSessionStateImplCopyWith<$Res>
     implements $ExerciseSessionStateCopyWith<$Res> {
-  factory _$$ExerciseSessionStateImplCopyWith(_$ExerciseSessionStateImpl value,
-          $Res Function(_$ExerciseSessionStateImpl) then) =
-      __$$ExerciseSessionStateImplCopyWithImpl<$Res>;
+  factory _$$ExerciseSessionStateImplCopyWith(
+    _$ExerciseSessionStateImpl value,
+    $Res Function(_$ExerciseSessionStateImpl) then,
+  ) = __$$ExerciseSessionStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String exerciseId,
-      String exerciseName,
-      String tier,
-      int restSeconds,
-      String stageId,
-      String displayLoadUnit,
-      bool showsPlateBreakdown,
-      int currentSetIndex,
-      List<SessionSetState> sets});
+  $Res call({
+    String id,
+    String exerciseId,
+    String exerciseName,
+    String tier,
+    int restSeconds,
+    String stageId,
+    String displayLoadUnit,
+    bool showsPlateBreakdown,
+    int currentSetIndex,
+    List<SessionSetState> sets,
+  });
 }
 
 /// @nodoc
 class __$$ExerciseSessionStateImplCopyWithImpl<$Res>
     extends _$ExerciseSessionStateCopyWithImpl<$Res, _$ExerciseSessionStateImpl>
     implements _$$ExerciseSessionStateImplCopyWith<$Res> {
-  __$$ExerciseSessionStateImplCopyWithImpl(_$ExerciseSessionStateImpl _value,
-      $Res Function(_$ExerciseSessionStateImpl) _then)
-      : super(_value, _then);
+  __$$ExerciseSessionStateImplCopyWithImpl(
+    _$ExerciseSessionStateImpl _value,
+    $Res Function(_$ExerciseSessionStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -791,66 +825,68 @@ class __$$ExerciseSessionStateImplCopyWithImpl<$Res>
     Object? currentSetIndex = null,
     Object? sets = null,
   }) {
-    return _then(_$ExerciseSessionStateImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseName: null == exerciseName
-          ? _value.exerciseName
-          : exerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      tier: null == tier
-          ? _value.tier
-          : tier // ignore: cast_nullable_to_non_nullable
-              as String,
-      restSeconds: null == restSeconds
-          ? _value.restSeconds
-          : restSeconds // ignore: cast_nullable_to_non_nullable
-              as int,
-      stageId: null == stageId
-          ? _value.stageId
-          : stageId // ignore: cast_nullable_to_non_nullable
-              as String,
-      displayLoadUnit: null == displayLoadUnit
-          ? _value.displayLoadUnit
-          : displayLoadUnit // ignore: cast_nullable_to_non_nullable
-              as String,
-      showsPlateBreakdown: null == showsPlateBreakdown
-          ? _value.showsPlateBreakdown
-          : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
-              as bool,
-      currentSetIndex: null == currentSetIndex
-          ? _value.currentSetIndex
-          : currentSetIndex // ignore: cast_nullable_to_non_nullable
-              as int,
-      sets: null == sets
-          ? _value._sets
-          : sets // ignore: cast_nullable_to_non_nullable
-              as List<SessionSetState>,
-    ));
+    return _then(
+      _$ExerciseSessionStateImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exerciseId: null == exerciseId
+            ? _value.exerciseId
+            : exerciseId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exerciseName: null == exerciseName
+            ? _value.exerciseName
+            : exerciseName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        tier: null == tier
+            ? _value.tier
+            : tier // ignore: cast_nullable_to_non_nullable
+                  as String,
+        restSeconds: null == restSeconds
+            ? _value.restSeconds
+            : restSeconds // ignore: cast_nullable_to_non_nullable
+                  as int,
+        stageId: null == stageId
+            ? _value.stageId
+            : stageId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        displayLoadUnit: null == displayLoadUnit
+            ? _value.displayLoadUnit
+            : displayLoadUnit // ignore: cast_nullable_to_non_nullable
+                  as String,
+        showsPlateBreakdown: null == showsPlateBreakdown
+            ? _value.showsPlateBreakdown
+            : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        currentSetIndex: null == currentSetIndex
+            ? _value.currentSetIndex
+            : currentSetIndex // ignore: cast_nullable_to_non_nullable
+                  as int,
+        sets: null == sets
+            ? _value._sets
+            : sets // ignore: cast_nullable_to_non_nullable
+                  as List<SessionSetState>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
-  const _$ExerciseSessionStateImpl(
-      {required this.id,
-      required this.exerciseId,
-      required this.exerciseName,
-      required this.tier,
-      required this.restSeconds,
-      required this.stageId,
-      this.displayLoadUnit = LoadUnits.kg,
-      this.showsPlateBreakdown = false,
-      this.currentSetIndex = 0,
-      required final List<SessionSetState> sets})
-      : _sets = sets;
+  const _$ExerciseSessionStateImpl({
+    required this.id,
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.tier,
+    required this.restSeconds,
+    required this.stageId,
+    this.displayLoadUnit = LoadUnits.kg,
+    this.showsPlateBreakdown = false,
+    this.currentSetIndex = 0,
+    required final List<SessionSetState> sets,
+  }) : _sets = sets;
 
   factory _$ExerciseSessionStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$ExerciseSessionStateImplFromJson(json);
@@ -915,46 +951,48 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      exerciseId,
-      exerciseName,
-      tier,
-      restSeconds,
-      stageId,
-      displayLoadUnit,
-      showsPlateBreakdown,
-      currentSetIndex,
-      const DeepCollectionEquality().hash(_sets));
+    runtimeType,
+    id,
+    exerciseId,
+    exerciseName,
+    tier,
+    restSeconds,
+    stageId,
+    displayLoadUnit,
+    showsPlateBreakdown,
+    currentSetIndex,
+    const DeepCollectionEquality().hash(_sets),
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ExerciseSessionStateImplCopyWith<_$ExerciseSessionStateImpl>
-      get copyWith =>
-          __$$ExerciseSessionStateImplCopyWithImpl<_$ExerciseSessionStateImpl>(
-              this, _$identity);
+  get copyWith =>
+      __$$ExerciseSessionStateImplCopyWithImpl<_$ExerciseSessionStateImpl>(
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$ExerciseSessionStateImplToJson(
-      this,
-    );
+    return _$$ExerciseSessionStateImplToJson(this);
   }
 }
 
 abstract class _ExerciseSessionState implements ExerciseSessionState {
-  const factory _ExerciseSessionState(
-      {required final String id,
-      required final String exerciseId,
-      required final String exerciseName,
-      required final String tier,
-      required final int restSeconds,
-      required final String stageId,
-      final String displayLoadUnit,
-      final bool showsPlateBreakdown,
-      final int currentSetIndex,
-      required final List<SessionSetState> sets}) = _$ExerciseSessionStateImpl;
+  const factory _ExerciseSessionState({
+    required final String id,
+    required final String exerciseId,
+    required final String exerciseName,
+    required final String tier,
+    required final int restSeconds,
+    required final String stageId,
+    final String displayLoadUnit,
+    final bool showsPlateBreakdown,
+    final int currentSetIndex,
+    required final List<SessionSetState> sets,
+  }) = _$ExerciseSessionStateImpl;
 
   factory _ExerciseSessionState.fromJson(Map<String, dynamic> json) =
       _$ExerciseSessionStateImpl.fromJson;
@@ -982,7 +1020,7 @@ abstract class _ExerciseSessionState implements ExerciseSessionState {
   @override
   @JsonKey(ignore: true)
   _$$ExerciseSessionStateImplCopyWith<_$ExerciseSessionStateImpl>
-      get copyWith => throw _privateConstructorUsedError;
+  get copyWith => throw _privateConstructorUsedError;
 }
 
 WorkoutSessionState _$WorkoutSessionStateFromJson(Map<String, dynamic> json) {
@@ -1011,19 +1049,21 @@ mixin _$WorkoutSessionState {
 /// @nodoc
 abstract class $WorkoutSessionStateCopyWith<$Res> {
   factory $WorkoutSessionStateCopyWith(
-          WorkoutSessionState value, $Res Function(WorkoutSessionState) then) =
-      _$WorkoutSessionStateCopyWithImpl<$Res, WorkoutSessionState>;
+    WorkoutSessionState value,
+    $Res Function(WorkoutSessionState) then,
+  ) = _$WorkoutSessionStateCopyWithImpl<$Res, WorkoutSessionState>;
   @useResult
-  $Res call(
-      {String instanceId,
-      String templateId,
-      String workoutId,
-      String scheduleToken,
-      String workoutName,
-      String dayLabel,
-      int estimatedDurationMinutes,
-      List<ExerciseSessionState> exercises,
-      int currentExerciseIndex});
+  $Res call({
+    String instanceId,
+    String templateId,
+    String workoutId,
+    String scheduleToken,
+    String workoutName,
+    String dayLabel,
+    int estimatedDurationMinutes,
+    List<ExerciseSessionState> exercises,
+    int currentExerciseIndex,
+  });
 }
 
 /// @nodoc
@@ -1049,74 +1089,80 @@ class _$WorkoutSessionStateCopyWithImpl<$Res, $Val extends WorkoutSessionState>
     Object? exercises = null,
     Object? currentExerciseIndex = null,
   }) {
-    return _then(_value.copyWith(
-      instanceId: null == instanceId
-          ? _value.instanceId
-          : instanceId // ignore: cast_nullable_to_non_nullable
-              as String,
-      templateId: null == templateId
-          ? _value.templateId
-          : templateId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      scheduleToken: null == scheduleToken
-          ? _value.scheduleToken
-          : scheduleToken // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutName: null == workoutName
-          ? _value.workoutName
-          : workoutName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exercises: null == exercises
-          ? _value.exercises
-          : exercises // ignore: cast_nullable_to_non_nullable
-              as List<ExerciseSessionState>,
-      currentExerciseIndex: null == currentExerciseIndex
-          ? _value.currentExerciseIndex
-          : currentExerciseIndex // ignore: cast_nullable_to_non_nullable
-              as int,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            instanceId: null == instanceId
+                ? _value.instanceId
+                : instanceId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            templateId: null == templateId
+                ? _value.templateId
+                : templateId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            workoutId: null == workoutId
+                ? _value.workoutId
+                : workoutId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            scheduleToken: null == scheduleToken
+                ? _value.scheduleToken
+                : scheduleToken // ignore: cast_nullable_to_non_nullable
+                      as String,
+            workoutName: null == workoutName
+                ? _value.workoutName
+                : workoutName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            dayLabel: null == dayLabel
+                ? _value.dayLabel
+                : dayLabel // ignore: cast_nullable_to_non_nullable
+                      as String,
+            estimatedDurationMinutes: null == estimatedDurationMinutes
+                ? _value.estimatedDurationMinutes
+                : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                      as int,
+            exercises: null == exercises
+                ? _value.exercises
+                : exercises // ignore: cast_nullable_to_non_nullable
+                      as List<ExerciseSessionState>,
+            currentExerciseIndex: null == currentExerciseIndex
+                ? _value.currentExerciseIndex
+                : currentExerciseIndex // ignore: cast_nullable_to_non_nullable
+                      as int,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$WorkoutSessionStateImplCopyWith<$Res>
     implements $WorkoutSessionStateCopyWith<$Res> {
-  factory _$$WorkoutSessionStateImplCopyWith(_$WorkoutSessionStateImpl value,
-          $Res Function(_$WorkoutSessionStateImpl) then) =
-      __$$WorkoutSessionStateImplCopyWithImpl<$Res>;
+  factory _$$WorkoutSessionStateImplCopyWith(
+    _$WorkoutSessionStateImpl value,
+    $Res Function(_$WorkoutSessionStateImpl) then,
+  ) = __$$WorkoutSessionStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String instanceId,
-      String templateId,
-      String workoutId,
-      String scheduleToken,
-      String workoutName,
-      String dayLabel,
-      int estimatedDurationMinutes,
-      List<ExerciseSessionState> exercises,
-      int currentExerciseIndex});
+  $Res call({
+    String instanceId,
+    String templateId,
+    String workoutId,
+    String scheduleToken,
+    String workoutName,
+    String dayLabel,
+    int estimatedDurationMinutes,
+    List<ExerciseSessionState> exercises,
+    int currentExerciseIndex,
+  });
 }
 
 /// @nodoc
 class __$$WorkoutSessionStateImplCopyWithImpl<$Res>
     extends _$WorkoutSessionStateCopyWithImpl<$Res, _$WorkoutSessionStateImpl>
     implements _$$WorkoutSessionStateImplCopyWith<$Res> {
-  __$$WorkoutSessionStateImplCopyWithImpl(_$WorkoutSessionStateImpl _value,
-      $Res Function(_$WorkoutSessionStateImpl) _then)
-      : super(_value, _then);
+  __$$WorkoutSessionStateImplCopyWithImpl(
+    _$WorkoutSessionStateImpl _value,
+    $Res Function(_$WorkoutSessionStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -1131,61 +1177,63 @@ class __$$WorkoutSessionStateImplCopyWithImpl<$Res>
     Object? exercises = null,
     Object? currentExerciseIndex = null,
   }) {
-    return _then(_$WorkoutSessionStateImpl(
-      instanceId: null == instanceId
-          ? _value.instanceId
-          : instanceId // ignore: cast_nullable_to_non_nullable
-              as String,
-      templateId: null == templateId
-          ? _value.templateId
-          : templateId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      scheduleToken: null == scheduleToken
-          ? _value.scheduleToken
-          : scheduleToken // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutName: null == workoutName
-          ? _value.workoutName
-          : workoutName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exercises: null == exercises
-          ? _value._exercises
-          : exercises // ignore: cast_nullable_to_non_nullable
-              as List<ExerciseSessionState>,
-      currentExerciseIndex: null == currentExerciseIndex
-          ? _value.currentExerciseIndex
-          : currentExerciseIndex // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
+    return _then(
+      _$WorkoutSessionStateImpl(
+        instanceId: null == instanceId
+            ? _value.instanceId
+            : instanceId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        templateId: null == templateId
+            ? _value.templateId
+            : templateId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        workoutId: null == workoutId
+            ? _value.workoutId
+            : workoutId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        scheduleToken: null == scheduleToken
+            ? _value.scheduleToken
+            : scheduleToken // ignore: cast_nullable_to_non_nullable
+                  as String,
+        workoutName: null == workoutName
+            ? _value.workoutName
+            : workoutName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        dayLabel: null == dayLabel
+            ? _value.dayLabel
+            : dayLabel // ignore: cast_nullable_to_non_nullable
+                  as String,
+        estimatedDurationMinutes: null == estimatedDurationMinutes
+            ? _value.estimatedDurationMinutes
+            : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                  as int,
+        exercises: null == exercises
+            ? _value._exercises
+            : exercises // ignore: cast_nullable_to_non_nullable
+                  as List<ExerciseSessionState>,
+        currentExerciseIndex: null == currentExerciseIndex
+            ? _value.currentExerciseIndex
+            : currentExerciseIndex // ignore: cast_nullable_to_non_nullable
+                  as int,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
-  const _$WorkoutSessionStateImpl(
-      {required this.instanceId,
-      required this.templateId,
-      required this.workoutId,
-      this.scheduleToken = '',
-      required this.workoutName,
-      required this.dayLabel,
-      required this.estimatedDurationMinutes,
-      required final List<ExerciseSessionState> exercises,
-      this.currentExerciseIndex = 0})
-      : _exercises = exercises;
+  const _$WorkoutSessionStateImpl({
+    required this.instanceId,
+    required this.templateId,
+    required this.workoutId,
+    this.scheduleToken = '',
+    required this.workoutName,
+    required this.dayLabel,
+    required this.estimatedDurationMinutes,
+    required final List<ExerciseSessionState> exercises,
+    this.currentExerciseIndex = 0,
+  }) : _exercises = exercises;
 
   factory _$WorkoutSessionStateImpl.fromJson(Map<String, dynamic> json) =>
       _$$WorkoutSessionStateImplFromJson(json);
@@ -1240,10 +1288,14 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
             (identical(other.dayLabel, dayLabel) ||
                 other.dayLabel == dayLabel) &&
             (identical(
-                    other.estimatedDurationMinutes, estimatedDurationMinutes) ||
+                  other.estimatedDurationMinutes,
+                  estimatedDurationMinutes,
+                ) ||
                 other.estimatedDurationMinutes == estimatedDurationMinutes) &&
-            const DeepCollectionEquality()
-                .equals(other._exercises, _exercises) &&
+            const DeepCollectionEquality().equals(
+              other._exercises,
+              _exercises,
+            ) &&
             (identical(other.currentExerciseIndex, currentExerciseIndex) ||
                 other.currentExerciseIndex == currentExerciseIndex));
   }
@@ -1251,43 +1303,45 @@ class _$WorkoutSessionStateImpl implements _WorkoutSessionState {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      instanceId,
-      templateId,
-      workoutId,
-      scheduleToken,
-      workoutName,
-      dayLabel,
-      estimatedDurationMinutes,
-      const DeepCollectionEquality().hash(_exercises),
-      currentExerciseIndex);
+    runtimeType,
+    instanceId,
+    templateId,
+    workoutId,
+    scheduleToken,
+    workoutName,
+    dayLabel,
+    estimatedDurationMinutes,
+    const DeepCollectionEquality().hash(_exercises),
+    currentExerciseIndex,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$WorkoutSessionStateImplCopyWith<_$WorkoutSessionStateImpl> get copyWith =>
       __$$WorkoutSessionStateImplCopyWithImpl<_$WorkoutSessionStateImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$WorkoutSessionStateImplToJson(
-      this,
-    );
+    return _$$WorkoutSessionStateImplToJson(this);
   }
 }
 
 abstract class _WorkoutSessionState implements WorkoutSessionState {
-  const factory _WorkoutSessionState(
-      {required final String instanceId,
-      required final String templateId,
-      required final String workoutId,
-      final String scheduleToken,
-      required final String workoutName,
-      required final String dayLabel,
-      required final int estimatedDurationMinutes,
-      required final List<ExerciseSessionState> exercises,
-      final int currentExerciseIndex}) = _$WorkoutSessionStateImpl;
+  const factory _WorkoutSessionState({
+    required final String instanceId,
+    required final String templateId,
+    required final String workoutId,
+    final String scheduleToken,
+    required final String workoutName,
+    required final String dayLabel,
+    required final int estimatedDurationMinutes,
+    required final List<ExerciseSessionState> exercises,
+    final int currentExerciseIndex,
+  }) = _$WorkoutSessionStateImpl;
 
   factory _WorkoutSessionState.fromJson(Map<String, dynamic> json) =
       _$WorkoutSessionStateImpl.fromJson;
@@ -1344,22 +1398,24 @@ mixin _$TodayWorkoutSummary {
 /// @nodoc
 abstract class $TodayWorkoutSummaryCopyWith<$Res> {
   factory $TodayWorkoutSummaryCopyWith(
-          TodayWorkoutSummary value, $Res Function(TodayWorkoutSummary) then) =
-      _$TodayWorkoutSummaryCopyWithImpl<$Res, TodayWorkoutSummary>;
+    TodayWorkoutSummary value,
+    $Res Function(TodayWorkoutSummary) then,
+  ) = _$TodayWorkoutSummaryCopyWithImpl<$Res, TodayWorkoutSummary>;
   @useResult
-  $Res call(
-      {String instanceId,
-      String workoutId,
-      String workoutName,
-      String dayLabel,
-      int currentWeekNumber,
-      int currentDayNumber,
-      int cycleWeekCount,
-      int workoutsPerWeek,
-      String primaryExerciseId,
-      String primaryExerciseName,
-      int estimatedDurationMinutes,
-      int exerciseCount});
+  $Res call({
+    String instanceId,
+    String workoutId,
+    String workoutName,
+    String dayLabel,
+    int currentWeekNumber,
+    int currentDayNumber,
+    int cycleWeekCount,
+    int workoutsPerWeek,
+    String primaryExerciseId,
+    String primaryExerciseName,
+    int estimatedDurationMinutes,
+    int exerciseCount,
+  });
 }
 
 /// @nodoc
@@ -1388,89 +1444,95 @@ class _$TodayWorkoutSummaryCopyWithImpl<$Res, $Val extends TodayWorkoutSummary>
     Object? estimatedDurationMinutes = null,
     Object? exerciseCount = null,
   }) {
-    return _then(_value.copyWith(
-      instanceId: null == instanceId
-          ? _value.instanceId
-          : instanceId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutName: null == workoutName
-          ? _value.workoutName
-          : workoutName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      currentWeekNumber: null == currentWeekNumber
-          ? _value.currentWeekNumber
-          : currentWeekNumber // ignore: cast_nullable_to_non_nullable
-              as int,
-      currentDayNumber: null == currentDayNumber
-          ? _value.currentDayNumber
-          : currentDayNumber // ignore: cast_nullable_to_non_nullable
-              as int,
-      cycleWeekCount: null == cycleWeekCount
-          ? _value.cycleWeekCount
-          : cycleWeekCount // ignore: cast_nullable_to_non_nullable
-              as int,
-      workoutsPerWeek: null == workoutsPerWeek
-          ? _value.workoutsPerWeek
-          : workoutsPerWeek // ignore: cast_nullable_to_non_nullable
-              as int,
-      primaryExerciseId: null == primaryExerciseId
-          ? _value.primaryExerciseId
-          : primaryExerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      primaryExerciseName: null == primaryExerciseName
-          ? _value.primaryExerciseName
-          : primaryExerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exerciseCount: null == exerciseCount
-          ? _value.exerciseCount
-          : exerciseCount // ignore: cast_nullable_to_non_nullable
-              as int,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            instanceId: null == instanceId
+                ? _value.instanceId
+                : instanceId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            workoutId: null == workoutId
+                ? _value.workoutId
+                : workoutId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            workoutName: null == workoutName
+                ? _value.workoutName
+                : workoutName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            dayLabel: null == dayLabel
+                ? _value.dayLabel
+                : dayLabel // ignore: cast_nullable_to_non_nullable
+                      as String,
+            currentWeekNumber: null == currentWeekNumber
+                ? _value.currentWeekNumber
+                : currentWeekNumber // ignore: cast_nullable_to_non_nullable
+                      as int,
+            currentDayNumber: null == currentDayNumber
+                ? _value.currentDayNumber
+                : currentDayNumber // ignore: cast_nullable_to_non_nullable
+                      as int,
+            cycleWeekCount: null == cycleWeekCount
+                ? _value.cycleWeekCount
+                : cycleWeekCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            workoutsPerWeek: null == workoutsPerWeek
+                ? _value.workoutsPerWeek
+                : workoutsPerWeek // ignore: cast_nullable_to_non_nullable
+                      as int,
+            primaryExerciseId: null == primaryExerciseId
+                ? _value.primaryExerciseId
+                : primaryExerciseId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            primaryExerciseName: null == primaryExerciseName
+                ? _value.primaryExerciseName
+                : primaryExerciseName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            estimatedDurationMinutes: null == estimatedDurationMinutes
+                ? _value.estimatedDurationMinutes
+                : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                      as int,
+            exerciseCount: null == exerciseCount
+                ? _value.exerciseCount
+                : exerciseCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$TodayWorkoutSummaryImplCopyWith<$Res>
     implements $TodayWorkoutSummaryCopyWith<$Res> {
-  factory _$$TodayWorkoutSummaryImplCopyWith(_$TodayWorkoutSummaryImpl value,
-          $Res Function(_$TodayWorkoutSummaryImpl) then) =
-      __$$TodayWorkoutSummaryImplCopyWithImpl<$Res>;
+  factory _$$TodayWorkoutSummaryImplCopyWith(
+    _$TodayWorkoutSummaryImpl value,
+    $Res Function(_$TodayWorkoutSummaryImpl) then,
+  ) = __$$TodayWorkoutSummaryImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String instanceId,
-      String workoutId,
-      String workoutName,
-      String dayLabel,
-      int currentWeekNumber,
-      int currentDayNumber,
-      int cycleWeekCount,
-      int workoutsPerWeek,
-      String primaryExerciseId,
-      String primaryExerciseName,
-      int estimatedDurationMinutes,
-      int exerciseCount});
+  $Res call({
+    String instanceId,
+    String workoutId,
+    String workoutName,
+    String dayLabel,
+    int currentWeekNumber,
+    int currentDayNumber,
+    int cycleWeekCount,
+    int workoutsPerWeek,
+    String primaryExerciseId,
+    String primaryExerciseName,
+    int estimatedDurationMinutes,
+    int exerciseCount,
+  });
 }
 
 /// @nodoc
 class __$$TodayWorkoutSummaryImplCopyWithImpl<$Res>
     extends _$TodayWorkoutSummaryCopyWithImpl<$Res, _$TodayWorkoutSummaryImpl>
     implements _$$TodayWorkoutSummaryImplCopyWith<$Res> {
-  __$$TodayWorkoutSummaryImplCopyWithImpl(_$TodayWorkoutSummaryImpl _value,
-      $Res Function(_$TodayWorkoutSummaryImpl) _then)
-      : super(_value, _then);
+  __$$TodayWorkoutSummaryImplCopyWithImpl(
+    _$TodayWorkoutSummaryImpl _value,
+    $Res Function(_$TodayWorkoutSummaryImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -1488,75 +1550,78 @@ class __$$TodayWorkoutSummaryImplCopyWithImpl<$Res>
     Object? estimatedDurationMinutes = null,
     Object? exerciseCount = null,
   }) {
-    return _then(_$TodayWorkoutSummaryImpl(
-      instanceId: null == instanceId
-          ? _value.instanceId
-          : instanceId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutId: null == workoutId
-          ? _value.workoutId
-          : workoutId // ignore: cast_nullable_to_non_nullable
-              as String,
-      workoutName: null == workoutName
-          ? _value.workoutName
-          : workoutName // ignore: cast_nullable_to_non_nullable
-              as String,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      currentWeekNumber: null == currentWeekNumber
-          ? _value.currentWeekNumber
-          : currentWeekNumber // ignore: cast_nullable_to_non_nullable
-              as int,
-      currentDayNumber: null == currentDayNumber
-          ? _value.currentDayNumber
-          : currentDayNumber // ignore: cast_nullable_to_non_nullable
-              as int,
-      cycleWeekCount: null == cycleWeekCount
-          ? _value.cycleWeekCount
-          : cycleWeekCount // ignore: cast_nullable_to_non_nullable
-              as int,
-      workoutsPerWeek: null == workoutsPerWeek
-          ? _value.workoutsPerWeek
-          : workoutsPerWeek // ignore: cast_nullable_to_non_nullable
-              as int,
-      primaryExerciseId: null == primaryExerciseId
-          ? _value.primaryExerciseId
-          : primaryExerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      primaryExerciseName: null == primaryExerciseName
-          ? _value.primaryExerciseName
-          : primaryExerciseName // ignore: cast_nullable_to_non_nullable
-              as String,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exerciseCount: null == exerciseCount
-          ? _value.exerciseCount
-          : exerciseCount // ignore: cast_nullable_to_non_nullable
-              as int,
-    ));
+    return _then(
+      _$TodayWorkoutSummaryImpl(
+        instanceId: null == instanceId
+            ? _value.instanceId
+            : instanceId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        workoutId: null == workoutId
+            ? _value.workoutId
+            : workoutId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        workoutName: null == workoutName
+            ? _value.workoutName
+            : workoutName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        dayLabel: null == dayLabel
+            ? _value.dayLabel
+            : dayLabel // ignore: cast_nullable_to_non_nullable
+                  as String,
+        currentWeekNumber: null == currentWeekNumber
+            ? _value.currentWeekNumber
+            : currentWeekNumber // ignore: cast_nullable_to_non_nullable
+                  as int,
+        currentDayNumber: null == currentDayNumber
+            ? _value.currentDayNumber
+            : currentDayNumber // ignore: cast_nullable_to_non_nullable
+                  as int,
+        cycleWeekCount: null == cycleWeekCount
+            ? _value.cycleWeekCount
+            : cycleWeekCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        workoutsPerWeek: null == workoutsPerWeek
+            ? _value.workoutsPerWeek
+            : workoutsPerWeek // ignore: cast_nullable_to_non_nullable
+                  as int,
+        primaryExerciseId: null == primaryExerciseId
+            ? _value.primaryExerciseId
+            : primaryExerciseId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        primaryExerciseName: null == primaryExerciseName
+            ? _value.primaryExerciseName
+            : primaryExerciseName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        estimatedDurationMinutes: null == estimatedDurationMinutes
+            ? _value.estimatedDurationMinutes
+            : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                  as int,
+        exerciseCount: null == exerciseCount
+            ? _value.exerciseCount
+            : exerciseCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$TodayWorkoutSummaryImpl implements _TodayWorkoutSummary {
-  const _$TodayWorkoutSummaryImpl(
-      {required this.instanceId,
-      required this.workoutId,
-      required this.workoutName,
-      required this.dayLabel,
-      required this.currentWeekNumber,
-      required this.currentDayNumber,
-      required this.cycleWeekCount,
-      required this.workoutsPerWeek,
-      required this.primaryExerciseId,
-      required this.primaryExerciseName,
-      required this.estimatedDurationMinutes,
-      required this.exerciseCount});
+  const _$TodayWorkoutSummaryImpl({
+    required this.instanceId,
+    required this.workoutId,
+    required this.workoutName,
+    required this.dayLabel,
+    required this.currentWeekNumber,
+    required this.currentDayNumber,
+    required this.cycleWeekCount,
+    required this.workoutsPerWeek,
+    required this.primaryExerciseId,
+    required this.primaryExerciseName,
+    required this.estimatedDurationMinutes,
+    required this.exerciseCount,
+  });
 
   factory _$TodayWorkoutSummaryImpl.fromJson(Map<String, dynamic> json) =>
       _$$TodayWorkoutSummaryImplFromJson(json);
@@ -1617,7 +1682,9 @@ class _$TodayWorkoutSummaryImpl implements _TodayWorkoutSummary {
             (identical(other.primaryExerciseName, primaryExerciseName) ||
                 other.primaryExerciseName == primaryExerciseName) &&
             (identical(
-                    other.estimatedDurationMinutes, estimatedDurationMinutes) ||
+                  other.estimatedDurationMinutes,
+                  estimatedDurationMinutes,
+                ) ||
                 other.estimatedDurationMinutes == estimatedDurationMinutes) &&
             (identical(other.exerciseCount, exerciseCount) ||
                 other.exerciseCount == exerciseCount));
@@ -1626,49 +1693,51 @@ class _$TodayWorkoutSummaryImpl implements _TodayWorkoutSummary {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      instanceId,
-      workoutId,
-      workoutName,
-      dayLabel,
-      currentWeekNumber,
-      currentDayNumber,
-      cycleWeekCount,
-      workoutsPerWeek,
-      primaryExerciseId,
-      primaryExerciseName,
-      estimatedDurationMinutes,
-      exerciseCount);
+    runtimeType,
+    instanceId,
+    workoutId,
+    workoutName,
+    dayLabel,
+    currentWeekNumber,
+    currentDayNumber,
+    cycleWeekCount,
+    workoutsPerWeek,
+    primaryExerciseId,
+    primaryExerciseName,
+    estimatedDurationMinutes,
+    exerciseCount,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$TodayWorkoutSummaryImplCopyWith<_$TodayWorkoutSummaryImpl> get copyWith =>
       __$$TodayWorkoutSummaryImplCopyWithImpl<_$TodayWorkoutSummaryImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$TodayWorkoutSummaryImplToJson(
-      this,
-    );
+    return _$$TodayWorkoutSummaryImplToJson(this);
   }
 }
 
 abstract class _TodayWorkoutSummary implements TodayWorkoutSummary {
-  const factory _TodayWorkoutSummary(
-      {required final String instanceId,
-      required final String workoutId,
-      required final String workoutName,
-      required final String dayLabel,
-      required final int currentWeekNumber,
-      required final int currentDayNumber,
-      required final int cycleWeekCount,
-      required final int workoutsPerWeek,
-      required final String primaryExerciseId,
-      required final String primaryExerciseName,
-      required final int estimatedDurationMinutes,
-      required final int exerciseCount}) = _$TodayWorkoutSummaryImpl;
+  const factory _TodayWorkoutSummary({
+    required final String instanceId,
+    required final String workoutId,
+    required final String workoutName,
+    required final String dayLabel,
+    required final int currentWeekNumber,
+    required final int currentDayNumber,
+    required final int cycleWeekCount,
+    required final int workoutsPerWeek,
+    required final String primaryExerciseId,
+    required final String primaryExerciseName,
+    required final int estimatedDurationMinutes,
+    required final int exerciseCount,
+  }) = _$TodayWorkoutSummaryImpl;
 
   factory _TodayWorkoutSummary.fromJson(Map<String, dynamic> json) =
       _$TodayWorkoutSummaryImpl.fromJson;

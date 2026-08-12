@@ -12,7 +12,8 @@ part of 'training_plan.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 PlanTemplate _$PlanTemplateFromJson(Map<String, dynamic> json) {
   return _PlanTemplate.fromJson(json);
@@ -42,20 +43,22 @@ mixin _$PlanTemplate {
 /// @nodoc
 abstract class $PlanTemplateCopyWith<$Res> {
   factory $PlanTemplateCopyWith(
-          PlanTemplate value, $Res Function(PlanTemplate) then) =
-      _$PlanTemplateCopyWithImpl<$Res, PlanTemplate>;
+    PlanTemplate value,
+    $Res Function(PlanTemplate) then,
+  ) = _$PlanTemplateCopyWithImpl<$Res, PlanTemplate>;
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      String description,
-      Map<String, String> localizedName,
-      Map<String, String> localizedDescription,
-      String engineFamily,
-      String scheduleMode,
-      List<String> requiredTrainingMaxKeys,
-      Map<String, dynamic> engineConfig,
-      List<Phase> phases});
+  $Res call({
+    String id,
+    String name,
+    String description,
+    Map<String, String> localizedName,
+    Map<String, String> localizedDescription,
+    String engineFamily,
+    String scheduleMode,
+    List<String> requiredTrainingMaxKeys,
+    Map<String, dynamic> engineConfig,
+    List<Phase> phases,
+  });
 }
 
 /// @nodoc
@@ -82,48 +85,51 @@ class _$PlanTemplateCopyWithImpl<$Res, $Val extends PlanTemplate>
     Object? engineConfig = null,
     Object? phases = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value.localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      localizedDescription: null == localizedDescription
-          ? _value.localizedDescription
-          : localizedDescription // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      engineFamily: null == engineFamily
-          ? _value.engineFamily
-          : engineFamily // ignore: cast_nullable_to_non_nullable
-              as String,
-      scheduleMode: null == scheduleMode
-          ? _value.scheduleMode
-          : scheduleMode // ignore: cast_nullable_to_non_nullable
-              as String,
-      requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
-          ? _value.requiredTrainingMaxKeys
-          : requiredTrainingMaxKeys // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      engineConfig: null == engineConfig
-          ? _value.engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      phases: null == phases
-          ? _value.phases
-          : phases // ignore: cast_nullable_to_non_nullable
-              as List<Phase>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            description: null == description
+                ? _value.description
+                : description // ignore: cast_nullable_to_non_nullable
+                      as String,
+            localizedName: null == localizedName
+                ? _value.localizedName
+                : localizedName // ignore: cast_nullable_to_non_nullable
+                      as Map<String, String>,
+            localizedDescription: null == localizedDescription
+                ? _value.localizedDescription
+                : localizedDescription // ignore: cast_nullable_to_non_nullable
+                      as Map<String, String>,
+            engineFamily: null == engineFamily
+                ? _value.engineFamily
+                : engineFamily // ignore: cast_nullable_to_non_nullable
+                      as String,
+            scheduleMode: null == scheduleMode
+                ? _value.scheduleMode
+                : scheduleMode // ignore: cast_nullable_to_non_nullable
+                      as String,
+            requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
+                ? _value.requiredTrainingMaxKeys
+                : requiredTrainingMaxKeys // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            engineConfig: null == engineConfig
+                ? _value.engineConfig
+                : engineConfig // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>,
+            phases: null == phases
+                ? _value.phases
+                : phases // ignore: cast_nullable_to_non_nullable
+                      as List<Phase>,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -131,21 +137,23 @@ class _$PlanTemplateCopyWithImpl<$Res, $Val extends PlanTemplate>
 abstract class _$$PlanTemplateImplCopyWith<$Res>
     implements $PlanTemplateCopyWith<$Res> {
   factory _$$PlanTemplateImplCopyWith(
-          _$PlanTemplateImpl value, $Res Function(_$PlanTemplateImpl) then) =
-      __$$PlanTemplateImplCopyWithImpl<$Res>;
+    _$PlanTemplateImpl value,
+    $Res Function(_$PlanTemplateImpl) then,
+  ) = __$$PlanTemplateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      String description,
-      Map<String, String> localizedName,
-      Map<String, String> localizedDescription,
-      String engineFamily,
-      String scheduleMode,
-      List<String> requiredTrainingMaxKeys,
-      Map<String, dynamic> engineConfig,
-      List<Phase> phases});
+  $Res call({
+    String id,
+    String name,
+    String description,
+    Map<String, String> localizedName,
+    Map<String, String> localizedDescription,
+    String engineFamily,
+    String scheduleMode,
+    List<String> requiredTrainingMaxKeys,
+    Map<String, dynamic> engineConfig,
+    List<Phase> phases,
+  });
 }
 
 /// @nodoc
@@ -153,8 +161,9 @@ class __$$PlanTemplateImplCopyWithImpl<$Res>
     extends _$PlanTemplateCopyWithImpl<$Res, _$PlanTemplateImpl>
     implements _$$PlanTemplateImplCopyWith<$Res> {
   __$$PlanTemplateImplCopyWithImpl(
-      _$PlanTemplateImpl _value, $Res Function(_$PlanTemplateImpl) _then)
-      : super(_value, _then);
+    _$PlanTemplateImpl _value,
+    $Res Function(_$PlanTemplateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -170,70 +179,72 @@ class __$$PlanTemplateImplCopyWithImpl<$Res>
     Object? engineConfig = null,
     Object? phases = null,
   }) {
-    return _then(_$PlanTemplateImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      description: null == description
-          ? _value.description
-          : description // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value._localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      localizedDescription: null == localizedDescription
-          ? _value._localizedDescription
-          : localizedDescription // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      engineFamily: null == engineFamily
-          ? _value.engineFamily
-          : engineFamily // ignore: cast_nullable_to_non_nullable
-              as String,
-      scheduleMode: null == scheduleMode
-          ? _value.scheduleMode
-          : scheduleMode // ignore: cast_nullable_to_non_nullable
-              as String,
-      requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
-          ? _value._requiredTrainingMaxKeys
-          : requiredTrainingMaxKeys // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      engineConfig: null == engineConfig
-          ? _value._engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      phases: null == phases
-          ? _value._phases
-          : phases // ignore: cast_nullable_to_non_nullable
-              as List<Phase>,
-    ));
+    return _then(
+      _$PlanTemplateImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        description: null == description
+            ? _value.description
+            : description // ignore: cast_nullable_to_non_nullable
+                  as String,
+        localizedName: null == localizedName
+            ? _value._localizedName
+            : localizedName // ignore: cast_nullable_to_non_nullable
+                  as Map<String, String>,
+        localizedDescription: null == localizedDescription
+            ? _value._localizedDescription
+            : localizedDescription // ignore: cast_nullable_to_non_nullable
+                  as Map<String, String>,
+        engineFamily: null == engineFamily
+            ? _value.engineFamily
+            : engineFamily // ignore: cast_nullable_to_non_nullable
+                  as String,
+        scheduleMode: null == scheduleMode
+            ? _value.scheduleMode
+            : scheduleMode // ignore: cast_nullable_to_non_nullable
+                  as String,
+        requiredTrainingMaxKeys: null == requiredTrainingMaxKeys
+            ? _value._requiredTrainingMaxKeys
+            : requiredTrainingMaxKeys // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        engineConfig: null == engineConfig
+            ? _value._engineConfig
+            : engineConfig // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>,
+        phases: null == phases
+            ? _value._phases
+            : phases // ignore: cast_nullable_to_non_nullable
+                  as List<Phase>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$PlanTemplateImpl implements _PlanTemplate {
-  const _$PlanTemplateImpl(
-      {required this.id,
-      required this.name,
-      required this.description,
-      final Map<String, String> localizedName = const <String, String>{},
-      final Map<String, String> localizedDescription = const <String, String>{},
-      this.engineFamily = 'legacy',
-      this.scheduleMode = PlanScheduleModes.legacy,
-      final List<String> requiredTrainingMaxKeys = const [],
-      final Map<String, dynamic> engineConfig = const <String, dynamic>{},
-      required final List<Phase> phases})
-      : _localizedName = localizedName,
-        _localizedDescription = localizedDescription,
-        _requiredTrainingMaxKeys = requiredTrainingMaxKeys,
-        _engineConfig = engineConfig,
-        _phases = phases;
+  const _$PlanTemplateImpl({
+    required this.id,
+    required this.name,
+    required this.description,
+    final Map<String, String> localizedName = const <String, String>{},
+    final Map<String, String> localizedDescription = const <String, String>{},
+    this.engineFamily = 'legacy',
+    this.scheduleMode = PlanScheduleModes.legacy,
+    final List<String> requiredTrainingMaxKeys = const [],
+    final Map<String, dynamic> engineConfig = const <String, dynamic>{},
+    required final List<Phase> phases,
+  }) : _localizedName = localizedName,
+       _localizedDescription = localizedDescription,
+       _requiredTrainingMaxKeys = requiredTrainingMaxKeys,
+       _engineConfig = engineConfig,
+       _phases = phases;
 
   factory _$PlanTemplateImpl.fromJson(Map<String, dynamic> json) =>
       _$$PlanTemplateImplFromJson(json);
@@ -310,35 +321,44 @@ class _$PlanTemplateImpl implements _PlanTemplate {
             (identical(other.name, name) || other.name == name) &&
             (identical(other.description, description) ||
                 other.description == description) &&
-            const DeepCollectionEquality()
-                .equals(other._localizedName, _localizedName) &&
-            const DeepCollectionEquality()
-                .equals(other._localizedDescription, _localizedDescription) &&
+            const DeepCollectionEquality().equals(
+              other._localizedName,
+              _localizedName,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._localizedDescription,
+              _localizedDescription,
+            ) &&
             (identical(other.engineFamily, engineFamily) ||
                 other.engineFamily == engineFamily) &&
             (identical(other.scheduleMode, scheduleMode) ||
                 other.scheduleMode == scheduleMode) &&
             const DeepCollectionEquality().equals(
-                other._requiredTrainingMaxKeys, _requiredTrainingMaxKeys) &&
-            const DeepCollectionEquality()
-                .equals(other._engineConfig, _engineConfig) &&
+              other._requiredTrainingMaxKeys,
+              _requiredTrainingMaxKeys,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._engineConfig,
+              _engineConfig,
+            ) &&
             const DeepCollectionEquality().equals(other._phases, _phases));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      name,
-      description,
-      const DeepCollectionEquality().hash(_localizedName),
-      const DeepCollectionEquality().hash(_localizedDescription),
-      engineFamily,
-      scheduleMode,
-      const DeepCollectionEquality().hash(_requiredTrainingMaxKeys),
-      const DeepCollectionEquality().hash(_engineConfig),
-      const DeepCollectionEquality().hash(_phases));
+    runtimeType,
+    id,
+    name,
+    description,
+    const DeepCollectionEquality().hash(_localizedName),
+    const DeepCollectionEquality().hash(_localizedDescription),
+    engineFamily,
+    scheduleMode,
+    const DeepCollectionEquality().hash(_requiredTrainingMaxKeys),
+    const DeepCollectionEquality().hash(_engineConfig),
+    const DeepCollectionEquality().hash(_phases),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -348,24 +368,23 @@ class _$PlanTemplateImpl implements _PlanTemplate {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$PlanTemplateImplToJson(
-      this,
-    );
+    return _$$PlanTemplateImplToJson(this);
   }
 }
 
 abstract class _PlanTemplate implements PlanTemplate {
-  const factory _PlanTemplate(
-      {required final String id,
-      required final String name,
-      required final String description,
-      final Map<String, String> localizedName,
-      final Map<String, String> localizedDescription,
-      final String engineFamily,
-      final String scheduleMode,
-      final List<String> requiredTrainingMaxKeys,
-      final Map<String, dynamic> engineConfig,
-      required final List<Phase> phases}) = _$PlanTemplateImpl;
+  const factory _PlanTemplate({
+    required final String id,
+    required final String name,
+    required final String description,
+    final Map<String, String> localizedName,
+    final Map<String, String> localizedDescription,
+    final String engineFamily,
+    final String scheduleMode,
+    final List<String> requiredTrainingMaxKeys,
+    final Map<String, dynamic> engineConfig,
+    required final List<Phase> phases,
+  }) = _$PlanTemplateImpl;
 
   factory _PlanTemplate.fromJson(Map<String, dynamic> json) =
       _$PlanTemplateImpl.fromJson;
@@ -431,33 +450,33 @@ class _$PhaseCopyWithImpl<$Res, $Val extends Phase>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? id = null,
-    Object? name = null,
-    Object? workouts = null,
-  }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      workouts: null == workouts
-          ? _value.workouts
-          : workouts // ignore: cast_nullable_to_non_nullable
-              as List<Workout>,
-    ) as $Val);
+  $Res call({Object? id = null, Object? name = null, Object? workouts = null}) {
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            workouts: null == workouts
+                ? _value.workouts
+                : workouts // ignore: cast_nullable_to_non_nullable
+                      as List<Workout>,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$PhaseImplCopyWith<$Res> implements $PhaseCopyWith<$Res> {
   factory _$$PhaseImplCopyWith(
-          _$PhaseImpl value, $Res Function(_$PhaseImpl) then) =
-      __$$PhaseImplCopyWithImpl<$Res>;
+    _$PhaseImpl value,
+    $Res Function(_$PhaseImpl) then,
+  ) = __$$PhaseImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({String id, String name, List<Workout> workouts});
@@ -468,41 +487,40 @@ class __$$PhaseImplCopyWithImpl<$Res>
     extends _$PhaseCopyWithImpl<$Res, _$PhaseImpl>
     implements _$$PhaseImplCopyWith<$Res> {
   __$$PhaseImplCopyWithImpl(
-      _$PhaseImpl _value, $Res Function(_$PhaseImpl) _then)
-      : super(_value, _then);
+    _$PhaseImpl _value,
+    $Res Function(_$PhaseImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? id = null,
-    Object? name = null,
-    Object? workouts = null,
-  }) {
-    return _then(_$PhaseImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      workouts: null == workouts
-          ? _value._workouts
-          : workouts // ignore: cast_nullable_to_non_nullable
-              as List<Workout>,
-    ));
+  $Res call({Object? id = null, Object? name = null, Object? workouts = null}) {
+    return _then(
+      _$PhaseImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        workouts: null == workouts
+            ? _value._workouts
+            : workouts // ignore: cast_nullable_to_non_nullable
+                  as List<Workout>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$PhaseImpl implements _Phase {
-  const _$PhaseImpl(
-      {required this.id,
-      required this.name,
-      required final List<Workout> workouts})
-      : _workouts = workouts;
+  const _$PhaseImpl({
+    required this.id,
+    required this.name,
+    required final List<Workout> workouts,
+  }) : _workouts = workouts;
 
   factory _$PhaseImpl.fromJson(Map<String, dynamic> json) =>
       _$$PhaseImplFromJson(json);
@@ -537,7 +555,11 @@ class _$PhaseImpl implements _Phase {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType, id, name, const DeepCollectionEquality().hash(_workouts));
+    runtimeType,
+    id,
+    name,
+    const DeepCollectionEquality().hash(_workouts),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -547,17 +569,16 @@ class _$PhaseImpl implements _Phase {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$PhaseImplToJson(
-      this,
-    );
+    return _$$PhaseImplToJson(this);
   }
 }
 
 abstract class _Phase implements Phase {
-  const factory _Phase(
-      {required final String id,
-      required final String name,
-      required final List<Workout> workouts}) = _$PhaseImpl;
+  const factory _Phase({
+    required final String id,
+    required final String name,
+    required final List<Workout> workouts,
+  }) = _$PhaseImpl;
 
   factory _Phase.fromJson(Map<String, dynamic> json) = _$PhaseImpl.fromJson;
 
@@ -598,14 +619,15 @@ abstract class $WorkoutCopyWith<$Res> {
   factory $WorkoutCopyWith(Workout value, $Res Function(Workout) then) =
       _$WorkoutCopyWithImpl<$Res, Workout>;
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      Map<String, String> localizedName,
-      String dayLabel,
-      Map<String, String> localizedDayLabel,
-      int estimatedDurationMinutes,
-      List<Exercise> exercises});
+  $Res call({
+    String id,
+    String name,
+    Map<String, String> localizedName,
+    String dayLabel,
+    Map<String, String> localizedDayLabel,
+    int estimatedDurationMinutes,
+    List<Exercise> exercises,
+  });
 }
 
 /// @nodoc
@@ -629,54 +651,59 @@ class _$WorkoutCopyWithImpl<$Res, $Val extends Workout>
     Object? estimatedDurationMinutes = null,
     Object? exercises = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value.localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedDayLabel: null == localizedDayLabel
-          ? _value.localizedDayLabel
-          : localizedDayLabel // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exercises: null == exercises
-          ? _value.exercises
-          : exercises // ignore: cast_nullable_to_non_nullable
-              as List<Exercise>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            localizedName: null == localizedName
+                ? _value.localizedName
+                : localizedName // ignore: cast_nullable_to_non_nullable
+                      as Map<String, String>,
+            dayLabel: null == dayLabel
+                ? _value.dayLabel
+                : dayLabel // ignore: cast_nullable_to_non_nullable
+                      as String,
+            localizedDayLabel: null == localizedDayLabel
+                ? _value.localizedDayLabel
+                : localizedDayLabel // ignore: cast_nullable_to_non_nullable
+                      as Map<String, String>,
+            estimatedDurationMinutes: null == estimatedDurationMinutes
+                ? _value.estimatedDurationMinutes
+                : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                      as int,
+            exercises: null == exercises
+                ? _value.exercises
+                : exercises // ignore: cast_nullable_to_non_nullable
+                      as List<Exercise>,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$WorkoutImplCopyWith<$Res> implements $WorkoutCopyWith<$Res> {
   factory _$$WorkoutImplCopyWith(
-          _$WorkoutImpl value, $Res Function(_$WorkoutImpl) then) =
-      __$$WorkoutImplCopyWithImpl<$Res>;
+    _$WorkoutImpl value,
+    $Res Function(_$WorkoutImpl) then,
+  ) = __$$WorkoutImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      Map<String, String> localizedName,
-      String dayLabel,
-      Map<String, String> localizedDayLabel,
-      int estimatedDurationMinutes,
-      List<Exercise> exercises});
+  $Res call({
+    String id,
+    String name,
+    Map<String, String> localizedName,
+    String dayLabel,
+    Map<String, String> localizedDayLabel,
+    int estimatedDurationMinutes,
+    List<Exercise> exercises,
+  });
 }
 
 /// @nodoc
@@ -684,8 +711,9 @@ class __$$WorkoutImplCopyWithImpl<$Res>
     extends _$WorkoutCopyWithImpl<$Res, _$WorkoutImpl>
     implements _$$WorkoutImplCopyWith<$Res> {
   __$$WorkoutImplCopyWithImpl(
-      _$WorkoutImpl _value, $Res Function(_$WorkoutImpl) _then)
-      : super(_value, _then);
+    _$WorkoutImpl _value,
+    $Res Function(_$WorkoutImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -698,53 +726,55 @@ class __$$WorkoutImplCopyWithImpl<$Res>
     Object? estimatedDurationMinutes = null,
     Object? exercises = null,
   }) {
-    return _then(_$WorkoutImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value._localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      dayLabel: null == dayLabel
-          ? _value.dayLabel
-          : dayLabel // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedDayLabel: null == localizedDayLabel
-          ? _value._localizedDayLabel
-          : localizedDayLabel // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      estimatedDurationMinutes: null == estimatedDurationMinutes
-          ? _value.estimatedDurationMinutes
-          : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
-              as int,
-      exercises: null == exercises
-          ? _value._exercises
-          : exercises // ignore: cast_nullable_to_non_nullable
-              as List<Exercise>,
-    ));
+    return _then(
+      _$WorkoutImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        localizedName: null == localizedName
+            ? _value._localizedName
+            : localizedName // ignore: cast_nullable_to_non_nullable
+                  as Map<String, String>,
+        dayLabel: null == dayLabel
+            ? _value.dayLabel
+            : dayLabel // ignore: cast_nullable_to_non_nullable
+                  as String,
+        localizedDayLabel: null == localizedDayLabel
+            ? _value._localizedDayLabel
+            : localizedDayLabel // ignore: cast_nullable_to_non_nullable
+                  as Map<String, String>,
+        estimatedDurationMinutes: null == estimatedDurationMinutes
+            ? _value.estimatedDurationMinutes
+            : estimatedDurationMinutes // ignore: cast_nullable_to_non_nullable
+                  as int,
+        exercises: null == exercises
+            ? _value._exercises
+            : exercises // ignore: cast_nullable_to_non_nullable
+                  as List<Exercise>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$WorkoutImpl implements _Workout {
-  const _$WorkoutImpl(
-      {required this.id,
-      required this.name,
-      final Map<String, String> localizedName = const <String, String>{},
-      this.dayLabel = '',
-      final Map<String, String> localizedDayLabel = const <String, String>{},
-      this.estimatedDurationMinutes = 45,
-      required final List<Exercise> exercises})
-      : _localizedName = localizedName,
-        _localizedDayLabel = localizedDayLabel,
-        _exercises = exercises;
+  const _$WorkoutImpl({
+    required this.id,
+    required this.name,
+    final Map<String, String> localizedName = const <String, String>{},
+    this.dayLabel = '',
+    final Map<String, String> localizedDayLabel = const <String, String>{},
+    this.estimatedDurationMinutes = 45,
+    required final List<Exercise> exercises,
+  }) : _localizedName = localizedName,
+       _localizedDayLabel = localizedDayLabel,
+       _exercises = exercises;
 
   factory _$WorkoutImpl.fromJson(Map<String, dynamic> json) =>
       _$$WorkoutImplFromJson(json);
@@ -798,30 +828,39 @@ class _$WorkoutImpl implements _Workout {
             other is _$WorkoutImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            const DeepCollectionEquality()
-                .equals(other._localizedName, _localizedName) &&
+            const DeepCollectionEquality().equals(
+              other._localizedName,
+              _localizedName,
+            ) &&
             (identical(other.dayLabel, dayLabel) ||
                 other.dayLabel == dayLabel) &&
-            const DeepCollectionEquality()
-                .equals(other._localizedDayLabel, _localizedDayLabel) &&
+            const DeepCollectionEquality().equals(
+              other._localizedDayLabel,
+              _localizedDayLabel,
+            ) &&
             (identical(
-                    other.estimatedDurationMinutes, estimatedDurationMinutes) ||
+                  other.estimatedDurationMinutes,
+                  estimatedDurationMinutes,
+                ) ||
                 other.estimatedDurationMinutes == estimatedDurationMinutes) &&
-            const DeepCollectionEquality()
-                .equals(other._exercises, _exercises));
+            const DeepCollectionEquality().equals(
+              other._exercises,
+              _exercises,
+            ));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      name,
-      const DeepCollectionEquality().hash(_localizedName),
-      dayLabel,
-      const DeepCollectionEquality().hash(_localizedDayLabel),
-      estimatedDurationMinutes,
-      const DeepCollectionEquality().hash(_exercises));
+    runtimeType,
+    id,
+    name,
+    const DeepCollectionEquality().hash(_localizedName),
+    dayLabel,
+    const DeepCollectionEquality().hash(_localizedDayLabel),
+    estimatedDurationMinutes,
+    const DeepCollectionEquality().hash(_exercises),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -831,21 +870,20 @@ class _$WorkoutImpl implements _Workout {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$WorkoutImplToJson(
-      this,
-    );
+    return _$$WorkoutImplToJson(this);
   }
 }
 
 abstract class _Workout implements Workout {
-  const factory _Workout(
-      {required final String id,
-      required final String name,
-      final Map<String, String> localizedName,
-      final String dayLabel,
-      final Map<String, String> localizedDayLabel,
-      final int estimatedDurationMinutes,
-      required final List<Exercise> exercises}) = _$WorkoutImpl;
+  const factory _Workout({
+    required final String id,
+    required final String name,
+    final Map<String, String> localizedName,
+    final String dayLabel,
+    final Map<String, String> localizedDayLabel,
+    final int estimatedDurationMinutes,
+    required final List<Exercise> exercises,
+  }) = _$WorkoutImpl;
 
   factory _Workout.fromJson(Map<String, dynamic> json) = _$WorkoutImpl.fromJson;
 
@@ -902,21 +940,22 @@ abstract class $ExerciseCopyWith<$Res> {
   factory $ExerciseCopyWith(Exercise value, $Res Function(Exercise) then) =
       _$ExerciseCopyWithImpl<$Res, Exercise>;
   @useResult
-  $Res call(
-      {String id,
-      String exerciseId,
-      String name,
-      Map<String, String> localizedName,
-      double initialBaseWeight,
-      String tier,
-      int restSeconds,
-      String? trainingMaxLift,
-      double trainingMaxMultiplier,
-      double roundingIncrement,
-      String loadUnit,
-      String equipmentType,
-      Map<String, dynamic> engineConfig,
-      List<SetScheme> stages});
+  $Res call({
+    String id,
+    String exerciseId,
+    String name,
+    Map<String, String> localizedName,
+    double initialBaseWeight,
+    String tier,
+    int restSeconds,
+    String? trainingMaxLift,
+    double trainingMaxMultiplier,
+    double roundingIncrement,
+    String loadUnit,
+    String equipmentType,
+    Map<String, dynamic> engineConfig,
+    List<SetScheme> stages,
+  });
 }
 
 /// @nodoc
@@ -947,64 +986,67 @@ class _$ExerciseCopyWithImpl<$Res, $Val extends Exercise>
     Object? engineConfig = null,
     Object? stages = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value.localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      initialBaseWeight: null == initialBaseWeight
-          ? _value.initialBaseWeight
-          : initialBaseWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      tier: null == tier
-          ? _value.tier
-          : tier // ignore: cast_nullable_to_non_nullable
-              as String,
-      restSeconds: null == restSeconds
-          ? _value.restSeconds
-          : restSeconds // ignore: cast_nullable_to_non_nullable
-              as int,
-      trainingMaxLift: freezed == trainingMaxLift
-          ? _value.trainingMaxLift
-          : trainingMaxLift // ignore: cast_nullable_to_non_nullable
-              as String?,
-      trainingMaxMultiplier: null == trainingMaxMultiplier
-          ? _value.trainingMaxMultiplier
-          : trainingMaxMultiplier // ignore: cast_nullable_to_non_nullable
-              as double,
-      roundingIncrement: null == roundingIncrement
-          ? _value.roundingIncrement
-          : roundingIncrement // ignore: cast_nullable_to_non_nullable
-              as double,
-      loadUnit: null == loadUnit
-          ? _value.loadUnit
-          : loadUnit // ignore: cast_nullable_to_non_nullable
-              as String,
-      equipmentType: null == equipmentType
-          ? _value.equipmentType
-          : equipmentType // ignore: cast_nullable_to_non_nullable
-              as String,
-      engineConfig: null == engineConfig
-          ? _value.engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      stages: null == stages
-          ? _value.stages
-          : stages // ignore: cast_nullable_to_non_nullable
-              as List<SetScheme>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            exerciseId: null == exerciseId
+                ? _value.exerciseId
+                : exerciseId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            localizedName: null == localizedName
+                ? _value.localizedName
+                : localizedName // ignore: cast_nullable_to_non_nullable
+                      as Map<String, String>,
+            initialBaseWeight: null == initialBaseWeight
+                ? _value.initialBaseWeight
+                : initialBaseWeight // ignore: cast_nullable_to_non_nullable
+                      as double,
+            tier: null == tier
+                ? _value.tier
+                : tier // ignore: cast_nullable_to_non_nullable
+                      as String,
+            restSeconds: null == restSeconds
+                ? _value.restSeconds
+                : restSeconds // ignore: cast_nullable_to_non_nullable
+                      as int,
+            trainingMaxLift: freezed == trainingMaxLift
+                ? _value.trainingMaxLift
+                : trainingMaxLift // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            trainingMaxMultiplier: null == trainingMaxMultiplier
+                ? _value.trainingMaxMultiplier
+                : trainingMaxMultiplier // ignore: cast_nullable_to_non_nullable
+                      as double,
+            roundingIncrement: null == roundingIncrement
+                ? _value.roundingIncrement
+                : roundingIncrement // ignore: cast_nullable_to_non_nullable
+                      as double,
+            loadUnit: null == loadUnit
+                ? _value.loadUnit
+                : loadUnit // ignore: cast_nullable_to_non_nullable
+                      as String,
+            equipmentType: null == equipmentType
+                ? _value.equipmentType
+                : equipmentType // ignore: cast_nullable_to_non_nullable
+                      as String,
+            engineConfig: null == engineConfig
+                ? _value.engineConfig
+                : engineConfig // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>,
+            stages: null == stages
+                ? _value.stages
+                : stages // ignore: cast_nullable_to_non_nullable
+                      as List<SetScheme>,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -1012,25 +1054,27 @@ class _$ExerciseCopyWithImpl<$Res, $Val extends Exercise>
 abstract class _$$ExerciseImplCopyWith<$Res>
     implements $ExerciseCopyWith<$Res> {
   factory _$$ExerciseImplCopyWith(
-          _$ExerciseImpl value, $Res Function(_$ExerciseImpl) then) =
-      __$$ExerciseImplCopyWithImpl<$Res>;
+    _$ExerciseImpl value,
+    $Res Function(_$ExerciseImpl) then,
+  ) = __$$ExerciseImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String exerciseId,
-      String name,
-      Map<String, String> localizedName,
-      double initialBaseWeight,
-      String tier,
-      int restSeconds,
-      String? trainingMaxLift,
-      double trainingMaxMultiplier,
-      double roundingIncrement,
-      String loadUnit,
-      String equipmentType,
-      Map<String, dynamic> engineConfig,
-      List<SetScheme> stages});
+  $Res call({
+    String id,
+    String exerciseId,
+    String name,
+    Map<String, String> localizedName,
+    double initialBaseWeight,
+    String tier,
+    int restSeconds,
+    String? trainingMaxLift,
+    double trainingMaxMultiplier,
+    double roundingIncrement,
+    String loadUnit,
+    String equipmentType,
+    Map<String, dynamic> engineConfig,
+    List<SetScheme> stages,
+  });
 }
 
 /// @nodoc
@@ -1038,8 +1082,9 @@ class __$$ExerciseImplCopyWithImpl<$Res>
     extends _$ExerciseCopyWithImpl<$Res, _$ExerciseImpl>
     implements _$$ExerciseImplCopyWith<$Res> {
   __$$ExerciseImplCopyWithImpl(
-      _$ExerciseImpl _value, $Res Function(_$ExerciseImpl) _then)
-      : super(_value, _then);
+    _$ExerciseImpl _value,
+    $Res Function(_$ExerciseImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -1059,88 +1104,90 @@ class __$$ExerciseImplCopyWithImpl<$Res>
     Object? engineConfig = null,
     Object? stages = null,
   }) {
-    return _then(_$ExerciseImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      exerciseId: null == exerciseId
-          ? _value.exerciseId
-          : exerciseId // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      localizedName: null == localizedName
-          ? _value._localizedName
-          : localizedName // ignore: cast_nullable_to_non_nullable
-              as Map<String, String>,
-      initialBaseWeight: null == initialBaseWeight
-          ? _value.initialBaseWeight
-          : initialBaseWeight // ignore: cast_nullable_to_non_nullable
-              as double,
-      tier: null == tier
-          ? _value.tier
-          : tier // ignore: cast_nullable_to_non_nullable
-              as String,
-      restSeconds: null == restSeconds
-          ? _value.restSeconds
-          : restSeconds // ignore: cast_nullable_to_non_nullable
-              as int,
-      trainingMaxLift: freezed == trainingMaxLift
-          ? _value.trainingMaxLift
-          : trainingMaxLift // ignore: cast_nullable_to_non_nullable
-              as String?,
-      trainingMaxMultiplier: null == trainingMaxMultiplier
-          ? _value.trainingMaxMultiplier
-          : trainingMaxMultiplier // ignore: cast_nullable_to_non_nullable
-              as double,
-      roundingIncrement: null == roundingIncrement
-          ? _value.roundingIncrement
-          : roundingIncrement // ignore: cast_nullable_to_non_nullable
-              as double,
-      loadUnit: null == loadUnit
-          ? _value.loadUnit
-          : loadUnit // ignore: cast_nullable_to_non_nullable
-              as String,
-      equipmentType: null == equipmentType
-          ? _value.equipmentType
-          : equipmentType // ignore: cast_nullable_to_non_nullable
-              as String,
-      engineConfig: null == engineConfig
-          ? _value._engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      stages: null == stages
-          ? _value._stages
-          : stages // ignore: cast_nullable_to_non_nullable
-              as List<SetScheme>,
-    ));
+    return _then(
+      _$ExerciseImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        exerciseId: null == exerciseId
+            ? _value.exerciseId
+            : exerciseId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        localizedName: null == localizedName
+            ? _value._localizedName
+            : localizedName // ignore: cast_nullable_to_non_nullable
+                  as Map<String, String>,
+        initialBaseWeight: null == initialBaseWeight
+            ? _value.initialBaseWeight
+            : initialBaseWeight // ignore: cast_nullable_to_non_nullable
+                  as double,
+        tier: null == tier
+            ? _value.tier
+            : tier // ignore: cast_nullable_to_non_nullable
+                  as String,
+        restSeconds: null == restSeconds
+            ? _value.restSeconds
+            : restSeconds // ignore: cast_nullable_to_non_nullable
+                  as int,
+        trainingMaxLift: freezed == trainingMaxLift
+            ? _value.trainingMaxLift
+            : trainingMaxLift // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        trainingMaxMultiplier: null == trainingMaxMultiplier
+            ? _value.trainingMaxMultiplier
+            : trainingMaxMultiplier // ignore: cast_nullable_to_non_nullable
+                  as double,
+        roundingIncrement: null == roundingIncrement
+            ? _value.roundingIncrement
+            : roundingIncrement // ignore: cast_nullable_to_non_nullable
+                  as double,
+        loadUnit: null == loadUnit
+            ? _value.loadUnit
+            : loadUnit // ignore: cast_nullable_to_non_nullable
+                  as String,
+        equipmentType: null == equipmentType
+            ? _value.equipmentType
+            : equipmentType // ignore: cast_nullable_to_non_nullable
+                  as String,
+        engineConfig: null == engineConfig
+            ? _value._engineConfig
+            : engineConfig // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>,
+        stages: null == stages
+            ? _value._stages
+            : stages // ignore: cast_nullable_to_non_nullable
+                  as List<SetScheme>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$ExerciseImpl implements _Exercise {
-  const _$ExerciseImpl(
-      {required this.id,
-      required this.exerciseId,
-      required this.name,
-      final Map<String, String> localizedName = const <String, String>{},
-      this.initialBaseWeight = 0,
-      this.tier = 'T2',
-      this.restSeconds = 120,
-      this.trainingMaxLift,
-      this.trainingMaxMultiplier = 1.0,
-      this.roundingIncrement = 2.5,
-      this.loadUnit = LoadUnits.kg,
-      this.equipmentType = EquipmentTypes.general,
-      final Map<String, dynamic> engineConfig = const <String, dynamic>{},
-      required final List<SetScheme> stages})
-      : _localizedName = localizedName,
-        _engineConfig = engineConfig,
-        _stages = stages;
+  const _$ExerciseImpl({
+    required this.id,
+    required this.exerciseId,
+    required this.name,
+    final Map<String, String> localizedName = const <String, String>{},
+    this.initialBaseWeight = 0,
+    this.tier = 'T2',
+    this.restSeconds = 120,
+    this.trainingMaxLift,
+    this.trainingMaxMultiplier = 1.0,
+    this.roundingIncrement = 2.5,
+    this.loadUnit = LoadUnits.kg,
+    this.equipmentType = EquipmentTypes.general,
+    final Map<String, dynamic> engineConfig = const <String, dynamic>{},
+    required final List<SetScheme> stages,
+  }) : _localizedName = localizedName,
+       _engineConfig = engineConfig,
+       _stages = stages;
 
   factory _$ExerciseImpl.fromJson(Map<String, dynamic> json) =>
       _$$ExerciseImplFromJson(json);
@@ -1149,7 +1196,7 @@ class _$ExerciseImpl implements _Exercise {
   final String id;
   @override
   final String exerciseId;
-// global ID like 'squat', 'bench_press'
+  // global ID like 'squat', 'bench_press'
   @override
   final String name;
   final Map<String, String> _localizedName;
@@ -1215,8 +1262,10 @@ class _$ExerciseImpl implements _Exercise {
             (identical(other.exerciseId, exerciseId) ||
                 other.exerciseId == exerciseId) &&
             (identical(other.name, name) || other.name == name) &&
-            const DeepCollectionEquality()
-                .equals(other._localizedName, _localizedName) &&
+            const DeepCollectionEquality().equals(
+              other._localizedName,
+              _localizedName,
+            ) &&
             (identical(other.initialBaseWeight, initialBaseWeight) ||
                 other.initialBaseWeight == initialBaseWeight) &&
             (identical(other.tier, tier) || other.tier == tier) &&
@@ -1232,29 +1281,32 @@ class _$ExerciseImpl implements _Exercise {
                 other.loadUnit == loadUnit) &&
             (identical(other.equipmentType, equipmentType) ||
                 other.equipmentType == equipmentType) &&
-            const DeepCollectionEquality()
-                .equals(other._engineConfig, _engineConfig) &&
+            const DeepCollectionEquality().equals(
+              other._engineConfig,
+              _engineConfig,
+            ) &&
             const DeepCollectionEquality().equals(other._stages, _stages));
   }
 
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      exerciseId,
-      name,
-      const DeepCollectionEquality().hash(_localizedName),
-      initialBaseWeight,
-      tier,
-      restSeconds,
-      trainingMaxLift,
-      trainingMaxMultiplier,
-      roundingIncrement,
-      loadUnit,
-      equipmentType,
-      const DeepCollectionEquality().hash(_engineConfig),
-      const DeepCollectionEquality().hash(_stages));
+    runtimeType,
+    id,
+    exerciseId,
+    name,
+    const DeepCollectionEquality().hash(_localizedName),
+    initialBaseWeight,
+    tier,
+    restSeconds,
+    trainingMaxLift,
+    trainingMaxMultiplier,
+    roundingIncrement,
+    loadUnit,
+    equipmentType,
+    const DeepCollectionEquality().hash(_engineConfig),
+    const DeepCollectionEquality().hash(_stages),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -1264,28 +1316,27 @@ class _$ExerciseImpl implements _Exercise {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$ExerciseImplToJson(
-      this,
-    );
+    return _$$ExerciseImplToJson(this);
   }
 }
 
 abstract class _Exercise implements Exercise {
-  const factory _Exercise(
-      {required final String id,
-      required final String exerciseId,
-      required final String name,
-      final Map<String, String> localizedName,
-      final double initialBaseWeight,
-      final String tier,
-      final int restSeconds,
-      final String? trainingMaxLift,
-      final double trainingMaxMultiplier,
-      final double roundingIncrement,
-      final String loadUnit,
-      final String equipmentType,
-      final Map<String, dynamic> engineConfig,
-      required final List<SetScheme> stages}) = _$ExerciseImpl;
+  const factory _Exercise({
+    required final String id,
+    required final String exerciseId,
+    required final String name,
+    final Map<String, String> localizedName,
+    final double initialBaseWeight,
+    final String tier,
+    final int restSeconds,
+    final String? trainingMaxLift,
+    final double trainingMaxMultiplier,
+    final double roundingIncrement,
+    final String loadUnit,
+    final String equipmentType,
+    final Map<String, dynamic> engineConfig,
+    required final List<SetScheme> stages,
+  }) = _$ExerciseImpl;
 
   factory _Exercise.fromJson(Map<String, dynamic> json) =
       _$ExerciseImpl.fromJson;
@@ -1349,14 +1400,15 @@ abstract class $SetSchemeCopyWith<$Res> {
   factory $SetSchemeCopyWith(SetScheme value, $Res Function(SetScheme) then) =
       _$SetSchemeCopyWithImpl<$Res, SetScheme>;
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      double basePercent,
-      int order,
-      Map<String, dynamic> engineConfig,
-      List<SetDefinition> sets,
-      List<ProgressionRule> rules});
+  $Res call({
+    String id,
+    String name,
+    double basePercent,
+    int order,
+    Map<String, dynamic> engineConfig,
+    List<SetDefinition> sets,
+    List<ProgressionRule> rules,
+  });
 }
 
 /// @nodoc
@@ -1380,36 +1432,39 @@ class _$SetSchemeCopyWithImpl<$Res, $Val extends SetScheme>
     Object? sets = null,
     Object? rules = null,
   }) {
-    return _then(_value.copyWith(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      basePercent: null == basePercent
-          ? _value.basePercent
-          : basePercent // ignore: cast_nullable_to_non_nullable
-              as double,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
-      engineConfig: null == engineConfig
-          ? _value.engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      sets: null == sets
-          ? _value.sets
-          : sets // ignore: cast_nullable_to_non_nullable
-              as List<SetDefinition>,
-      rules: null == rules
-          ? _value.rules
-          : rules // ignore: cast_nullable_to_non_nullable
-              as List<ProgressionRule>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            id: null == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                      as String,
+            name: null == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                      as String,
+            basePercent: null == basePercent
+                ? _value.basePercent
+                : basePercent // ignore: cast_nullable_to_non_nullable
+                      as double,
+            order: null == order
+                ? _value.order
+                : order // ignore: cast_nullable_to_non_nullable
+                      as int,
+            engineConfig: null == engineConfig
+                ? _value.engineConfig
+                : engineConfig // ignore: cast_nullable_to_non_nullable
+                      as Map<String, dynamic>,
+            sets: null == sets
+                ? _value.sets
+                : sets // ignore: cast_nullable_to_non_nullable
+                      as List<SetDefinition>,
+            rules: null == rules
+                ? _value.rules
+                : rules // ignore: cast_nullable_to_non_nullable
+                      as List<ProgressionRule>,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -1417,18 +1472,20 @@ class _$SetSchemeCopyWithImpl<$Res, $Val extends SetScheme>
 abstract class _$$SetSchemeImplCopyWith<$Res>
     implements $SetSchemeCopyWith<$Res> {
   factory _$$SetSchemeImplCopyWith(
-          _$SetSchemeImpl value, $Res Function(_$SetSchemeImpl) then) =
-      __$$SetSchemeImplCopyWithImpl<$Res>;
+    _$SetSchemeImpl value,
+    $Res Function(_$SetSchemeImpl) then,
+  ) = __$$SetSchemeImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String id,
-      String name,
-      double basePercent,
-      int order,
-      Map<String, dynamic> engineConfig,
-      List<SetDefinition> sets,
-      List<ProgressionRule> rules});
+  $Res call({
+    String id,
+    String name,
+    double basePercent,
+    int order,
+    Map<String, dynamic> engineConfig,
+    List<SetDefinition> sets,
+    List<ProgressionRule> rules,
+  });
 }
 
 /// @nodoc
@@ -1436,8 +1493,9 @@ class __$$SetSchemeImplCopyWithImpl<$Res>
     extends _$SetSchemeCopyWithImpl<$Res, _$SetSchemeImpl>
     implements _$$SetSchemeImplCopyWith<$Res> {
   __$$SetSchemeImplCopyWithImpl(
-      _$SetSchemeImpl _value, $Res Function(_$SetSchemeImpl) _then)
-      : super(_value, _then);
+    _$SetSchemeImpl _value,
+    $Res Function(_$SetSchemeImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -1450,53 +1508,55 @@ class __$$SetSchemeImplCopyWithImpl<$Res>
     Object? sets = null,
     Object? rules = null,
   }) {
-    return _then(_$SetSchemeImpl(
-      id: null == id
-          ? _value.id
-          : id // ignore: cast_nullable_to_non_nullable
-              as String,
-      name: null == name
-          ? _value.name
-          : name // ignore: cast_nullable_to_non_nullable
-              as String,
-      basePercent: null == basePercent
-          ? _value.basePercent
-          : basePercent // ignore: cast_nullable_to_non_nullable
-              as double,
-      order: null == order
-          ? _value.order
-          : order // ignore: cast_nullable_to_non_nullable
-              as int,
-      engineConfig: null == engineConfig
-          ? _value._engineConfig
-          : engineConfig // ignore: cast_nullable_to_non_nullable
-              as Map<String, dynamic>,
-      sets: null == sets
-          ? _value._sets
-          : sets // ignore: cast_nullable_to_non_nullable
-              as List<SetDefinition>,
-      rules: null == rules
-          ? _value._rules
-          : rules // ignore: cast_nullable_to_non_nullable
-              as List<ProgressionRule>,
-    ));
+    return _then(
+      _$SetSchemeImpl(
+        id: null == id
+            ? _value.id
+            : id // ignore: cast_nullable_to_non_nullable
+                  as String,
+        name: null == name
+            ? _value.name
+            : name // ignore: cast_nullable_to_non_nullable
+                  as String,
+        basePercent: null == basePercent
+            ? _value.basePercent
+            : basePercent // ignore: cast_nullable_to_non_nullable
+                  as double,
+        order: null == order
+            ? _value.order
+            : order // ignore: cast_nullable_to_non_nullable
+                  as int,
+        engineConfig: null == engineConfig
+            ? _value._engineConfig
+            : engineConfig // ignore: cast_nullable_to_non_nullable
+                  as Map<String, dynamic>,
+        sets: null == sets
+            ? _value._sets
+            : sets // ignore: cast_nullable_to_non_nullable
+                  as List<SetDefinition>,
+        rules: null == rules
+            ? _value._rules
+            : rules // ignore: cast_nullable_to_non_nullable
+                  as List<ProgressionRule>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$SetSchemeImpl implements _SetScheme {
-  const _$SetSchemeImpl(
-      {required this.id,
-      required this.name,
-      this.basePercent = 1.0,
-      this.order = 0,
-      final Map<String, dynamic> engineConfig = const <String, dynamic>{},
-      required final List<SetDefinition> sets,
-      required final List<ProgressionRule> rules})
-      : _engineConfig = engineConfig,
-        _sets = sets,
-        _rules = rules;
+  const _$SetSchemeImpl({
+    required this.id,
+    required this.name,
+    this.basePercent = 1.0,
+    this.order = 0,
+    final Map<String, dynamic> engineConfig = const <String, dynamic>{},
+    required final List<SetDefinition> sets,
+    required final List<ProgressionRule> rules,
+  }) : _engineConfig = engineConfig,
+       _sets = sets,
+       _rules = rules;
 
   factory _$SetSchemeImpl.fromJson(Map<String, dynamic> json) =>
       _$$SetSchemeImplFromJson(json);
@@ -1551,8 +1611,10 @@ class _$SetSchemeImpl implements _SetScheme {
             (identical(other.basePercent, basePercent) ||
                 other.basePercent == basePercent) &&
             (identical(other.order, order) || other.order == order) &&
-            const DeepCollectionEquality()
-                .equals(other._engineConfig, _engineConfig) &&
+            const DeepCollectionEquality().equals(
+              other._engineConfig,
+              _engineConfig,
+            ) &&
             const DeepCollectionEquality().equals(other._sets, _sets) &&
             const DeepCollectionEquality().equals(other._rules, _rules));
   }
@@ -1560,14 +1622,15 @@ class _$SetSchemeImpl implements _SetScheme {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      name,
-      basePercent,
-      order,
-      const DeepCollectionEquality().hash(_engineConfig),
-      const DeepCollectionEquality().hash(_sets),
-      const DeepCollectionEquality().hash(_rules));
+    runtimeType,
+    id,
+    name,
+    basePercent,
+    order,
+    const DeepCollectionEquality().hash(_engineConfig),
+    const DeepCollectionEquality().hash(_sets),
+    const DeepCollectionEquality().hash(_rules),
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -1577,21 +1640,20 @@ class _$SetSchemeImpl implements _SetScheme {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SetSchemeImplToJson(
-      this,
-    );
+    return _$$SetSchemeImplToJson(this);
   }
 }
 
 abstract class _SetScheme implements SetScheme {
-  const factory _SetScheme(
-      {required final String id,
-      required final String name,
-      final double basePercent,
-      final int order,
-      final Map<String, dynamic> engineConfig,
-      required final List<SetDefinition> sets,
-      required final List<ProgressionRule> rules}) = _$SetSchemeImpl;
+  const factory _SetScheme({
+    required final String id,
+    required final String name,
+    final double basePercent,
+    final int order,
+    final Map<String, dynamic> engineConfig,
+    required final List<SetDefinition> sets,
+    required final List<ProgressionRule> rules,
+  }) = _$SetSchemeImpl;
 
   factory _SetScheme.fromJson(Map<String, dynamic> json) =
       _$SetSchemeImpl.fromJson;
@@ -1639,16 +1701,18 @@ mixin _$SetDefinition {
 /// @nodoc
 abstract class $SetDefinitionCopyWith<$Res> {
   factory $SetDefinitionCopyWith(
-          SetDefinition value, $Res Function(SetDefinition) then) =
-      _$SetDefinitionCopyWithImpl<$Res, SetDefinition>;
+    SetDefinition value,
+    $Res Function(SetDefinition) then,
+  ) = _$SetDefinitionCopyWithImpl<$Res, SetDefinition>;
   @useResult
-  $Res call(
-      {int targetReps,
-      double intensity,
-      double? targetRpe,
-      bool isAmrap,
-      String kind,
-      String setType});
+  $Res call({
+    int targetReps,
+    double intensity,
+    double? targetRpe,
+    bool isAmrap,
+    String kind,
+    String setType,
+  });
 }
 
 /// @nodoc
@@ -1671,32 +1735,35 @@ class _$SetDefinitionCopyWithImpl<$Res, $Val extends SetDefinition>
     Object? kind = null,
     Object? setType = null,
   }) {
-    return _then(_value.copyWith(
-      targetReps: null == targetReps
-          ? _value.targetReps
-          : targetReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      intensity: null == intensity
-          ? _value.intensity
-          : intensity // ignore: cast_nullable_to_non_nullable
-              as double,
-      targetRpe: freezed == targetRpe
-          ? _value.targetRpe
-          : targetRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      isAmrap: null == isAmrap
-          ? _value.isAmrap
-          : isAmrap // ignore: cast_nullable_to_non_nullable
-              as bool,
-      kind: null == kind
-          ? _value.kind
-          : kind // ignore: cast_nullable_to_non_nullable
-              as String,
-      setType: null == setType
-          ? _value.setType
-          : setType // ignore: cast_nullable_to_non_nullable
-              as String,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            targetReps: null == targetReps
+                ? _value.targetReps
+                : targetReps // ignore: cast_nullable_to_non_nullable
+                      as int,
+            intensity: null == intensity
+                ? _value.intensity
+                : intensity // ignore: cast_nullable_to_non_nullable
+                      as double,
+            targetRpe: freezed == targetRpe
+                ? _value.targetRpe
+                : targetRpe // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            isAmrap: null == isAmrap
+                ? _value.isAmrap
+                : isAmrap // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            kind: null == kind
+                ? _value.kind
+                : kind // ignore: cast_nullable_to_non_nullable
+                      as String,
+            setType: null == setType
+                ? _value.setType
+                : setType // ignore: cast_nullable_to_non_nullable
+                      as String,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -1704,17 +1771,19 @@ class _$SetDefinitionCopyWithImpl<$Res, $Val extends SetDefinition>
 abstract class _$$SetDefinitionImplCopyWith<$Res>
     implements $SetDefinitionCopyWith<$Res> {
   factory _$$SetDefinitionImplCopyWith(
-          _$SetDefinitionImpl value, $Res Function(_$SetDefinitionImpl) then) =
-      __$$SetDefinitionImplCopyWithImpl<$Res>;
+    _$SetDefinitionImpl value,
+    $Res Function(_$SetDefinitionImpl) then,
+  ) = __$$SetDefinitionImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {int targetReps,
-      double intensity,
-      double? targetRpe,
-      bool isAmrap,
-      String kind,
-      String setType});
+  $Res call({
+    int targetReps,
+    double intensity,
+    double? targetRpe,
+    bool isAmrap,
+    String kind,
+    String setType,
+  });
 }
 
 /// @nodoc
@@ -1722,8 +1791,9 @@ class __$$SetDefinitionImplCopyWithImpl<$Res>
     extends _$SetDefinitionCopyWithImpl<$Res, _$SetDefinitionImpl>
     implements _$$SetDefinitionImplCopyWith<$Res> {
   __$$SetDefinitionImplCopyWithImpl(
-      _$SetDefinitionImpl _value, $Res Function(_$SetDefinitionImpl) _then)
-      : super(_value, _then);
+    _$SetDefinitionImpl _value,
+    $Res Function(_$SetDefinitionImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -1735,45 +1805,48 @@ class __$$SetDefinitionImplCopyWithImpl<$Res>
     Object? kind = null,
     Object? setType = null,
   }) {
-    return _then(_$SetDefinitionImpl(
-      targetReps: null == targetReps
-          ? _value.targetReps
-          : targetReps // ignore: cast_nullable_to_non_nullable
-              as int,
-      intensity: null == intensity
-          ? _value.intensity
-          : intensity // ignore: cast_nullable_to_non_nullable
-              as double,
-      targetRpe: freezed == targetRpe
-          ? _value.targetRpe
-          : targetRpe // ignore: cast_nullable_to_non_nullable
-              as double?,
-      isAmrap: null == isAmrap
-          ? _value.isAmrap
-          : isAmrap // ignore: cast_nullable_to_non_nullable
-              as bool,
-      kind: null == kind
-          ? _value.kind
-          : kind // ignore: cast_nullable_to_non_nullable
-              as String,
-      setType: null == setType
-          ? _value.setType
-          : setType // ignore: cast_nullable_to_non_nullable
-              as String,
-    ));
+    return _then(
+      _$SetDefinitionImpl(
+        targetReps: null == targetReps
+            ? _value.targetReps
+            : targetReps // ignore: cast_nullable_to_non_nullable
+                  as int,
+        intensity: null == intensity
+            ? _value.intensity
+            : intensity // ignore: cast_nullable_to_non_nullable
+                  as double,
+        targetRpe: freezed == targetRpe
+            ? _value.targetRpe
+            : targetRpe // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        isAmrap: null == isAmrap
+            ? _value.isAmrap
+            : isAmrap // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        kind: null == kind
+            ? _value.kind
+            : kind // ignore: cast_nullable_to_non_nullable
+                  as String,
+        setType: null == setType
+            ? _value.setType
+            : setType // ignore: cast_nullable_to_non_nullable
+                  as String,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$SetDefinitionImpl implements _SetDefinition {
-  const _$SetDefinitionImpl(
-      {required this.targetReps,
-      required this.intensity,
-      this.targetRpe,
-      this.isAmrap = false,
-      this.kind = SetKinds.working,
-      this.setType = ''});
+  const _$SetDefinitionImpl({
+    required this.targetReps,
+    required this.intensity,
+    this.targetRpe,
+    this.isAmrap = false,
+    this.kind = SetKinds.working,
+    this.setType = '',
+  });
 
   factory _$SetDefinitionImpl.fromJson(Map<String, dynamic> json) =>
       _$$SetDefinitionImplFromJson(json);
@@ -1782,7 +1855,7 @@ class _$SetDefinitionImpl implements _SetDefinition {
   final int targetReps;
   @override
   final double intensity;
-// multiplier of TM or base weight e.g. 0.85
+  // multiplier of TM or base weight e.g. 0.85
   @override
   final double? targetRpe;
   @override
@@ -1819,7 +1892,14 @@ class _$SetDefinitionImpl implements _SetDefinition {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType, targetReps, intensity, targetRpe, isAmrap, kind, setType);
+    runtimeType,
+    targetReps,
+    intensity,
+    targetRpe,
+    isAmrap,
+    kind,
+    setType,
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -1829,20 +1909,19 @@ class _$SetDefinitionImpl implements _SetDefinition {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$SetDefinitionImplToJson(
-      this,
-    );
+    return _$$SetDefinitionImplToJson(this);
   }
 }
 
 abstract class _SetDefinition implements SetDefinition {
-  const factory _SetDefinition(
-      {required final int targetReps,
-      required final double intensity,
-      final double? targetRpe,
-      final bool isAmrap,
-      final String kind,
-      final String setType}) = _$SetDefinitionImpl;
+  const factory _SetDefinition({
+    required final int targetReps,
+    required final double intensity,
+    final double? targetRpe,
+    final bool isAmrap,
+    final String kind,
+    final String setType,
+  }) = _$SetDefinitionImpl;
 
   factory _SetDefinition.fromJson(Map<String, dynamic> json) =
       _$SetDefinitionImpl.fromJson;
@@ -1884,8 +1963,9 @@ mixin _$ProgressionRule {
 /// @nodoc
 abstract class $ProgressionRuleCopyWith<$Res> {
   factory $ProgressionRuleCopyWith(
-          ProgressionRule value, $Res Function(ProgressionRule) then) =
-      _$ProgressionRuleCopyWithImpl<$Res, ProgressionRule>;
+    ProgressionRule value,
+    $Res Function(ProgressionRule) then,
+  ) = _$ProgressionRuleCopyWithImpl<$Res, ProgressionRule>;
   @useResult
   $Res call({String condition, List<RuleAction> actions});
 }
@@ -1902,29 +1982,30 @@ class _$ProgressionRuleCopyWithImpl<$Res, $Val extends ProgressionRule>
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? condition = null,
-    Object? actions = null,
-  }) {
-    return _then(_value.copyWith(
-      condition: null == condition
-          ? _value.condition
-          : condition // ignore: cast_nullable_to_non_nullable
-              as String,
-      actions: null == actions
-          ? _value.actions
-          : actions // ignore: cast_nullable_to_non_nullable
-              as List<RuleAction>,
-    ) as $Val);
+  $Res call({Object? condition = null, Object? actions = null}) {
+    return _then(
+      _value.copyWith(
+            condition: null == condition
+                ? _value.condition
+                : condition // ignore: cast_nullable_to_non_nullable
+                      as String,
+            actions: null == actions
+                ? _value.actions
+                : actions // ignore: cast_nullable_to_non_nullable
+                      as List<RuleAction>,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$ProgressionRuleImplCopyWith<$Res>
     implements $ProgressionRuleCopyWith<$Res> {
-  factory _$$ProgressionRuleImplCopyWith(_$ProgressionRuleImpl value,
-          $Res Function(_$ProgressionRuleImpl) then) =
-      __$$ProgressionRuleImplCopyWithImpl<$Res>;
+  factory _$$ProgressionRuleImplCopyWith(
+    _$ProgressionRuleImpl value,
+    $Res Function(_$ProgressionRuleImpl) then,
+  ) = __$$ProgressionRuleImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({String condition, List<RuleAction> actions});
@@ -1935,43 +2016,44 @@ class __$$ProgressionRuleImplCopyWithImpl<$Res>
     extends _$ProgressionRuleCopyWithImpl<$Res, _$ProgressionRuleImpl>
     implements _$$ProgressionRuleImplCopyWith<$Res> {
   __$$ProgressionRuleImplCopyWithImpl(
-      _$ProgressionRuleImpl _value, $Res Function(_$ProgressionRuleImpl) _then)
-      : super(_value, _then);
+    _$ProgressionRuleImpl _value,
+    $Res Function(_$ProgressionRuleImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
-  $Res call({
-    Object? condition = null,
-    Object? actions = null,
-  }) {
-    return _then(_$ProgressionRuleImpl(
-      condition: null == condition
-          ? _value.condition
-          : condition // ignore: cast_nullable_to_non_nullable
-              as String,
-      actions: null == actions
-          ? _value._actions
-          : actions // ignore: cast_nullable_to_non_nullable
-              as List<RuleAction>,
-    ));
+  $Res call({Object? condition = null, Object? actions = null}) {
+    return _then(
+      _$ProgressionRuleImpl(
+        condition: null == condition
+            ? _value.condition
+            : condition // ignore: cast_nullable_to_non_nullable
+                  as String,
+        actions: null == actions
+            ? _value._actions
+            : actions // ignore: cast_nullable_to_non_nullable
+                  as List<RuleAction>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$ProgressionRuleImpl implements _ProgressionRule {
-  const _$ProgressionRuleImpl(
-      {required this.condition, required final List<RuleAction> actions})
-      : _actions = actions;
+  const _$ProgressionRuleImpl({
+    required this.condition,
+    required final List<RuleAction> actions,
+  }) : _actions = actions;
 
   factory _$ProgressionRuleImpl.fromJson(Map<String, dynamic> json) =>
       _$$ProgressionRuleImplFromJson(json);
 
   @override
   final String condition;
-// e.g. '${failed_sets} == 0'
+  // e.g. '${failed_sets} == 0'
   final List<RuleAction> _actions;
-// e.g. '${failed_sets} == 0'
+  // e.g. '${failed_sets} == 0'
   @override
   List<RuleAction> get actions {
     if (_actions is EqualUnmodifiableListView) return _actions;
@@ -1997,27 +2079,31 @@ class _$ProgressionRuleImpl implements _ProgressionRule {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType, condition, const DeepCollectionEquality().hash(_actions));
+    runtimeType,
+    condition,
+    const DeepCollectionEquality().hash(_actions),
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ProgressionRuleImplCopyWith<_$ProgressionRuleImpl> get copyWith =>
       __$$ProgressionRuleImplCopyWithImpl<_$ProgressionRuleImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$ProgressionRuleImplToJson(
-      this,
-    );
+    return _$$ProgressionRuleImplToJson(this);
   }
 }
 
 abstract class _ProgressionRule implements ProgressionRule {
-  const factory _ProgressionRule(
-      {required final String condition,
-      required final List<RuleAction> actions}) = _$ProgressionRuleImpl;
+  const factory _ProgressionRule({
+    required final String condition,
+    required final List<RuleAction> actions,
+  }) = _$ProgressionRuleImpl;
 
   factory _ProgressionRule.fromJson(Map<String, dynamic> json) =
       _$ProgressionRuleImpl.fromJson;
@@ -2053,11 +2139,16 @@ mixin _$RuleAction {
 /// @nodoc
 abstract class $RuleActionCopyWith<$Res> {
   factory $RuleActionCopyWith(
-          RuleAction value, $Res Function(RuleAction) then) =
-      _$RuleActionCopyWithImpl<$Res, RuleAction>;
+    RuleAction value,
+    $Res Function(RuleAction) then,
+  ) = _$RuleActionCopyWithImpl<$Res, RuleAction>;
   @useResult
-  $Res call(
-      {String type, double? amount, double? multiplier, String? targetStageId});
+  $Res call({
+    String type,
+    double? amount,
+    double? multiplier,
+    String? targetStageId,
+  });
 }
 
 /// @nodoc
@@ -2078,24 +2169,27 @@ class _$RuleActionCopyWithImpl<$Res, $Val extends RuleAction>
     Object? multiplier = freezed,
     Object? targetStageId = freezed,
   }) {
-    return _then(_value.copyWith(
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as String,
-      amount: freezed == amount
-          ? _value.amount
-          : amount // ignore: cast_nullable_to_non_nullable
-              as double?,
-      multiplier: freezed == multiplier
-          ? _value.multiplier
-          : multiplier // ignore: cast_nullable_to_non_nullable
-              as double?,
-      targetStageId: freezed == targetStageId
-          ? _value.targetStageId
-          : targetStageId // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            type: null == type
+                ? _value.type
+                : type // ignore: cast_nullable_to_non_nullable
+                      as String,
+            amount: freezed == amount
+                ? _value.amount
+                : amount // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            multiplier: freezed == multiplier
+                ? _value.multiplier
+                : multiplier // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            targetStageId: freezed == targetStageId
+                ? _value.targetStageId
+                : targetStageId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -2103,12 +2197,17 @@ class _$RuleActionCopyWithImpl<$Res, $Val extends RuleAction>
 abstract class _$$RuleActionImplCopyWith<$Res>
     implements $RuleActionCopyWith<$Res> {
   factory _$$RuleActionImplCopyWith(
-          _$RuleActionImpl value, $Res Function(_$RuleActionImpl) then) =
-      __$$RuleActionImplCopyWithImpl<$Res>;
+    _$RuleActionImpl value,
+    $Res Function(_$RuleActionImpl) then,
+  ) = __$$RuleActionImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String type, double? amount, double? multiplier, String? targetStageId});
+  $Res call({
+    String type,
+    double? amount,
+    double? multiplier,
+    String? targetStageId,
+  });
 }
 
 /// @nodoc
@@ -2116,8 +2215,9 @@ class __$$RuleActionImplCopyWithImpl<$Res>
     extends _$RuleActionCopyWithImpl<$Res, _$RuleActionImpl>
     implements _$$RuleActionImplCopyWith<$Res> {
   __$$RuleActionImplCopyWithImpl(
-      _$RuleActionImpl _value, $Res Function(_$RuleActionImpl) _then)
-      : super(_value, _then);
+    _$RuleActionImpl _value,
+    $Res Function(_$RuleActionImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -2127,45 +2227,51 @@ class __$$RuleActionImplCopyWithImpl<$Res>
     Object? multiplier = freezed,
     Object? targetStageId = freezed,
   }) {
-    return _then(_$RuleActionImpl(
-      type: null == type
-          ? _value.type
-          : type // ignore: cast_nullable_to_non_nullable
-              as String,
-      amount: freezed == amount
-          ? _value.amount
-          : amount // ignore: cast_nullable_to_non_nullable
-              as double?,
-      multiplier: freezed == multiplier
-          ? _value.multiplier
-          : multiplier // ignore: cast_nullable_to_non_nullable
-              as double?,
-      targetStageId: freezed == targetStageId
-          ? _value.targetStageId
-          : targetStageId // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
+    return _then(
+      _$RuleActionImpl(
+        type: null == type
+            ? _value.type
+            : type // ignore: cast_nullable_to_non_nullable
+                  as String,
+        amount: freezed == amount
+            ? _value.amount
+            : amount // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        multiplier: freezed == multiplier
+            ? _value.multiplier
+            : multiplier // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        targetStageId: freezed == targetStageId
+            ? _value.targetStageId
+            : targetStageId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$RuleActionImpl implements _RuleAction {
-  const _$RuleActionImpl(
-      {required this.type, this.amount, this.multiplier, this.targetStageId});
+  const _$RuleActionImpl({
+    required this.type,
+    this.amount,
+    this.multiplier,
+    this.targetStageId,
+  });
 
   factory _$RuleActionImpl.fromJson(Map<String, dynamic> json) =>
       _$$RuleActionImplFromJson(json);
 
   @override
   final String type;
-// 'ADD_WEIGHT', 'JUMP_TO_STAGE', 'STAY_STAGE', 'MULTIPLY_WEIGHT'
+  // 'ADD_WEIGHT', 'JUMP_TO_STAGE', 'STAY_STAGE', 'MULTIPLY_WEIGHT'
   @override
   final double? amount;
-// amount to add
+  // amount to add
   @override
   final double? multiplier;
-// multiplier
+  // multiplier
   @override
   final String? targetStageId;
 
@@ -2200,18 +2306,17 @@ class _$RuleActionImpl implements _RuleAction {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$RuleActionImplToJson(
-      this,
-    );
+    return _$$RuleActionImplToJson(this);
   }
 }
 
 abstract class _RuleAction implements RuleAction {
-  const factory _RuleAction(
-      {required final String type,
-      final double? amount,
-      final double? multiplier,
-      final String? targetStageId}) = _$RuleActionImpl;
+  const factory _RuleAction({
+    required final String type,
+    final double? amount,
+    final double? multiplier,
+    final String? targetStageId,
+  }) = _$RuleActionImpl;
 
   factory _RuleAction.fromJson(Map<String, dynamic> json) =
       _$RuleActionImpl.fromJson;

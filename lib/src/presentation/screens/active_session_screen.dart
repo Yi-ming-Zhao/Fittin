@@ -171,6 +171,35 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           localizedExercise: localizedExercise,
           onSelectExercise: notifier.selectExercise,
         ),
+        if (sessionState.draftErrorMessage != null) ...[
+          const SizedBox(height: 8),
+          DashboardSurfaceCard(
+            radius: 16,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_off_rounded,
+                  color: fittinTheme.danger,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    sessionState.draftErrorMessage!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: fittinTheme.uiStyle(11, fittinTheme.fgDim),
+                  ),
+                ),
+                TextButton(
+                  onPressed: notifier.retryDraftSave,
+                  child: Text(strings.retry),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         Expanded(
           child: recordingMode == WorkoutRecordingMode.card

@@ -86,7 +86,7 @@ class BackendAuthRepository implements AuthRepository {
   }) async {
     return _authenticate(
       path: '/v1/auth/sign-in',
-      email: email,
+      email: email.trim().toLowerCase(),
       password: password,
     );
   }
@@ -96,9 +96,14 @@ class BackendAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    final passwordLength = utf8.encode(password).length;
+    if (passwordLength < 10 || passwordLength > 72) {
+      throw StateError('Password must be between 10 and 72 bytes.');
+    }
     return _authenticate(
       path: '/v1/auth/sign-up',
-      email: email,
+      email: normalizedEmail,
       password: password,
     );
   }

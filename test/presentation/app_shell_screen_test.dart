@@ -72,6 +72,43 @@ void main() {
     expect(find.text('Plan Library'), findsOneWidget);
     expect(find.text('GZCLP 4-Day 12-Week'), findsOneWidget);
   });
+
+  testWidgets('empty home browse action switches tabs without losing nav', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(
+            FakeTodayWorkoutGateway(),
+          ),
+          todayWorkoutSummaryProvider.overrideWith(
+            (ref) async => throw StateError(
+              'No active training plan instance. Open Plan Library to start one.',
+            ),
+          ),
+          activeTemplateProvider.overrideWith(
+            (ref) async => throw StateError(
+              'No active training plan instance. Open Plan Library to start one.',
+            ),
+          ),
+          planLibraryItemsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AppShellScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byKey(const ValueKey('choose-training-plan')));
+    await tester.pump();
+
+    expect(find.text('Training plans'), findsOneWidget);
+    expect(find.byKey(const ValueKey('nav-plan-library')), findsOneWidget);
+    expect(find.byKey(const ValueKey('choose-training-plan')), findsNothing);
+  });
   testWidgets('bottom nav opens the profile settings tab', (
     WidgetTester tester,
   ) async {

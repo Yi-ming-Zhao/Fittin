@@ -4,13 +4,13 @@ set -euo pipefail
 
 export PATH="$HOME/.local/bin:$HOME/.local/lib/flutter/bin:$PATH"
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
+if [[ $# -ne 1 ]]; then
   cat <<'EOF'
 Usage:
-  tool/build_web_release.sh <BACKEND_URL> [BACKEND_API_KEY]
+  tool/build_web_release.sh <BACKEND_URL>
 
 Example:
-  tool/build_web_release.sh https://api.your-domain.com optional-api-key
+  tool/build_web_release.sh https://fittin.hammerscholar.net/api
 
 See docs/web-public-deployment.md for the full deployment flow.
 EOF
@@ -18,7 +18,6 @@ EOF
 fi
 
 BACKEND_URL="$1"
-BACKEND_API_KEY="${2:-}"
 SCHEMA_BACKUP_DIR="$(mktemp -d)"
 
 restore_isar_schema_ids() {
@@ -39,8 +38,8 @@ flutter pub get
 
 echo "==> Building Flutter web release"
 flutter build web --release \
-  --dart-define=BACKEND_URL="$BACKEND_URL" \
-  --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+  --no-web-resources-cdn \
+  --dart-define=BACKEND_URL="$BACKEND_URL"
 
 BUILD_VERSION="$(date +%s)"
 python3 - <<'PY' "$BUILD_VERSION"

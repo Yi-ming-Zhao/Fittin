@@ -75,7 +75,14 @@ class SyncService {
         .findAll();
 
     for (final item in queue) {
-      await _pushQueueItem(item, ownerUserId);
+      try {
+        await _pushQueueItem(item, ownerUserId);
+      } on RemoteRepositoryException catch (error) {
+        if (!error.isConflict) {
+          rethrow;
+        }
+        await _markQueueItemConflict(item);
+      }
     }
   }
 
@@ -90,10 +97,15 @@ class SyncService {
             item.entityId,
           );
           if (collection != null) {
+            if (collection.syncStatusKey == SyncStatusKeys.conflict) {
+              return;
+            }
             if (collection.deletedAt != null) {
               await _remoteRepository.deleteById(
                 table: 'plans',
                 id: item.entityId,
+                version: collection.version,
+                deviceId: collection.lastModifiedByDeviceId,
               );
             } else {
               await _remoteRepository.upsertPlan(collection);
@@ -108,10 +120,15 @@ class SyncService {
             item.entityId,
           );
           if (instance != null) {
+            if (instance.syncStatus == SyncStatusKeys.conflict) {
+              return;
+            }
             if (instance.deletedAt != null) {
               await _remoteRepository.deleteById(
                 table: 'plan_instances',
                 id: item.entityId,
+                version: instance.version,
+                deviceId: instance.lastModifiedByDeviceId,
               );
             } else {
               await _remoteRepository.upsertInstance(instance);
@@ -126,10 +143,15 @@ class SyncService {
             item.entityId,
           );
           if (collection != null) {
+            if (collection.syncStatusKey == SyncStatusKeys.conflict) {
+              return;
+            }
             if (collection.deletedAt != null) {
               await _remoteRepository.deleteById(
                 table: 'workout_logs',
                 id: item.entityId,
+                version: collection.version,
+                deviceId: collection.lastModifiedByDeviceId,
               );
             } else {
               await _remoteRepository.upsertWorkoutLog(collection);
@@ -145,10 +167,15 @@ class SyncService {
               .metricIdEqualTo(item.entityId)
               .findFirst();
           if (collection != null) {
+            if (collection.syncStatusKey == SyncStatusKeys.conflict) {
+              return;
+            }
             if (collection.deletedAt != null) {
               await _remoteRepository.deleteById(
                 table: 'body_metrics',
                 id: item.entityId,
+                version: collection.version,
+                deviceId: collection.lastModifiedByDeviceId,
               );
             } else {
               await _remoteRepository.upsertBodyMetric(collection);
@@ -164,10 +191,15 @@ class SyncService {
               .photoIdEqualTo(item.entityId)
               .findFirst();
           if (collection != null) {
+            if (collection.syncStatusKey == SyncStatusKeys.conflict) {
+              return;
+            }
             if (collection.deletedAt != null) {
               await _remoteRepository.deleteById(
                 table: 'progress_photos',
                 id: item.entityId,
+                version: collection.version,
+                deviceId: collection.lastModifiedByDeviceId,
               );
             } else {
               final storagePath = await _remoteRepository.uploadProgressPhoto(
@@ -192,25 +224,13 @@ class SyncService {
   }
 
   Future<void> _pullRemote(String ownerUserId) async {
-    final plans = await _remoteRepository.fetchRows(
-      table: 'plans',
-      userId: ownerUserId,
-    );
-    final instances = await _remoteRepository.fetchRows(
-      table: 'plan_instances',
-      userId: ownerUserId,
-    );
-    final logs = await _remoteRepository.fetchRows(
-      table: 'workout_logs',
-      userId: ownerUserId,
-    );
-    final metrics = await _remoteRepository.fetchRows(
-      table: 'body_metrics',
-      userId: ownerUserId,
-    );
-    final progressPhotos = await _remoteRepository.fetchRows(
-      table: 'progress_photos',
-      userId: ownerUserId,
+    final plans = await _fetchIncremental('plans', ownerUserId);
+    final instances = await _fetchIncremental('plan_instances', ownerUserId);
+    final logs = await _fetchIncremental('workout_logs', ownerUserId);
+    final metrics = await _fetchIncremental('body_metrics', ownerUserId);
+    final progressPhotos = await _fetchIncremental(
+      'progress_photos',
+      ownerUserId,
     );
 
     await _mergePlans(plans, ownerUserId);
@@ -218,6 +238,54 @@ class SyncService {
     await _mergeWorkoutLogs(logs, ownerUserId);
     await _mergeBodyMetrics(metrics, ownerUserId);
     await _mergeProgressPhotos(progressPhotos, ownerUserId);
+    await _saveCursors(ownerUserId, {
+      'plans': plans,
+      'plan_instances': instances,
+      'workout_logs': logs,
+      'body_metrics': metrics,
+      'progress_photos': progressPhotos,
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchIncremental(
+    String table,
+    String ownerUserId,
+  ) async {
+    final cursor = await _databaseRepository.fetchSyncCursor(
+      ownerUserId,
+      table,
+    );
+    return _remoteRepository.fetchRows(
+      table: table,
+      userId: ownerUserId,
+      since: cursor?.subtract(const Duration(seconds: 2)),
+    );
+  }
+
+  Future<void> _saveCursors(
+    String ownerUserId,
+    Map<String, List<Map<String, dynamic>>> rowsByTable,
+  ) async {
+    for (final entry in rowsByTable.entries) {
+      DateTime? newest;
+      for (final row in entry.value) {
+        final value = row['updated_at'] as String?;
+        final updatedAt = value == null
+            ? null
+            : DateTime.tryParse(value)?.toUtc();
+        if (updatedAt != null &&
+            (newest == null || updatedAt.isAfter(newest))) {
+          newest = updatedAt;
+        }
+      }
+      if (newest != null) {
+        await _databaseRepository.saveSyncCursor(
+          ownerUserId,
+          entry.key,
+          newest,
+        );
+      }
+    }
   }
 
   Future<void> _mergePlans(
@@ -228,8 +296,11 @@ class SyncService {
       final existing = await _isar.templateCollections.getByTemplateId(
         row['id'] as String,
       );
-      if (_shouldMarkTemplateConflict(existing, row['version'])) {
+      if (_shouldMarkTemplateConflict(existing, row)) {
         await _markTemplateConflict(existing!);
+        continue;
+      }
+      if (_shouldKeepTemplateLocal(existing, row)) {
         continue;
       }
 
@@ -267,13 +338,13 @@ class SyncService {
         row['id'] as String,
       );
       final remoteVersion = row['version'] as int? ?? 1;
-      if (_isPendingLocalConflict(existing?.syncStatus) &&
-          existing != null &&
-          existing.version > remoteVersion) {
-        await _databaseRepository.saveInstance(
-          existing.copyWith(syncStatus: SyncStatusKeys.conflict),
-          syncStatus: SyncStatusKeys.conflict,
+      if (_shouldMarkInstanceConflict(existing, row)) {
+        await _databaseRepository.saveRemoteInstance(
+          existing!.copyWith(syncStatus: SyncStatusKeys.conflict),
         );
+        continue;
+      }
+      if (_shouldKeepInstanceLocal(existing, row)) {
         continue;
       }
 
@@ -302,10 +373,7 @@ class SyncService {
         lastSyncedAt: DateTime.now(),
         lastModifiedByDeviceId: row['last_modified_by_device_id'] as String?,
       );
-      await _databaseRepository.saveInstance(
-        instance,
-        syncStatus: SyncStatusKeys.synced,
-      );
+      await _databaseRepository.saveRemoteInstance(instance);
       if (instance.deletedAt == null) {
         remoteInstances.add(instance);
       }
@@ -330,8 +398,11 @@ class SyncService {
       final existing = await _isar.workoutLogCollections.getByLogId(
         row['id'] as String,
       );
-      if (_shouldMarkWorkoutLogConflict(existing, row['version'])) {
+      if (_shouldMarkWorkoutLogConflict(existing, row)) {
         await _markWorkoutLogConflict(existing!);
+        continue;
+      }
+      if (_shouldKeepWorkoutLogLocal(existing, row)) {
         continue;
       }
       if (existing != null &&
@@ -370,8 +441,11 @@ class SyncService {
           .filter()
           .metricIdEqualTo(row['id'] as String)
           .findFirst();
-      if (_shouldMarkBodyMetricConflict(existing, row['version'])) {
+      if (_shouldMarkBodyMetricConflict(existing, row)) {
         await _markBodyMetricConflict(existing!);
+        continue;
+      }
+      if (_shouldKeepBodyMetricLocal(existing, row)) {
         continue;
       }
       if (existing != null &&
@@ -410,8 +484,11 @@ class SyncService {
           .filter()
           .photoIdEqualTo(row['id'] as String)
           .findFirst();
-      if (_shouldMarkProgressPhotoConflict(existing, row['version'])) {
+      if (_shouldMarkProgressPhotoConflict(existing, row)) {
         await _markProgressPhotoConflict(existing!);
+        continue;
+      }
+      if (_shouldKeepProgressPhotoLocal(existing, row)) {
         continue;
       }
       if (existing != null &&
@@ -421,15 +498,20 @@ class SyncService {
       }
 
       final storagePath = row['storage_path'] as String? ?? '';
+      var localFilePath = existing?.filePath ?? '';
+      if (_parseDateTime(row['deleted_at']) == null &&
+          (localFilePath.isEmpty || localFilePath == storagePath)) {
+        localFilePath = await _remoteRepository.downloadProgressPhotoToLocal(
+          row['id'] as String,
+        );
+      }
       final collection = ProgressPhotoCollection()
         ..photoId = row['id'] as String
         ..ownerUserId = ownerUserId
         ..timestamp = DateTime.parse(
           (row['captured_at'] ?? row['created_at']) as String,
         ).toLocal()
-        ..filePath = existing?.filePath.isNotEmpty == true
-            ? existing!.filePath
-            : storagePath
+        ..filePath = localFilePath
         ..label = row['label'] as String?
         ..metadataJson = row['metadata_json'] as String?
         ..deletedAt = _parseDateTime(row['deleted_at'])
@@ -466,12 +548,11 @@ class SyncService {
     if (existing == null) {
       return;
     }
-    await _databaseRepository.saveInstance(
+    await _databaseRepository.saveRemoteInstance(
       existing.copyWith(
         syncStatus: SyncStatusKeys.synced,
         lastSyncedAt: DateTime.now(),
       ),
-      syncStatus: SyncStatusKeys.synced,
     );
   }
 
@@ -524,40 +605,191 @@ class SyncService {
     });
   }
 
-  bool _shouldMarkTemplateConflict(
-    TemplateCollection? existing,
-    Object? remoteVersion,
+  Future<void> _markQueueItemConflict(SyncQueueCollection item) async {
+    switch (item.entityType) {
+      case SyncEntityTypes.template:
+        final collection = await _isar.templateCollections.getByTemplateId(
+          item.entityId,
+        );
+        if (collection != null) await _markTemplateConflict(collection);
+        break;
+      case SyncEntityTypes.instance:
+        final instance = await _databaseRepository.fetchInstance(item.entityId);
+        if (instance != null) {
+          await _databaseRepository.saveRemoteInstance(
+            instance.copyWith(syncStatus: SyncStatusKeys.conflict),
+          );
+        }
+        break;
+      case SyncEntityTypes.workoutLog:
+        final collection = await _isar.workoutLogCollections.getByLogId(
+          item.entityId,
+        );
+        if (collection != null) await _markWorkoutLogConflict(collection);
+        break;
+      case SyncEntityTypes.bodyMetric:
+        final collection = await _isar.bodyMetricCollections
+            .filter()
+            .metricIdEqualTo(item.entityId)
+            .findFirst();
+        if (collection != null) await _markBodyMetricConflict(collection);
+        break;
+      case SyncEntityTypes.progressPhoto:
+        final collection = await _isar.progressPhotoCollections
+            .filter()
+            .photoIdEqualTo(item.entityId)
+            .findFirst();
+        if (collection != null) await _markProgressPhotoConflict(collection);
+        break;
+    }
+  }
+
+  bool _shouldMarkInstanceConflict(
+    StoredTrainingInstance? existing,
+    Map<String, dynamic> row,
   ) {
     return existing != null &&
-        _isPendingLocalConflict(existing.syncStatusKey) &&
-        existing.version > (remoteVersion as int? ?? 0);
+        _remoteConflictsWithLocal(
+          syncStatus: existing.syncStatus,
+          localVersion: existing.version,
+          localDeviceId: existing.lastModifiedByDeviceId,
+          row: row,
+        );
+  }
+
+  bool _shouldKeepTemplateLocal(
+    TemplateCollection? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _shouldKeepLocal(
+          existing.syncStatusKey,
+          existing.version,
+          row['version'],
+        );
+  }
+
+  bool _shouldKeepInstanceLocal(
+    StoredTrainingInstance? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _shouldKeepLocal(existing.syncStatus, existing.version, row['version']);
+  }
+
+  bool _shouldKeepWorkoutLogLocal(
+    WorkoutLogCollection? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _shouldKeepLocal(
+          existing.syncStatusKey,
+          existing.version,
+          row['version'],
+        );
+  }
+
+  bool _shouldKeepBodyMetricLocal(
+    BodyMetricCollection? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _shouldKeepLocal(
+          existing.syncStatusKey,
+          existing.version,
+          row['version'],
+        );
+  }
+
+  bool _shouldKeepProgressPhotoLocal(
+    ProgressPhotoCollection? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _shouldKeepLocal(
+          existing.syncStatusKey,
+          existing.version,
+          row['version'],
+        );
+  }
+
+  bool _shouldKeepLocal(
+    String? syncStatus,
+    int localVersion,
+    Object? remoteVersion,
+  ) {
+    return _isPendingLocalConflict(syncStatus) &&
+        localVersion > (remoteVersion as int? ?? 0);
+  }
+
+  bool _remoteConflictsWithLocal({
+    required String? syncStatus,
+    required int localVersion,
+    required String? localDeviceId,
+    required Map<String, dynamic> row,
+  }) {
+    if (!_isPendingLocalConflict(syncStatus)) return false;
+    final remoteVersion = row['version'] as int? ?? 0;
+    if (remoteVersion < localVersion) return false;
+    final remoteDeviceId = row['last_modified_by_device_id'] as String?;
+    final isIdempotentSameDevice =
+        remoteVersion == localVersion &&
+        localDeviceId != null &&
+        localDeviceId.isNotEmpty &&
+        localDeviceId == remoteDeviceId;
+    return !isIdempotentSameDevice;
+  }
+
+  bool _shouldMarkTemplateConflict(
+    TemplateCollection? existing,
+    Map<String, dynamic> row,
+  ) {
+    return existing != null &&
+        _remoteConflictsWithLocal(
+          syncStatus: existing.syncStatusKey,
+          localVersion: existing.version,
+          localDeviceId: existing.lastModifiedByDeviceId,
+          row: row,
+        );
   }
 
   bool _shouldMarkWorkoutLogConflict(
     WorkoutLogCollection? existing,
-    Object? remoteVersion,
+    Map<String, dynamic> row,
   ) {
     return existing != null &&
-        _isPendingLocalConflict(existing.syncStatusKey) &&
-        existing.version > (remoteVersion as int? ?? 0);
+        _remoteConflictsWithLocal(
+          syncStatus: existing.syncStatusKey,
+          localVersion: existing.version,
+          localDeviceId: existing.lastModifiedByDeviceId,
+          row: row,
+        );
   }
 
   bool _shouldMarkBodyMetricConflict(
     BodyMetricCollection? existing,
-    Object? remoteVersion,
+    Map<String, dynamic> row,
   ) {
     return existing != null &&
-        _isPendingLocalConflict(existing.syncStatusKey) &&
-        existing.version > (remoteVersion as int? ?? 0);
+        _remoteConflictsWithLocal(
+          syncStatus: existing.syncStatusKey,
+          localVersion: existing.version,
+          localDeviceId: existing.lastModifiedByDeviceId,
+          row: row,
+        );
   }
 
   bool _shouldMarkProgressPhotoConflict(
     ProgressPhotoCollection? existing,
-    Object? remoteVersion,
+    Map<String, dynamic> row,
   ) {
     return existing != null &&
-        _isPendingLocalConflict(existing.syncStatusKey) &&
-        existing.version > (remoteVersion as int? ?? 0);
+        _remoteConflictsWithLocal(
+          syncStatus: existing.syncStatusKey,
+          localVersion: existing.version,
+          localDeviceId: existing.lastModifiedByDeviceId,
+          row: row,
+        );
   }
 
   bool _isPendingLocalConflict(String? syncStatus) {

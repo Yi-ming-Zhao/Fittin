@@ -18,6 +18,7 @@ Self-hosted Go backend intended to replace the previous Supabase runtime.
 ## Routes
 
 - `GET /healthz`
+- `GET /readyz`
 - `POST /v1/auth/sign-up`
 - `POST /v1/auth/sign-in`
 - `GET /v1/auth/session`
@@ -26,18 +27,10 @@ Self-hosted Go backend intended to replace the previous Supabase runtime.
 - `POST /v1/sync/upsert/{table}`
 - `DELETE /v1/sync/{table}/{id}`
 - `POST /v1/files/progress-photos`
+- `GET /v1/files/progress-photos/{photoId}`
 
-## Import Existing Data
+## Migrations
 
-The repository includes a migration import command that reads the exported SQL
-bundle from `.deploy/supabase_restore/generated/` and loads compatible auth and
-application rows into the new schema:
-
-```bash
-go run ./cmd/fittin-import \
-  --auth-sql ../.deploy/supabase_restore/generated/30_restore_auth_data.sql \
-  --app-sql ../.deploy/supabase_restore/generated/20_restore_public_app_data.sql
-```
-
-The auth import keeps the exported bcrypt hashes from `auth.users`, so existing
-users keep their passwords when moving off Supabase.
+Apply `backend/migrations/*.sql` in lexical order before starting a newer
+backend binary. Migration inputs containing real users or password hashes must
+come from an encrypted path outside the repository; never commit them.

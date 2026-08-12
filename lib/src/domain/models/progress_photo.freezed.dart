@@ -12,7 +12,8 @@ part of 'progress_photo.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 ProgressPhoto _$ProgressPhotoFromJson(Map<String, dynamic> json) {
   return _ProgressPhoto.fromJson(json);
@@ -35,15 +36,17 @@ mixin _$ProgressPhoto {
 /// @nodoc
 abstract class $ProgressPhotoCopyWith<$Res> {
   factory $ProgressPhotoCopyWith(
-          ProgressPhoto value, $Res Function(ProgressPhoto) then) =
-      _$ProgressPhotoCopyWithImpl<$Res, ProgressPhoto>;
+    ProgressPhoto value,
+    $Res Function(ProgressPhoto) then,
+  ) = _$ProgressPhotoCopyWithImpl<$Res, ProgressPhoto>;
   @useResult
-  $Res call(
-      {String photoId,
-      DateTime timestamp,
-      String filePath,
-      String? label,
-      String? metadataJson});
+  $Res call({
+    String photoId,
+    DateTime timestamp,
+    String filePath,
+    String? label,
+    String? metadataJson,
+  });
 }
 
 /// @nodoc
@@ -65,28 +68,31 @@ class _$ProgressPhotoCopyWithImpl<$Res, $Val extends ProgressPhoto>
     Object? label = freezed,
     Object? metadataJson = freezed,
   }) {
-    return _then(_value.copyWith(
-      photoId: null == photoId
-          ? _value.photoId
-          : photoId // ignore: cast_nullable_to_non_nullable
-              as String,
-      timestamp: null == timestamp
-          ? _value.timestamp
-          : timestamp // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      filePath: null == filePath
-          ? _value.filePath
-          : filePath // ignore: cast_nullable_to_non_nullable
-              as String,
-      label: freezed == label
-          ? _value.label
-          : label // ignore: cast_nullable_to_non_nullable
-              as String?,
-      metadataJson: freezed == metadataJson
-          ? _value.metadataJson
-          : metadataJson // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            photoId: null == photoId
+                ? _value.photoId
+                : photoId // ignore: cast_nullable_to_non_nullable
+                      as String,
+            timestamp: null == timestamp
+                ? _value.timestamp
+                : timestamp // ignore: cast_nullable_to_non_nullable
+                      as DateTime,
+            filePath: null == filePath
+                ? _value.filePath
+                : filePath // ignore: cast_nullable_to_non_nullable
+                      as String,
+            label: freezed == label
+                ? _value.label
+                : label // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            metadataJson: freezed == metadataJson
+                ? _value.metadataJson
+                : metadataJson // ignore: cast_nullable_to_non_nullable
+                      as String?,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -94,16 +100,18 @@ class _$ProgressPhotoCopyWithImpl<$Res, $Val extends ProgressPhoto>
 abstract class _$$ProgressPhotoImplCopyWith<$Res>
     implements $ProgressPhotoCopyWith<$Res> {
   factory _$$ProgressPhotoImplCopyWith(
-          _$ProgressPhotoImpl value, $Res Function(_$ProgressPhotoImpl) then) =
-      __$$ProgressPhotoImplCopyWithImpl<$Res>;
+    _$ProgressPhotoImpl value,
+    $Res Function(_$ProgressPhotoImpl) then,
+  ) = __$$ProgressPhotoImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {String photoId,
-      DateTime timestamp,
-      String filePath,
-      String? label,
-      String? metadataJson});
+  $Res call({
+    String photoId,
+    DateTime timestamp,
+    String filePath,
+    String? label,
+    String? metadataJson,
+  });
 }
 
 /// @nodoc
@@ -111,8 +119,9 @@ class __$$ProgressPhotoImplCopyWithImpl<$Res>
     extends _$ProgressPhotoCopyWithImpl<$Res, _$ProgressPhotoImpl>
     implements _$$ProgressPhotoImplCopyWith<$Res> {
   __$$ProgressPhotoImplCopyWithImpl(
-      _$ProgressPhotoImpl _value, $Res Function(_$ProgressPhotoImpl) _then)
-      : super(_value, _then);
+    _$ProgressPhotoImpl _value,
+    $Res Function(_$ProgressPhotoImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -123,40 +132,43 @@ class __$$ProgressPhotoImplCopyWithImpl<$Res>
     Object? label = freezed,
     Object? metadataJson = freezed,
   }) {
-    return _then(_$ProgressPhotoImpl(
-      photoId: null == photoId
-          ? _value.photoId
-          : photoId // ignore: cast_nullable_to_non_nullable
-              as String,
-      timestamp: null == timestamp
-          ? _value.timestamp
-          : timestamp // ignore: cast_nullable_to_non_nullable
-              as DateTime,
-      filePath: null == filePath
-          ? _value.filePath
-          : filePath // ignore: cast_nullable_to_non_nullable
-              as String,
-      label: freezed == label
-          ? _value.label
-          : label // ignore: cast_nullable_to_non_nullable
-              as String?,
-      metadataJson: freezed == metadataJson
-          ? _value.metadataJson
-          : metadataJson // ignore: cast_nullable_to_non_nullable
-              as String?,
-    ));
+    return _then(
+      _$ProgressPhotoImpl(
+        photoId: null == photoId
+            ? _value.photoId
+            : photoId // ignore: cast_nullable_to_non_nullable
+                  as String,
+        timestamp: null == timestamp
+            ? _value.timestamp
+            : timestamp // ignore: cast_nullable_to_non_nullable
+                  as DateTime,
+        filePath: null == filePath
+            ? _value.filePath
+            : filePath // ignore: cast_nullable_to_non_nullable
+                  as String,
+        label: freezed == label
+            ? _value.label
+            : label // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        metadataJson: freezed == metadataJson
+            ? _value.metadataJson
+            : metadataJson // ignore: cast_nullable_to_non_nullable
+                  as String?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 @JsonSerializable()
 class _$ProgressPhotoImpl implements _ProgressPhoto {
-  const _$ProgressPhotoImpl(
-      {required this.photoId,
-      required this.timestamp,
-      required this.filePath,
-      this.label,
-      this.metadataJson});
+  const _$ProgressPhotoImpl({
+    required this.photoId,
+    required this.timestamp,
+    required this.filePath,
+    this.label,
+    this.metadataJson,
+  });
 
   factory _$ProgressPhotoImpl.fromJson(Map<String, dynamic> json) =>
       _$$ProgressPhotoImplFromJson(json);
@@ -195,7 +207,13 @@ class _$ProgressPhotoImpl implements _ProgressPhoto {
   @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(
-      runtimeType, photoId, timestamp, filePath, label, metadataJson);
+    runtimeType,
+    photoId,
+    timestamp,
+    filePath,
+    label,
+    metadataJson,
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -205,19 +223,18 @@ class _$ProgressPhotoImpl implements _ProgressPhoto {
 
   @override
   Map<String, dynamic> toJson() {
-    return _$$ProgressPhotoImplToJson(
-      this,
-    );
+    return _$$ProgressPhotoImplToJson(this);
   }
 }
 
 abstract class _ProgressPhoto implements ProgressPhoto {
-  const factory _ProgressPhoto(
-      {required final String photoId,
-      required final DateTime timestamp,
-      required final String filePath,
-      final String? label,
-      final String? metadataJson}) = _$ProgressPhotoImpl;
+  const factory _ProgressPhoto({
+    required final String photoId,
+    required final DateTime timestamp,
+    required final String filePath,
+    final String? label,
+    final String? metadataJson,
+  }) = _$ProgressPhotoImpl;
 
   factory _ProgressPhoto.fromJson(Map<String, dynamic> json) =
       _$ProgressPhotoImpl.fromJson;
