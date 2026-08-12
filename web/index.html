@@ -63,6 +63,39 @@
       letter-spacing: 5.4px;
     }
 
+    .fittin-web-launch__status,
+    .fittin-web-launch__retry {
+      display: none;
+    }
+
+    .fittin-web-launch__status {
+      max-width: min(78vw, 320px);
+      color: color-mix(in srgb, var(--fittin-launch-foreground) 72%, transparent);
+      font: 500 14px/1.6 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      text-align: center;
+    }
+
+    .fittin-web-launch__retry {
+      min-width: 132px;
+      min-height: 48px;
+      padding: 0 24px;
+      border: 1px solid color-mix(in srgb, var(--fittin-launch-accent) 72%, transparent);
+      border-radius: 999px;
+      color: var(--fittin-launch-background);
+      background: var(--fittin-launch-accent);
+      font: 700 15px/1 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      cursor: pointer;
+    }
+
+    .fittin-web-launch.is-failed .fittin-web-launch__barbell {
+      animation: none;
+    }
+
+    .fittin-web-launch.is-failed .fittin-web-launch__status,
+    .fittin-web-launch.is-failed .fittin-web-launch__retry {
+      display: block;
+    }
+
     @keyframes fittin-launch-lift {
       from { transform: translateY(3px); }
       to { transform: translateY(-3px); }
@@ -74,6 +107,35 @@
   </style>
   <script>
     (() => {
+      let startupSettled = false;
+      let startupFailureTimer;
+
+      const revealStartupFailure = () => {
+        if (startupSettled) return;
+        const launch = document.getElementById('fittin-web-launch');
+        if (!launch) return;
+
+        const isChinese = navigator.language?.toLowerCase().startsWith('zh');
+        const status = document.getElementById('fittin-web-launch-status');
+        const retry = document.getElementById('fittin-web-launch-retry');
+        if (status) {
+          status.textContent = isChinese
+            ? '应用暂时无法启动，请检查网络后重试。'
+            : 'Fittin could not start. Check your connection and try again.';
+        }
+        if (retry) {
+          retry.textContent = isChinese ? '重新加载' : 'Reload';
+        }
+        launch.classList.add('is-failed');
+        launch.setAttribute('aria-hidden', 'false');
+      };
+
+      const finishStartup = () => {
+        startupSettled = true;
+        window.clearTimeout(startupFailureTimer);
+        document.getElementById('fittin-web-launch')?.remove();
+      };
+
       try {
         const stored = localStorage.getItem('flutter.fittin.appearance.palette');
         const palette = stored === null ? null : JSON.parse(stored);
@@ -99,9 +161,17 @@
       }
       window.addEventListener(
         'flutter-first-frame',
-        () => document.getElementById('fittin-web-launch')?.remove(),
+        finishStartup,
         { once: true },
       );
+      window.addEventListener('error', revealStartupFailure);
+      window.addEventListener('unhandledrejection', revealStartupFailure);
+      window.addEventListener('DOMContentLoaded', () => {
+        document
+          .getElementById('fittin-web-launch-retry')
+          ?.addEventListener('click', () => window.location.reload());
+      }, { once: true });
+      startupFailureTimer = window.setTimeout(revealStartupFailure, 30000);
     })();
   </script>
 
@@ -139,6 +209,8 @@
         </g>
       </svg>
       <div class="fittin-web-launch__wordmark">FITTIN</div>
+      <div id="fittin-web-launch-status" class="fittin-web-launch__status"></div>
+      <button id="fittin-web-launch-retry" class="fittin-web-launch__retry" type="button"></button>
     </div>
   </div>
   <script src="flutter_bootstrap.js" async></script>

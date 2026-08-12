@@ -144,6 +144,8 @@ retry_curl -fsS "${curl_timeout[@]}" "$PUBLIC_ORIGIN/version.json" \
 retry_curl -fsS "${curl_timeout[@]}" "$PUBLIC_ORIGIN/flutter_bootstrap.js" \
   | grep -Fq "main.dart.js?v="
 retry_curl -fsSI "${curl_timeout[@]}" "$PUBLIC_ORIGIN/main.dart.js"
+retry_curl -fsSI "${curl_timeout[@]}" "$PUBLIC_ORIGIN/canvaskit/canvaskit.wasm" \
+  | grep -Eiq '^content-type: application/wasm\r?$'
 
 activated=0
 

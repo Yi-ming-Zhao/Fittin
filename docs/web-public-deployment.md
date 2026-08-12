@@ -151,7 +151,10 @@ the release root changes.
 The Fittin nginx server block enables `gzip_static` and `Vary:
 Accept-Encoding`. Verify `Content-Encoding: gzip` for `main.dart.js` after
 publishing; an uncompressed multi-megabyte Flutter bundle materially delays the
-first frame on mobile networks.
+first frame on mobile networks. The same server block explicitly returns every
+`.wasm` asset as `application/wasm`; older nginx MIME tables otherwise return
+`application/octet-stream`, which makes CanvasKit fail before Flutter can render
+its first frame.
 
 SSH may prompt interactively. Do not add the ECS password to the script or an environment file tracked by Git.
 
@@ -164,11 +167,14 @@ curl -fsSI https://fittin.hammerscholar.net/
 curl -fsS https://fittin.hammerscholar.net/api/healthz
 curl -fsSI https://fittin.hammerscholar.net/flutter_bootstrap.js
 curl -fsSI https://fittin.hammerscholar.net/main.dart.js
+curl -fsSI https://fittin.hammerscholar.net/canvaskit/canvaskit.wasm \
+  | rg -i '^content-type: application/wasm'
 ```
 
 Also verify in a phone-sized browser viewport:
 
-1. the first frame renders without console errors;
+1. the first frame renders, the static `#fittin-web-launch` layer disappears,
+   and the console has no fatal Flutter engine or WebAssembly MIME errors;
 2. refreshing a nested app state still returns the Flutter shell;
 3. home, plans, progress, and profile pages do not overflow horizontally;
 4. a workout can start or resume;
