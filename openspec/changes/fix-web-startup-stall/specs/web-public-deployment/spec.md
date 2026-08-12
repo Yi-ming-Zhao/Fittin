@@ -14,7 +14,7 @@ The public Web launch surface MUST be removed when Flutter renders its first fra
 
 #### Scenario: Existing browser cached the invalid WebAssembly response
 - **WHEN** an existing Service Worker cache contains CanvasKit bytes with the former invalid response media type
-- **THEN** the launch loader evicts only the legacy Flutter static-asset cache once before bootstrap
+- **THEN** the launch loader bypasses stale HTTP and Service Worker entries, validates the corrected media type, and overwrites only the canonical cached CanvasKit response once before bootstrap
 - **AND** authentication, browser-local training data, and user preferences remain intact.
 
 ## MODIFIED Requirements

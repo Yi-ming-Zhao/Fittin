@@ -154,10 +154,11 @@ publishing; an uncompressed multi-megabyte Flutter bundle materially delays the
 first frame on mobile networks. The same server block explicitly returns every
 `.wasm` asset as `application/wasm`; older nginx MIME tables otherwise return
 `application/octet-stream`, which makes CanvasKit fail before Flutter can render
-its first frame. The launch loader performs a versioned, one-time eviction of
-the legacy Flutter asset cache before bootstrap so an unchanged CanvasKit file
-cannot retain the previous incorrect response header. This does not clear
-IndexedDB, authentication state, or local training data.
+its first frame. The launch loader performs a versioned, one-time refresh of the
+cached CanvasKit response before bootstrap so an unchanged binary cannot retain
+the previous incorrect response header in either the Service Worker or browser
+HTTP cache. It replaces only that engine response and does not clear IndexedDB,
+authentication state, preferences, or local training data.
 
 SSH may prompt interactively. Do not add the ECS password to the script or an environment file tracked by Git.
 

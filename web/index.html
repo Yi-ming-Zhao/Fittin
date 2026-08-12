@@ -137,11 +137,23 @@
       };
 
       const prepareWebRuntime = async () => {
-        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v1';
+        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v2';
         try {
           if (localStorage.getItem(migrationKey) === 'done') return;
           if ('caches' in window) {
-            await caches.delete('flutter-app-cache');
+            const wasmResponse = await fetch(
+              'canvaskit/canvaskit.wasm?fittin-mime-migration=v2',
+              { cache: 'reload' },
+            );
+            const contentType = wasmResponse.headers.get('content-type') ?? '';
+            if (!wasmResponse.ok || !contentType.startsWith('application/wasm')) {
+              throw new Error('CanvasKit WebAssembly MIME migration failed.');
+            }
+            const flutterCache = await caches.open('flutter-app-cache');
+            await flutterCache.put(
+              'canvaskit/canvaskit.wasm',
+              wasmResponse.clone(),
+            );
           }
           localStorage.setItem(migrationKey, 'done');
         } catch (_) {

@@ -21,7 +21,7 @@ The production app uses Flutter's CanvasKit renderer and a static HTML launch la
 
 1. Add dedicated regex locations for fingerprinted and mutable `.wasm` assets with `default_type application/wasm`. This is preferred over a server-level `types` block because a partial `types` block would replace inherited MIME mappings for unrelated assets on older nginx installations.
 2. Keep the existing immutable/one-hour cache split and `gzip_static` behavior. Only the response media type changes.
-3. Run a versioned, one-time deletion of the generated Flutter `flutter-app-cache` before loading the bootstrap script. Service Worker manifests compare file bytes rather than response headers, so an unchanged CanvasKit binary otherwise retains the invalid cached media type after nginx is fixed. CacheStorage eviction does not touch localStorage, IndexedDB, credentials, or training data.
+3. Before loading the bootstrap script, fetch CanvasKit WASM once through a versioned migration URL using reload semantics, validate its response media type, and overwrite the canonical entry in `flutter-app-cache`. Service Worker manifests compare file bytes rather than response headers, and deleting CacheStorage alone can repopulate the invalid response from a still-fresh HTTP cache. The targeted overwrite bypasses both stale layers without touching localStorage, IndexedDB, credentials, preferences, or training data.
 4. Let the launch page enter an error state after 30 seconds or immediately after an uncaught bootstrap/WebAssembly failure. A visible reload button performs a normal navigation reload, which also gives the browser another chance to activate the latest Service Worker.
 5. Add a repository test that asserts the deployment template has a dedicated WASM media type and that the HTML contains cache migration, first-frame cleanup, and failure recovery. The production browser smoke test remains authoritative because nginx behavior cannot be proven from static parsing alone.
 
@@ -30,7 +30,7 @@ The production app uses Flutter's CanvasKit renderer and a static HTML launch la
 - [Very slow first load reaches the 30-second recovery state] -> Keep the animation visible and allow reload; first-frame still removes the entire layer if Flutter succeeds after the message appears.
 - [Regex precedence accidentally applies the generic asset location first] -> Place dedicated WASM locations before broader static-asset regexes and cover ordering in the regression script.
 - [A Service Worker retains an older shell during rollout] -> Keep bootstrap and service worker entrypoints non-cacheable, then test both a fresh tab and the affected browser session after deployment.
-- [Cache migration removes offline static assets once] -> Delete only the generated Flutter asset cache, preserve all application storage, and let the active Worker repopulate assets from the corrected origin.
+- [Cache migration downloads CanvasKit once] -> Refresh only the affected engine response, require `application/wasm` before caching it, and persist a versioned completion marker.
 
 ## Migration Plan
 
