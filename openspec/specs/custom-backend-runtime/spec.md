@@ -24,3 +24,16 @@ The backend MUST enforce user ownership for all synchronized entities in applica
 - **THEN** the backend only returns rows owned by that authenticated user
 - **AND** it MUST reject attempts to access another user's rows
 
+### Requirement: Dependency-Aware Readiness
+The backend MUST expose liveness separately from readiness and readiness MUST fail when required database connectivity is unavailable.
+
+#### Scenario: Process runs without database
+- **WHEN** the HTTP process is live but PostgreSQL cannot be pinged
+- **THEN** liveness remains available and readiness returns an unavailable status.
+
+### Requirement: Hardened Request Boundary
+The backend MUST enforce authenticated ownership, body limits, validation, configurable CORS, and bounded abuse controls at exposed write and authentication endpoints.
+
+#### Scenario: Oversized unauthenticated request burst
+- **WHEN** a caller exceeds configured body or request-rate limits
+- **THEN** the server rejects requests without performing protected storage mutations.

@@ -24,3 +24,10 @@ The system MUST interpret and deserialize QR-scanned data or captured Deep Link 
 #### Scenario: Importing from an external URI
 - **WHEN** a user scans a generated QR code from another device
 - **THEN** the engine accurately decodes the JSON, validates its schema against standard definitions, and imports it as a new distinct template under local storage.
+
+### Requirement: Bounded Validated Template Import
+Shared template decoding MUST cap encoded and decompressed sizes and MUST run domain validation before any template is persisted.
+
+#### Scenario: Compressed payload expands beyond limit
+- **WHEN** a shared code decompresses beyond the configured maximum
+- **THEN** import stops with a validation error and does not allocate or persist the complete payload.
