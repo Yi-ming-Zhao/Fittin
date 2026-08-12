@@ -50,3 +50,17 @@ The system MUST expose the project-owned backend on `241-dhg` through an NPS TCP
 - **WHEN** a maintainer completes the 241 NPS mapping and nginx configuration
 - **THEN** a public request to `/api/healthz` reaches the Fittin backend on `241-dhg`
 - **AND** the response succeeds without a Cloudflare Tunnel hop.
+
+### Requirement: Atomic Verified Web Activation
+The deployment process MUST stage builds, run same-origin health, version, and asset probes, activate atomically, and restore the prior release if post-activation verification fails.
+
+#### Scenario: Activated build serves stale metadata
+- **WHEN** post-activation version metadata does not match the intended release
+- **THEN** the script rolls the active symlink back and reports failure.
+
+### Requirement: Browser Security Policy
+The public HTTPS service MUST send transport, content, referrer, and permissions policies compatible with the Flutter application.
+
+#### Scenario: Public page is requested
+- **WHEN** a browser loads the application over HTTPS
+- **THEN** the response includes the configured security headers and excludes obsolete permissive CORS origins.

@@ -191,3 +191,17 @@ The logger MUST represent set progress in a compact visual indicator rather than
 - **WHEN** the user taps a set marker in the progress strip
 - **THEN** the logger focuses that set for editing
 - **AND** the current-set controls update to the tapped set instead of remaining locked to the previous position.
+
+### Requirement: Network-Independent Gesture Commitment
+Recognized session gestures MUST update the local card stack immediately, persist commands in order, and synchronize asynchronously; fast gestures MUST NOT be lost because of animation or network timing.
+
+#### Scenario: Rapid valid swipe
+- **WHEN** the user performs a fast swipe beyond the velocity or distance threshold
+- **THEN** exactly one configured action is committed and the next card becomes interactive without waiting for the network.
+
+### Requirement: Visible Draft Durability
+Draft persistence failures MUST be visible and retryable and MUST NOT be silently converted into successful futures.
+
+#### Scenario: Local draft write fails
+- **WHEN** persisting the current set fails
+- **THEN** the screen retains the user's state, shows a retry action, and prevents a false durability indication.

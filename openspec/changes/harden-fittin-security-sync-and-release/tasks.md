@@ -40,6 +40,6 @@
 ## 6. Verification and publication
 
 - [x] 6.1 Add/adjust Flutter unit/widget/integration and Go tests for the repaired paths; enforce formatting and generated-data checks in CI
-- [ ] 6.2 Run formatting, analyze, full Flutter/Go tests, Android release build, and phone-sized web visual/interaction checks
-- [ ] 6.3 Commit and push the reviewed changes, synchronize the 241 checkout without overwriting remote WIP, deploy backend/web migrations safely, and verify public login/readiness/version/update endpoints
-- [ ] 6.4 Publish the v1.0.13 Android release and verify an installed Android client can discover and download the update
+- [x] 6.2 Run formatting, analyze, full Flutter/Go tests, Android release build, and phone-sized web visual/interaction checks
+- [x] 6.3 Commit and push the reviewed changes, synchronize the 241 checkout without overwriting remote WIP, deploy backend/web migrations safely, and verify public login/readiness/version/update endpoints
+- [x] 6.4 Publish the v1.0.13 Android release and verify an installed Android client can discover and download the update

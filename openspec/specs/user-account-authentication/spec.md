@@ -40,3 +40,14 @@ The account surface MUST reflect the real backend bootstrap state so a local-fir
 - **WHEN** the account surface opens on an Android APK build without explicit `BACKEND_URL`
 - **THEN** the app shows that account authentication is unavailable
 - **AND** the message explains that repo-local localhost fallback is not used for Android device builds
+
+### Requirement: Normalized and Failure-Aware Authentication
+Authentication MUST normalize email identity consistently, enforce bounded password policy, protect session tokens in platform-appropriate secure storage, and distinguish invalid credentials from unavailable backend or database responses.
+
+#### Scenario: Database is unavailable during sign-in
+- **WHEN** credential lookup fails because the database is unavailable
+- **THEN** the backend returns a service error rather than an invalid-credentials response.
+
+#### Scenario: Equivalent email casing is used
+- **WHEN** a user signs in with different email casing or surrounding whitespace
+- **THEN** the normalized identity resolves to the same account.

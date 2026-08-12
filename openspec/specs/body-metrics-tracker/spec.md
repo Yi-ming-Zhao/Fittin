@@ -95,3 +95,17 @@ The body-weight trend MUST implement the shared interactive chart contract with 
 #### Scenario: User inspects a historical body weight
 - **WHEN** the user taps a point on the body-weight line
 - **THEN** the chart highlights that measurement and shows its full date, exact weight, unit, and change from the previous comparable measurement when available.
+
+### Requirement: Validated Body Measurements
+The body metric form MUST await persistence, reject non-finite or implausible values, and report save failures before dismissing.
+
+#### Scenario: Persistence fails
+- **WHEN** a valid measurement cannot be saved
+- **THEN** the dialog remains recoverable and presents an actionable error.
+
+### Requirement: Cross-Device Progress Photos
+Progress photos MUST synchronize stable media identity and authenticated bytes instead of treating another device's local filesystem path as usable.
+
+#### Scenario: Remote-only photo is listed
+- **WHEN** a remote progress photo has no local cached file
+- **THEN** the client retrieves or marks the media for retrieval without displaying the remote device path.
