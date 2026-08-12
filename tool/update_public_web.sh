@@ -126,13 +126,14 @@ ssh -t "$ECS_TARGET" \
 activated=1
 
 echo "==> Public smoke checks"
-curl -fsSI --max-time 20 "$PUBLIC_ORIGIN/"
-curl -fsS --max-time 20 "$PUBLIC_ORIGIN/api/readyz"
-curl -fsS --max-time 20 "$PUBLIC_ORIGIN/version.json" \
+curl_retry=(--retry 5 --retry-delay 2 --retry-all-errors --connect-timeout 10 --max-time 20)
+curl -fsSI "${curl_retry[@]}" "$PUBLIC_ORIGIN/"
+curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/api/readyz"
+curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/version.json" \
   | grep -Fq "\"version\":\"$expected_version\""
-curl -fsS --max-time 20 "$PUBLIC_ORIGIN/flutter_bootstrap.js" \
+curl -fsS "${curl_retry[@]}" "$PUBLIC_ORIGIN/flutter_bootstrap.js" \
   | grep -Fq "main.dart.js?v="
-curl -fsSI --max-time 20 "$PUBLIC_ORIGIN/main.dart.js"
+curl -fsSI "${curl_retry[@]}" "$PUBLIC_ORIGIN/main.dart.js"
 
 activated=0
 
