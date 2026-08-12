@@ -194,15 +194,12 @@ jobs:
 
       - name: Build Android APK
         id: build_apk
-        env:
-          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
         run: |
           set -euo pipefail
           flutter build apk --release \
             --build-name "${{ steps.meta.outputs.version_name }}" \
             --build-number "${{ steps.meta.outputs.build_number }}" \
-            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
-            --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}"
           apk_output="build/app/outputs/flutter-apk/app-release.apk"
           if [[ ! -f "$apk_output" ]]; then
             mapfile -t apk_outputs < <(find build/app/outputs -type f -name "*.apk" | sort)
@@ -245,15 +242,12 @@ jobs:
 
       - name: Build Android App Bundle
         id: build_aab
-        env:
-          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
         run: |
           set -euo pipefail
           flutter build appbundle --release \
             --build-name "${{ steps.meta.outputs.version_name }}" \
             --build-number "${{ steps.meta.outputs.build_number }}" \
-            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}" \
-            --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+            --dart-define=BACKEND_URL="${{ steps.meta.outputs.backend_url }}"
           aab_output="build/app/outputs/bundle/release/app-release.aab"
           if [[ ! -f "$aab_output" ]]; then
             mapfile -t aab_outputs < <(find build/app/outputs -type f -name "*.aab" | sort)
@@ -289,9 +283,7 @@ jobs:
         run: rm -f android/key.properties android/release-keystore.jks
 
       - name: Build Flutter Web release bundle
-        env:
-          BACKEND_API_KEY: ${{ secrets.RELEASE_BACKEND_API_KEY }}
-        run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}" "$BACKEND_API_KEY"
+        run: tool/build_web_release.sh "${{ steps.meta.outputs.backend_url }}"
 
       - name: Package web artifact
         run: |

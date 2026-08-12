@@ -27,6 +27,14 @@ class AppStrings {
   String get navPr => isChinese ? '力量' : 'PR';
   String get navBody => isChinese ? '身体' : 'BODY';
   String get navMe => isChinese ? '我的' : 'ME';
+  String get progressPhotos => isChinese ? '进度照片' : 'Progress photos';
+  String get addProgressPhoto => isChinese ? '添加照片' : 'Add photo';
+  String get chooseFromGallery => isChinese ? '从相册选择' : 'Choose from gallery';
+  String get takePhoto => isChinese ? '拍照' : 'Take photo';
+  String get photoComparison => isChinese ? '最近对比' : 'Recent comparison';
+  String get noProgressPhotos => isChinese
+      ? '添加第一张照片，在相同光线和角度下追踪变化。'
+      : 'Add your first photo to track changes in consistent lighting and pose.';
 
   String get startupPreparing =>
       isChinese ? '正在准备训练空间' : 'Preparing your training space';

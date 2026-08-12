@@ -163,7 +163,7 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
 
   @override
   Future<PlanTemplate> importSharedTemplate(PlanTemplate template) {
-    return _repository.importSharedTemplate(template);
+    return _repository.importSharedTemplate(template, ownerUserId: ownerUserId);
   }
 
   Future<_ProgramContext> _loadContext() async {

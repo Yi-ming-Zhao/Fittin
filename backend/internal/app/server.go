@@ -1,20 +1,30 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
+	"math"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,6 +33,13 @@ type Server struct {
 	cfg        Config
 	db         *pgxpool.Pool
 	httpServer *http.Server
+	rateMu     sync.Mutex
+	rateByIP   map[string]rateWindow
+}
+
+type rateWindow struct {
+	started time.Time
+	count   int
 }
 
 type tableSpec struct {
@@ -115,13 +132,21 @@ func NewServer() (*Server, error) {
 	}
 
 	server := &Server{
-		cfg: cfg,
-		db:  pool,
+		cfg:      cfg,
+		db:       pool,
+		rateByIP: make(map[string]rateWindow),
+	}
+	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := pool.Ping(pingCtx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("database readiness check: %w", err)
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", server.handleRoot)
 	mux.HandleFunc("/healthz", server.handleHealthz)
+	mux.HandleFunc("/readyz", server.handleReadyz)
 	mux.HandleFunc("/v1/auth/sign-up", server.handleSignUp)
 	mux.HandleFunc("/v1/auth/sign-in", server.handleSignIn)
 	mux.HandleFunc("/v1/auth/session", server.withAuth(server.handleSession))
@@ -129,11 +154,15 @@ func NewServer() (*Server, error) {
 	mux.HandleFunc("/v1/sync/upsert/", server.withAuth(server.handleSyncUpsert))
 	mux.HandleFunc("/v1/sync/", server.withAuth(server.handleSync))
 	mux.HandleFunc("/v1/files/progress-photos", server.withAuth(server.handleProgressPhotoUpload))
+	mux.HandleFunc("/v1/files/progress-photos/", server.withAuth(server.handleProgressPhotoDownload))
 
 	server.httpServer = &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           server.withCORS(mux),
+		Handler:           server.withCORS(server.withRateLimit(mux)),
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       20 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	return server, nil
@@ -148,7 +177,7 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 		origin := r.Header.Get("Origin")
 		if origin != "" {
 			w.Header().Set("Vary", "Origin")
-			if origin == "https://fittin.yimelo.cc" {
+			if s.cfg.AllowedOrigins[origin] {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
@@ -178,11 +207,91 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		"service": "fittin-backend",
 		"ok":      true,
 		"healthz": "/healthz",
+		"readyz":  "/readyz",
 	})
 }
 
 func (s *Server) handleHealthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+	if s.db == nil || s.db.Ping(ctx) != nil {
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "database is unavailable")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "ready": true})
+}
+
+func (s *Server) withRateLimit(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions || !isRateLimitedRequest(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		limit := s.cfg.RateLimitPerMin
+		if limit <= 0 {
+			limit = 60
+		}
+		host := clientIPAddress(r)
+		now := time.Now()
+		s.rateMu.Lock()
+		if len(s.rateByIP) > 10_000 {
+			for candidate, entry := range s.rateByIP {
+				if now.Sub(entry.started) >= 2*time.Minute {
+					delete(s.rateByIP, candidate)
+				}
+			}
+		}
+		window := s.rateByIP[host]
+		if window.started.IsZero() || now.Sub(window.started) >= time.Minute {
+			window = rateWindow{started: now}
+		}
+		window.count++
+		s.rateByIP[host] = window
+		s.rateMu.Unlock()
+		if window.count > limit {
+			w.Header().Set("Retry-After", "60")
+			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func clientIPAddress(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	remoteIP := net.ParseIP(strings.TrimSpace(host))
+	if remoteIP != nil && remoteIP.IsLoopback() {
+		forwarded := strings.TrimSpace(r.Header.Get("X-Real-IP"))
+		if parsed := net.ParseIP(forwarded); parsed != nil {
+			return parsed.String()
+		}
+	}
+	if remoteIP != nil {
+		return remoteIP.String()
+	}
+	return strings.TrimSpace(host)
+}
+
+func isRateLimitedRequest(r *http.Request) bool {
+	if strings.HasPrefix(r.URL.Path, "/v1/auth/") {
+		return true
+	}
+	return r.Method != http.MethodGet && strings.HasPrefix(r.URL.Path, "/v1/")
 }
 
 type authRequest struct {
@@ -202,8 +311,18 @@ func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req authRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSONBody(w, r, &req, 64<<10); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid auth payload")
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if req.Email == "" || !strings.Contains(req.Email, "@") {
+		writeError(w, http.StatusBadRequest, "invalid_email", "a valid email is required")
+		return
+	}
+	passwordBytes := len([]byte(req.Password))
+	if passwordBytes < 10 || passwordBytes > 72 {
+		writeError(w, http.StatusBadRequest, "invalid_password", "password must be between 10 and 72 bytes")
 		return
 	}
 	if req.Email == "" || req.Password == "" {
@@ -218,7 +337,13 @@ func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := uuid.NewString()
-	_, err = s.db.Exec(
+	tx, err := s.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
+		return
+	}
+	defer tx.Rollback(r.Context())
+	_, err = tx.Exec(
 		r.Context(),
 		`insert into users (id, email, password_hash, display_name, created_at, updated_at)
 		 values ($1, $2, $3, $4, now(), now())`,
@@ -228,13 +353,22 @@ func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		req.Email,
 	)
 	if err != nil {
-		writeError(w, http.StatusConflict, "failed to create user")
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			writeError(w, http.StatusConflict, "email_in_use", "an account already exists for this email")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 
-	token, err := s.issueToken(userID, req.Email)
+	token, err := s.issueSessionTokenWithExecutor(r.Context(), tx, userID, req.Email, r.Header.Get("X-Fittin-Device-Id"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to issue token")
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 
@@ -256,25 +390,34 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req authRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeJSONBody(w, r, &req, 64<<10); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid auth payload")
+		return
+	}
+	req.Email = normalizeEmail(req.Email)
+	if req.Email == "" || len([]byte(req.Password)) > 72 {
+		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
 		return
 	}
 
 	user, err := s.lookupUserByEmail(r.Context(), req.Email)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		writeError(w, http.StatusUnauthorized, "invalid_credentials", "invalid credentials")
 		return
 	}
 
-	token, err := s.issueToken(user.ID, user.Email)
+	token, err := s.issueSessionToken(r.Context(), user.ID, user.Email, r.Header.Get("X-Fittin-Device-Id"))
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to issue token")
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 
@@ -285,10 +428,18 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+		return
+	}
 	userID := r.Context().Value(contextKeyUserID{}).(string)
 	user, err := s.lookupUserByID(r.Context(), userID)
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "session user no longer exists")
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusUnauthorized, "session_invalid", "session user no longer exists")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 	writeJSON(w, http.StatusOK, authResponse{
@@ -298,6 +449,16 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	if sessionID, _ := r.Context().Value(contextKeySessionID{}).(string); sessionID != "" {
+		if _, err := s.db.Exec(r.Context(), `update auth_sessions set revoked_at = now() where id = $1`, sessionID); err != nil {
+			writeError(w, http.StatusServiceUnavailable, "database_unavailable", "sign-out is temporarily unavailable")
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -315,7 +476,7 @@ func (s *Server) handleSyncUpsert(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var row map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&row); err != nil {
+	if err := decodeJSONBody(w, r, &row, 2<<20); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid sync payload")
 		return
 	}
@@ -330,10 +491,19 @@ func (s *Server) handleSyncUpsert(w http.ResponseWriter, r *http.Request) {
 	savedRow, err := s.upsertSyncRow(r.Context(), spec, normalized)
 	if err != nil {
 		status := http.StatusInternalServerError
+		code := "sync_failed"
 		if errors.Is(err, errSyncOwnershipConflict) {
 			status = http.StatusConflict
+			code = "sync_ownership_conflict"
+		} else if errors.Is(err, errSyncVersionConflict) {
+			status = http.StatusConflict
+			code = "sync_conflict"
 		}
-		writeError(w, status, err.Error())
+		if status >= http.StatusInternalServerError {
+			writeError(w, http.StatusServiceUnavailable, "database_unavailable", "sync service is temporarily unavailable")
+		} else {
+			writeError(w, status, code, err.Error())
+		}
 		return
 	}
 
@@ -364,13 +534,34 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		deletedRow, err := s.softDeleteSyncRow(r.Context(), spec, userID, parts[1])
+		var expectedVersion *int
+		if rawVersion := r.URL.Query().Get("version"); rawVersion != "" {
+			parsed, err := strconv.Atoi(rawVersion)
+			if err != nil || parsed < 1 {
+				writeError(w, http.StatusBadRequest, "invalid sync delete version")
+				return
+			}
+			expectedVersion = &parsed
+		}
+		deletedRow, err := s.softDeleteSyncRow(
+			r.Context(),
+			spec,
+			userID,
+			parts[1],
+			expectedVersion,
+			r.URL.Query().Get("deviceId"),
+		)
 		if err != nil {
 			status := http.StatusInternalServerError
+			code := "sync_delete_failed"
 			if errors.Is(err, errNotFound) {
 				status = http.StatusNotFound
+				code = "not_found"
+			} else if errors.Is(err, errSyncVersionConflict) {
+				status = http.StatusConflict
+				code = "sync_conflict"
 			}
-			writeError(w, status, err.Error())
+			writeError(w, status, code, err.Error())
 			return
 		}
 
@@ -405,17 +596,49 @@ func (s *Server) handleSync(w http.ResponseWriter, r *http.Request) {
 			}
 			since = &parsed
 		}
+		limit := 200
+		if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
+			parsed, err := strconv.Atoi(rawLimit)
+			if err != nil || parsed < 1 || parsed > 500 {
+				writeError(w, http.StatusBadRequest, "invalid limit")
+				return
+			}
+			limit = parsed
+		}
+		var cursorUpdatedAt *time.Time
+		cursorID := r.URL.Query().Get("cursorId")
+		if rawCursor := r.URL.Query().Get("cursorUpdatedAt"); rawCursor != "" {
+			parsed, err := time.Parse(time.RFC3339, rawCursor)
+			if err != nil || cursorID == "" {
+				writeError(w, http.StatusBadRequest, "invalid sync cursor")
+				return
+			}
+			cursorUpdatedAt = &parsed
+		}
 
-		rows, err := s.fetchSyncRows(r.Context(), spec, userID, timestampColumn, since)
+		rows, err := s.fetchSyncRows(r.Context(), spec, userID, timestampColumn, since, cursorUpdatedAt, cursorID, limit+1)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusServiceUnavailable, "database_unavailable", "sync service is temporarily unavailable")
 			return
 		}
 
-		writeJSON(w, http.StatusOK, map[string]any{
-			"table": spec.Name,
-			"rows":  rows,
-		})
+		hasMore := len(rows) > limit
+		if hasMore {
+			rows = rows[:limit]
+		}
+		payload := map[string]any{
+			"table":   spec.Name,
+			"rows":    rows,
+			"hasMore": hasMore,
+		}
+		if hasMore && len(rows) > 0 {
+			last := rows[len(rows)-1]
+			payload["nextCursor"] = map[string]any{
+				"updatedAt": last["updated_at"],
+				"id":        last["id"],
+			}
+		}
+		writeJSON(w, http.StatusOK, payload)
 		return
 	}
 	writeError(w, http.StatusMethodNotAllowed, "method not allowed")
@@ -426,45 +649,198 @@ func (s *Server) handleProgressPhotoUpload(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid multipart payload")
+	maxBytes := s.cfg.MaxUploadBytes
+	if maxBytes <= 0 {
+		maxBytes = 10 << 20
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes+(1<<20))
+	if err := r.ParseMultipartForm(maxBytes); err != nil {
+		writeError(w, http.StatusRequestEntityTooLarge, "upload_too_large", "invalid or oversized multipart payload")
 		return
 	}
 
-	userID := r.FormValue("userId")
-	photoID := r.FormValue("photoId")
+	userID := r.Context().Value(contextKeyUserID{}).(string)
+	if suppliedUserID := strings.TrimSpace(r.FormValue("userId")); suppliedUserID != "" && suppliedUserID != userID {
+		writeError(w, http.StatusForbidden, "owner_mismatch", "userId does not match authenticated user")
+		return
+	}
+	photoID := strings.TrimSpace(r.FormValue("photoId"))
+	if _, err := uuid.Parse(photoID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_photo_id", "photoId must be a UUID")
+		return
+	}
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "missing file")
 		return
 	}
 	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, maxBytes+1))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_image", "failed to read image")
+		return
+	}
+	if int64(len(data)) == 0 || int64(len(data)) > maxBytes {
+		writeError(w, http.StatusRequestEntityTooLarge, "upload_too_large", "image exceeds upload limit")
+		return
+	}
+	contentType := http.DetectContentType(data)
+	extension := imageExtension(contentType)
+	if extension == "" {
+		writeError(w, http.StatusUnsupportedMediaType, "invalid_image", "only JPEG, PNG, and GIF images are accepted")
+		return
+	}
+	imageConfig, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil || imageConfig.Width <= 0 || imageConfig.Height <= 0 || imageConfig.Width > 12000 || imageConfig.Height > 12000 || int64(imageConfig.Width)*int64(imageConfig.Height) > 40_000_000 {
+		writeError(w, http.StatusBadRequest, "invalid_image", "image dimensions are invalid or too large")
+		return
+	}
 
-	storagePath := filepath.Join("users", userID, "progress_photos", photoID, "original.jpg")
-	absolutePath := filepath.Join(s.cfg.FileStorageRoot, storagePath)
-	if err := os.MkdirAll(filepath.Dir(absolutePath), 0o755); err != nil {
+	storagePath := filepath.Join("users", userID, "progress_photos", photoID, "original"+extension)
+	absolutePath, err := safeStoragePath(s.cfg.FileStorageRoot, storagePath)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_storage_path", "invalid storage path")
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(absolutePath), 0o700); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to prepare storage directory")
 		return
 	}
 
-	out, err := os.Create(absolutePath)
+	out, err := os.CreateTemp(filepath.Dir(absolutePath), ".upload-*")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create destination file")
 		return
 	}
-	defer out.Close()
-	if _, err := out.ReadFrom(file); err != nil {
+	temporaryPath := out.Name()
+	defer os.Remove(temporaryPath)
+	if err := out.Chmod(0o600); err != nil {
+		out.Close()
+		writeError(w, http.StatusInternalServerError, "failed to secure uploaded file")
+		return
+	}
+	if _, err := out.Write(data); err != nil {
+		out.Close()
 		writeError(w, http.StatusInternalServerError, "failed to persist uploaded file")
+		return
+	}
+	if err := out.Sync(); err != nil {
+		out.Close()
+		writeError(w, http.StatusInternalServerError, "failed to persist uploaded file")
+		return
+	}
+	if err := out.Close(); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to persist uploaded file")
+		return
+	}
+	if err := os.Rename(temporaryPath, absolutePath); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to activate uploaded file")
 		return
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"storagePath": filepath.ToSlash(storagePath),
+		"contentType": contentType,
+		"size":        len(data),
 	})
+}
+
+func (s *Server) handleProgressPhotoDownload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	photoID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/v1/files/progress-photos/"))
+	if _, err := uuid.Parse(photoID); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid_photo_id", "photo id must be a UUID")
+		return
+	}
+	userID := r.Context().Value(contextKeyUserID{}).(string)
+	var storagePath string
+	err := s.db.QueryRow(
+		r.Context(),
+		`select storage_path from progress_photos where id = $1 and user_id = $2 and deleted_at is null`,
+		photoID,
+		userID,
+	).Scan(&storagePath)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "photo_not_found", "progress photo not found")
+			return
+		}
+		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "photo service is temporarily unavailable")
+		return
+	}
+	if !validProgressPhotoStoragePath(userID, photoID, storagePath) {
+		writeError(w, http.StatusInternalServerError, "invalid_storage_path", "stored photo path is invalid")
+		return
+	}
+	absolutePath, err := safeStoragePath(s.cfg.FileStorageRoot, storagePath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "invalid_storage_path", "stored photo path is invalid")
+		return
+	}
+	file, err := os.Open(absolutePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "photo_file_missing", "progress photo file is unavailable")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "photo_read_failed", "failed to read progress photo")
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		writeError(w, http.StatusInternalServerError, "photo_read_failed", "failed to read progress photo")
+		return
+	}
+	header := make([]byte, 512)
+	n, _ := file.Read(header)
+	_, _ = file.Seek(0, io.SeekStart)
+	w.Header().Set("Content-Type", http.DetectContentType(header[:n]))
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, file)
+}
+
+func imageExtension(contentType string) string {
+	switch contentType {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ""
+	}
+}
+
+func safeStoragePath(root, relative string) (string, error) {
+	cleanRoot, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	joined, err := filepath.Abs(filepath.Join(cleanRoot, filepath.Clean(relative)))
+	if err != nil {
+		return "", err
+	}
+	if joined != cleanRoot && !strings.HasPrefix(joined, cleanRoot+string(os.PathSeparator)) {
+		return "", errors.New("path escapes storage root")
+	}
+	return joined, nil
 }
 
 type contextKeyUserID struct{}
 type contextKeyEmail struct{}
+type contextKeySessionID struct{}
 
 func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -474,7 +850,8 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		claims := jwt.MapClaims{}
-		_, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
+		parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		_, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 			return []byte(s.cfg.JWTSecret), nil
 		})
 		if err != nil {
@@ -484,13 +861,32 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 
 		userID, _ := claims["sub"].(string)
 		email, _ := claims["email"].(string)
+		sessionID, _ := claims["jti"].(string)
 		if userID == "" {
 			writeError(w, http.StatusUnauthorized, "invalid bearer token")
 			return
 		}
+		if sessionID != "" && s.db != nil {
+			var active bool
+			err := s.db.QueryRow(
+				r.Context(),
+				`select exists(select 1 from auth_sessions where id = $1 and user_id = $2 and revoked_at is null and expires_at > now())`,
+				sessionID,
+				userID,
+			).Scan(&active)
+			if err != nil {
+				writeError(w, http.StatusServiceUnavailable, "database_unavailable", "session service is temporarily unavailable")
+				return
+			}
+			if !active {
+				writeError(w, http.StatusUnauthorized, "session_invalid", "session has expired or was revoked")
+				return
+			}
+		}
 
 		ctx := context.WithValue(r.Context(), contextKeyUserID{}, userID)
 		ctx = context.WithValue(ctx, contextKeyEmail{}, email)
+		ctx = context.WithValue(ctx, contextKeySessionID{}, sessionID)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -504,6 +900,7 @@ type authUserRecord struct {
 
 var errNotFound = errors.New("record not found")
 var errSyncOwnershipConflict = errors.New("sync record id belongs to another user")
+var errSyncVersionConflict = errors.New("sync record has a newer or competing version")
 
 func authUserPayload(user authUserRecord) map[string]any {
 	return map[string]any{
@@ -521,7 +918,7 @@ func (s *Server) lookupUserByEmail(ctx context.Context, email string) (authUserR
 		`select id, email, coalesce(nullif(display_name, ''), email), password_hash
 		   from users
 		  where lower(email) = lower($1)`,
-		email,
+		normalizeEmail(email),
 	).Scan(&user.ID, &user.Email, &user.DisplayName, &user.PasswordHash)
 	return user, err
 }
@@ -565,7 +962,26 @@ func normalizeSyncRow(spec tableSpec, row map[string]any, userID string) (map[st
 		}
 		normalized[column] = parsed
 	}
+	version, ok := normalized["version"].(int)
+	if !ok || version < 1 {
+		return nil, errors.New("sync row version must be a positive integer")
+	}
+	if spec.Name == "progress_photos" {
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, errors.New("progress photo id must be a UUID")
+		}
+		storagePath, _ := normalized["storage_path"].(string)
+		if !validProgressPhotoStoragePath(userID, id, storagePath) {
+			return nil, errors.New("progress photo storage_path does not match its authenticated owner and id")
+		}
+	}
 	return normalized, nil
+}
+
+func validProgressPhotoStoragePath(userID, photoID, storagePath string) bool {
+	clean := filepath.ToSlash(filepath.Clean(strings.TrimSpace(storagePath)))
+	prefix := "users/" + userID + "/progress_photos/" + photoID + "/original"
+	return clean == prefix+".jpg" || clean == prefix+".png" || clean == prefix+".gif"
 }
 
 func normalizeColumnValue(column string, value any) (any, error) {
@@ -615,6 +1031,9 @@ func normalizeIntValue(value any) (int, error) {
 	case int64:
 		return int(typed), nil
 	case float64:
+		if math.IsNaN(typed) || math.IsInf(typed, 0) || math.Trunc(typed) != typed {
+			return 0, errors.New("expected integer")
+		}
 		return int(typed), nil
 	case json.Number:
 		parsed, err := typed.Int64()
@@ -630,17 +1049,31 @@ func normalizeIntValue(value any) (int, error) {
 func normalizeFloatValue(value any) (float64, error) {
 	switch typed := value.(type) {
 	case float64:
+		if math.IsNaN(typed) || math.IsInf(typed, 0) {
+			return 0, errors.New("expected finite number")
+		}
 		return typed, nil
 	case float32:
+		if math.IsNaN(float64(typed)) || math.IsInf(float64(typed), 0) {
+			return 0, errors.New("expected finite number")
+		}
 		return float64(typed), nil
 	case int:
 		return float64(typed), nil
 	case int64:
 		return float64(typed), nil
 	case json.Number:
-		return typed.Float64()
+		parsed, err := typed.Float64()
+		if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
+			return 0, errors.New("expected finite number")
+		}
+		return parsed, nil
 	case string:
-		return strconv.ParseFloat(typed, 64)
+		parsed, err := strconv.ParseFloat(typed, 64)
+		if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
+			return 0, errors.New("expected finite number")
+		}
+		return parsed, nil
 	default:
 		return 0, errors.New("expected number")
 	}
@@ -665,6 +1098,13 @@ func (s *Server) upsertSyncRow(ctx context.Context, spec tableSpec, row map[stri
 		 on conflict (id) do update
 		     set %s
 		 where target.user_id = excluded.user_id
+		   and (
+		        excluded.version > target.version
+		        or (
+		             excluded.version = target.version
+		             and coalesce(excluded.last_modified_by_device_id, '') = coalesce(target.last_modified_by_device_id, '')
+		           )
+		       )
 		 returning row_to_json(target)`,
 		spec.Name,
 		strings.Join(spec.Columns, ", "),
@@ -675,7 +1115,19 @@ func (s *Server) upsertSyncRow(ctx context.Context, spec tableSpec, row map[stri
 	var encoded []byte
 	if err := s.db.QueryRow(ctx, query, args...).Scan(&encoded); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, errSyncOwnershipConflict
+			var existingUserID string
+			lookupQuery := fmt.Sprintf(`select user_id from %s where id = $1`, spec.Name)
+			lookupErr := s.db.QueryRow(ctx, lookupQuery, row["id"]).Scan(&existingUserID)
+			if errors.Is(lookupErr, pgx.ErrNoRows) {
+				return nil, err
+			}
+			if lookupErr != nil {
+				return nil, lookupErr
+			}
+			if existingUserID != row["user_id"] {
+				return nil, errSyncOwnershipConflict
+			}
+			return nil, errSyncVersionConflict
 		}
 		return nil, err
 	}
@@ -688,6 +1140,9 @@ func (s *Server) fetchSyncRows(
 	userID string,
 	timestampColumn string,
 	since *time.Time,
+	cursorUpdatedAt *time.Time,
+	cursorID string,
+	limit int,
 ) ([]map[string]any, error) {
 	query := fmt.Sprintf(
 		`select coalesce(json_agg(row_to_json(records)), '[]'::json)
@@ -696,7 +1151,9 @@ func (s *Server) fetchSyncRows(
 		           from %s
 		          where user_id = $1
 		            and ($2::timestamptz is null or %s >= $2)
+		            and ($3::timestamptz is null or (updated_at, id) > ($3, $4))
 		          order by updated_at asc, id asc
+		          limit $5
 		        ) as records`,
 		strings.Join(spec.Columns, ", "),
 		spec.Name,
@@ -704,7 +1161,7 @@ func (s *Server) fetchSyncRows(
 	)
 
 	var encoded []byte
-	if err := s.db.QueryRow(ctx, query, userID, since).Scan(&encoded); err != nil {
+	if err := s.db.QueryRow(ctx, query, userID, since, cursorUpdatedAt, cursorID, limit).Scan(&encoded); err != nil {
 		return nil, err
 	}
 	return decodeJSONRows(encoded)
@@ -715,7 +1172,54 @@ func (s *Server) softDeleteSyncRow(
 	spec tableSpec,
 	userID string,
 	recordID string,
+	expectedVersion *int,
+	deviceID string,
 ) (map[string]any, error) {
+	if expectedVersion != nil {
+		query := fmt.Sprintf(
+			`update %s
+			    set deleted_at = coalesce(deleted_at, now()),
+			        updated_at = now(),
+			        version = $3,
+			        last_modified_by_device_id = nullif($4, '')
+			  where id = $1
+			    and user_id = $2
+			    and (
+			         version < $3
+			         or (version = $3 and coalesce(last_modified_by_device_id, '') = $4)
+			        )
+			  returning row_to_json(%s)`,
+			spec.Name,
+			spec.Name,
+		)
+		var encoded []byte
+		err := s.db.QueryRow(
+			ctx,
+			query,
+			recordID,
+			userID,
+			*expectedVersion,
+			strings.TrimSpace(deviceID),
+		).Scan(&encoded)
+		if err == nil {
+			return decodeJSONRow(encoded)
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		var exists bool
+		lookup := fmt.Sprintf(
+			`select exists(select 1 from %s where id = $1 and user_id = $2)`,
+			spec.Name,
+		)
+		if err := s.db.QueryRow(ctx, lookup, recordID, userID).Scan(&exists); err != nil {
+			return nil, err
+		}
+		if !exists {
+			return nil, errNotFound
+		}
+		return nil, errSyncVersionConflict
+	}
 	query := fmt.Sprintf(
 		`update %s
 		    set deleted_at = coalesce(deleted_at, now()),
@@ -755,11 +1259,46 @@ func decodeJSONRows(encoded []byte) ([]map[string]any, error) {
 }
 
 func (s *Server) issueToken(userID, email string) (string, error) {
+	return s.issueTokenWithSession(userID, email, uuid.NewString(), time.Now())
+}
+
+func (s *Server) issueSessionToken(ctx context.Context, userID, email, deviceID string) (string, error) {
+	return s.issueSessionTokenWithExecutor(ctx, s.db, userID, email, deviceID)
+}
+
+type commandExecutor interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+func (s *Server) issueSessionTokenWithExecutor(ctx context.Context, executor commandExecutor, userID, email, deviceID string) (string, error) {
+	now := time.Now().UTC()
+	sessionID := uuid.NewString()
+	token, err := s.issueTokenWithSession(userID, email, sessionID, now)
+	if err != nil {
+		return "", err
+	}
+	_, err = executor.Exec(
+		ctx,
+		`insert into auth_sessions (id, user_id, issued_at, expires_at, device_id) values ($1, $2, $3, $4, nullif($5, ''))`,
+		sessionID,
+		userID,
+		now,
+		now.Add(24*time.Hour),
+		strings.TrimSpace(deviceID),
+	)
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+func (s *Server) issueTokenWithSession(userID, email, sessionID string, now time.Time) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   userID,
 		"email": email,
-		"exp":   time.Now().Add(24 * time.Hour).Unix(),
-		"iat":   time.Now().Unix(),
+		"jti":   sessionID,
+		"exp":   now.Add(24 * time.Hour).Unix(),
+		"iat":   now.Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.cfg.JWTSecret))
@@ -776,12 +1315,42 @@ func bearerToken(header string) string {
 	return parts[1]
 }
 
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func decodeJSONBody(w http.ResponseWriter, r *http.Request, destination any, maxBytes int64) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("multiple JSON values are not allowed")
+		}
+		return err
+	}
+	return nil
+}
+
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]any{"error": message})
+func writeError(w http.ResponseWriter, status int, fields ...string) {
+	code := "request_failed"
+	message := http.StatusText(status)
+	if len(fields) == 1 {
+		message = fields[0]
+	}
+	if len(fields) >= 2 {
+		code = fields[0]
+		message = fields[1]
+	}
+	writeJSON(w, status, map[string]any{"error": message, "code": code})
 }

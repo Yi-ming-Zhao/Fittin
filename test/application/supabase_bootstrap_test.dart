@@ -86,7 +86,9 @@ void main() {
     expect(state.isConfigured, isFalse);
     expect(
       state.errorMessage,
-      contains('Local backend dev server at http://127.0.0.1:8081 is not reachable'),
+      contains(
+        'Local backend dev server at http://127.0.0.1:8081 is not reachable',
+      ),
     );
   });
 

@@ -8,24 +8,17 @@ backend model is now:
 - Go API on `127.0.0.1:8081`
 - PostgreSQL for auth and sync data
 - Local disk storage for progress photo files
-- Cloudflare Tunnel for public exposure
+- NPS from 241 to Alibaba Cloud and direct HTTPS exposure through Nginx
 
 Use these documents instead of the old Supabase workflow:
 
 - [docs/custom-backend-deployment.md](/data/zhaoyiming/Fittin/docs/custom-backend-deployment.md)
 - [docs/web-public-deployment.md](/data/zhaoyiming/Fittin/docs/web-public-deployment.md)
 
-Migration source assets from the previous Supabase environment remain in:
-
-- `.deploy/supabase_restore/generated/30_restore_auth_data.sql`
-- `.deploy/supabase_restore/generated/20_restore_public_app_data.sql`
-
-Those files are consumed by:
-
-```bash
-cd backend
-go run ./cmd/fittin-import
-```
+Production migration exports are deliberately excluded from source control.
+When an approved migration is required, use an encrypted input path outside the
+repository and follow `docs/security-incident-response.md` for cleanup and
+credential handling.
 
 If you are looking for the previous Supabase-specific instructions, treat them
 as archival context only. They no longer describe the supported runtime.

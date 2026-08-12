@@ -53,22 +53,33 @@ final activeSessionProvider =
     });
 
 class SessionState {
-  SessionState({this.isLoading = false, this.activeWorkout, this.errorMessage});
+  SessionState({
+    this.isLoading = false,
+    this.activeWorkout,
+    this.errorMessage,
+    this.draftErrorMessage,
+  });
 
   final bool isLoading;
   final WorkoutSessionState? activeWorkout;
   final String? errorMessage;
+  final String? draftErrorMessage;
 
   SessionState copyWith({
     bool? isLoading,
     WorkoutSessionState? activeWorkout,
     String? errorMessage,
+    String? draftErrorMessage,
     bool clearError = false,
+    bool clearDraftError = false,
   }) {
     return SessionState(
       isLoading: isLoading ?? this.isLoading,
       activeWorkout: activeWorkout ?? this.activeWorkout,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      draftErrorMessage: clearDraftError
+          ? null
+          : draftErrorMessage ?? this.draftErrorMessage,
     );
   }
 }
@@ -85,6 +96,8 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   Future<void> _draftWriteTail = Future<void>.value();
   bool _draftWritesOpen = true;
   bool _restoreFailed = false;
+  Object? _lastDraftWriteError;
+  WorkoutSessionState? _lastDraftSnapshot;
 
   Future<void> startOrResumeSession() {
     final existing = _startInFlight;
@@ -414,6 +427,11 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
     try {
       await _draftWriteTail;
+      if (_lastDraftWriteError != null) {
+        throw StateError(
+          'Training draft is not saved yet. Retry before finishing.',
+        );
+      }
       await _ref
           .read(todayWorkoutGatewayProvider)
           .concludeWorkoutSession(workout);
@@ -452,6 +470,14 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
 
   void dismissError() {
     state = state.copyWith(clearError: true);
+  }
+
+  void retryDraftSave() {
+    final snapshot = _lastDraftSnapshot ?? state.activeWorkout;
+    if (snapshot == null) return;
+    _lastDraftWriteError = null;
+    state = state.copyWith(clearDraftError: true);
+    _queueDraftSave(snapshot);
   }
 
   void _updateCurrentExerciseSet(
@@ -517,11 +543,27 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     }
     final ownerUserId = _ref.read(currentUserIdProvider);
     final repository = _ref.read(databaseRepositoryProvider);
-    final write = _draftWriteTail.then(
-      (_) =>
-          repository.saveActiveSessionDraft(workout, ownerUserId: ownerUserId),
-    );
-    _draftWriteTail = write.catchError((Object _, StackTrace __) {});
+    _lastDraftSnapshot = workout;
+    _draftWriteTail = _draftWriteTail
+        .then(
+          (_) => repository.saveActiveSessionDraft(
+            workout,
+            ownerUserId: ownerUserId,
+          ),
+        )
+        .then((_) {
+          _lastDraftWriteError = null;
+          if (mounted) state = state.copyWith(clearDraftError: true);
+        })
+        .catchError((Object error, StackTrace _) {
+          _lastDraftWriteError = error;
+          if (mounted) {
+            state = state.copyWith(
+              draftErrorMessage:
+                  'Training draft was not saved. Check device storage and retry.',
+            );
+          }
+        });
   }
 
   Future<void> _discardDraft(String instanceId) async {

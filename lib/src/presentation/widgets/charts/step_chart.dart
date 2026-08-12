@@ -72,7 +72,8 @@ class _StepChartPainter extends CustomPainter {
     final minVal = data.reduce(math.min);
     final range = (maxVal - minVal).abs() < 0.001 ? 1.0 : maxVal - minVal;
 
-    double xFor(int i) => pad + (data.length <= 1 ? innerW / 2 : i / (data.length - 1)) * innerW;
+    double xFor(int i) =>
+        pad + (data.length <= 1 ? innerW / 2 : i / (data.length - 1)) * innerW;
     double yFor(double v) => pad + innerH - ((v - minVal) / range) * innerH;
 
     // Grid lines at 0%, 33%, 66%, 100%
@@ -177,11 +178,7 @@ class _StepChartPainter extends CustomPainter {
         final py = yFor(data[i]);
 
         // bg-colored center to create "ring" effect
-        canvas.drawCircle(
-          Offset(px, py),
-          2.5,
-          Paint()..color = theme.bg,
-        );
+        canvas.drawCircle(Offset(px, py), 2.5, Paint()..color = theme.bg);
         canvas.drawCircle(
           Offset(px, py),
           2.5,

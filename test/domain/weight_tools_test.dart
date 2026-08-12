@@ -4,8 +4,14 @@ import 'package:fittin_v2/src/domain/weight_tools.dart';
 
 void main() {
   test('converts between kg and lb in both directions', () {
-    expect(convertWeight(100, LoadUnits.kg, LoadUnits.lbs), closeTo(220.462, 0.001));
-    expect(convertWeight(225, LoadUnits.lbs, LoadUnits.kg), closeTo(102.058, 0.001));
+    expect(
+      convertWeight(100, LoadUnits.kg, LoadUnits.lbs),
+      closeTo(220.462, 0.001),
+    );
+    expect(
+      convertWeight(225, LoadUnits.lbs, LoadUnits.kg),
+      closeTo(102.058, 0.001),
+    );
   });
 
   test('computes kilogram plate breakdown per side', () {

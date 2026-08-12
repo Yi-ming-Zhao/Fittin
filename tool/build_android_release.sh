@@ -10,10 +10,10 @@ EXPECTED_ANDROID_SIGNER_SHA256="0c52c1350c14a360c833422967ac33469572e9acb64a33dd
 
 cd "$REPO_ROOT"
 
-if [[ $# -lt 1 || $# -gt 2 ]]; then
+if [[ $# -ne 1 ]]; then
   cat <<'EOF'
 Usage:
-  tool/build_android_release.sh <BACKEND_URL> [BACKEND_API_KEY]
+  tool/build_android_release.sh <BACKEND_URL>
 
 Example:
   tool/build_android_release.sh https://fittin.hammerscholar.net/api
@@ -25,8 +25,6 @@ EOF
 fi
 
 BACKEND_URL="$1"
-BACKEND_API_KEY="${2:-}"
-
 if [[ ! -f android/key.properties ]]; then
   echo "android/key.properties is required for a signed release build."
   exit 1
@@ -37,8 +35,7 @@ flutter pub get
 
 echo "==> Building Android APK"
 flutter build apk --release \
-  --dart-define=BACKEND_URL="$BACKEND_URL" \
-  --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+  --dart-define=BACKEND_URL="$BACKEND_URL"
 
 ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
 APKSIGNER="$(
@@ -69,8 +66,7 @@ fi
 
 echo "==> Building Android App Bundle"
 flutter build appbundle --release \
-  --dart-define=BACKEND_URL="$BACKEND_URL" \
-  --dart-define=BACKEND_API_KEY="$BACKEND_API_KEY"
+  --dart-define=BACKEND_URL="$BACKEND_URL"
 
 cat <<'EOF'
 

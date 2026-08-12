@@ -56,10 +56,14 @@ class LocalPlanRepository {
     return _repository.saveEditedTemplate(
       draft: draft,
       originalTemplateId: originalTemplateId,
+      ownerUserId: _ownerUserId,
     );
   }
 
   Future<PlanTemplate> importSharedTemplate(PlanTemplate template) {
-    return _repository.importSharedTemplate(template);
+    return _repository.importSharedTemplate(
+      template,
+      ownerUserId: _ownerUserId,
+    );
   }
 }

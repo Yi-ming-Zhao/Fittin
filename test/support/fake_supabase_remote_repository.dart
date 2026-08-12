@@ -65,6 +65,16 @@ class FakeSupabaseRemoteRepository extends SupabaseRemoteRepository {
   }
 
   @override
+  Future<String> downloadProgressPhotoToLocal(String photoId) async {
+    for (final row in rowsByTable['progress_photos'] ?? const []) {
+      if (row['id'] == photoId) {
+        return row['storage_path'] as String? ?? '';
+      }
+    }
+    throw StateError('Missing fake progress photo: $photoId');
+  }
+
+  @override
   Future<void> upsertProgressPhotoMetadata({
     required collection,
     required String storagePath,
@@ -78,7 +88,12 @@ class FakeSupabaseRemoteRepository extends SupabaseRemoteRepository {
   }
 
   @override
-  Future<void> deleteById({required String table, required String id}) async {
+  Future<void> deleteById({
+    required String table,
+    required String id,
+    int? version,
+    String? deviceId,
+  }) async {
     deletes.add({'table': table, 'id': id});
   }
 

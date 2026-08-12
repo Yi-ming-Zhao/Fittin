@@ -1,0 +1,15 @@
+## ADDED Requirements
+
+### Requirement: Verifiable first-party releases
+The system SHALL publish update metadata and artifacts from a first-party HTTPS endpoint and SHALL reject activation of a deployment whose readiness, version, bootstrap, or artifact probes fail.
+
+#### Scenario: Deployment probe fails
+- **WHEN** a staged release does not return the expected version or required assets
+- **THEN** deployment keeps or restores the previous active release
+
+### Requirement: Cache-correct entrypoints
+Mutable web entrypoints and release metadata SHALL revalidate, while fingerprinted static assets MAY be cached immutably.
+
+#### Scenario: New web version is deployed
+- **WHEN** the active release symlink changes
+- **THEN** a returning browser obtains current bootstrap/version metadata without waiting for an old immutable cache lifetime

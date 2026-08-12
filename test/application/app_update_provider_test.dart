@@ -146,4 +146,44 @@ void main() {
       expect(source.fetchLatestRelease(), throwsA(isA<AppUpdateException>()));
     });
   });
+
+  group('FirstPartyAppUpdateSource', () {
+    test('reads a same-origin Android manifest', () async {
+      final source = FirstPartyAppUpdateSource(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'version': '1.0.13',
+              'releasePageUrl':
+                  'https://fittin.hammerscholar.net/releases/v1.0.13/',
+              'androidApkUrl':
+                  'https://fittin.hammerscholar.net/releases/v1.0.13/fittin.apk',
+            }),
+            200,
+          ),
+        ),
+      );
+
+      final release = await source.fetchLatestRelease();
+
+      expect(release.version, '1.0.13');
+      expect(release.androidApkUrl?.host, 'fittin.hammerscholar.net');
+    });
+
+    test('rejects manifest links on another host', () async {
+      final source = FirstPartyAppUpdateSource(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'version': '1.0.13',
+              'releasePageUrl': 'https://example.test/releases/v1.0.13/',
+            }),
+            200,
+          ),
+        ),
+      );
+
+      expect(source.fetchLatestRelease(), throwsA(isA<AppUpdateException>()));
+    });
+  });
 }

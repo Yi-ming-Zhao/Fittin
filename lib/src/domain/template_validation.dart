@@ -32,16 +32,22 @@ class TemplateValidation {
     }
 
     for (final workout in template.workouts) {
-      final workoutLabel = workout.name.trim().isEmpty ? workout.id : workout.name;
+      final workoutLabel = workout.name.trim().isEmpty
+          ? workout.id
+          : workout.name;
       if (workout.name.trim().isEmpty) {
         errors.add('Workout "$workoutLabel" must have a name.');
       }
       if (workout.exercises.isEmpty) {
-        errors.add('Workout "$workoutLabel" must contain at least one exercise.');
+        errors.add(
+          'Workout "$workoutLabel" must contain at least one exercise.',
+        );
       }
 
       for (final exercise in workout.exercises) {
-        final exerciseLabel = exercise.name.trim().isEmpty ? exercise.id : exercise.name;
+        final exerciseLabel = exercise.name.trim().isEmpty
+            ? exercise.id
+            : exercise.name;
         if (exercise.name.trim().isEmpty) {
           errors.add('Exercise "$exerciseLabel" must have a name.');
         }
@@ -51,7 +57,9 @@ class TemplateValidation {
           );
         }
         if (exercise.stages.isEmpty) {
-          errors.add('Exercise "$exerciseLabel" must contain at least one stage.');
+          errors.add(
+            'Exercise "$exerciseLabel" must contain at least one stage.',
+          );
           continue;
         }
 

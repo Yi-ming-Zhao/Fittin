@@ -11,23 +11,25 @@ _$PlanTemplateImpl _$$PlanTemplateImplFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
-      localizedName: (json['localizedName'] as Map<String, dynamic>?)?.map(
+      localizedName:
+          (json['localizedName'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as String),
           ) ??
           const <String, String>{},
       localizedDescription:
           (json['localizedDescription'] as Map<String, dynamic>?)?.map(
-                (k, e) => MapEntry(k, e as String),
-              ) ??
-              const <String, String>{},
+            (k, e) => MapEntry(k, e as String),
+          ) ??
+          const <String, String>{},
       engineFamily: json['engineFamily'] as String? ?? 'legacy',
       scheduleMode: json['scheduleMode'] as String? ?? PlanScheduleModes.legacy,
       requiredTrainingMaxKeys:
           (json['requiredTrainingMaxKeys'] as List<dynamic>?)
-                  ?.map((e) => e as String)
-                  .toList() ??
-              const [],
-      engineConfig: json['engineConfig'] as Map<String, dynamic>? ??
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      engineConfig:
+          json['engineConfig'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
       phases: (json['phases'] as List<dynamic>)
           .map((e) => Phase.fromJson(e as Map<String, dynamic>))
@@ -49,12 +51,12 @@ Map<String, dynamic> _$$PlanTemplateImplToJson(_$PlanTemplateImpl instance) =>
     };
 
 _$PhaseImpl _$$PhaseImplFromJson(Map<String, dynamic> json) => _$PhaseImpl(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      workouts: (json['workouts'] as List<dynamic>)
-          .map((e) => Workout.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  id: json['id'] as String,
+  name: json['name'] as String,
+  workouts: (json['workouts'] as List<dynamic>)
+      .map((e) => Workout.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$$PhaseImplToJson(_$PhaseImpl instance) =>
     <String, dynamic>{
@@ -67,16 +69,17 @@ _$WorkoutImpl _$$WorkoutImplFromJson(Map<String, dynamic> json) =>
     _$WorkoutImpl(
       id: json['id'] as String,
       name: json['name'] as String,
-      localizedName: (json['localizedName'] as Map<String, dynamic>?)?.map(
+      localizedName:
+          (json['localizedName'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as String),
           ) ??
           const <String, String>{},
       dayLabel: json['dayLabel'] as String? ?? '',
       localizedDayLabel:
           (json['localizedDayLabel'] as Map<String, dynamic>?)?.map(
-                (k, e) => MapEntry(k, e as String),
-              ) ??
-              const <String, String>{},
+            (k, e) => MapEntry(k, e as String),
+          ) ??
+          const <String, String>{},
       estimatedDurationMinutes:
           (json['estimatedDurationMinutes'] as num?)?.toInt() ?? 45,
       exercises: (json['exercises'] as List<dynamic>)
@@ -100,7 +103,8 @@ _$ExerciseImpl _$$ExerciseImplFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       exerciseId: json['exerciseId'] as String,
       name: json['name'] as String,
-      localizedName: (json['localizedName'] as Map<String, dynamic>?)?.map(
+      localizedName:
+          (json['localizedName'] as Map<String, dynamic>?)?.map(
             (k, e) => MapEntry(k, e as String),
           ) ??
           const <String, String>{},
@@ -113,7 +117,8 @@ _$ExerciseImpl _$$ExerciseImplFromJson(Map<String, dynamic> json) =>
       roundingIncrement: (json['roundingIncrement'] as num?)?.toDouble() ?? 2.5,
       loadUnit: json['loadUnit'] as String? ?? LoadUnits.kg,
       equipmentType: json['equipmentType'] as String? ?? EquipmentTypes.general,
-      engineConfig: json['engineConfig'] as Map<String, dynamic>? ??
+      engineConfig:
+          json['engineConfig'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
       stages: (json['stages'] as List<dynamic>)
           .map((e) => SetScheme.fromJson(e as Map<String, dynamic>))
@@ -144,7 +149,8 @@ _$SetSchemeImpl _$$SetSchemeImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       basePercent: (json['basePercent'] as num?)?.toDouble() ?? 1.0,
       order: (json['order'] as num?)?.toInt() ?? 0,
-      engineConfig: json['engineConfig'] as Map<String, dynamic>? ??
+      engineConfig:
+          json['engineConfig'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
       sets: (json['sets'] as List<dynamic>)
           .map((e) => SetDefinition.fromJson(e as Map<String, dynamic>))
@@ -186,20 +192,20 @@ Map<String, dynamic> _$$SetDefinitionImplToJson(_$SetDefinitionImpl instance) =>
     };
 
 _$ProgressionRuleImpl _$$ProgressionRuleImplFromJson(
-        Map<String, dynamic> json) =>
-    _$ProgressionRuleImpl(
-      condition: json['condition'] as String,
-      actions: (json['actions'] as List<dynamic>)
-          .map((e) => RuleAction.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  Map<String, dynamic> json,
+) => _$ProgressionRuleImpl(
+  condition: json['condition'] as String,
+  actions: (json['actions'] as List<dynamic>)
+      .map((e) => RuleAction.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$$ProgressionRuleImplToJson(
-        _$ProgressionRuleImpl instance) =>
-    <String, dynamic>{
-      'condition': instance.condition,
-      'actions': instance.actions,
-    };
+  _$ProgressionRuleImpl instance,
+) => <String, dynamic>{
+  'condition': instance.condition,
+  'actions': instance.actions,
+};
 
 _$RuleActionImpl _$$RuleActionImplFromJson(Map<String, dynamic> json) =>
     _$RuleActionImpl(

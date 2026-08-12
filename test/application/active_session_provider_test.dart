@@ -97,6 +97,22 @@ class _DelayedDraftRepository extends InMemoryDatabaseRepository {
   }
 }
 
+class _FailNextDraftRepository extends InMemoryDatabaseRepository {
+  bool failNextSave = false;
+
+  @override
+  Future<void> saveActiveSessionDraft(
+    WorkoutSessionState draft, {
+    String? ownerUserId,
+  }) async {
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('simulated local storage failure');
+    }
+    await super.saveActiveSessionDraft(draft, ownerUserId: ownerUserId);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -544,6 +560,47 @@ void main() {
     firstSave.complete();
     await _flushMicrotasks(12);
 
+    final savedDraft = await repository.fetchActiveSessionDraft(
+      fakeWorkoutSessionState.instanceId,
+    );
+    expect(savedDraft?.exercises.first.sets.first.completedReps, 9);
+  });
+
+  test('failed draft save keeps local state and succeeds on retry', () async {
+    final repository = _FailNextDraftRepository();
+    final gateway = FakeTodayWorkoutGateway();
+    final container = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(repository),
+        todayWorkoutGatewayProvider.overrideWithValue(gateway),
+      ],
+    );
+    addTearDown(container.dispose);
+    final notifier = container.read(activeSessionProvider.notifier);
+    await notifier.startOrResumeSession();
+    await _flushMicrotasks();
+
+    repository.failNextSave = true;
+    notifier.updateReps(0, 9);
+    await _flushMicrotasks(12);
+
+    expect(
+      container
+          .read(activeSessionProvider)
+          .activeWorkout
+          ?.exercises
+          .first
+          .sets
+          .first
+          .completedReps,
+      9,
+    );
+    expect(container.read(activeSessionProvider).draftErrorMessage, isNotNull);
+
+    notifier.retryDraftSave();
+    await _flushMicrotasks(12);
+
+    expect(container.read(activeSessionProvider).draftErrorMessage, isNull);
     final savedDraft = await repository.fetchActiveSessionDraft(
       fakeWorkoutSessionState.instanceId,
     );

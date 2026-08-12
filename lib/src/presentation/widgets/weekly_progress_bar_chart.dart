@@ -77,9 +77,14 @@ class WeeklyProgressBarChart extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(
               days[index],
-              style: fittinTheme.uiStyle(11, isToday ? fittinTheme.accent : fittinTheme.fgMuted).copyWith(
-                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-              ),
+              style: fittinTheme
+                  .uiStyle(
+                    11,
+                    isToday ? fittinTheme.accent : fittinTheme.fgMuted,
+                  )
+                  .copyWith(
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  ),
             ),
           ],
         );

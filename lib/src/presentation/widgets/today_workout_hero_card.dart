@@ -10,8 +10,8 @@ import '../../domain/models/training_plan.dart';
 import '../localization/app_strings.dart';
 import '../localization/plan_text.dart';
 import '../screens/active_session_screen.dart';
-import '../screens/plan_library_screen.dart';
 import '../screens/share_screen.dart';
+import '../app_shell_navigation.dart';
 import 'fittin_card.dart';
 import 'fittin_primitives.dart';
 import '../theme/fittin_theme.dart' show FittinTheme, FittinCardStyle;
@@ -91,9 +91,8 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
       return _NoActivePlanCard(
         theme: theme,
         strings: strings,
-        onBrowsePlans: () => Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const PlanLibraryScreen())),
+        onBrowsePlans: () =>
+            ref.read(appShellTabIndexProvider.notifier).state = 1,
       );
     }
     return _ErrorCard(
