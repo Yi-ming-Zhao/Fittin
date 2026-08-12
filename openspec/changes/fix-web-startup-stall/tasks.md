@@ -13,6 +13,6 @@
 
 ## 3. Production Activation
 
-- [ ] 3.1 Push the scoped change and confirm exact-SHA CI succeeds.
-- [ ] 3.2 Install the nginx fix with a rollback backup, deploy the matching Web build, and verify MIME, backend health, first frame, refresh, and phone-sized behavior on the public origin.
+- [x] 3.1 Push the scoped change and confirm exact-SHA CI succeeds.
+- [x] 3.2 Install the nginx fix with a rollback backup, deploy the matching Web build, and verify MIME, backend health, first frame, refresh, and phone-sized behavior on the public origin.
 - [ ] 3.3 Synchronize the 241 checkout to the released commit without overwriting remote work.
