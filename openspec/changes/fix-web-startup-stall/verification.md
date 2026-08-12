@@ -25,3 +25,4 @@
 - The originally affected browser session recovered after the targeted cache migration.
 - A subsequent 390x844 reload rendered one `flutter-view` within the normal startup window, removed the static launch layer, had no horizontal overflow, and showed no new startup warning or error logs.
 - The static launch surface now exposes localized Reload recovery if no first frame is produced.
+- The clean 241 checkout fast-forwarded from `c7074c8` to `1aab832` through GitHub with no local file transfer or overwritten remote work; the OpenSpec CLI is not installed on that host, while strict validation passed locally and in the committed evidence above.
