@@ -63,12 +63,12 @@ bootstrap_path.write_text(bootstrap_updated)
 index_path = Path("build/web/index.html")
 index_text = index_path.read_text()
 index_updated = index_text.replace(
-    '<script src="flutter_bootstrap.js" async></script>',
-    f'<script src="flutter_bootstrap.js?v={version}" async></script>',
+    "window.fittinLaunchFlutter('flutter_bootstrap.js');",
+    f"window.fittinLaunchFlutter('flutter_bootstrap.js?v={version}');",
     1,
 )
 if index_updated == index_text:
-    raise SystemExit("Failed to inject versioned flutter_bootstrap.js path into index.html")
+    raise SystemExit("Failed to inject versioned Flutter bootstrap path into index.html")
 index_path.write_text(index_updated)
 
 print(f"Injected bootstrap/main cache-busting query: v={version}")

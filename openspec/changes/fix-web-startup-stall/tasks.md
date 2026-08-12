@@ -3,6 +3,7 @@
 - [x] 1.1 Reproduce the public phone-sized startup stall and record the fatal browser evidence.
 - [x] 1.2 Serve fingerprinted and mutable WebAssembly assets as `application/wasm` without weakening cache or security headers.
 - [x] 1.3 Add a bounded localized launch failure state with a reload action while preserving normal first-frame handoff.
+- [x] 1.4 Migrate the legacy Flutter asset cache once before bootstrap without clearing user data.
 
 ## 2. Regression Coverage
 

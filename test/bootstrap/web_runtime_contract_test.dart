@@ -43,6 +43,12 @@ void main() {
       expect(index, contains('fittin-web-launch-retry'));
       expect(index, contains('window.location.reload()'));
       expect(index, contains('应用暂时无法启动，请检查网络后重试。'));
+      expect(index, contains("caches.delete('flutter-app-cache')"));
+      expect(index, contains('fittin.web-cache-migration.wasm-mime-v1'));
+      expect(
+        index,
+        contains("window.fittinLaunchFlutter('flutter_bootstrap.js')"),
+      );
     });
   });
 }

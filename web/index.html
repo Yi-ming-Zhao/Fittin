@@ -136,6 +136,29 @@
         document.getElementById('fittin-web-launch')?.remove();
       };
 
+      const prepareWebRuntime = async () => {
+        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v1';
+        try {
+          if (localStorage.getItem(migrationKey) === 'done') return;
+          if ('caches' in window) {
+            await caches.delete('flutter-app-cache');
+          }
+          localStorage.setItem(migrationKey, 'done');
+        } catch (_) {
+          // CacheStorage and localStorage can be unavailable in private modes.
+          // Continue with the network-backed Flutter bootstrap in that case.
+        }
+      };
+
+      window.fittinLaunchFlutter = async (bootstrapUrl) => {
+        await prepareWebRuntime();
+        const bootstrap = document.createElement('script');
+        bootstrap.src = bootstrapUrl;
+        bootstrap.async = true;
+        bootstrap.addEventListener('error', revealStartupFailure, { once: true });
+        document.body.appendChild(bootstrap);
+      };
+
       try {
         const stored = localStorage.getItem('flutter.fittin.appearance.palette');
         const palette = stored === null ? null : JSON.parse(stored);
@@ -213,6 +236,6 @@
       <button id="fittin-web-launch-retry" class="fittin-web-launch__retry" type="button"></button>
     </div>
   </div>
-  <script src="flutter_bootstrap.js" async></script>
+  <script>window.fittinLaunchFlutter('flutter_bootstrap.js');</script>
 </body>
 </html>
