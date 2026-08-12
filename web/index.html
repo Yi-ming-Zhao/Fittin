@@ -137,23 +137,26 @@
       };
 
       const prepareWebRuntime = async () => {
-        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v2';
+        const migrationKey = 'fittin.web-cache-migration.wasm-mime-v3';
         try {
           if (localStorage.getItem(migrationKey) === 'done') return;
           if ('caches' in window) {
-            const wasmResponse = await fetch(
-              'canvaskit/canvaskit.wasm?fittin-mime-migration=v2',
-              { cache: 'reload' },
-            );
-            const contentType = wasmResponse.headers.get('content-type') ?? '';
-            if (!wasmResponse.ok || !contentType.startsWith('application/wasm')) {
-              throw new Error('CanvasKit WebAssembly MIME migration failed.');
-            }
             const flutterCache = await caches.open('flutter-app-cache');
-            await flutterCache.put(
+            const wasmPaths = [
               'canvaskit/canvaskit.wasm',
-              wasmResponse.clone(),
-            );
+              'canvaskit/chromium/canvaskit.wasm',
+            ];
+            for (const wasmPath of wasmPaths) {
+              const wasmResponse = await fetch(
+                `${wasmPath}?fittin-mime-migration=v3`,
+                { cache: 'reload' },
+              );
+              const contentType = wasmResponse.headers.get('content-type') ?? '';
+              if (!wasmResponse.ok || !contentType.startsWith('application/wasm')) {
+                throw new Error('CanvasKit WebAssembly MIME migration failed.');
+              }
+              await flutterCache.put(wasmPath, wasmResponse.clone());
+            }
           }
           localStorage.setItem(migrationKey, 'done');
         } catch (_) {

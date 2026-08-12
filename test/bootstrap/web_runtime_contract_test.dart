@@ -43,10 +43,11 @@ void main() {
       expect(index, contains('fittin-web-launch-retry'));
       expect(index, contains('window.location.reload()'));
       expect(index, contains('应用暂时无法启动，请检查网络后重试。'));
-      expect(index, contains('fittin-mime-migration=v2'));
+      expect(index, contains('fittin-mime-migration=v3'));
       expect(index, contains("caches.open('flutter-app-cache')"));
       expect(index, contains("'canvaskit/canvaskit.wasm'"));
-      expect(index, contains('fittin.web-cache-migration.wasm-mime-v2'));
+      expect(index, contains("'canvaskit/chromium/canvaskit.wasm'"));
+      expect(index, contains('fittin.web-cache-migration.wasm-mime-v3'));
       expect(
         index,
         contains("window.fittinLaunchFlutter('flutter_bootstrap.js')"),
