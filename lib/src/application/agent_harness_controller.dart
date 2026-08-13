@@ -736,8 +736,27 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       StateError(:final message) => message,
       _ => _isChinese ? 'Agent 请求失败。' : 'The Agent request failed.',
     };
-    return source.length <= 500 ? source : '${source.substring(0, 500)}…';
+    final localized = _isChinese ? _localizeOwnedError(source) : source;
+    return localized.length <= 500
+        ? localized
+        : '${localized.substring(0, 500)}…';
   }
+
+  static String _localizeOwnedError(String source) => switch (source) {
+    'This proposal expired. Ask the Agent to generate it again.' =>
+      '这个修改预览已过期，请让 Agent 重新生成。',
+    'The target changed on this or another device. Generate a fresh proposal.' =>
+      '目标数据已在本机或其他设备上改变，请重新生成修改预览。',
+    'This action cannot be undone.' => '该操作无法撤销。',
+    'The target changed after this action. Undo was safely refused.' =>
+      '该操作之后目标数据又发生了变化，已安全拒绝撤销。',
+    'Training progress changed after this preview. Generate a fresh proposal.' =>
+      '训练进度在生成预览后发生了变化，请重新生成修改预览。',
+    'Agent action not found.' => '找不到 Agent 操作记录。',
+    'This change is too large to keep a safe undo snapshot. Split it into smaller changes.' =>
+      '这次修改太大，无法安全保留撤销快照。请拆分为更小的修改。',
+    _ => source,
+  };
 }
 
 class _ToolCallBuilder {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
 import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
@@ -39,6 +40,8 @@ class AgentToolRegistry {
   AgentToolRegistry(this._ref);
 
   final Ref _ref;
+
+  bool get _isChinese => _ref.read(appLocaleProvider) == AppLocale.zh;
 
   static const readToolNames = {
     'list_plans',
@@ -402,8 +405,10 @@ class AgentToolRegistry {
     }
     return _proposal(
       toolName: 'propose_create_plan',
-      title: 'Create ${plan.name}',
-      summary: '${plan.workouts.length} workouts will be added.',
+      title: _isChinese ? '创建${plan.name}' : 'Create ${plan.name}',
+      summary: _isChinese
+          ? '将添加 ${plan.workouts.length} 个训练日。'
+          : '${plan.workouts.length} workouts will be added.',
       args: {'plan': plan.toJson()},
       targetType: 'plan',
       targetId: plan.id,
@@ -411,8 +416,8 @@ class AgentToolRegistry {
       after: plan.toJson(),
       changes: [
         AgentMutationChange(
-          path: 'plan',
-          before: 'Not created',
+          path: _isChinese ? '计划' : 'plan',
+          before: _isChinese ? '尚未创建' : 'Not created',
           after: plan.name,
         ),
       ],
@@ -446,10 +451,16 @@ class AgentToolRegistry {
         : null;
     return _proposal(
       toolName: 'propose_revise_plan',
-      title: 'Revise ${existing.template.name}',
+      title: _isChinese
+          ? '修订${existing.template.name}'
+          : 'Revise ${existing.template.name}',
       summary: activeRevision
-          ? 'A safe copy will replace the active plan while retaining compatible progress.'
-          : 'The plan will be updated or saved as a safe copy.',
+          ? (_isChinese
+                ? '将创建安全副本替换当前计划，并保留可兼容的训练进度。'
+                : 'A safe copy will replace the active plan while retaining compatible progress.')
+          : (_isChinese
+                ? '将更新计划或将其保存为安全副本。'
+                : 'The plan will be updated or saved as a safe copy.'),
       args: {
         'templateId': templateId,
         'plan': plan.toJson(),
@@ -463,31 +474,33 @@ class AgentToolRegistry {
       before: existing.template.toJson(),
       after: plan.toJson(),
       progressionEffect: activeRevision
-          ? 'Preserve current workout, training maxes, engine state and ${newExerciseIds.intersection(oldExerciseIds).length} matching exercise states; initialize ${added.length}; remove ${removed.length}.'
+          ? (_isChinese
+                ? '保留当前训练日、训练最大值、进度引擎状态以及 ${newExerciseIds.intersection(oldExerciseIds).length} 个匹配动作的状态；初始化 ${added.length} 个，移除 ${removed.length} 个。'
+                : 'Preserve current workout, training maxes, engine state and ${newExerciseIds.intersection(oldExerciseIds).length} matching exercise states; initialize ${added.length}; remove ${removed.length}.')
           : null,
       changes: [
         if (existing.template.name != plan.name)
           AgentMutationChange(
-            path: 'name',
+            path: _isChinese ? '名称' : 'name',
             before: existing.template.name,
             after: plan.name,
           ),
         AgentMutationChange(
-          path: 'workouts',
+          path: _isChinese ? '训练日' : 'workouts',
           before: '${existing.template.workouts.length}',
           after: '${plan.workouts.length}',
         ),
         if (added.isNotEmpty)
           AgentMutationChange(
-            path: 'exercises.added',
-            before: 'None',
+            path: _isChinese ? '新增动作' : 'exercises.added',
+            before: _isChinese ? '无' : 'None',
             after: added.join(', '),
           ),
         if (removed.isNotEmpty)
           AgentMutationChange(
-            path: 'exercises.removed',
+            path: _isChinese ? '移除动作' : 'exercises.removed',
             before: removed.join(', '),
-            after: 'Removed',
+            after: _isChinese ? '将移除' : 'Removed',
           ),
       ],
     );
@@ -503,8 +516,12 @@ class AgentToolRegistry {
     }
     return _proposal(
       toolName: 'propose_delete_plan',
-      title: 'Delete ${existing.template.name}',
-      summary: 'The custom plan will be soft-deleted and synced.',
+      title: _isChinese
+          ? '删除${existing.template.name}'
+          : 'Delete ${existing.template.name}',
+      summary: _isChinese
+          ? '该自定义计划将被软删除并同步。'
+          : 'The custom plan will be soft-deleted and synced.',
       args: {'templateId': id},
       targetType: 'plan',
       targetId: id,
@@ -512,9 +529,9 @@ class AgentToolRegistry {
       after: null,
       changes: [
         AgentMutationChange(
-          path: 'plan',
+          path: _isChinese ? '计划' : 'plan',
           before: existing.template.name,
-          after: 'Deleted',
+          after: _isChinese ? '将删除' : 'Deleted',
         ),
       ],
     );
@@ -528,19 +545,24 @@ class AgentToolRegistry {
     _validateLog(log);
     return _proposal(
       toolName: 'propose_create_workout_log',
-      title: 'Add ${log.workoutName} record',
-      summary:
-          'This historical record will update analytics but not current plan progress.',
+      title: _isChinese
+          ? '添加${log.workoutName}记录'
+          : 'Add ${log.workoutName} record',
+      summary: _isChinese
+          ? '该历史记录会更新分析，但不会改变当前计划进度。'
+          : 'This historical record will update analytics but not current plan progress.',
       args: {'log': log.toJson()},
       targetType: 'workout_log',
       targetId: log.logId,
       before: null,
       after: log.toJson(),
-      progressionEffect: 'History and analytics only.',
+      progressionEffect: _isChinese
+          ? '仅影响历史记录和分析。'
+          : 'History and analytics only.',
       changes: [
         AgentMutationChange(
-          path: 'completedAt',
-          before: 'Not recorded',
+          path: _isChinese ? '完成时间' : 'completedAt',
+          before: _isChinese ? '尚未记录' : 'Not recorded',
           after: log.completedAt.toLocal().toString(),
         ),
       ],
@@ -557,15 +579,20 @@ class AgentToolRegistry {
     _validateLog(revised);
     return _proposal(
       toolName: 'propose_update_workout_log',
-      title: 'Correct ${existing.workoutName}',
-      summary: 'The existing workout record will be replaced.',
+      title: _isChinese
+          ? '修正${existing.workoutName}'
+          : 'Correct ${existing.workoutName}',
+      summary: _isChinese
+          ? '将替换现有训练记录。'
+          : 'The existing workout record will be replaced.',
       args: {'logId': id, 'log': revised.toJson()},
       targetType: 'workout_log',
       targetId: id,
       before: existing.toJson(),
       after: revised.toJson(),
-      progressionEffect:
-          'Current progression is recomputed only if this remains the latest snapshot-compatible log.',
+      progressionEffect: _isChinese
+          ? '仅当它仍是最新且快照兼容的记录时，才会重新计算当前进度。'
+          : 'Current progression is recomputed only if this remains the latest snapshot-compatible log.',
       changes: _logChanges(existing, revised),
     );
   }
@@ -578,20 +605,23 @@ class AgentToolRegistry {
     if (existing == null) throw StateError('Workout log not found.');
     return _proposal(
       toolName: 'propose_delete_workout_log',
-      title: 'Delete ${existing.workoutName} record',
-      summary: 'The record will be soft-deleted.',
+      title: _isChinese
+          ? '删除${existing.workoutName}记录'
+          : 'Delete ${existing.workoutName} record',
+      summary: _isChinese ? '该记录将被软删除。' : 'The record will be soft-deleted.',
       args: {'logId': id},
       targetType: 'workout_log',
       targetId: id,
       before: existing.toJson(),
       after: null,
-      progressionEffect:
-          'Latest compatible progression may be rolled back; otherwise only history and analytics change.',
+      progressionEffect: _isChinese
+          ? '可能回滚最新且兼容的训练进度；否则仅改变历史记录和分析。'
+          : 'Latest compatible progression may be rolled back; otherwise only history and analytics change.',
       changes: [
         AgentMutationChange(
-          path: 'record',
+          path: _isChinese ? '记录' : 'record',
           before: existing.completedAt.toLocal().toString(),
-          after: 'Deleted',
+          after: _isChinese ? '将删除' : 'Deleted',
         ),
       ],
     );
@@ -603,8 +633,10 @@ class AgentToolRegistry {
     final metric = _metricFromArgs(args, metricId: const Uuid().v4());
     return _proposal(
       toolName: 'propose_create_body_metric',
-      title: 'Add body measurement',
-      summary: 'A new body metric entry will be added.',
+      title: _isChinese ? '添加身体测量' : 'Add body measurement',
+      summary: _isChinese
+          ? '将添加一条新的身体指标记录。'
+          : 'A new body metric entry will be added.',
       args: {'metric': metric.toJson()},
       targetType: 'body_metric',
       targetId: metric.metricId,
@@ -622,8 +654,10 @@ class AgentToolRegistry {
     final metric = _metricFromArgs(args, metricId: id, fallback: existing);
     return _proposal(
       toolName: 'propose_update_body_metric',
-      title: 'Correct body measurement',
-      summary: 'The selected entry will be replaced.',
+      title: _isChinese ? '修正身体测量' : 'Correct body measurement',
+      summary: _isChinese
+          ? '将替换选中的记录。'
+          : 'The selected entry will be replaced.',
       args: {'metric': metric.toJson()},
       targetType: 'body_metric',
       targetId: id,
@@ -640,8 +674,8 @@ class AgentToolRegistry {
     final existing = await _findMetric(id);
     return _proposal(
       toolName: 'propose_delete_body_metric',
-      title: 'Delete body measurement',
-      summary: 'The entry will be soft-deleted.',
+      title: _isChinese ? '删除身体测量' : 'Delete body measurement',
+      summary: _isChinese ? '该记录将被软删除。' : 'The entry will be soft-deleted.',
       args: {'metricId': id},
       targetType: 'body_metric',
       targetId: id,
@@ -649,9 +683,9 @@ class AgentToolRegistry {
       after: null,
       changes: [
         AgentMutationChange(
-          path: 'measurement',
+          path: _isChinese ? '测量记录' : 'measurement',
           before: existing.timestamp.toLocal().toString(),
-          after: 'Deleted',
+          after: _isChinese ? '将删除' : 'Deleted',
         ),
       ],
     );
@@ -778,17 +812,17 @@ class AgentToolRegistry {
       [
         if (before.completedAt != after.completedAt)
           AgentMutationChange(
-            path: 'completedAt',
+            path: _isChinese ? '完成时间' : 'completedAt',
             before: before.completedAt.toLocal().toString(),
             after: after.completedAt.toLocal().toString(),
           ),
         AgentMutationChange(
-          path: 'completedSets',
+          path: _isChinese ? '完成组数' : 'completedSets',
           before: '${_completedSets(before)}',
           after: '${_completedSets(after)}',
         ),
         AgentMutationChange(
-          path: 'volume',
+          path: _isChinese ? '训练容量' : 'volume',
           before: _volume(before).toStringAsFixed(1),
           after: _volume(after).toStringAsFixed(1),
         ),
@@ -800,27 +834,32 @@ class AgentToolRegistry {
   ) => [
     if (before?.weightKg != after.weightKg)
       AgentMutationChange(
-        path: 'weightKg',
-        before: before?.weightKg?.toString() ?? 'Not set',
-        after: after.weightKg?.toString() ?? 'Removed',
+        path: _isChinese ? '体重（kg）' : 'weightKg',
+        before:
+            before?.weightKg?.toString() ?? (_isChinese ? '未设置' : 'Not set'),
+        after: after.weightKg?.toString() ?? (_isChinese ? '将移除' : 'Removed'),
       ),
     if (before?.bodyFatPercent != after.bodyFatPercent)
       AgentMutationChange(
-        path: 'bodyFatPercent',
-        before: before?.bodyFatPercent?.toString() ?? 'Not set',
-        after: after.bodyFatPercent?.toString() ?? 'Removed',
+        path: _isChinese ? '体脂率（%）' : 'bodyFatPercent',
+        before:
+            before?.bodyFatPercent?.toString() ??
+            (_isChinese ? '未设置' : 'Not set'),
+        after:
+            after.bodyFatPercent?.toString() ??
+            (_isChinese ? '将移除' : 'Removed'),
       ),
     if (before?.waistCm != after.waistCm)
       AgentMutationChange(
-        path: 'waistCm',
-        before: before?.waistCm?.toString() ?? 'Not set',
-        after: after.waistCm?.toString() ?? 'Removed',
+        path: _isChinese ? '腰围（cm）' : 'waistCm',
+        before: before?.waistCm?.toString() ?? (_isChinese ? '未设置' : 'Not set'),
+        after: after.waistCm?.toString() ?? (_isChinese ? '将移除' : 'Removed'),
       ),
     if (before?.note != after.note)
       AgentMutationChange(
-        path: 'note',
-        before: before?.note ?? 'Not set',
-        after: after.note ?? 'Removed',
+        path: _isChinese ? '备注' : 'note',
+        before: before?.note ?? (_isChinese ? '未设置' : 'Not set'),
+        after: after.note ?? (_isChinese ? '将移除' : 'Removed'),
       ),
   ];
 

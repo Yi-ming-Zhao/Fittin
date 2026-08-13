@@ -162,7 +162,9 @@ class AgentMutationCoordinator {
       actionId,
       ownerUserId: ownerUserId,
     );
-    if (action == null) throw StateError('Agent action not found.');
+    if (action == null) {
+      throw StateError('Agent action not found.');
+    }
     if (action.status == AgentActionStatus.undone) return action;
     if (action.status != AgentActionStatus.applied) {
       throw const AgentMutationConflict('This action cannot be undone.');

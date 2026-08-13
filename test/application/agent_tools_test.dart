@@ -1,4 +1,5 @@
 import 'package:fittin_v2/src/application/agent_tools.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
@@ -148,6 +149,27 @@ void main() {
       'cursor': 'not-a-valid-cursor',
     });
     expect(invalid.isError, isTrue);
+  });
+
+  test('mutation previews follow the selected Chinese locale', () async {
+    final container = ProviderContainer(
+      overrides: [
+        appLocaleProvider.overrideWith(
+          (ref) => AppLocaleNotifier(ref, initialLocale: AppLocale.zh),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final result = await container.read(agentToolRegistryProvider).execute(
+      'propose_create_body_metric',
+      {'timestamp': '2026-08-13T08:00:00.000Z', 'weightKg': 80},
+    );
+
+    expect(result.proposal?.title, '添加身体测量');
+    expect(result.proposal?.summary, contains('身体指标记录'));
+    expect(result.proposal?.changes.single.path, '体重（kg）');
+    expect(result.proposal?.changes.single.before, '未设置');
   });
 }
 
