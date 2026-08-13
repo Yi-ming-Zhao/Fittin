@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,12 @@ type Config struct {
 	AllowedOrigins  map[string]bool
 	MaxUploadBytes  int64
 	RateLimitPerMin int
+
+	AgentUpstreamTimeout      time.Duration
+	AgentMaxRequestBytes      int64
+	AgentMaxResponseBytes     int64
+	AgentMaxConcurrentPerUser int
+	AgentRateLimitPerMin      int
 }
 
 func LoadConfig() (Config, error) {
@@ -26,6 +33,12 @@ func LoadConfig() (Config, error) {
 		AllowedOrigins:  parseOrigins(envOrDefault("FITTIN_ALLOWED_ORIGINS", "https://fittin.hammerscholar.net")),
 		MaxUploadBytes:  int64(envIntOrDefault("FITTIN_MAX_UPLOAD_BYTES", 10<<20)),
 		RateLimitPerMin: envIntOrDefault("FITTIN_RATE_LIMIT_PER_MINUTE", 60),
+
+		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 120)) * time.Second,
+		AgentMaxRequestBytes:      int64(envIntOrDefault("FITTIN_AGENT_MAX_REQUEST_BYTES", 512<<10)),
+		AgentMaxResponseBytes:     int64(envIntOrDefault("FITTIN_AGENT_MAX_RESPONSE_BYTES", 8<<20)),
+		AgentMaxConcurrentPerUser: envIntOrDefault("FITTIN_AGENT_MAX_CONCURRENT_PER_USER", 2),
+		AgentRateLimitPerMin:      envIntOrDefault("FITTIN_AGENT_RATE_LIMIT_PER_MINUTE", 12),
 	}
 
 	if cfg.DatabaseURL == "" {

@@ -3,8 +3,10 @@ package app
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHandleRootReturnsServiceMetadata(t *testing.T) {
@@ -160,6 +162,36 @@ func TestWithAuthRejectsMissingBearerToken(t *testing.T) {
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", recorder.Code)
+	}
+}
+
+func TestGlobalRateLimitStateHasHardEntryLimit(t *testing.T) {
+	now := time.Now()
+	server := &Server{
+		cfg:             Config{RateLimitPerMin: 60},
+		rateByIP:        make(map[string]rateWindow),
+		rateLastCleanup: now,
+	}
+	for index := 0; index < maxRateLimitEntries; index++ {
+		server.rateByIP["existing-"+strconv.Itoa(index)] = rateWindow{
+			started: now,
+			count:   1,
+		}
+	}
+	handler := server.withRateLimit(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Fatal("request from a new key must fail closed when the limiter is full")
+	}))
+	request := httptest.NewRequest(http.MethodPost, "/v1/agent/chat-completions", nil)
+	request.RemoteAddr = "8.8.8.8:43120"
+	recorder := httptest.NewRecorder()
+
+	handler.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d", recorder.Code)
+	}
+	if len(server.rateByIP) != maxRateLimitEntries {
+		t.Fatalf("global rate table grew past hard limit: %d", len(server.rateByIP))
 	}
 }
 

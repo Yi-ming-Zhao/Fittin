@@ -30,17 +30,27 @@ import (
 )
 
 type Server struct {
-	cfg        Config
-	db         *pgxpool.Pool
-	httpServer *http.Server
-	rateMu     sync.Mutex
-	rateByIP   map[string]rateWindow
+	cfg             Config
+	db              *pgxpool.Pool
+	httpServer      *http.Server
+	rateMu          sync.Mutex
+	rateByIP        map[string]rateWindow
+	rateLastCleanup time.Time
+
+	agentMu               sync.Mutex
+	agentRateByKey        map[string]rateWindow
+	agentRateLastCleanup  time.Time
+	agentConcurrentByUser map[string]int
+	agentResolver         agentDNSResolver
+	agentClientFactory    agentHTTPClientFactory
 }
 
 type rateWindow struct {
 	started time.Time
 	count   int
 }
+
+const maxRateLimitEntries = 10_000
 
 type tableSpec struct {
 	Name             string
@@ -132,9 +142,11 @@ func NewServer() (*Server, error) {
 	}
 
 	server := &Server{
-		cfg:      cfg,
-		db:       pool,
-		rateByIP: make(map[string]rateWindow),
+		cfg:                   cfg,
+		db:                    pool,
+		rateByIP:              make(map[string]rateWindow),
+		agentRateByKey:        make(map[string]rateWindow),
+		agentConcurrentByUser: make(map[string]int),
 	}
 	pingCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -155,13 +167,14 @@ func NewServer() (*Server, error) {
 	mux.HandleFunc("/v1/sync/", server.withAuth(server.handleSync))
 	mux.HandleFunc("/v1/files/progress-photos", server.withAuth(server.handleProgressPhotoUpload))
 	mux.HandleFunc("/v1/files/progress-photos/", server.withAuth(server.handleProgressPhotoDownload))
+	mux.HandleFunc("/v1/agent/chat-completions", server.withAuth(server.handleAgentChatCompletions))
 
 	server.httpServer = &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           server.withCORS(server.withRateLimit(mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       20 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      max(30*time.Second, cfg.AgentUpstreamTimeout+5*time.Second),
 		IdleTimeout:       60 * time.Second,
 	}
 
@@ -246,12 +259,19 @@ func (s *Server) withRateLimit(next http.Handler) http.Handler {
 		host := clientIPAddress(r)
 		now := time.Now()
 		s.rateMu.Lock()
-		if len(s.rateByIP) > 10_000 {
+		if s.rateLastCleanup.IsZero() || now.Sub(s.rateLastCleanup) >= time.Minute {
 			for candidate, entry := range s.rateByIP {
 				if now.Sub(entry.started) >= 2*time.Minute {
 					delete(s.rateByIP, candidate)
 				}
 			}
+			s.rateLastCleanup = now
+		}
+		if _, exists := s.rateByIP[host]; !exists && len(s.rateByIP) >= maxRateLimitEntries {
+			s.rateMu.Unlock()
+			w.Header().Set("Retry-After", "60")
+			writeError(w, http.StatusTooManyRequests, "rate_limited", "too many requests")
+			return
 		}
 		window := s.rateByIP[host]
 		if window.started.IsZero() || now.Sub(window.started) >= time.Minute {

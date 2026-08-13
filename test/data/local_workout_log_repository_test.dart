@@ -135,6 +135,50 @@ void main() {
     expect(updatedInstance?.states.first.baseWeight, 102.5);
   });
 
+  test(
+    'latest log does not rewrite progression when the full snapshot diverged',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      final template = _buildTemplate();
+      await repository.saveTemplate(template);
+      const preState = TrainingState(
+        workoutId: 'day-1',
+        exerciseId: 'squat-session',
+        exerciseName: 'Squat',
+        baseWeight: 100,
+        currentStageId: 'stage-1',
+      );
+      final log = _buildLog(
+        completedAt: DateTime(2026, 3, 31, 10),
+        completedReps: 5,
+        preState: preState,
+        postState: preState.copyWith(baseWeight: 102.5),
+        logId: 'log-diverged',
+      );
+      await repository.logWorkout(log);
+      await repository.saveInstance(
+        StoredTrainingInstance(
+          instanceId: 'instance-1',
+          templateId: template.id,
+          currentWorkoutIndex: 0,
+          states: [preState.copyWith(baseWeight: 105)],
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container
+          .read(localWorkoutLogRepositoryProvider)
+          .updateWorkoutLog(log.copyWith(completedAt: DateTime(2026, 4, 1)));
+
+      expect(result.progressionRewritten, isFalse);
+      final instance = await repository.fetchInstance('instance-1');
+      expect(instance?.states.single.baseWeight, 105);
+    },
+  );
+
   test('deleting a workout log removes it from local history', () async {
     final repository = InMemoryDatabaseRepository();
     const preState = TrainingState(

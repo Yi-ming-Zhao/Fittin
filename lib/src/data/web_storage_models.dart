@@ -8,10 +8,44 @@ import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/models/agent_models.dart';
 
 String? serializeStoredDateTime(DateTime? value) {
   return value?.toUtc().toIso8601String();
 }
+
+AgentConversation agentConversationFromDoc(Map<String, dynamic> doc) {
+  return AgentConversation.fromJson(
+    jsonDecode(doc['rawJsonPayload'] as String) as Map<String, dynamic>,
+  );
+}
+
+Map<String, dynamic> agentConversationDoc(
+  AgentConversation conversation, {
+  String? ownerUserId,
+}) => {
+  'conversationId': conversation.id,
+  'ownerUserId': ownerUserId,
+  'title': conversation.title,
+  'createdAt': serializeStoredDateTime(conversation.createdAt),
+  'updatedAt': serializeStoredDateTime(conversation.updatedAt),
+  'rawJsonPayload': jsonEncode(conversation.toJson()),
+};
+
+AgentActionRecord agentActionFromDoc(Map<String, dynamic> doc) {
+  return AgentActionRecord.fromJson(
+    jsonDecode(doc['rawJsonPayload'] as String) as Map<String, dynamic>,
+  );
+}
+
+Map<String, dynamic> agentActionDoc(AgentActionRecord action) => {
+  'actionId': action.id,
+  'ownerUserId': action.ownerUserId,
+  'statusKey': action.status.name,
+  'createdAt': serializeStoredDateTime(action.createdAt),
+  'undoneAt': serializeStoredDateTime(action.undoneAt),
+  'rawJsonPayload': jsonEncode(action.toJson()),
+};
 
 DateTime? parseStoredDateTime(Object? value) {
   final stringValue = value as String?;

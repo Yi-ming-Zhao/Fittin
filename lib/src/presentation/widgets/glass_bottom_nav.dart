@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 
-/// Fittin bottom tab bar — 5 tabs with glass background
-/// Tabs: Today, Plans, Progress, Body, Profile
+/// Fittin bottom tab bar — six adaptive destinations on a glass surface.
+/// Tabs: Today, Plans, AI, PR, Body, Profile.
 class FittinTabBar extends ConsumerWidget {
   const FittinTabBar({
     super.key,
@@ -15,7 +15,7 @@ class FittinTabBar extends ConsumerWidget {
   });
 
   final FittinTheme theme;
-  final String active; // 'home' | 'plans' | 'progress' | 'body' | 'profile'
+  final String active;
   final ValueChanged<String> onChange;
 
   @override
@@ -24,6 +24,7 @@ class FittinTabBar extends ConsumerWidget {
     final tabs = [
       ('home', strings.navToday, Icons.play_arrow_rounded),
       ('plans', strings.navPlans, Icons.layers_rounded),
+      ('agent', strings.navAi, Icons.auto_awesome_rounded),
       ('progress', strings.navPr, Icons.trending_up_rounded),
       ('body', strings.navBody, Icons.accessibility_new_rounded),
       ('profile', strings.navMe, Icons.person_outline_rounded),
@@ -41,26 +42,32 @@ class FittinTabBar extends ConsumerWidget {
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
               child: Container(
-                height: 48,
+                height: 52,
                 decoration: BoxDecoration(
                   color: theme.surface.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(color: theme.border, width: 0.5),
                 ),
-                child: Row(
-                  children: tabs.map((t) {
-                    final isActive = t.$1 == active;
-                    return Expanded(
-                      child: _FittinTabItem(
-                        key: ValueKey(_navKeyFor(t.$1)),
-                        theme: theme,
-                        label: t.$2,
-                        icon: t.$3,
-                        isActive: isActive,
-                        onTap: () => onChange(t.$1),
-                      ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final collapseInactiveLabels = constraints.maxWidth <= 390;
+                    return Row(
+                      children: tabs.map((t) {
+                        final isActive = t.$1 == active;
+                        return Expanded(
+                          child: _FittinTabItem(
+                            key: ValueKey(_navKeyFor(t.$1)),
+                            theme: theme,
+                            label: t.$2,
+                            icon: t.$3,
+                            isActive: isActive,
+                            showLabel: isActive || !collapseInactiveLabels,
+                            onTap: () => onChange(t.$1),
+                          ),
+                        );
+                      }).toList(),
                     );
-                  }).toList(),
+                  },
                 ),
               ),
             ),
@@ -73,6 +80,7 @@ class FittinTabBar extends ConsumerWidget {
   static String _navKeyFor(String id) {
     return switch (id) {
       'plans' => 'nav-plan-library',
+      'agent' => 'nav-agent',
       'profile' => 'nav-profile',
       _ => 'nav-$id',
     };
@@ -86,6 +94,7 @@ class _FittinTabItem extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.isActive,
+    required this.showLabel,
     required this.onTap,
   });
 
@@ -93,6 +102,7 @@ class _FittinTabItem extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool isActive;
+  final bool showLabel;
   final VoidCallback onTap;
 
   @override
@@ -118,23 +128,25 @@ class _FittinTabItem extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  size: 17,
+                  size: showLabel ? 17 : 20,
                   color: isActive ? theme.accentInk : theme.fgDim,
                 ),
-                const SizedBox(height: 1),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme
-                        .uiStyle(10, isActive ? theme.accentInk : theme.fgDim)
-                        .copyWith(
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.6,
-                        ),
+                if (showLabel) ...[
+                  const SizedBox(height: 1),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme
+                          .uiStyle(9, isActive ? theme.accentInk : theme.fgDim)
+                          .copyWith(
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                          ),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),
@@ -157,7 +169,14 @@ class GlassBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
   final FittinTheme? theme;
 
-  static const _tabIds = ['home', 'plans', 'progress', 'body', 'profile'];
+  static const _tabIds = [
+    'home',
+    'plans',
+    'agent',
+    'progress',
+    'body',
+    'profile',
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -215,21 +234,27 @@ class _LegacyNav extends StatelessWidget {
                   theme: theme,
                 ),
                 _LegacyItem(
-                  icon: Icons.insights_rounded,
+                  icon: Icons.auto_awesome_rounded,
                   isActive: currentIndex == 2,
                   onTap: () => onTap(2),
                   theme: theme,
                 ),
                 _LegacyItem(
-                  icon: Icons.accessibility_new_rounded,
+                  icon: Icons.trending_up_rounded,
                   isActive: currentIndex == 3,
                   onTap: () => onTap(3),
                   theme: theme,
                 ),
                 _LegacyItem(
-                  icon: Icons.person_outline_rounded,
+                  icon: Icons.accessibility_new_rounded,
                   isActive: currentIndex == 4,
                   onTap: () => onTap(4),
+                  theme: theme,
+                ),
+                _LegacyItem(
+                  icon: Icons.person_outline_rounded,
+                  isActive: currentIndex == 5,
+                  onTap: () => onTap(5),
                   theme: theme,
                 ),
               ],

@@ -6,6 +6,33 @@ class WebStoreNames {
   static const bodyMetrics = 'body_metrics';
   static const progressPhotos = 'progress_photos';
   static const syncQueue = 'sync_queue';
+  static const agentConversations = 'agent_conversations';
+  static const agentActions = 'agent_actions';
+
+  static const all = [
+    appState,
+    templates,
+    instances,
+    workoutLogs,
+    bodyMetrics,
+    progressPhotos,
+    syncQueue,
+    agentConversations,
+    agentActions,
+  ];
+}
+
+class WebStoreMutation {
+  const WebStoreMutation.put(this.storeName, this.key, this.value)
+    : isDelete = false;
+  const WebStoreMutation.delete(this.storeName, this.key)
+    : value = null,
+      isDelete = true;
+
+  final String storeName;
+  final String key;
+  final Map<String, dynamic>? value;
+  final bool isDelete;
 }
 
 class WebLocalStore {
@@ -30,6 +57,17 @@ class WebLocalStore {
   }
 
   Future<void> deleteRecord(String storeName, String key) async {
+    throw UnsupportedError('WebLocalStore is only available on the web.');
+  }
+
+  Future<void> applyMutations(List<WebStoreMutation> mutations) async {
+    throw UnsupportedError('WebLocalStore is only available on the web.');
+  }
+
+  Future<T> runInTransaction<T>(
+    List<String> storeNames,
+    Future<T> Function() operation,
+  ) async {
     throw UnsupportedError('WebLocalStore is only available on the web.');
   }
 }

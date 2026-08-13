@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:isar/isar.dart';
@@ -12,6 +13,7 @@ import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
+import 'package:fittin_v2/src/data/agent_transaction_context.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
@@ -47,6 +49,13 @@ class DatabaseRepository {
       throw StateError('This repository instance is not backed by Isar.');
     }
     return isar;
+  }
+
+  Future<T> _write<T>(Future<T> Function() operation) {
+    if (Zone.current[agentTransactionZoneKey] == true) {
+      return operation();
+    }
+    return _database.writeTxn(operation);
   }
 
   Future<void> ensureDefaultProgramSeeded() async {
@@ -110,7 +119,7 @@ class DatabaseRepository {
       ..lastModifiedByDeviceId = deviceId ?? existing?.lastModifiedByDeviceId
       ..rawJsonPayload = serialized;
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.templateCollections.putByTemplateId(collection);
     });
     await _enqueueSync(
@@ -186,6 +195,37 @@ class DatabaseRepository {
       );
     });
     return records;
+  }
+
+  Future<void> deleteTemplate(String templateId, {String? ownerUserId}) async {
+    final existing = await _database.templateCollections.getByTemplateId(
+      templateId,
+    );
+    if (existing == null ||
+        existing.deletedAt != null ||
+        existing.isBuiltIn ||
+        !_ownerMatches(existing.ownerUserId, ownerUserId)) {
+      throw StateError('Template cannot be deleted.');
+    }
+    if (await _instanceCountForTemplate(templateId, ownerUserId: ownerUserId) >
+        0) {
+      throw StateError('A plan with training history cannot be deleted.');
+    }
+    existing
+      ..deletedAt = DateTime.now()
+      ..lastModifiedAt = DateTime.now()
+      ..version = existing.version + 1
+      ..syncStatusKey = SyncStatusKeys.pendingDelete;
+    await _write(() async {
+      await _database.templateCollections.putByTemplateId(existing);
+    });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.template,
+      entityId: templateId,
+      ownerUserId: existing.ownerUserId,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: existing.syncStatusKey,
+    );
   }
 
   Future<PlanTemplate?> fetchTemplateForInstance(String instanceId) async {
@@ -283,7 +323,7 @@ class DatabaseRepository {
       state.id = existing.id;
     }
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -305,7 +345,7 @@ class DatabaseRepository {
       ..stateKey = _scopedStateKey(_activeStateKey, ownerUserId)
       ..updatedAt = DateTime.now();
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -348,7 +388,7 @@ class DatabaseRepository {
       state.activeInstanceId = existing.activeInstanceId;
     }
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -369,7 +409,7 @@ class DatabaseRepository {
     state.analyticsFormulaKey = formula.key;
     state.updatedAt = DateTime.now();
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -390,7 +430,7 @@ class DatabaseRepository {
     state.glassOpacity = opacity;
     state.updatedAt = DateTime.now();
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -662,7 +702,7 @@ class DatabaseRepository {
           data.lastModifiedByDeviceId ??
           existing?.lastModifiedByDeviceId;
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.instanceCollections.putByInstanceId(instance);
     });
     await _enqueueSync(
@@ -707,6 +747,32 @@ class DatabaseRepository {
     );
   }
 
+  Future<void> deleteInstance(String instanceId, {String? ownerUserId}) async {
+    final existing = await _database.instanceCollections.getByInstanceId(
+      instanceId,
+    );
+    if (existing == null ||
+        existing.deletedAt != null ||
+        !_ownerMatches(existing.ownerUserId, ownerUserId)) {
+      throw StateError('Training instance cannot be deleted.');
+    }
+    existing
+      ..deletedAt = DateTime.now()
+      ..lastModifiedAt = DateTime.now()
+      ..version = existing.version + 1
+      ..syncStatusKey = SyncStatusKeys.pendingDelete;
+    await _write(() async {
+      await _database.instanceCollections.putByInstanceId(existing);
+    });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.instance,
+      entityId: instanceId,
+      ownerUserId: existing.ownerUserId,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: existing.syncStatusKey,
+    );
+  }
+
   // ---------- Workflow Logs ---------- //
 
   Future<void> logWorkout(
@@ -735,7 +801,7 @@ class DatabaseRepository {
           syncStatus ?? _defaultSyncStatus(ownerUserId ?? existing?.ownerUserId)
       ..lastModifiedByDeviceId = deviceId ?? existing?.lastModifiedByDeviceId;
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.workoutLogCollections.putByLogId(collection);
     });
     await _enqueueSync(
@@ -790,7 +856,7 @@ class DatabaseRepository {
           syncStatus ?? _defaultSyncStatus(ownerUserId ?? existing.ownerUserId)
       ..lastModifiedByDeviceId = deviceId ?? existing.lastModifiedByDeviceId;
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.workoutLogCollections.putByLogId(collection);
     });
     await _enqueueSync(
@@ -814,7 +880,7 @@ class DatabaseRepository {
       ..deletedAt = DateTime.now()
       ..version = existing.version + 1
       ..syncStatusKey = SyncStatusKeys.pendingDelete;
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.workoutLogCollections.putByLogId(existing);
     });
     await _enqueueSync(
@@ -911,7 +977,7 @@ class DatabaseRepository {
     final staleQueueKeys = <String>[];
     final queuedUpserts =
         <(String entityType, String entityId, String? ownerUserId)>[];
-    await _database.writeTxn(() async {
+    await _write(() async {
       final templates = await _database.templateCollections.where().findAll();
       for (final template in templates) {
         if (!template.isBuiltIn && template.ownerUserId == null) {
@@ -1043,7 +1109,7 @@ class DatabaseRepository {
     state.stateKey = stateKey;
     state.stringValue = value;
     state.updatedAt = DateTime.now();
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.putByStateKey(state);
     });
   }
@@ -1055,7 +1121,7 @@ class DatabaseRepository {
     if (existing == null) {
       return;
     }
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.appStateCollections.delete(existing.id);
     });
   }
@@ -1082,7 +1148,7 @@ class DatabaseRepository {
       ..operationType = operationType
       ..createdAt = existing?.createdAt ?? DateTime.now()
       ..updatedAt = DateTime.now();
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.syncQueueCollections.putByQueueKey(queueItem);
     });
   }
@@ -1153,7 +1219,7 @@ class DatabaseRepository {
       return;
     }
 
-    await _database.writeTxn(() async {
+    await _write(() async {
       await _database.instanceCollections.deleteByInstanceId(instanceId);
     });
 
