@@ -24,3 +24,10 @@ The system MUST make the second bottom-navigation item open the plan library and
 - **WHEN** the user taps the second item in the floating bottom navigation bar
 - **THEN** the main app content switches to the plan library destination
 - **AND** the second tab is rendered as the active navigation context.
+
+### Requirement: Six-destination adaptive navigation
+The bottom navigation SHALL present Today, Plans, AI, PR, Body, and Me in that order while retaining at least 44 logical pixels of touch height, semantic labels, and a non-overflowing layout on supported phones.
+
+#### Scenario: Narrow phone navigation
+- **WHEN** the viewport width is 320 to 390 logical pixels
+- **THEN** inactive labels may collapse but all six icons, the active short label, selection semantics, and touch targets remain usable

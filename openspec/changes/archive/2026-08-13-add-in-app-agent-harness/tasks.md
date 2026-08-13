@@ -37,6 +37,6 @@
 - [x] 6.1 Add Agent unit, repository, migration, tool, orchestration, and widget tests including fragmented UTF-8 SSE and stale/duplicate mutations
 - [x] 6.2 Run formatting, Flutter analyze/tests, Go tests, Web build, Android release build, iOS no-codesign build, and OpenSpec validation
 - [x] 6.3 Perform long-phone Web visual/interaction regression at 390x844, 390x926, 390x568, and 320px and fix defects
-- [ ] 6.4 Set version 1.1.0+21, complete change verification/archive, commit, push, pass CI, review, and merge
-- [ ] 6.5 Synchronize 241 by fast-forward, build/restart/verify backend, deploy/verify public Web with rollback retained, and run a non-persisted real-provider canary
-- [ ] 6.6 Tag and publish v1.1.0, verify signed APK/AAB/Web/checksums, test Android upgrade from v1.0.13, publish first-party latest.json, and verify public update availability
+- [x] 6.4 Set version 1.1.0+21, complete change verification/archive, commit, push, pass CI, review, and merge
+- [x] 6.5 Synchronize 241 by fast-forward, build/restart/verify backend, deploy/verify public Web with rollback retained, and run a non-persisted real-provider canary
+- [x] 6.6 Tag and publish v1.1.0, verify signed APK/AAB/Web/checksums, test Android upgrade from v1.0.13, publish first-party latest.json, and verify public update availability

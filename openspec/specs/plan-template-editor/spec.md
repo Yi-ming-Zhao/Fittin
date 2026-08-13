@@ -85,3 +85,10 @@ The editor MUST also prevent saving a template when required engine-aware metada
 #### Scenario: User tries to save a periodized day without slot context
 - **WHEN** a user is editing a periodized template and the selected `WnDn` slot is missing or invalid
 - **THEN** the editor blocks save and identifies the missing scheduling context.
+
+### Requirement: Agent plans reuse editor validation
+Agent-created and Agent-revised templates SHALL pass the same normalization and validation contract as manually edited templates and SHALL preserve stable identifiers for unchanged nodes.
+
+#### Scenario: Invalid proposed plan
+- **WHEN** a proposed plan contains unsupported schedule, load, set, or progression values
+- **THEN** the proposal is rejected before approval and validation errors are returned to the Agent
