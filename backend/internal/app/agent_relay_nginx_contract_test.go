@@ -46,3 +46,19 @@ func TestProductionNginxAgentRelayContract(t *testing.T) {
 		t.Fatal("exact Agent streaming route must precede the general /api/ route")
 	}
 }
+
+func TestProductionNginxAllowsRuntimeFontFetches(t *testing.T) {
+	configPath := filepath.Join(
+		"..", "..", "..", "deploy", "nginx", "fittin-security-headers.conf",
+	)
+	contents, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read production nginx security headers: %v", err)
+	}
+	if !strings.Contains(
+		string(contents),
+		"connect-src 'self' https://api.github.com https://fonts.gstatic.com",
+	) {
+		t.Fatal("connect-src must allow the runtime fetch used by google_fonts")
+	}
+}
