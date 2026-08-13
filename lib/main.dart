@@ -13,6 +13,7 @@ import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/bootstrap/local_persistence_factory.dart';
 import 'package:fittin_v2/src/bootstrap/local_persistence_bundle.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
+import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';
 import 'package:fittin_v2/src/data/sync/sync_service.dart';
 import 'package:fittin_v2/src/data/web_database_repository.dart';
@@ -188,6 +189,9 @@ class _FittinBootstrapHostState extends State<FittinBootstrapHost> {
         ),
         progressRepositoryProvider.overrideWithValue(
           persistence.progressRepository,
+        ),
+        agentLocalRepositoryProvider.overrideWithValue(
+          persistence.agentLocalRepository,
         ),
         if (persistence.webDatabaseRepository != null &&
             persistence.webProgressRepository != null)

@@ -39,6 +39,11 @@ class LocalInstanceRepository {
     );
   }
 
+  Future<StoredTrainingInstance?> fetchInstance(String instanceId) async {
+    final instance = await _repository.fetchInstance(instanceId);
+    return instance?.ownerUserId == _ownerUserId ? instance : null;
+  }
+
   Future<TrainingMaxSetupRequirement?> activationRequirementForTemplate(
     String templateId,
   ) {
@@ -63,5 +68,28 @@ class LocalInstanceRepository {
 
   Future<void> saveInstance(StoredTrainingInstance instance) {
     return _repository.saveInstance(instance);
+  }
+
+  Future<void> saveAndActivateInstance(StoredTrainingInstance instance) async {
+    if (instance.ownerUserId != _ownerUserId) {
+      throw StateError('The training instance belongs to another user.');
+    }
+    await _repository.saveInstance(instance);
+    await _repository.saveActiveInstanceIdForUser(
+      instance.instanceId,
+      _ownerUserId,
+    );
+  }
+
+  Future<void> activateStoredInstance(String instanceId) async {
+    final instance = await _repository.fetchInstance(instanceId);
+    if (instance == null || instance.ownerUserId != _ownerUserId) {
+      throw StateError('The training instance is no longer available.');
+    }
+    await _repository.saveActiveInstanceIdForUser(instanceId, _ownerUserId);
+  }
+
+  Future<void> deleteInstance(String instanceId) {
+    return _repository.deleteInstance(instanceId, ownerUserId: _ownerUserId);
   }
 }

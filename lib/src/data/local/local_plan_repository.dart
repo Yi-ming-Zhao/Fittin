@@ -29,6 +29,10 @@ class LocalPlanRepository {
     return _repository.fetchTemplates(ownerUserId: _ownerUserId);
   }
 
+  Future<void> deleteTemplate(String templateId) {
+    return _repository.deleteTemplate(templateId, ownerUserId: _ownerUserId);
+  }
+
   Future<StoredTemplateRecord?> fetchStoredTemplate(String templateId) {
     return _repository.fetchStoredTemplate(
       templateId,

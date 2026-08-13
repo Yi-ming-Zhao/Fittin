@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
@@ -74,6 +75,72 @@ class LocalWorkoutLogRepository {
     return _repository.deleteWorkoutLog(logId, ownerUserId: _ownerUserId);
   }
 
+  /// Restores the exact pre-workout state only when this is still the newest
+  /// log and the active instance matches the recorded post-workout snapshot.
+  /// Otherwise callers may safely edit/delete history without rewinding a
+  /// plan that has since advanced on this or another device.
+  Future<bool> restoreProgressionBeforeLogIfAllowed(WorkoutLog log) async {
+    final preSnapshot = log.preConclusionSnapshot;
+    final postSnapshot = log.postConclusionSnapshot;
+    if (preSnapshot == null || postSnapshot == null) return false;
+
+    final logs = await fetchWorkoutLogs(log.instanceId);
+    if (logs.isEmpty || logs.first.logId != log.logId) return false;
+    final currentInstance = await _repository.fetchInstance(log.instanceId);
+    if (currentInstance == null ||
+        currentInstance.currentWorkoutIndex !=
+            postSnapshot.currentWorkoutIndex ||
+        agentPayloadDigest(_progressionSnapshot(currentInstance)) !=
+            agentPayloadDigest(_progressionSnapshotFromLog(postSnapshot))) {
+      return false;
+    }
+    await _repository.saveInstance(
+      _instanceFromSnapshot(
+        currentInstance: currentInstance,
+        snapshot: preSnapshot,
+      ),
+    );
+    return true;
+  }
+
+  Future<bool> applyProgressionAfterLogIfAllowed(WorkoutLog log) async {
+    final preSnapshot = log.preConclusionSnapshot;
+    final postSnapshot = log.postConclusionSnapshot;
+    if (preSnapshot == null || postSnapshot == null) return false;
+    final currentInstance = await _repository.fetchInstance(log.instanceId);
+    if (currentInstance == null ||
+        agentPayloadDigest(_progressionSnapshot(currentInstance)) !=
+            agentPayloadDigest(_progressionSnapshotFromLog(preSnapshot))) {
+      return false;
+    }
+    await _repository.saveInstance(
+      _instanceFromSnapshot(
+        currentInstance: currentInstance,
+        snapshot: postSnapshot,
+      ),
+    );
+    return true;
+  }
+
+  Map<String, dynamic> _progressionSnapshot(StoredTrainingInstance instance) =>
+      {
+        'templateId': instance.templateId,
+        'currentWorkoutIndex': instance.currentWorkoutIndex,
+        'trainingMaxProfile': instance.trainingMaxProfile.toJson(),
+        'engineState': instance.engineState,
+        'states': instance.states.map((state) => state.toJson()).toList(),
+      };
+
+  Map<String, dynamic> _progressionSnapshotFromLog(
+    WorkoutProgressionSnapshot snapshot,
+  ) => {
+    'templateId': snapshot.templateId,
+    'currentWorkoutIndex': snapshot.currentWorkoutIndex,
+    'trainingMaxProfile': snapshot.trainingMaxProfile.toJson(),
+    'engineState': snapshot.engineState,
+    'states': snapshot.states.map((state) => state.toJson()).toList(),
+  };
+
   Future<bool> _rewriteProgressionIfAllowed(WorkoutLog updatedLog) async {
     final preSnapshot = updatedLog.preConclusionSnapshot;
     final postSnapshot = updatedLog.postConclusionSnapshot;
@@ -90,8 +157,8 @@ class LocalWorkoutLogRepository {
       updatedLog.instanceId,
     );
     if (currentInstance == null ||
-        currentInstance.currentWorkoutIndex !=
-            postSnapshot.currentWorkoutIndex) {
+        agentPayloadDigest(_progressionSnapshot(currentInstance)) !=
+            agentPayloadDigest(_progressionSnapshotFromLog(postSnapshot))) {
       return false;
     }
 

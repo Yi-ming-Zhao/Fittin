@@ -3,6 +3,8 @@ import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
+final Object _transactionZoneKey = Object();
+
 class WebStoreNames {
   static const appState = 'app_state';
   static const templates = 'templates';
@@ -11,6 +13,8 @@ class WebStoreNames {
   static const bodyMetrics = 'body_metrics';
   static const progressPhotos = 'progress_photos';
   static const syncQueue = 'sync_queue';
+  static const agentConversations = 'agent_conversations';
+  static const agentActions = 'agent_actions';
 
   static const all = [
     appState,
@@ -20,14 +24,29 @@ class WebStoreNames {
     bodyMetrics,
     progressPhotos,
     syncQueue,
+    agentConversations,
+    agentActions,
   ];
+}
+
+class WebStoreMutation {
+  const WebStoreMutation.put(this.storeName, this.key, this.value)
+    : isDelete = false;
+  const WebStoreMutation.delete(this.storeName, this.key)
+    : value = null,
+      isDelete = true;
+
+  final String storeName;
+  final String key;
+  final Map<String, dynamic>? value;
+  final bool isDelete;
 }
 
 class WebLocalStore {
   WebLocalStore._(this._database);
 
   static const _databaseName = 'fittin_v2_web_store';
-  static const _databaseVersion = 1;
+  static const _databaseVersion = 2;
   static Future<WebLocalStore>? _instance;
 
   final web.IDBDatabase _database;
@@ -63,6 +82,13 @@ class WebLocalStore {
   }
 
   Future<Map<String, dynamic>?> getRecord(String storeName, String key) async {
+    final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
+    if (active != null) {
+      final result = await _requestResult(
+        active.objectStore(storeName).get(key.toJS),
+      );
+      return result == null ? null : _castRecord(result);
+    }
     final transaction = _database.transaction(storeName.toJS, 'readonly');
     final store = transaction.objectStore(storeName);
     final result = await _requestResult(store.get(key.toJS));
@@ -74,6 +100,13 @@ class WebLocalStore {
   }
 
   Future<List<Map<String, dynamic>>> getAllRecords(String storeName) async {
+    final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
+    if (active != null) {
+      final result = await _requestResult(
+        active.objectStore(storeName).getAll(),
+      );
+      return (result as List? ?? const <dynamic>[]).map(_castRecord).toList();
+    }
     final transaction = _database.transaction(storeName.toJS, 'readonly');
     final store = transaction.objectStore(storeName);
     final result = await _requestResult(store.getAll());
@@ -86,6 +119,13 @@ class WebLocalStore {
     String key,
     Map<String, dynamic> value,
   ) async {
+    final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
+    if (active != null) {
+      await _requestResult(
+        active.objectStore(storeName).put(value.jsify(), key.toJS),
+      );
+      return;
+    }
     final transaction = _database.transaction(storeName.toJS, 'readwrite');
     final store = transaction.objectStore(storeName);
     await _requestResult(store.put(value.jsify(), key.toJS));
@@ -93,10 +133,68 @@ class WebLocalStore {
   }
 
   Future<void> deleteRecord(String storeName, String key) async {
+    final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
+    if (active != null) {
+      await _requestResult(active.objectStore(storeName).delete(key.toJS));
+      return;
+    }
     final transaction = _database.transaction(storeName.toJS, 'readwrite');
     final store = transaction.objectStore(storeName);
     await _requestResult(store.delete(key.toJS));
     await _transactionCompleted(transaction);
+  }
+
+  Future<void> applyMutations(List<WebStoreMutation> mutations) async {
+    if (mutations.isEmpty) return;
+    final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
+    if (active != null) {
+      await _queueMutations(active, mutations);
+      return;
+    }
+    final storeNames = mutations
+        .map((mutation) => mutation.storeName)
+        .toSet()
+        .toList();
+    final transaction = _database.transaction(storeNames.jsify()!, 'readwrite');
+    await _queueMutations(transaction, mutations);
+    await _transactionCompleted(transaction);
+  }
+
+  Future<T> runInTransaction<T>(
+    List<String> storeNames,
+    Future<T> Function() operation,
+  ) async {
+    if (Zone.current[_transactionZoneKey] != null) return operation();
+    final transaction = _database.transaction(
+      storeNames.toSet().toList().jsify()!,
+      'readwrite',
+    );
+    try {
+      final result = await runZoned(
+        operation,
+        zoneValues: {_transactionZoneKey: transaction},
+      );
+      await _transactionCompleted(transaction);
+      return result;
+    } catch (_) {
+      try {
+        transaction.abort();
+      } catch (_) {}
+      rethrow;
+    }
+  }
+
+  static Future<void> _queueMutations(
+    web.IDBTransaction transaction,
+    List<WebStoreMutation> mutations,
+  ) async {
+    for (final mutation in mutations) {
+      final store = transaction.objectStore(mutation.storeName);
+      final request = mutation.isDelete
+          ? store.delete(mutation.key.toJS)
+          : store.put(mutation.value!.jsify(), mutation.key.toJS);
+      await _requestResult(request);
+    }
   }
 
   static Future<Object?> _requestResult(web.IDBRequest request) {

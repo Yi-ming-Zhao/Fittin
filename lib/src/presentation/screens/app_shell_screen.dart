@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/glass_bottom_nav.dart';
 import 'home_dashboard_screen.dart';
+import 'agent_screen.dart';
 import 'plan_library_screen.dart';
 import 'pr_dashboard_screen.dart';
 import 'body_metrics_screen.dart';
@@ -35,6 +36,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
         children: const [
           HomeDashboardScreen(),
           PlanLibraryScreen(),
+          AgentScreen(),
           PRDashboardScreen(),
           BodyMetricsScreen(),
           ProfileSettingsScreen(),
@@ -42,9 +44,16 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       ),
       bottomNavigationBar: FittinTabBar(
         theme: theme,
-        active: ['home', 'plans', 'progress', 'body', 'profile'][currentIndex],
+        active: [
+          'home',
+          'plans',
+          'agent',
+          'progress',
+          'body',
+          'profile',
+        ][currentIndex],
         onChange: (id) => _handleTap(
-          ['home', 'plans', 'progress', 'body', 'profile'].indexOf(id),
+          ['home', 'plans', 'agent', 'progress', 'body', 'profile'].indexOf(id),
         ),
       ),
     );

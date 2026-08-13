@@ -40,6 +40,11 @@ jobs:
       - name: Run Flutter tests
         run: tool/run_ci_flutter_tests.sh
 
+      - name: Verify Web IndexedDB v1 migration
+        run: >-
+          flutter test --no-pub --platform chrome
+          test/data/web_local_store_migration_test.dart
+
   backend-tests:
     runs-on: ubuntu-latest
     defaults:
@@ -57,3 +62,25 @@ jobs:
 
       - name: Run backend tests
         run: go test ./...
+
+  ios-release-build:
+    runs-on: macos-15
+    timeout-minutes: 35
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.7"
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Build unsigned iOS release
+        run: >-
+          flutter build ios --release --no-codesign
+          --dart-define=BACKEND_URL=https://fittin.hammerscholar.net/api

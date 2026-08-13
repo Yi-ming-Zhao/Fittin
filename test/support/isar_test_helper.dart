@@ -8,6 +8,8 @@ import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
+import 'package:fittin_v2/src/data/models/agent_action_collection.dart';
+import 'package:fittin_v2/src/data/models/agent_conversation_collection.dart';
 
 Future<void> initializeTestIsarCore() async {
   final home = Platform.environment['HOME'];
@@ -54,6 +56,8 @@ Future<({Isar isar, Directory directory})> openTestIsar(String name) async {
       SyncQueueCollectionSchema,
       TemplateCollectionSchema,
       WorkoutLogCollectionSchema,
+      AgentConversationCollectionSchema,
+      AgentActionCollectionSchema,
     ],
     directory: directory.path,
     name: name,

@@ -152,6 +152,49 @@ void main() {
     expect(find.text('Language'), findsOneWidget);
   });
 
+  testWidgets('six-tab shell preserves destination order and index mapping', (
+    WidgetTester tester,
+  ) async {
+    final repository = InMemoryDatabaseRepository();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(
+            FakeTodayWorkoutGateway(),
+          ),
+          planLibraryItemsProvider.overrideWith((ref) async => []),
+        ],
+        child: const MaterialApp(home: AppShellScreen()),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    const destinations = [
+      ('nav-home', 0),
+      ('nav-plan-library', 1),
+      ('nav-agent', 2),
+      ('nav-progress', 3),
+      ('nav-body', 4),
+      ('nav-profile', 5),
+    ];
+    var previousLeft = -1.0;
+    for (final destination in destinations) {
+      final finder = find.byKey(ValueKey(destination.$1));
+      final rect = tester.getRect(finder);
+      expect(rect.left, greaterThan(previousLeft));
+      previousLeft = rect.left;
+      await tester.tap(finder);
+      await tester.pump();
+      expect(
+        tester.widget<IndexedStack>(find.byType(IndexedStack)).index,
+        destination.$2,
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   for (final viewport in const [Size(390, 926), Size(390, 568)]) {
     testWidgets(
       'Today and Body clear the app-shell nav at ${viewport.width.toInt()}x${viewport.height.toInt()}',

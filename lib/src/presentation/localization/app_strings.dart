@@ -24,6 +24,7 @@ class AppStrings {
 
   String get navToday => isChinese ? '今天' : 'TODAY';
   String get navPlans => isChinese ? '计划' : 'PLANS';
+  String get navAi => 'AI';
   String get navPr => isChinese ? '力量' : 'PR';
   String get navBody => isChinese ? '身体' : 'BODY';
   String get navMe => isChinese ? '我的' : 'ME';
@@ -544,6 +545,103 @@ class AppStrings {
   String get restoringAccount => isChinese ? '正在恢复账户…' : 'Restoring account…';
   String get accountUnavailable =>
       isChinese ? '账户状态暂不可用' : 'Account status unavailable';
+  String get agentSection => 'AGENT';
+  String get agentSettings => isChinese ? 'Agent 设置' : 'Agent Settings';
+  String get agentSettingsSubtitle => isChinese
+      ? '配置你自己的模型服务，API Key 不会进入同步。'
+      : 'Connect your own model provider. Your API key is never synced.';
+  String get agentNotConfigured => isChinese ? '尚未配置' : 'Not configured';
+  String get agentNeedsTest => isChinese ? '待验证工具调用' : 'Tool test required';
+  String get agentReady => isChinese ? '可用' : 'Ready';
+  String get agentPageEyebrow => isChinese ? '训练控制台' : 'TRAINING CONSOLE';
+  String get agentPageTitle => 'Fittin Agent';
+  String get agentPageSubtitle => isChinese
+      ? '用你选择的模型分析训练数据，并在你确认后修改记录。'
+      : 'Analyze your training and preview every change before it touches your data.';
+  String get agentConfigureTitle => isChinese ? '连接你的模型' : 'Connect your model';
+  String get agentConfigureDetail => isChinese
+      ? '填入 OpenAI 兼容的 Base URL、模型 ID 和 API Key 后即可开始。'
+      : 'Add an OpenAI-compatible Base URL, model ID, and API key to begin.';
+  String get agentConfigureAction => isChinese ? '前往配置' : 'Configure Agent';
+  String get agentSuggestedPrompts => isChinese ? '可以试试' : 'TRY ASKING';
+  List<String> get agentPromptSuggestions => isChinese
+      ? const ['分析我近 8 周的力量趋势', '找出训练量不均衡的肌群', '为我的当前计划增加一周减量周']
+      : const [
+          'Analyze my strength trend over the last 8 weeks',
+          'Find muscle groups with uneven training volume',
+          'Add a deload week to my current plan',
+        ];
+  String get agentComposerHint =>
+      isChinese ? '询问训练数据或提出修改…' : 'Ask about training or propose a change…';
+  String get agentSend => isChinese ? '发送' : 'Send';
+  String get agentStop => isChinese ? '停止' : 'Stop';
+  String get agentRetry => isChinese ? '重试' : 'Retry';
+  String get agentNewConversation => isChinese ? '新对话' : 'New conversation';
+  String get agentConversationHistory =>
+      isChinese ? '对话历史' : 'Conversation history';
+  String get agentNoHistory =>
+      isChinese ? '还没有本地对话。' : 'No local conversations yet.';
+  String get agentToolWorking => isChinese ? '正在读取数据' : 'Reading local data';
+  String agentToolWorkingNamed(String name) =>
+      isChinese ? '正在执行 $name' : 'Running $name';
+  String get agentStreaming => isChinese ? '正在生成' : 'Streaming response';
+  String get agentInsights => isChinese ? '数据洞察' : 'DATA INSIGHT';
+  String get agentChangePreview => isChinese ? '修改预览' : 'CHANGE PREVIEW';
+  String get agentBefore => isChinese ? '修改前' : 'Before';
+  String get agentAfter => isChinese ? '修改后' : 'After';
+  String get agentConfirm => isChinese ? '确认修改' : 'Confirm change';
+  String get agentReject => isChinese ? '拒绝' : 'Reject';
+  String get agentAwaitingConfirmation =>
+      isChinese ? '等待你确认' : 'Waiting for your approval';
+  String get agentActionHistory => isChinese ? '最近操作' : 'RECENT ACTIONS';
+  String get agentUndo => isChinese ? '撤销' : 'Undo';
+  String get agentUndone => isChinese ? '已撤销' : 'Undone';
+  String get agentConflict => isChinese ? '数据已变更' : 'Data changed';
+  String get agentErrorTitle =>
+      isChinese ? '本次运行未完成' : 'This run did not finish';
+  String get agentPrivacyTitle => isChinese ? '数据与隐私' : 'Data & privacy';
+  String get agentPrivacyDetail => isChinese
+      ? 'Agent 只在需要时向模型发送结构化训练数据，不会发送照片、账户凭证或应用设置。对话与操作历史仅保存在本设备。'
+      : 'The Agent sends only the structured training data a request needs. Photos, account credentials, and app settings are excluded. Conversations and action history stay on this device.';
+  String get agentProviderSection => isChinese ? '模型服务' : 'MODEL PROVIDER';
+  String get agentBaseUrl => 'Base URL';
+  String get agentBaseUrlHint => 'https://api.openai.com/v1';
+  String get agentModelId => isChinese ? '模型 ID' : 'Model ID';
+  String get agentModelHint => 'gpt-5.2';
+  String get agentApiKey => 'API Key';
+  String get agentApiKeyHint => 'sk-…';
+  String get agentApiKeyStored =>
+      isChinese ? '已安全保存，留空即保留' : 'Stored securely; leave blank to keep it';
+  String get agentShowApiKey => isChinese ? '显示 API Key' : 'Show API key';
+  String get agentHideApiKey => isChinese ? '隐藏 API Key' : 'Hide API key';
+  String get agentSaveConfiguration =>
+      isChinese ? '保存配置' : 'Save configuration';
+  String get agentClearConfiguration =>
+      isChinese ? '清除配置' : 'Clear configuration';
+  String get agentTestConnection => isChinese ? '测试连接' : 'Test connection';
+  String get agentTestingConnection => isChinese ? '正在测试…' : 'Testing…';
+  String get agentSavingConfiguration => isChinese ? '正在保存…' : 'Saving…';
+  String get agentConfigurationSaved =>
+      isChinese ? '配置已保存' : 'Configuration saved';
+  String get agentConnectionVerified =>
+      isChinese ? '流式输出与工具调用已验证' : 'Streaming and tool calling verified';
+  String get agentConnectionChatOnly => isChinese
+      ? '可生成文本，但不支持 Agent 工具'
+      : 'Chat works, but Agent tools are unavailable';
+  String get agentNativeKeyStorage => isChinese
+      ? 'API Key 存入系统安全存储，不会进入普通偏好或 Fittin 同步。'
+      : 'The API key is kept in system secure storage, never ordinary preferences or Fittin sync.';
+  String get agentWebKeyStorage => isChinese
+      ? 'Web 端 API Key 只留在当前页面内存中，刷新后需要重新输入。'
+      : 'On Web, the API key stays only in this page session and must be entered again after refresh.';
+  String get agentProviderCostDisclosure => isChinese
+      ? '测试会向你的模型服务发送一次小型真实请求，可能产生少量供应商费用。'
+      : 'Testing sends one small real request to your provider and may incur a small provider charge.';
+  String get agentBaseUrlRequired =>
+      isChinese ? '请输入 Base URL' : 'Enter a Base URL';
+  String get agentModelRequired => isChinese ? '请输入模型 ID' : 'Enter a model ID';
+  String get agentApiKeyRequired =>
+      isChinese ? '请输入 API Key' : 'Enter an API key';
   String get signedInNoEmail => isChinese ? '已登录账户' : 'Signed-in account';
   String get signIn => isChinese ? '登录' : 'Sign In';
   String get createAccount => isChinese ? '创建账户' : 'Create Account';

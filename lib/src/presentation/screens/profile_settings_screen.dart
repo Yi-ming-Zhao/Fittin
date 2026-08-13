@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/agent_settings_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/milestone_exercise_settings_screen.dart';
@@ -28,6 +30,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final locale = ref.watch(appLocaleProvider);
     final notifier = ref.read(appLocaleProvider.notifier);
     final authState = ref.watch(authStateProvider);
+    final agentSettings = ref.watch(agentProviderSettingsControllerProvider);
     final accountLabel = authState.when(
       data: (user) => user?.email ?? strings.signedOut,
       loading: () => strings.restoringAccount,
@@ -108,6 +111,28 @@ class ProfileSettingsScreen extends ConsumerWidget {
                 onTap: () => notifier.setLocale(AppLocale.zh),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        DashboardSectionLabel(label: strings.agentSection),
+        const SizedBox(height: 10),
+        FittinCard(
+          theme: fittinTheme,
+          noPad: true,
+          child: _SettingsLinkRow(
+            key: const ValueKey('open-agent-settings'),
+            theme: fittinTheme,
+            title: strings.agentSettings,
+            subtitle: agentSettings.isLoading
+                ? strings.workingState
+                : '${strings.agentSettingsSubtitle} · ${switch (agentSettings.readiness) {
+                    AgentProviderReadiness.ready => strings.agentReady,
+                    AgentProviderReadiness.unverified => strings.agentNeedsTest,
+                    _ => strings.agentNotConfigured,
+                  }}',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AgentSettingsScreen()),
+            ),
           ),
         ),
         const SizedBox(height: 24),

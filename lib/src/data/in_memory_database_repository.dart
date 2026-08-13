@@ -138,6 +138,23 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<void> deleteTemplate(String templateId, {String? ownerUserId}) async {
+    final record = _templates[templateId];
+    if (record == null ||
+        record.isBuiltIn ||
+        record.ownerUserId != ownerUserId ||
+        _instances.values.any(
+          (instance) =>
+              instance.templateId == templateId &&
+              instance.ownerUserId == ownerUserId &&
+              instance.deletedAt == null,
+        )) {
+      throw StateError('Template cannot be deleted.');
+    }
+    _templates.remove(templateId);
+  }
+
+  @override
   Future<void> saveInstance(
     StoredTrainingInstance data, {
     String? syncStatus,
@@ -152,6 +169,15 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   @override
   Future<StoredTrainingInstance?> fetchInstance(String instanceId) async {
     return _instances[instanceId];
+  }
+
+  @override
+  Future<void> deleteInstance(String instanceId, {String? ownerUserId}) async {
+    final instance = _instances[instanceId];
+    if (instance == null || instance.ownerUserId != ownerUserId) {
+      throw StateError('Training instance cannot be deleted.');
+    }
+    _instances.remove(instanceId);
   }
 
   @override

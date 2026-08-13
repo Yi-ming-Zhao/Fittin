@@ -197,6 +197,38 @@ class WebDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<void> deleteTemplate(String templateId, {String? ownerUserId}) async {
+    final existing = await store.getRecord(WebStoreNames.templates, templateId);
+    if (existing == null ||
+        parseStoredDateTime(existing['deletedAt']) != null ||
+        existing['isBuiltIn'] == true ||
+        !_ownerMatches(existing['ownerUserId'] as String?, ownerUserId)) {
+      throw StateError('Template cannot be deleted.');
+    }
+    final instances = await store.getAllRecords(WebStoreNames.instances);
+    if (instances.any(
+      (instance) =>
+          instance['templateId'] == templateId &&
+          instance['ownerUserId'] == ownerUserId &&
+          parseStoredDateTime(instance['deletedAt']) == null,
+    )) {
+      throw StateError('A plan with training history cannot be deleted.');
+    }
+    existing['deletedAt'] = serializeStoredDateTime(DateTime.now());
+    existing['lastModifiedAt'] = serializeStoredDateTime(DateTime.now());
+    existing['version'] = (existing['version'] as int? ?? 0) + 1;
+    existing['syncStatusKey'] = SyncStatusKeys.pendingDelete;
+    await store.putRecord(WebStoreNames.templates, templateId, existing);
+    await _enqueueSync(
+      entityType: SyncEntityTypes.template,
+      entityId: templateId,
+      ownerUserId: existing['ownerUserId'] as String?,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: SyncStatusKeys.pendingDelete,
+    );
+  }
+
+  @override
   Future<String?> fetchActiveInstanceId() async {
     return fetchActiveInstanceIdForUser(null);
   }
@@ -615,6 +647,28 @@ class WebDatabaseRepository extends DatabaseRepository {
       return null;
     }
     return storedTrainingInstanceFromDoc(doc);
+  }
+
+  @override
+  Future<void> deleteInstance(String instanceId, {String? ownerUserId}) async {
+    final existing = await store.getRecord(WebStoreNames.instances, instanceId);
+    if (existing == null ||
+        parseStoredDateTime(existing['deletedAt']) != null ||
+        !_ownerMatches(existing['ownerUserId'] as String?, ownerUserId)) {
+      throw StateError('Training instance cannot be deleted.');
+    }
+    existing['deletedAt'] = serializeStoredDateTime(DateTime.now());
+    existing['lastModifiedAt'] = serializeStoredDateTime(DateTime.now());
+    existing['version'] = (existing['version'] as int? ?? 0) + 1;
+    existing['syncStatusKey'] = SyncStatusKeys.pendingDelete;
+    await store.putRecord(WebStoreNames.instances, instanceId, existing);
+    await _enqueueSync(
+      entityType: SyncEntityTypes.instance,
+      entityId: instanceId,
+      ownerUserId: existing['ownerUserId'] as String?,
+      operationType: SyncOperationTypes.delete,
+      syncStatus: SyncStatusKeys.pendingDelete,
+    );
   }
 
   @override
