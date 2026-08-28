@@ -12,4 +12,4 @@
 ## 3. Release
 
 - [x] 3.1 Update version to 1.1.2+23 and release notes; validate OpenSpec and submit the tested branch for CI.
-- [ ] 3.2 Merge passing CI, tag and publish signed artifacts, fast-forward 241, and deploy Web with latest.json last.
+- [x] 3.2 Merge passing CI, tag and publish signed artifacts, fast-forward 241, and deploy Web with latest.json last.
