@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:fittin_v2/src/application/agent_tools.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
@@ -7,6 +8,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'body metric tool contracts accept explicit null and preserve omitted fields',
+    () async {
+      final progress = InMemoryProgressRepository();
+      await progress.saveBodyMetric(
+        BodyMetric(
+          metricId: 'm',
+          timestamp: DateTime(2026, 8, 13),
+          weightKg: 70,
+          bodyFatPercent: 20,
+          waistCm: 80,
+          note: 'note',
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          progressRepositoryProvider.overrideWithValue(progress),
+          appLocaleProvider.overrideWith(
+            (ref) => AppLocaleNotifier(ref, initialLocale: AppLocale.zh),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      for (final field in ['bodyFatPercent', 'waistCm', 'note']) {
+        final result = await container.read(agentToolRegistryProvider).execute(
+          'propose_update_body_metric',
+          {'metricId': 'm', field: null},
+        );
+        expect(result.isError, false, reason: result.encoded);
+        final metric =
+            jsonDecode(result.proposal!.argumentsJson)['metric'] as Map;
+        expect(metric[field], isNull);
+        expect(metric['weightKg'], 70);
+        expect((await progress.fetchBodyMetrics()).single.note, 'note');
+      }
+    },
+  );
+
   test('tool allowlist exposes only structured fitness capabilities', () {
     expect(AgentToolRegistry.exposedReadToolsForTesting, {
       'list_plans',
@@ -122,7 +161,12 @@ void main() {
       );
     }
     final container = ProviderContainer(
-      overrides: [progressRepositoryProvider.overrideWithValue(progress)],
+      overrides: [
+        progressRepositoryProvider.overrideWithValue(progress),
+        appLocaleProvider.overrideWith(
+          (ref) => AppLocaleNotifier(ref, initialLocale: AppLocale.zh),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     final tools = container.read(agentToolRegistryProvider);
@@ -169,8 +213,16 @@ void main() {
 
     expect(result.proposal?.title, '添加身体测量');
     expect(result.proposal?.summary, contains('身体指标记录'));
-    expect(result.proposal?.changes.single.path, '体重（kg）');
-    expect(result.proposal?.changes.single.before, '未设置');
+    expect(
+      result.proposal!.changes.map((change) => change.path),
+      contains('体重（kg）'),
+    );
+    expect(
+      result.proposal!.changes
+          .firstWhere((change) => change.path == '体重（kg）')
+          .before,
+      '未设置',
+    );
   });
 }
 

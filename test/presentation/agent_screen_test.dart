@@ -280,6 +280,8 @@ class _MemorySettingsStore implements AgentProviderSettingsStore {
     required String model,
     String? apiKey,
     bool toolCallingVerified = false,
+    int contextWindowTokens = 32768,
+    AgentProviderCapabilityProfile? capabilities,
   }) async {
     if (apiKey?.isNotEmpty ?? false) key = apiKey;
     config = AgentProviderConfig(
@@ -325,4 +327,7 @@ class _RecordingBridge implements AgentUiBridge {
 
   @override
   Future<void> undoAction(String actionId) async => undone.add(actionId);
+
+  @override
+  Future<void> loadMoreHistory() async {}
 }

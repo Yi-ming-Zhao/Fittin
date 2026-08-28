@@ -11,6 +11,7 @@ import 'package:fittin_v2/src/data/models/agent_conversation_collection.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:isar/isar.dart';
+import '../data/models/agent_runtime_collection.dart';
 import 'package:path_provider/path_provider.dart';
 
 Future<LocalPersistenceBundle> createLocalPersistence() async {
@@ -24,6 +25,7 @@ Future<LocalPersistenceBundle> createLocalPersistence() async {
     SyncQueueCollectionSchema,
     AgentConversationCollectionSchema,
     AgentActionCollectionSchema,
+    AgentRuntimeCollectionSchema,
   ];
 
   final appDirectory = await getApplicationDocumentsDirectory();

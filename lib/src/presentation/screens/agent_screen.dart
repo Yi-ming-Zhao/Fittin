@@ -9,6 +9,7 @@ import '../localization/app_strings.dart';
 import '../theme/fittin_theme.dart';
 import '../widgets/fittin_card.dart';
 import '../widgets/agent_markdown.dart';
+import '../widgets/agent_run_timeline.dart';
 import '../widgets/fittin_primitives.dart';
 import 'agent_settings_screen.dart';
 
@@ -135,81 +136,100 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(theme.radius)),
       ),
-      builder: (context) => ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.72,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.borderHi,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                strings.agentConversationHistory,
-                style: theme.displayStyle(24, theme.fg),
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: state.conversations.isEmpty
-                    ? Center(
-                        child: Text(
-                          strings.agentNoHistory,
-                          style: theme.uiStyle(14, theme.fgDim),
-                        ),
-                      )
-                    : ListView.separated(
-                        itemCount: state.conversations.length,
-                        separatorBuilder: (_, __) =>
-                            Divider(height: 1, color: theme.divider),
-                        itemBuilder: (context, index) {
-                          final conversation = state.conversations[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            minTileHeight: 56,
-                            title: Text(
-                              conversation.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.uiStyle(14, theme.fg),
-                            ),
-                            subtitle: Text(
-                              _formatDate(conversation.updatedAt),
-                              style: theme.uiStyle(11, theme.fgMuted),
-                            ),
-                            trailing: IconButton(
-                              tooltip: strings.delete,
-                              icon: Icon(
-                                Icons.delete_outline_rounded,
-                                color: theme.fgMuted,
-                              ),
-                              onPressed: () => ref
-                                  .read(agentUiBridgeProvider)
-                                  .deleteConversation(conversation.id),
-                            ),
-                            onTap: () {
-                              Navigator.of(context).pop();
-                              ref
-                                  .read(agentUiBridgeProvider)
-                                  .openConversation(conversation.id);
-                            },
-                          );
-                        },
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final state = ref.watch(agentUiStateProvider);
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(context).height * 0.72,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.borderHi,
+                        borderRadius: BorderRadius.circular(999),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    strings.agentConversationHistory,
+                    style: theme.displayStyle(24, theme.fg),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: state.conversations.isEmpty
+                        ? Center(
+                            child: Text(
+                              strings.agentNoHistory,
+                              style: theme.uiStyle(14, theme.fgDim),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount:
+                                state.conversations.length +
+                                (state.hasMoreHistory ? 1 : 0),
+                            separatorBuilder: (_, __) =>
+                                Divider(height: 1, color: theme.divider),
+                            itemBuilder: (context, index) {
+                              if (index == state.conversations.length) {
+                                return TextButton(
+                                  onPressed: () => ref
+                                      .read(agentUiBridgeProvider)
+                                      .loadMoreHistory(),
+                                  child: Text(
+                                    strings.isChinese
+                                        ? '加载更早记录'
+                                        : 'Load older history',
+                                  ),
+                                );
+                              }
+                              final conversation = state.conversations[index];
+                              return ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                minTileHeight: 56,
+                                title: Text(
+                                  conversation.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.uiStyle(14, theme.fg),
+                                ),
+                                subtitle: Text(
+                                  _formatDate(conversation.updatedAt),
+                                  style: theme.uiStyle(11, theme.fgMuted),
+                                ),
+                                trailing: IconButton(
+                                  tooltip: strings.delete,
+                                  icon: Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: theme.fgMuted,
+                                  ),
+                                  onPressed: () => ref
+                                      .read(agentUiBridgeProvider)
+                                      .deleteConversation(conversation.id),
+                                ),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  ref
+                                      .read(agentUiBridgeProvider)
+                                      .openConversation(conversation.id);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -476,7 +496,19 @@ class _ConversationBody extends StatelessWidget {
           if (message.role == AgentMessageRole.user ||
               (message.role == AgentMessageRole.assistant &&
                   message.content.trim().isNotEmpty))
-            _AgentMessageCard(message: message, theme: theme),
+            _AgentMessageCard(message: message, theme: theme)
+          else if (message.role == AgentMessageRole.tool)
+            AgentDecisionNotice(
+              message: message,
+              theme: theme,
+              strings: strings,
+            ),
+        if (state.events.isNotEmpty)
+          AgentRunTimeline(
+            events: state.events,
+            theme: theme,
+            strings: strings,
+          ),
         if (state.runState.phase == AgentRunPhase.usingTools ||
             state.runState.activeToolName != null)
           _AgentToolActivityCard(
@@ -505,6 +537,34 @@ class _ConversationBody extends StatelessWidget {
             strings: strings,
             message: state.runState.errorMessage,
             onRetry: bridge.retry,
+            code: state.runState.errorCode,
+          ),
+        if ({
+              AgentRunPhase.interrupted,
+              AgentRunPhase.cancelled,
+            }.contains(state.runState.phase) &&
+            state.runState.pendingProposal == null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  strings.isChinese
+                      ? '任务已保存在本机。点击继续才会再次调用模型；已提交的修改不会重复执行。'
+                      : 'This task is saved locally. Resume to contact the model; committed changes will not be replayed.',
+                  style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                FittinBtn(
+                  theme,
+                  strings.isChinese ? '继续任务' : 'Resume task',
+                  key: const ValueKey('agent-resume'),
+                  block: true,
+                  onPressed: bridge.retry,
+                ),
+              ],
+            ),
           ),
         if (state.actions.isNotEmpty)
           _AgentActionHistory(
@@ -690,8 +750,39 @@ class _AgentMutationCard extends StatelessWidget {
               ),
             ],
             const SizedBox(height: 14),
-            for (final change in proposal.changes)
-              _MutationDiffRow(change: change, theme: theme, strings: strings),
+            Text(
+              proposal.expectedVersion == null
+                  ? (strings.isChinese
+                        ? '确认时会重新校验数据摘要'
+                        : 'Content will be checked again at commit')
+                  : (strings.isChinese
+                        ? '基于数据版本 v${proposal.expectedVersion}'
+                        : 'Based on data version v${proposal.expectedVersion}'),
+              style: theme.uiStyle(10, theme.fgMuted),
+            ),
+            if (proposal.changes.length <= 4)
+              for (final change in proposal.changes)
+                _MutationDiffRow(change: change, theme: theme, strings: strings)
+            else
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                shape: const Border(),
+                collapsedShape: const Border(),
+                title: Text(
+                  strings.isChinese
+                      ? '查看全部 ${proposal.changes.length} 项变化'
+                      : 'Review all ${proposal.changes.length} changes',
+                  style: theme.uiStyle(13, theme.fg, FontWeight.w700),
+                ),
+                children: [
+                  for (final change in proposal.changes)
+                    AgentDiffField(
+                      change: change,
+                      theme: theme,
+                      strings: strings,
+                    ),
+                ],
+              ),
             if (proposal.progressionEffect case final effect?) ...[
               const SizedBox(height: 10),
               Container(
@@ -845,12 +936,14 @@ class _AgentActionHistory extends StatelessWidget {
     required this.theme,
     required this.strings,
     required this.onUndo,
+    this.showAll = false,
   });
 
   final List<AgentActionRecord> actions;
   final FittinTheme theme;
   final AppStrings strings;
   final ValueChanged<String> onUndo;
+  final bool showAll;
 
   @override
   Widget build(BuildContext context) {
@@ -861,7 +954,7 @@ class _AgentActionHistory extends StatelessWidget {
         children: [
           FittinEyebrow(theme, strings.agentActionHistory),
           const SizedBox(height: 10),
-          for (final action in actions.take(5))
+          for (final action in actions.take(showAll ? actions.length : 5))
             Container(
               key: ValueKey('agent-action-${action.id}'),
               constraints: const BoxConstraints(minHeight: 56),
@@ -914,6 +1007,46 @@ class _AgentActionHistory extends StatelessWidget {
                 ],
               ),
             ),
+          if (!showAll && actions.length > 5)
+            TextButton(
+              child: Text(strings.isChinese ? '查看全部操作' : 'View all actions'),
+              onPressed: () => showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                useSafeArea: true,
+                backgroundColor: theme.surfaceSolid,
+                builder: (context) => FractionallySizedBox(
+                  heightFactor: .75,
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final state = ref.watch(agentUiStateProvider);
+                      final bridge = ref.watch(agentUiBridgeProvider);
+                      return ListView(
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          _AgentActionHistory(
+                            actions: state.actions,
+                            theme: theme,
+                            strings: strings,
+                            onUndo: bridge.undoAction,
+                            showAll: true,
+                          ),
+                          if (state.hasMoreHistory)
+                            TextButton(
+                              onPressed: bridge.loadMoreHistory,
+                              child: Text(
+                                strings.isChinese
+                                    ? '加载更早记录'
+                                    : 'Load older history',
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -926,12 +1059,14 @@ class _AgentErrorCard extends StatelessWidget {
     required this.strings,
     required this.message,
     required this.onRetry,
+    this.code,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
   final String? message;
   final VoidCallback onRetry;
+  final String? code;
 
   @override
   Widget build(BuildContext context) {
@@ -963,7 +1098,17 @@ class _AgentErrorCard extends StatelessWidget {
               ],
             ),
           ),
-          TextButton(onPressed: onRetry, child: Text(strings.agentRetry)),
+          TextButton(
+            onPressed: onRetry,
+            child: Text(
+              code == 'checkpoint_failed'
+                  ? (strings.isChinese ? '核对并继续' : 'Reconcile')
+                  : code == 'provider_auth_failed'
+                  ? (strings.isChinese ? '更新配置后重试' : 'Retry after setup')
+                  : (strings.isChinese ? '继续任务' : 'Resume'),
+              style: theme.uiStyle(11, theme.accent),
+            ),
+          ),
         ],
       ),
     );
@@ -1058,6 +1203,19 @@ class _AgentComposerState extends State<_AgentComposer> {
               ),
             ),
             const SizedBox(width: 8),
+            if (widget.isBusy && canSend)
+              IconButton(
+                key: const ValueKey('agent-steer'),
+                tooltip: widget.strings.isChinese
+                    ? '追加纠正，在下一安全步骤生效'
+                    : 'Steer at the next safe step',
+                onPressed: widget.onSubmit,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                icon: Icon(
+                  Icons.subdirectory_arrow_right,
+                  color: widget.theme.accent,
+                ),
+              ),
             Semantics(
               button: true,
               label: widget.isBusy

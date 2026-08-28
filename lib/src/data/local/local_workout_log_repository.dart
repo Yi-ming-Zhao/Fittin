@@ -51,10 +51,8 @@ class LocalWorkoutLogRepository {
 
     final normalizedLog = log.copyWith(
       logId: log.logId,
-      preConclusionSnapshot:
-          log.preConclusionSnapshot ?? existing.preConclusionSnapshot,
-      postConclusionSnapshot:
-          log.postConclusionSnapshot ?? existing.postConclusionSnapshot,
+      preConclusionSnapshot: existing.preConclusionSnapshot,
+      postConclusionSnapshot: existing.postConclusionSnapshot,
     );
 
     await _repository.updateWorkoutLog(

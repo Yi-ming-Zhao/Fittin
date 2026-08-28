@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,6 +22,8 @@ abstract interface class AgentProviderSettingsStore {
     required String model,
     String? apiKey,
     bool toolCallingVerified = false,
+    int contextWindowTokens = 32768,
+    AgentProviderCapabilityProfile? capabilities,
   });
 
   Future<void> clear();
@@ -83,6 +86,8 @@ class PlatformAgentProviderSettingsStore implements AgentProviderSettingsStore {
   static const modelPreferenceKey = 'fittin.agent.provider.model';
   static const verifiedPreferenceKey = 'fittin.agent.provider.toolVerified';
   static const apiKeySecureStorageKey = 'fittin.agent.provider.apiKey';
+  static const contextPreferenceKey = 'fittin.agent.provider.contextTokens';
+  static const capabilitiesPreferenceKey = 'fittin.agent.provider.capabilities';
 
   final SharedPreferences? _preferences;
   final AgentSecretStore _secretStore;
@@ -102,6 +107,8 @@ class PlatformAgentProviderSettingsStore implements AgentProviderSettingsStore {
       model: preferences.getString(modelPreferenceKey) ?? '',
       hasApiKey: key != null && key.isNotEmpty,
       toolCallingVerified: preferences.getBool(verifiedPreferenceKey) ?? false,
+      contextWindowTokens: preferences.getInt(contextPreferenceKey) ?? 32768,
+      capabilities: key == null ? null : _readCapabilities(preferences),
     );
   }
 
@@ -118,12 +125,19 @@ class PlatformAgentProviderSettingsStore implements AgentProviderSettingsStore {
     required String model,
     String? apiKey,
     bool toolCallingVerified = false,
+    int contextWindowTokens = 32768,
+    AgentProviderCapabilityProfile? capabilities,
   }) async {
     final normalizedBase = normalizeAgentProviderBaseUrl(
       baseUrl,
       allowDebugLoopbackHttp: _allowDebugLoopbackHttp,
     ).toString();
     final normalizedModel = model.trim();
+    if (contextWindowTokens < 8192 || contextWindowTokens > 262144) {
+      throw const FormatException(
+        'Context window must be between 8192 and 262144 tokens.',
+      );
+    }
     if (normalizedModel.isEmpty) {
       throw const FormatException('Enter a model ID.');
     }
@@ -143,11 +157,22 @@ class PlatformAgentProviderSettingsStore implements AgentProviderSettingsStore {
     await preferences.setString(baseUrlPreferenceKey, normalizedBase);
     await preferences.setString(modelPreferenceKey, normalizedModel);
     await preferences.setBool(verifiedPreferenceKey, toolCallingVerified);
+    await preferences.setInt(contextPreferenceKey, contextWindowTokens);
+    if (capabilities == null) {
+      await preferences.remove(capabilitiesPreferenceKey);
+    } else {
+      await preferences.setString(
+        capabilitiesPreferenceKey,
+        jsonEncode(capabilities.toJson()),
+      );
+    }
     return AgentProviderConfig(
       baseUrl: normalizedBase,
       model: normalizedModel,
       hasApiKey: storedKey != null && storedKey.isNotEmpty,
       toolCallingVerified: toolCallingVerified,
+      contextWindowTokens: contextWindowTokens,
+      capabilities: capabilities,
     );
   }
 
@@ -162,6 +187,21 @@ class PlatformAgentProviderSettingsStore implements AgentProviderSettingsStore {
     await preferences.remove(baseUrlPreferenceKey);
     await preferences.remove(modelPreferenceKey);
     await preferences.remove(verifiedPreferenceKey);
+    await preferences.remove(contextPreferenceKey);
+    await preferences.remove(capabilitiesPreferenceKey);
+  }
+
+  AgentProviderCapabilityProfile? _readCapabilities(SharedPreferences prefs) {
+    try {
+      final raw = prefs.getString(capabilitiesPreferenceKey);
+      return raw == null
+          ? null
+          : AgentProviderCapabilityProfile.fromJson(
+              (jsonDecode(raw) as Map).cast(),
+            );
+    } catch (_) {
+      return null;
+    }
   }
 }
 
@@ -170,15 +210,18 @@ class AgentConnectionTestResult {
     required this.chatCapable,
     required this.toolCallingSupported,
     this.errorMessage,
+    this.capabilities,
   });
 
   const AgentConnectionTestResult.failed(this.errorMessage)
     : chatCapable = false,
-      toolCallingSupported = false;
+      toolCallingSupported = false,
+      capabilities = null;
 
   final bool chatCapable;
   final bool toolCallingSupported;
   final String? errorMessage;
+  final AgentProviderCapabilityProfile? capabilities;
 
   bool get succeeded => chatCapable && errorMessage == null;
 }
@@ -195,6 +238,9 @@ class AgentConnectionTester {
   }) async {
     var receivedContent = false;
     var completedToolCall = false;
+    bool? streaming;
+    bool? reasoning;
+    bool? usage;
     final toolNames = <int, String>{};
     final toolIds = <int, String>{};
     final toolArguments = <int, String>{};
@@ -225,8 +271,16 @@ class AgentConnectionTester {
         // DeepSeek reasoning models can reject named-tool forcing even though
         // they support tools. Readiness still requires a real valid ping call.
         toolChoice: 'auto',
+        maxCompletionTokens: 512,
+        includeUsage: const {
+          'api.openai.com',
+          'api.deepseek.com',
+        }.contains(Uri.tryParse(config.baseUrl)?.host),
       ),
     )) {
+      if (event is AgentResponseMetadata) streaming = event.streaming;
+      if (event is AgentReasoningDelta) reasoning = true;
+      if (event is AgentUsage) usage = true;
       if (event is AgentModelFailure) {
         return AgentConnectionTestResult.failed(
           _boundedSettingsMessage(
@@ -273,6 +327,13 @@ class AgentConnectionTester {
       errorMessage: receivedValidEvent
           ? null
           : 'The provider returned no completion events.',
+      capabilities: AgentProviderCapabilityProfile(
+        testedAt: DateTime.now(),
+        functionCalling: supportsTools,
+        streaming: streaming,
+        reasoningFields: reasoning,
+        usageReporting: usage,
+      ),
     );
   }
 }
@@ -335,6 +396,24 @@ class AgentProviderSettingsController
   final AgentProviderSettingsStore _store;
   final AgentConnectionTester _tester;
   late final Future<void> _initialLoad;
+  int _revision = 0;
+  AgentCancellationToken? _testCancellation;
+  Future<void> _writes = Future.value();
+
+  Future<T> _write<T>(Future<T> Function() operation) {
+    final result = _writes.then((_) => operation());
+    _writes = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
+    return result;
+  }
+
+  bool _current(int revision) => mounted && revision == _revision;
+
+  @override
+  void dispose() {
+    _revision++;
+    _testCancellation?.cancel();
+    super.dispose();
+  }
 
   Future<void> get initialized => _initialLoad;
 
@@ -362,25 +441,38 @@ class AgentProviderSettingsController
     required String baseUrl,
     required String model,
     String? apiKey,
+    int? contextWindowTokens,
   }) async {
     await _initialLoad;
+    if (!mounted) return false;
+    final revision = ++_revision;
+    _testCancellation?.cancel();
     state = state.copyWith(
       isSaving: true,
+      isTesting: false,
+      config: state.config.copyWith(
+        toolCallingVerified: false,
+        clearCapabilities: true,
+      ),
       clearError: true,
       clearLastTest: true,
     );
     try {
-      final config = await _store.save(
-        baseUrl: baseUrl,
-        model: model,
-        apiKey: apiKey,
+      final config = await _write(
+        () => _store.save(
+          baseUrl: baseUrl,
+          model: model,
+          apiKey: apiKey,
+          contextWindowTokens:
+              contextWindowTokens ?? state.config.contextWindowTokens,
+        ),
       );
-      if (mounted) {
+      if (_current(revision)) {
         state = state.copyWith(config: config, isSaving: false);
       }
       return true;
     } catch (error) {
-      if (mounted) {
+      if (_current(revision)) {
         state = state.copyWith(
           isSaving: false,
           errorMessage: _settingsError(error, apiKey: apiKey),
@@ -392,13 +484,19 @@ class AgentProviderSettingsController
 
   Future<void> clear() async {
     await _initialLoad;
+    if (!mounted) return;
+    final revision = ++_revision;
+    _testCancellation?.cancel();
+    state = const AgentProviderSettingsState(isLoading: false);
     try {
-      await _store.clear();
-      if (mounted) {
+      await _write(_store.clear);
+      if (_current(revision)) {
         state = const AgentProviderSettingsState(isLoading: false);
       }
     } catch (error) {
-      if (mounted) state = state.copyWith(errorMessage: _settingsError(error));
+      if (_current(revision)) {
+        state = state.copyWith(errorMessage: _settingsError(error));
+      }
     }
   }
 
@@ -406,11 +504,28 @@ class AgentProviderSettingsController
     String? baseUrl,
     String? model,
     String? apiKey,
+    int? contextWindowTokens,
     AgentCancellationToken? cancellationToken,
   }) async {
     await _initialLoad;
+    if (!mounted) {
+      return const AgentConnectionTestResult.failed(
+        'Connection test cancelled.',
+      );
+    }
+    final revision = ++_revision;
+    _testCancellation?.cancel();
+    final token = AgentCancellationToken();
+    _testCancellation = token;
+    if (cancellationToken != null) {
+      unawaited(cancellationToken.whenCancelled.then((_) => token.cancel()));
+    }
     state = state.copyWith(
       isTesting: true,
+      config: state.config.copyWith(
+        toolCallingVerified: false,
+        clearCapabilities: true,
+      ),
       clearError: true,
       clearLastTest: true,
     );
@@ -428,6 +543,8 @@ class AgentProviderSettingsController
         ).toString(),
         model: (model ?? state.config.model).trim(),
         hasApiKey: true,
+        contextWindowTokens:
+            contextWindowTokens ?? state.config.contextWindowTokens,
       );
       if (candidate.model.isEmpty) {
         throw const FormatException('Enter a model ID.');
@@ -436,15 +553,22 @@ class AgentProviderSettingsController
       final result = await _tester.test(
         config: candidate,
         apiKey: candidateKey,
-        cancellationToken: cancellationToken,
+        cancellationToken: token,
       );
-      final saved = await _store.save(
-        baseUrl: candidate.baseUrl,
-        model: candidate.model,
-        apiKey: candidateKey,
-        toolCallingVerified: result.toolCallingSupported,
-      );
-      if (mounted) {
+      token.throwIfCancelled();
+      if (!_current(revision)) throw const AgentRequestCancelledException();
+      final saved = await _write(() {
+        if (!_current(revision)) throw const AgentRequestCancelledException();
+        return _store.save(
+          baseUrl: candidate.baseUrl,
+          model: candidate.model,
+          apiKey: candidateKey,
+          toolCallingVerified: result.toolCallingSupported,
+          contextWindowTokens: candidate.contextWindowTokens,
+          capabilities: result.capabilities,
+        );
+      });
+      if (_current(revision)) {
         state = state.copyWith(
           config: saved,
           isTesting: false,
@@ -457,7 +581,7 @@ class AgentProviderSettingsController
     } catch (error) {
       final message = _settingsError(error, apiKey: candidateKey);
       final result = AgentConnectionTestResult.failed(message);
-      if (mounted) {
+      if (_current(revision)) {
         state = state.copyWith(
           isTesting: false,
           lastTest: result,

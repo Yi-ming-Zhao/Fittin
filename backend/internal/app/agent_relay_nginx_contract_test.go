@@ -28,7 +28,7 @@ func TestProductionNginxAgentRelayContract(t *testing.T) {
 		"proxy_request_buffering off;",
 		"proxy_buffering off;",
 		"proxy_cache off;",
-		"proxy_read_timeout 125s;",
+		"proxy_read_timeout 310s;",
 		"location @fittin_agent_request_too_large {",
 		`return 413 '{"error":"Agent request is too large","code":"relay_request_too_large"}';`,
 		"location @fittin_agent_rate_limited {",

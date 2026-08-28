@@ -43,10 +43,12 @@ class AgentAtomicMutationWriter {
       ..metricId = metricId
       ..timestamp = metric?.timestamp ?? existing?.timestamp ?? now
       ..ownerUserId = existing?.ownerUserId ?? ownerUserId
-      ..weightKg = metric?.weightKg ?? existing?.weightKg
-      ..bodyFatPercent = metric?.bodyFatPercent ?? existing?.bodyFatPercent
-      ..waistCm = metric?.waistCm ?? existing?.waistCm
-      ..note = metric?.note ?? existing?.note
+      ..weightKg = delete ? existing?.weightKg : metric?.weightKg
+      ..bodyFatPercent = delete
+          ? existing?.bodyFatPercent
+          : metric?.bodyFatPercent
+      ..waistCm = delete ? existing?.waistCm : metric?.waistCm
+      ..note = delete ? existing?.note : metric?.note
       ..deletedAt = delete ? now : null
       ..lastSyncedAt = existing?.lastSyncedAt
       ..version = (existing?.version ?? 0) + 1

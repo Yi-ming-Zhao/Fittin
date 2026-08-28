@@ -43,6 +43,7 @@ type Server struct {
 	agentConcurrentByUser map[string]int
 	agentResolver         agentDNSResolver
 	agentClientFactory    agentHTTPClientFactory
+	agentStats            agentRelayMetrics
 }
 
 type rateWindow struct {

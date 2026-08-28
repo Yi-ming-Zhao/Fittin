@@ -61,6 +61,8 @@ class AgentChatCompletionRequest {
     this.stream = true,
     this.temperature,
     this.maxCompletionTokens,
+    this.allowRetries = true,
+    this.includeUsage = false,
   });
 
   final String model;
@@ -70,6 +72,8 @@ class AgentChatCompletionRequest {
   final bool stream;
   final double? temperature;
   final int? maxCompletionTokens;
+  final bool allowRetries;
+  final bool includeUsage;
 
   Map<String, dynamic> toJson({bool includeReasoningContent = false}) => {
     'model': model,
@@ -80,6 +84,7 @@ class AgentChatCompletionRequest {
         )
         .toList(),
     'stream': stream,
+    if (stream && includeUsage) 'stream_options': {'include_usage': true},
     if (tools.isNotEmpty)
       'tools': tools.map((definition) => definition.toJson()).toList(),
     if (toolChoice != null) 'tool_choice': toolChoice,
@@ -91,6 +96,16 @@ class AgentChatCompletionRequest {
 
 sealed class AgentModelEvent {
   const AgentModelEvent();
+}
+
+class AgentResponseMetadata extends AgentModelEvent {
+  const AgentResponseMetadata({required this.streaming});
+  final bool streaming;
+}
+
+class AgentUsage extends AgentModelEvent {
+  const AgentUsage(this.tokens);
+  final Map<String, int> tokens;
 }
 
 class AgentTextDelta extends AgentModelEvent {
@@ -240,6 +255,14 @@ Iterable<AgentModelEvent> _eventsFromPayload(
     return;
   }
 
+  final usage = payload['usage'];
+  if (usage is Map) {
+    yield AgentUsage({
+      for (final key in ['prompt_tokens', 'completion_tokens', 'total_tokens'])
+        if (usage[key] is int && (usage[key] as int) >= 0)
+          key: usage[key] as int,
+    });
+  }
   final choices = payload['choices'];
   if (choices is List && choices.isEmpty && payload['usage'] is Map) {
     return;

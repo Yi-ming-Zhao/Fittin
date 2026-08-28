@@ -9,6 +9,7 @@ class AgentBusinessTransaction {
   final AgentLocalRepository repository;
 
   Future<T> run<T>(Future<T> Function() operation) {
+    if (Zone.current[agentTransactionZoneKey] == true) return operation();
     final local = repository;
     if (local is IsarAgentLocalRepository) {
       return local.isar.writeTxn(

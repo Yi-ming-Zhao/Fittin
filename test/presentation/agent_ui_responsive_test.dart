@@ -392,6 +392,8 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     required String model,
     String? apiKey,
     bool toolCallingVerified = false,
+    int contextWindowTokens = 32768,
+    AgentProviderCapabilityProfile? capabilities,
   }) async => AgentProviderConfig(
     baseUrl: baseUrl,
     model: model,

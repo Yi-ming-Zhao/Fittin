@@ -77,16 +77,23 @@ class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
   }
 
   final Ref _ref;
+  int _loadRevision = 0;
 
   Future<void> _load() async {
+    if (!mounted) return;
+    final revision = ++_loadRevision;
     state = const AsyncValue.loading();
     try {
       final metrics = await _ref
           .read(localProgressRepositoryProvider)
           .fetchBodyMetrics();
-      state = AsyncValue.data(metrics);
+      if (mounted && revision == _loadRevision) {
+        state = AsyncValue.data(metrics);
+      }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted && revision == _loadRevision) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
