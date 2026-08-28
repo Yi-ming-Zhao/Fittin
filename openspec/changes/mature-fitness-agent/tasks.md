@@ -24,7 +24,7 @@
 
 ## 5. Verification gates
 
-- [ ] 5.1 Pass focused and full Flutter tests/analyze, old-schema migrations and OpenSpec validation.
-- [ ] 5.2 Pass Android, iOS no-codesign and Web builds plus five-theme narrow/mobile visual checks.
+- [x] 5.1 Pass focused and full Flutter tests/analyze, old-schema migrations and OpenSpec validation.
+- [x] 5.2 Pass Android, iOS no-codesign and Web builds plus five-theme narrow/mobile visual checks.
 - [x] 5.3 Run ephemeral-key real-provider canaries, measure at least 90% task success and zero unsafe writes.
-- [ ] 5.4 Complete PR/CI, signed Android upgrade verification, 241 backend and public Web deployment; publish latest.json only after all gates pass.
+- [x] 5.4 Complete PR/CI, signed Android upgrade verification, 241 backend and public Web deployment; publish latest.json only after all gates pass.
