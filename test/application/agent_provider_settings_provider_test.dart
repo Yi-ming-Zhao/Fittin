@@ -113,12 +113,9 @@ void main() {
     expect(cleared.hasApiKey, isFalse);
   });
 
-  test('forced ping test distinguishes chat from tool compatibility', () async {
+  test('ping test distinguishes chat from tool compatibility', () async {
     final transport = _FakeTransport((request) async* {
-      expect(request.toolChoice, {
-        'type': 'function',
-        'function': {'name': 'ping'},
-      });
+      expect(request.toolChoice, 'auto');
       yield const AgentTextDelta('I cannot call tools.');
       yield const AgentModelCompleted(finishReason: 'stop');
     });

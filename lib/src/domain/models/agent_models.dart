@@ -110,6 +110,7 @@ class AgentMessage {
     required this.role,
     required this.createdAt,
     this.content = '',
+    this.reasoningContent,
     this.toolCalls = const [],
     this.toolCallId,
     this.isPartial = false,
@@ -119,12 +120,15 @@ class AgentMessage {
   final AgentMessageRole role;
   final DateTime createdAt;
   final String content;
+  // Local-only provider metadata. Presentation uses content, never this field.
+  final String? reasoningContent;
   final List<AgentToolCall> toolCalls;
   final String? toolCallId;
   final bool isPartial;
 
   AgentMessage copyWith({
     String? content,
+    String? reasoningContent,
     List<AgentToolCall>? toolCalls,
     bool? isPartial,
   }) => AgentMessage(
@@ -132,6 +136,7 @@ class AgentMessage {
     role: role,
     createdAt: createdAt,
     content: content ?? this.content,
+    reasoningContent: reasoningContent ?? this.reasoningContent,
     toolCalls: toolCalls ?? this.toolCalls,
     toolCallId: toolCallId,
     isPartial: isPartial ?? this.isPartial,
@@ -142,6 +147,7 @@ class AgentMessage {
     'role': role.name,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'content': content,
+    if (reasoningContent != null) 'reasoningContent': reasoningContent,
     'toolCalls': toolCalls.map((call) => call.toJson()).toList(),
     'toolCallId': toolCallId,
     'isPartial': isPartial,
@@ -152,6 +158,7 @@ class AgentMessage {
     role: AgentMessageRole.values.byName(json['role'] as String),
     createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
     content: json['content'] as String? ?? '',
+    reasoningContent: json['reasoningContent'] as String?,
     toolCalls: (json['toolCalls'] as List? ?? const [])
         .map((item) => AgentToolCall.fromJson((item as Map).cast()))
         .toList(),

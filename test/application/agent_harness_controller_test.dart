@@ -11,8 +11,108 @@ import 'package:fittin_v2/src/data/remote/agent_model_transport.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 void main() {
+  test(
+    'DeepSeek tool continuation survives a saved conversation reopen',
+    () async {
+      var requests = 0;
+      final transport = NativeAgentModelTransport(
+        client: MockClient((request) async {
+          final body = jsonDecode(request.body) as Map;
+          final messages = body['messages'] as List;
+          requests += 1;
+          if (requests > 1) {
+            final assistant = messages.cast<Map>().firstWhere(
+              (message) => message['role'] == 'assistant',
+            );
+            if (assistant['reasoning_content'] !=
+                'Read local summary [REDACTED]') {
+              return http.Response(
+                '{"error":{"message":"Missing reasoning_content"}}',
+                400,
+              );
+            }
+            expect(
+              messages.last['content'],
+              isNot(contains('secret-test-key')),
+            );
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': requests == 1
+                      ? {
+                          'role': 'assistant',
+                          'content': '',
+                          'reasoning_content':
+                              'Read local summary secret-test-key',
+                          'tool_calls': [
+                            {
+                              'id': 'call_summary',
+                              'type': 'function',
+                              'function': {
+                                'name': 'read_summary',
+                                'arguments': '{}',
+                              },
+                            },
+                          ],
+                        }
+                      : {
+                          'role': 'assistant',
+                          'content': 'Two workouts this week.',
+                          'reasoning_content': 'Summarize the result',
+                        },
+                  'finish_reason': requests == 1 ? 'tool_calls' : 'stop',
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+      final container = _container(
+        transport: transport,
+        tools: _FakeTools(
+          AgentToolResult(payload: const {'completedWorkouts': 2}),
+        ),
+        settingsStore: _DeepSeekSettingsStore(),
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        agentHarnessControllerProvider.notifier,
+      );
+      await controller.submit('How did I train?');
+      expect(
+        container.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.completed,
+      );
+      final saved =
+          (await container
+                  .read(agentLocalRepositoryProvider)
+                  .fetchConversations())
+              .single;
+      final firstAssistant = saved.messages.firstWhere(
+        (message) => message.role == AgentMessageRole.assistant,
+      );
+      expect(firstAssistant.reasoningContent, 'Read local summary [REDACTED]');
+      expect(firstAssistant.content, isEmpty);
+      expect(jsonEncode(saved.toJson()), isNot(contains('secret-test-key')));
+
+      await controller.openConversation(saved.id);
+      await controller.submit('Continue the analysis');
+      expect(requests, 3);
+      expect(
+        container.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.completed,
+      );
+    },
+  );
+
   test(
     'streams assistant content and keeps the completed conversation',
     () async {
@@ -514,6 +614,16 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     model: model,
     hasApiKey: true,
     toolCallingVerified: toolCallingVerified,
+  );
+}
+
+class _DeepSeekSettingsStore extends _ReadySettingsStore {
+  @override
+  Future<AgentProviderConfig> load() async => const AgentProviderConfig(
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-reasoner',
+    hasApiKey: true,
+    toolCallingVerified: true,
   );
 }
 

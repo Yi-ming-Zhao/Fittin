@@ -1,0 +1,1457 @@
+{
+  "id": "shenshi-five-day-split",
+  "name": "沈师五分划",
+  "localizedName": {
+    "zh": "沈师五分划",
+    "en": "Shen's Five-Day Split"
+  },
+  "description": "每周5天，依次练胸、背、腿、肩、手臂。\n\n训练原则（按原计划保留）\n1. 不要受伤，保持稳定的力量训练。\n2. 充分休息，每个肌群训练间隔48小时以上。\n3. 动作质量优先，避免代偿，专注目标肌群发力。\n\n训练细节\n复合动作组间休息90–120秒（记录默认120秒），孤立动作60秒。不要选择8RM以下的重量，尽可能选择能完成12次的重量。全程控制；初始重量由你确认，计划不自动加重。\n\nDay 1：胸部训练\n目标：胸大肌（整体厚度、上中下束分化）\n1. 平板杠铃卧推：4 × 12。下落到大臂平行地面；下放和发力均保持控制。\n2. 上斜哑铃卧推：4 × 12。上胸强化。\n3. 双杠臂屈伸：4 × 力竭。4组×力竭；下胸和肱三头肌。做不了时用上斜俯卧撑替代。\n4. 绳索夹胸：3 × 12。细节雕刻。\n\nDay 2：背部训练\n目标：背阔肌、斜方肌\n1. 引体向上（宽握）：4 × 力竭。4组×力竭；拉不了时用高位下拉替代。\n2. 坐姿划船（器械或绳索）：4 × 12。固定器械或绳索均可；背阔肌中下束。\n3. 单臂哑铃划船（每侧）：3 × 12。每侧12次；单侧控制。\n4. 直臂下压：4 × 12。背阔肌。\n\nDay 3：腿部训练\n目标：股四头肌、臀肌、腘绳肌、小腿\n1. 杠铃深蹲：4 × 12。全程控制；下放至大腿平行地面，膝盖不内扣。\n2. 腿屈伸：4 × 12。股四头肌。\n3. 保加利亚分腿蹲（每腿）：3 × 12。每腿12次；单侧稳定性。\n4. 倒蹬机：3 × 12。下放到底；股直肌强化。\n5. 坐姿腿弯举：3 × 12。腘绳肌孤立。\n\nDay 4：肩部训练\n目标：三角肌前、中、后束均衡发展\n1. 坐姿杠铃推举：4 × 12。前束和整体肩部。\n2. 哑铃侧平举（递减组）：4 × 12。4组×12次，采用递减组；原计划未指定减重比例，由用户调整。\n3. 反向飞鸟：3 × 12。三角肌后束。\n4. 器械推肩：3 × 12。辅助孤立前束。\n5. 面拉（高位）：3 × 12。后束和上背联动。\n\nDay 5：手臂训练\n目标：肱二头肌、肱三头肌\n1. 杠铃弯举（21响礼炮）：4 × 21。每组21次，全程控制。\n2. 牧师凳弯举：3 × 12。集中发力。\n3. 锤式弯举：3 × 12。肱肌和肱二头肌长头。\n4. 窄距俯卧撑：4 × 力竭。4组×力竭；肱三头肌强化。\n5. 绳索臂屈伸：3 × 12。肱三头肌长头。\n6. 凳上臂屈伸（负重）：3 × 12。肱三头肌整体；记录额外负重。\n\n腹部可选附加训练（不计入五天循环）\n1. 悬垂举腿：慢速10次×5组，后期可增加到10组；每天或每2天一次。\n2. 坐姿举腿：每天20次×5组。\n腹部安排与主计划分开选择；主计划中的力竭组记录实际完成次数。",
+  "localizedDescription": {
+    "zh": "每周5天，依次练胸、背、腿、肩、手臂。\n\n训练原则（按原计划保留）\n1. 不要受伤，保持稳定的力量训练。\n2. 充分休息，每个肌群训练间隔48小时以上。\n3. 动作质量优先，避免代偿，专注目标肌群发力。\n\n训练细节\n复合动作组间休息90–120秒（记录默认120秒），孤立动作60秒。不要选择8RM以下的重量，尽可能选择能完成12次的重量。全程控制；初始重量由你确认，计划不自动加重。\n\nDay 1：胸部训练\n目标：胸大肌（整体厚度、上中下束分化）\n1. 平板杠铃卧推：4 × 12。下落到大臂平行地面；下放和发力均保持控制。\n2. 上斜哑铃卧推：4 × 12。上胸强化。\n3. 双杠臂屈伸：4 × 力竭。4组×力竭；下胸和肱三头肌。做不了时用上斜俯卧撑替代。\n4. 绳索夹胸：3 × 12。细节雕刻。\n\nDay 2：背部训练\n目标：背阔肌、斜方肌\n1. 引体向上（宽握）：4 × 力竭。4组×力竭；拉不了时用高位下拉替代。\n2. 坐姿划船（器械或绳索）：4 × 12。固定器械或绳索均可；背阔肌中下束。\n3. 单臂哑铃划船（每侧）：3 × 12。每侧12次；单侧控制。\n4. 直臂下压：4 × 12。背阔肌。\n\nDay 3：腿部训练\n目标：股四头肌、臀肌、腘绳肌、小腿\n1. 杠铃深蹲：4 × 12。全程控制；下放至大腿平行地面，膝盖不内扣。\n2. 腿屈伸：4 × 12。股四头肌。\n3. 保加利亚分腿蹲（每腿）：3 × 12。每腿12次；单侧稳定性。\n4. 倒蹬机：3 × 12。下放到底；股直肌强化。\n5. 坐姿腿弯举：3 × 12。腘绳肌孤立。\n\nDay 4：肩部训练\n目标：三角肌前、中、后束均衡发展\n1. 坐姿杠铃推举：4 × 12。前束和整体肩部。\n2. 哑铃侧平举（递减组）：4 × 12。4组×12次，采用递减组；原计划未指定减重比例，由用户调整。\n3. 反向飞鸟：3 × 12。三角肌后束。\n4. 器械推肩：3 × 12。辅助孤立前束。\n5. 面拉（高位）：3 × 12。后束和上背联动。\n\nDay 5：手臂训练\n目标：肱二头肌、肱三头肌\n1. 杠铃弯举（21响礼炮）：4 × 21。每组21次，全程控制。\n2. 牧师凳弯举：3 × 12。集中发力。\n3. 锤式弯举：3 × 12。肱肌和肱二头肌长头。\n4. 窄距俯卧撑：4 × 力竭。4组×力竭；肱三头肌强化。\n5. 绳索臂屈伸：3 × 12。肱三头肌长头。\n6. 凳上臂屈伸（负重）：3 × 12。肱三头肌整体；记录额外负重。\n\n腹部可选附加训练（不计入五天循环）\n1. 悬垂举腿：慢速10次×5组，后期可增加到10组；每天或每2天一次。\n2. 坐姿举腿：每天20次×5组。\n腹部安排与主计划分开选择；主计划中的力竭组记录实际完成次数。",
+    "en": "Five sessions per week, rotating chest, back, legs, shoulders and arms.\n\nSource training principles\n1. Avoid injury and maintain consistent strength training.\n2. Rest adequately; allow more than 48 hours between sessions for each muscle group.\n3. Prioritize movement quality, avoid compensation and focus on the intended muscles.\n\nTraining details\nRest 90–120 seconds for compound movements (120-second default) and 60 seconds for isolation work. Avoid loads heavier than an 8RM and aim for a load you can complete for 12 repetitions. Keep every repetition controlled. Confirm starting loads yourself; this plan does not increase them automatically.\n\nDay 1：Chest\nTarget: Pectorals: overall thickness and upper, middle and lower regions\n1. Flat Barbell Bench Press：4 × 12。Lower until the upper arms are parallel to the floor; control both lowering and pressing.\n2. Incline Dumbbell Bench Press：4 × 12。Upper-chest emphasis.\n3. Parallel-Bar Dip：4 × AMRAP。4 sets to failure; lower chest and triceps. Substitute incline push-ups if needed.\n4. Cable Chest Fly：3 × 12。Chest isolation.\n\nDay 2：Back\nTarget: Latissimus dorsi and trapezius\n1. Wide-Grip Pull-Up：4 × AMRAP。4 sets to failure; substitute lat pulldowns if needed.\n2. Seated Machine or Cable Row：4 × 12。Use a fixed machine or cable; middle/lower lat emphasis.\n3. One-Arm Dumbbell Row (Each Side)：3 × 12。12 repetitions per side; controlled unilateral work.\n4. Straight-Arm Pulldown：4 × 12。Lat emphasis.\n\nDay 3：Legs\nTarget: Quadriceps, glutes, hamstrings and calves\n1. Barbell Squat：4 × 12。Control the full repetition; lower to thighs parallel and avoid knees collapsing inward.\n2. Leg Extension：4 × 12。Quadriceps isolation.\n3. Bulgarian Split Squat (Each Leg)：3 × 12。12 repetitions per leg; unilateral stability.\n4. Leg Press：3 × 12。Lower through the prescribed range; rectus femoris emphasis.\n5. Seated Leg Curl：3 × 12。Hamstring isolation.\n\nDay 4：Shoulders\nTarget: Balanced anterior, middle and posterior deltoid work\n1. Seated Barbell Shoulder Press：4 × 12。Anterior deltoid and overall shoulder emphasis.\n2. Dumbbell Lateral Raise (Drop Sets)：4 × 12。4 sets of 12 using drop sets; the source does not specify drop percentages, so adjust loads manually.\n3. Reverse Fly：3 × 12。Posterior deltoids.\n4. Machine Shoulder Press：3 × 12。Supplementary anterior-deltoid work.\n5. High Cable Face Pull：3 × 12。Posterior deltoids and upper back.\n\nDay 5：Arms\nTarget: Biceps and triceps\n1. Barbell Curl (21s)：4 × 21。21 repetitions per set with controlled movement.\n2. Preacher Curl：3 × 12。Focused contraction.\n3. Hammer Curl：3 × 12。Brachialis and biceps long-head emphasis.\n4. Close-Grip Push-Up：4 × AMRAP。4 sets to failure; triceps emphasis.\n5. Cable Triceps Extension：3 × 12。Triceps long-head emphasis.\n6. Weighted Bench Dip：3 × 12。Overall triceps; record additional load.\n\nOptional abdominal work (outside the five-day rotation)\n1. Hanging leg raises: 5 sets of 10 slow repetitions, increasing to 10 sets later; daily or every other day.\n2. Seated leg raises: 5 sets of 20 repetitions daily.\nChoose abdominal work separately from the main rotation. Log actual completed repetitions for AMRAP sets."
+  },
+  "engineFamily": "legacy",
+  "scheduleMode": "linear",
+  "requiredTrainingMaxKeys": [],
+  "engineConfig": {
+    "trainingDaysPerWeek": 5,
+    "minimumMuscleRestHours": 48,
+    "automaticProgression": false,
+    "optionalAbdominalTraining": [
+      {
+        "name": "悬垂举腿",
+        "sets": 5,
+        "reps": 10,
+        "tempo": "slow",
+        "laterSets": 10,
+        "frequency": "daily_or_every_other_day"
+      },
+      {
+        "name": "坐姿举腿",
+        "sets": 5,
+        "reps": 20,
+        "frequency": "daily"
+      }
+    ]
+  },
+  "phases": [
+    {
+      "id": "shenshi-five-day-rotation",
+      "name": "五天分化循环",
+      "workouts": [
+        {
+          "id": "shenshi-day1-chest",
+          "name": "胸部训练",
+          "localizedName": {
+            "zh": "胸部训练",
+            "en": "Chest"
+          },
+          "dayLabel": "Day 1",
+          "localizedDayLabel": {
+            "zh": "第1天",
+            "en": "Day 1"
+          },
+          "estimatedDurationMinutes": 55,
+          "exercises": [
+            {
+              "id": "shenshi-day1-exercise1",
+              "exerciseId": "bench_press",
+              "name": "平板杠铃卧推",
+              "localizedName": {
+                "zh": "平板杠铃卧推",
+                "en": "Flat Barbell Bench Press"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "barbell",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "下落到大臂平行地面；下放和发力均保持控制。",
+                "localizedNotes": {
+                  "zh": "下落到大臂平行地面；下放和发力均保持控制。",
+                  "en": "Lower until the upper arms are parallel to the floor; control both lowering and pressing."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day1-exercise2",
+              "exerciseId": "incline_dumbbell_press",
+              "name": "上斜哑铃卧推",
+              "localizedName": {
+                "zh": "上斜哑铃卧推",
+                "en": "Incline Dumbbell Bench Press"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "上胸强化。",
+                "localizedNotes": {
+                  "zh": "上胸强化。",
+                  "en": "Upper-chest emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day1-exercise3",
+              "exerciseId": "custom:parallel_bar_dip",
+              "name": "双杠臂屈伸",
+              "localizedName": {
+                "zh": "双杠臂屈伸",
+                "en": "Parallel-Bar Dip"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "bodyweight",
+              "equipmentType": "bodyweight",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "4组×力竭；下胸和肱三头肌。做不了时用上斜俯卧撑替代。",
+                "localizedNotes": {
+                  "zh": "4组×力竭；下胸和肱三头肌。做不了时用上斜俯卧撑替代。",
+                  "en": "4 sets to failure; lower chest and triceps. Substitute incline push-ups if needed."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 力竭 / AMRAP",
+                  "sets": [
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day1-exercise4",
+              "exerciseId": "custom:cable_chest_fly",
+              "name": "绳索夹胸",
+              "localizedName": {
+                "zh": "绳索夹胸",
+                "en": "Cable Chest Fly"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "cable",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "细节雕刻。",
+                "localizedNotes": {
+                  "zh": "细节雕刻。",
+                  "en": "Chest isolation."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shenshi-day2-back",
+          "name": "背部训练",
+          "localizedName": {
+            "zh": "背部训练",
+            "en": "Back"
+          },
+          "dayLabel": "Day 2",
+          "localizedDayLabel": {
+            "zh": "第2天",
+            "en": "Day 2"
+          },
+          "estimatedDurationMinutes": 55,
+          "exercises": [
+            {
+              "id": "shenshi-day2-exercise1",
+              "exerciseId": "pull_up",
+              "name": "引体向上（宽握）",
+              "localizedName": {
+                "zh": "引体向上（宽握）",
+                "en": "Wide-Grip Pull-Up"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "bodyweight",
+              "equipmentType": "bodyweight",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "4组×力竭；拉不了时用高位下拉替代。",
+                "localizedNotes": {
+                  "zh": "4组×力竭；拉不了时用高位下拉替代。",
+                  "en": "4 sets to failure; substitute lat pulldowns if needed."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 力竭 / AMRAP",
+                  "sets": [
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day2-exercise2",
+              "exerciseId": "custom:seated_row",
+              "name": "坐姿划船（器械或绳索）",
+              "localizedName": {
+                "zh": "坐姿划船（器械或绳索）",
+                "en": "Seated Machine or Cable Row"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "machine",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "固定器械或绳索均可；背阔肌中下束。",
+                "localizedNotes": {
+                  "zh": "固定器械或绳索均可；背阔肌中下束。",
+                  "en": "Use a fixed machine or cable; middle/lower lat emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day2-exercise3",
+              "exerciseId": "custom:one_arm_dumbbell_row",
+              "name": "单臂哑铃划船（每侧）",
+              "localizedName": {
+                "zh": "单臂哑铃划船（每侧）",
+                "en": "One-Arm Dumbbell Row (Each Side)"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "每侧12次；单侧控制。",
+                "localizedNotes": {
+                  "zh": "每侧12次；单侧控制。",
+                  "en": "12 repetitions per side; controlled unilateral work."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day2-exercise4",
+              "exerciseId": "custom:straight_arm_pulldown",
+              "name": "直臂下压",
+              "localizedName": {
+                "zh": "直臂下压",
+                "en": "Straight-Arm Pulldown"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "cable",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "背阔肌。",
+                "localizedNotes": {
+                  "zh": "背阔肌。",
+                  "en": "Lat emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shenshi-day3-legs",
+          "name": "腿部训练",
+          "localizedName": {
+            "zh": "腿部训练",
+            "en": "Legs"
+          },
+          "dayLabel": "Day 3",
+          "localizedDayLabel": {
+            "zh": "第3天",
+            "en": "Day 3"
+          },
+          "estimatedDurationMinutes": 65,
+          "exercises": [
+            {
+              "id": "shenshi-day3-exercise1",
+              "exerciseId": "squat",
+              "name": "杠铃深蹲",
+              "localizedName": {
+                "zh": "杠铃深蹲",
+                "en": "Barbell Squat"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "barbell",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "全程控制；下放至大腿平行地面，膝盖不内扣。",
+                "localizedNotes": {
+                  "zh": "全程控制；下放至大腿平行地面，膝盖不内扣。",
+                  "en": "Control the full repetition; lower to thighs parallel and avoid knees collapsing inward."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day3-exercise2",
+              "exerciseId": "custom:leg_extension",
+              "name": "腿屈伸",
+              "localizedName": {
+                "zh": "腿屈伸",
+                "en": "Leg Extension"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "machine",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "股四头肌。",
+                "localizedNotes": {
+                  "zh": "股四头肌。",
+                  "en": "Quadriceps isolation."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day3-exercise3",
+              "exerciseId": "custom:bulgarian_split_squat",
+              "name": "保加利亚分腿蹲（每腿）",
+              "localizedName": {
+                "zh": "保加利亚分腿蹲（每腿）",
+                "en": "Bulgarian Split Squat (Each Leg)"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "每腿12次；单侧稳定性。",
+                "localizedNotes": {
+                  "zh": "每腿12次；单侧稳定性。",
+                  "en": "12 repetitions per leg; unilateral stability."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day3-exercise4",
+              "exerciseId": "leg_press",
+              "name": "倒蹬机",
+              "localizedName": {
+                "zh": "倒蹬机",
+                "en": "Leg Press"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "machine",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "下放到底；股直肌强化。",
+                "localizedNotes": {
+                  "zh": "下放到底；股直肌强化。",
+                  "en": "Lower through the prescribed range; rectus femoris emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day3-exercise5",
+              "exerciseId": "custom:seated_leg_curl",
+              "name": "坐姿腿弯举",
+              "localizedName": {
+                "zh": "坐姿腿弯举",
+                "en": "Seated Leg Curl"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "machine",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "腘绳肌孤立。",
+                "localizedNotes": {
+                  "zh": "腘绳肌孤立。",
+                  "en": "Hamstring isolation."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shenshi-day4-shoulders",
+          "name": "肩部训练",
+          "localizedName": {
+            "zh": "肩部训练",
+            "en": "Shoulders"
+          },
+          "dayLabel": "Day 4",
+          "localizedDayLabel": {
+            "zh": "第4天",
+            "en": "Day 4"
+          },
+          "estimatedDurationMinutes": 55,
+          "exercises": [
+            {
+              "id": "shenshi-day4-exercise1",
+              "exerciseId": "custom:seated_barbell_press",
+              "name": "坐姿杠铃推举",
+              "localizedName": {
+                "zh": "坐姿杠铃推举",
+                "en": "Seated Barbell Shoulder Press"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "barbell",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "前束和整体肩部。",
+                "localizedNotes": {
+                  "zh": "前束和整体肩部。",
+                  "en": "Anterior deltoid and overall shoulder emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day4-exercise2",
+              "exerciseId": "dumbbell_lateral_raise",
+              "name": "哑铃侧平举（递减组）",
+              "localizedName": {
+                "zh": "哑铃侧平举（递减组）",
+                "en": "Dumbbell Lateral Raise (Drop Sets)"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "4组×12次，采用递减组；原计划未指定减重比例，由用户调整。",
+                "localizedNotes": {
+                  "zh": "4组×12次，采用递减组；原计划未指定减重比例，由用户调整。",
+                  "en": "4 sets of 12 using drop sets; the source does not specify drop percentages, so adjust loads manually."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 12 · 递减组 / Drop sets",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day4-exercise3",
+              "exerciseId": "custom:reverse_fly",
+              "name": "反向飞鸟",
+              "localizedName": {
+                "zh": "反向飞鸟",
+                "en": "Reverse Fly"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "三角肌后束。",
+                "localizedNotes": {
+                  "zh": "三角肌后束。",
+                  "en": "Posterior deltoids."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day4-exercise4",
+              "exerciseId": "custom:machine_shoulder_press",
+              "name": "器械推肩",
+              "localizedName": {
+                "zh": "器械推肩",
+                "en": "Machine Shoulder Press"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "machine",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "辅助孤立前束。",
+                "localizedNotes": {
+                  "zh": "辅助孤立前束。",
+                  "en": "Supplementary anterior-deltoid work."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day4-exercise5",
+              "exerciseId": "face_pull",
+              "name": "面拉（高位）",
+              "localizedName": {
+                "zh": "面拉（高位）",
+                "en": "High Cable Face Pull"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "cable",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "后束和上背联动。",
+                "localizedNotes": {
+                  "zh": "后束和上背联动。",
+                  "en": "Posterior deltoids and upper back."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "shenshi-day5-arms",
+          "name": "手臂训练",
+          "localizedName": {
+            "zh": "手臂训练",
+            "en": "Arms"
+          },
+          "dayLabel": "Day 5",
+          "localizedDayLabel": {
+            "zh": "第5天",
+            "en": "Day 5"
+          },
+          "estimatedDurationMinutes": 60,
+          "exercises": [
+            {
+              "id": "shenshi-day5-exercise1",
+              "exerciseId": "barbell_curl",
+              "name": "杠铃弯举（21响礼炮）",
+              "localizedName": {
+                "zh": "杠铃弯举（21响礼炮）",
+                "en": "Barbell Curl (21s)"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "barbell",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "每组21次，全程控制。",
+                "localizedNotes": {
+                  "zh": "每组21次，全程控制。",
+                  "en": "21 repetitions per set with controlled movement."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 21",
+                  "sets": [
+                    {
+                      "targetReps": 21,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 21,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 21,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 21,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day5-exercise2",
+              "exerciseId": "custom:preacher_curl",
+              "name": "牧师凳弯举",
+              "localizedName": {
+                "zh": "牧师凳弯举",
+                "en": "Preacher Curl"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "barbell",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "集中发力。",
+                "localizedNotes": {
+                  "zh": "集中发力。",
+                  "en": "Focused contraction."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day5-exercise3",
+              "exerciseId": "custom:hammer_curl",
+              "name": "锤式弯举",
+              "localizedName": {
+                "zh": "锤式弯举",
+                "en": "Hammer Curl"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "dumbbell",
+              "roundingIncrement": 1,
+              "engineConfig": {
+                "notes": "肱肌和肱二头肌长头。",
+                "localizedNotes": {
+                  "zh": "肱肌和肱二头肌长头。",
+                  "en": "Brachialis and biceps long-head emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day5-exercise4",
+              "exerciseId": "custom:close_grip_push_up",
+              "name": "窄距俯卧撑",
+              "localizedName": {
+                "zh": "窄距俯卧撑",
+                "en": "Close-Grip Push-Up"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "bodyweight",
+              "equipmentType": "bodyweight",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "4组×力竭；肱三头肌强化。",
+                "localizedNotes": {
+                  "zh": "4组×力竭；肱三头肌强化。",
+                  "en": "4 sets to failure; triceps emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "4 × 力竭 / AMRAP",
+                  "sets": [
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    },
+                    {
+                      "targetReps": 1,
+                      "intensity": 1,
+                      "isAmrap": true,
+                      "kind": "working",
+                      "setType": "amrap_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day5-exercise5",
+              "exerciseId": "custom:cable_triceps_extension",
+              "name": "绳索臂屈伸",
+              "localizedName": {
+                "zh": "绳索臂屈伸",
+                "en": "Cable Triceps Extension"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T3",
+              "restSeconds": 60,
+              "loadUnit": "kg",
+              "equipmentType": "cable",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "肱三头肌长头。",
+                "localizedNotes": {
+                  "zh": "肱三头肌长头。",
+                  "en": "Triceps long-head emphasis."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            },
+            {
+              "id": "shenshi-day5-exercise6",
+              "exerciseId": "custom:weighted_bench_dip",
+              "name": "凳上臂屈伸（负重）",
+              "localizedName": {
+                "zh": "凳上臂屈伸（负重）",
+                "en": "Weighted Bench Dip"
+              },
+              "initialBaseWeight": 0,
+              "tier": "T2",
+              "restSeconds": 120,
+              "loadUnit": "kg",
+              "equipmentType": "bodyweight",
+              "roundingIncrement": 2.5,
+              "engineConfig": {
+                "notes": "肱三头肌整体；记录额外负重。",
+                "localizedNotes": {
+                  "zh": "肱三头肌整体；记录额外负重。",
+                  "en": "Overall triceps; record additional load."
+                }
+              },
+              "stages": [
+                {
+                  "id": "fixed-prescription",
+                  "name": "3 × 12",
+                  "sets": [
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    },
+                    {
+                      "targetReps": 12,
+                      "intensity": 1,
+                      "isAmrap": false,
+                      "kind": "working",
+                      "setType": "straight_set"
+                    }
+                  ],
+                  "rules": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

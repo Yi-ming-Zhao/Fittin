@@ -1,12 +1,13 @@
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
+import 'package:fittin_v2/src/data/seeds/shenshi_five_day_seed.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 
 const builtInTemplateSeedVersionStateKey = 'built-in-template-seed-version';
 // Bump whenever a bundled plan asset or its seed normalization changes.
-const currentBuiltInTemplateSeedVersion = 1;
+const currentBuiltInTemplateSeedVersion = 2;
 
 class BuiltInTemplateSeed {
   const BuiltInTemplateSeed({
@@ -34,6 +35,10 @@ final builtInTemplateSeeds = <BuiltInTemplateSeed>[
   const BuiltInTemplateSeed(
     templateId: Powerbuilding4Day12WeekSeed.templateId,
     loadTemplate: Powerbuilding4Day12WeekSeed.loadTemplate,
+  ),
+  const BuiltInTemplateSeed(
+    templateId: ShenshiFiveDaySeed.templateId,
+    loadTemplate: ShenshiFiveDaySeed.loadTemplate,
   ),
 ];
 

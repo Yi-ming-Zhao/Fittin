@@ -104,7 +104,7 @@ class NativeAgentModelTransport extends _HttpAgentModelTransport {
     required AgentProviderConfig config,
     required String apiKey,
     required AgentChatCompletionRequest request,
-  }) => request.toJson();
+  }) => _providerRequestBody(config, request);
 }
 
 class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
@@ -159,8 +159,21 @@ class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
   }) => {
     'providerBaseUrl': normalizeAgentProviderBaseUrl(config.baseUrl).toString(),
     'apiKey': apiKey,
-    'payload': request.toJson(),
+    'payload': _providerRequestBody(config, request),
   };
+}
+
+Map<String, dynamic> _providerRequestBody(
+  AgentProviderConfig config,
+  AgentChatCompletionRequest request,
+) {
+  // DeepSeek's thinking-mode tool turns require reasoning_content even when
+  // the visible answer is empty. Do not send this extension to other APIs.
+  final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase();
+  final deepSeek =
+      host == 'api.deepseek.com' ||
+      config.model.toLowerCase().contains('deepseek');
+  return request.toJson(includeReasoningContent: deepSeek);
 }
 
 abstract class _HttpAgentModelTransport implements AgentModelTransport {
@@ -349,7 +362,12 @@ Uri normalizeAgentProviderBaseUrl(
   if (!isHttps && !isAllowedDebugHttp) {
     throw const FormatException('The provider Base URL must use HTTPS.');
   }
-  return uri.replace(path: uri.path.replaceFirst(RegExp(r'/+$'), ''));
+  var path = uri.path.replaceFirst(RegExp(r'/+$'), '');
+  const endpointSuffix = '/chat/completions';
+  if (path.endsWith(endpointSuffix)) {
+    path = path.substring(0, path.length - endpointSuffix.length);
+  }
+  return uri.replace(path: path);
 }
 
 Uri agentChatCompletionsUri(

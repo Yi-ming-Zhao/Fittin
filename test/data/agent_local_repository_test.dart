@@ -30,9 +30,25 @@ void main() {
           createdAt: DateTime(2026, 8, 13),
           content: 'Review this week',
         ),
+        AgentMessage(
+          id: 'reasoning-message',
+          role: AgentMessageRole.assistant,
+          createdAt: DateTime(2026, 8, 28),
+          content: 'Visible summary',
+          reasoningContent: 'Local provider continuation',
+        ),
       ],
     );
     await repository.saveConversation(conversation, ownerUserId: 'user-a');
+    final restored = await repository.fetchConversation(
+      conversation.id,
+      ownerUserId: 'user-a',
+    );
+    expect(
+      restored!.messages.last.reasoningContent,
+      'Local provider continuation',
+    );
+    expect(restored.messages.last.content, 'Visible summary');
 
     expect(
       await repository.fetchConversation(
