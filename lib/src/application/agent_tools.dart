@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/application/agent_plan_tools.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/pr_dashboard_provider.dart';
@@ -46,6 +47,7 @@ class AgentToolRegistry {
   static const readToolNames = {
     'list_plans',
     'get_active_plan',
+    'get_plan',
     'get_workout_history',
     'analyze_training',
     'get_body_metrics',
@@ -71,8 +73,23 @@ class AgentToolRegistry {
     ),
     _tool(
       'get_active_plan',
-      'Read the active plan, current workout position, training maxes and exercise progression.',
-      _object(const {}, required: const []),
+      'Read active plan summary, position and a bounded workout page. Use get_plan for more pages. Never use a page as a full replacement plan.',
+      _object({
+        'offset': _integer(0, 10000),
+        'limit': _integer(1, 4),
+      }, required: const []),
+    ),
+    _tool(
+      'get_plan',
+      'Read plan details with full-plan digest and absolute JSON-pointer paths for edits. offset counts workouts. A page is not a complete plan.',
+      _object(
+        {
+          'templateId': _string(),
+          'offset': _integer(0, 10000),
+          'limit': _integer(1, 4),
+        },
+        required: const ['templateId'],
+      ),
     ),
     _tool(
       'get_workout_history',
@@ -100,22 +117,41 @@ class AgentToolRegistry {
     _tool(
       'propose_create_plan',
       'Propose creating a training plan. Never writes before approval.',
-      _object(
-        {
-          'plan': const {'type': 'object'},
-        },
-        required: const ['plan'],
-      ),
+      _object({'plan': agentPlanSchema}, required: const ['plan']),
     ),
     _tool(
       'propose_revise_plan',
-      'Propose a full validated revision of an existing plan while preserving stable IDs.',
+      'Propose a validated revision. Prefer edits from get_plan plus expectedDigest, e.g. [{"op":"replace","path":"/phases/0/workouts/0/exercises/0/restSeconds","value":90}]. Use exactly one of edits or a complete plan. Preserve IDs and unrelated fields. No write before approval.',
       _object(
         {
           'templateId': _string(),
-          'plan': const {'type': 'object'},
+          'plan': agentPlanSchema,
+          'expectedDigest': _string(),
+          'edits': {
+            'type': 'array',
+            'minItems': 1,
+            'maxItems': 40,
+            'items': _object(
+              {
+                'op': {
+                  'type': 'string',
+                  'enum': ['add', 'replace', 'remove'],
+                },
+                'path': {
+                  'type': 'string',
+                  'description':
+                      'Absolute JSON pointer from get_plan; array positions are zero-based.',
+                },
+                'value': <String, dynamic>{
+                  'description':
+                      'New JSON value; required for add/replace, omitted for remove.',
+                },
+              },
+              required: const ['op', 'path'],
+            ),
+          },
         },
-        required: const ['templateId', 'plan'],
+        required: const ['templateId'],
       ),
     ),
     _tool(
@@ -173,7 +209,8 @@ class AgentToolRegistry {
     try {
       return switch (name) {
         'list_plans' => await _listPlans(arguments),
-        'get_active_plan' => await _activePlan(),
+        'get_active_plan' => await _activePlan(arguments),
+        'get_plan' => await _getPlan(arguments),
         'get_workout_history' => await _workoutHistory(arguments),
         'analyze_training' => await _analyzeTraining(arguments),
         'get_body_metrics' => await _bodyMetrics(arguments),
@@ -232,7 +269,7 @@ class AgentToolRegistry {
     );
   }
 
-  Future<AgentToolResult> _activePlan() async {
+  Future<AgentToolResult> _activePlan(Map<String, dynamic> args) async {
     final instance = await _ref
         .read(localInstanceRepositoryProvider)
         .fetchActiveInstance();
@@ -250,7 +287,7 @@ class AgentToolRegistry {
     );
     return AgentToolResult(
       payload: {
-        'template': record.template.toJson(),
+        ..._planPage(record.template, args),
         'templateVersion': record.version,
         'instance': {
           'id': instance.instanceId,
@@ -261,11 +298,71 @@ class AgentToolRegistry {
           'trainingMaxProfile': instance.trainingMaxProfile.toJson(),
           'engineState': instance.engineState,
           'exerciseStates': instance.states
+              .where(
+                (state) => workout.exercises.any(
+                  (exercise) => exercise.id == state.exerciseId,
+                ),
+              )
               .map((state) => state.toJson())
               .toList(),
         },
       },
     );
+  }
+
+  Future<AgentToolResult> _getPlan(Map<String, dynamic> args) async {
+    final record = await _ref
+        .read(localPlanRepositoryProvider)
+        .fetchStoredTemplate(_requiredString(args, 'templateId'));
+    if (record == null) throw StateError('Plan not found.');
+    return AgentToolResult(
+      payload: {
+        ..._planPage(record.template, args),
+        'templateVersion': record.version,
+        'isBuiltIn': record.isBuiltIn,
+      },
+    );
+  }
+
+  Map<String, dynamic> _planPage(PlanTemplate plan, Map<String, dynamic> args) {
+    final offset = args['offset'] ?? 0;
+    if (offset is! int || offset < 0 || offset > plan.workouts.length) {
+      throw const FormatException(
+        'offset must be within the plan workout count.',
+      );
+    }
+    final limit = _boundedInt(args['limit'], fallback: 2, max: 4);
+    final entries = <Map<String, dynamic>>[];
+    for (var p = 0; p < plan.phases.length; p++) {
+      for (var w = 0; w < plan.phases[p].workouts.length; w++) {
+        entries.add({
+          'path': '/phases/$p/workouts/$w',
+          'workout': plan.phases[p].workouts[w].toJson(),
+        });
+      }
+    }
+    final header = Map<String, dynamic>.from(plan.toJson())..remove('phases');
+    final page = entries.skip(offset).take(limit).toList();
+    return {
+      'template': header,
+      'expectedDigest': agentPayloadDigest(plan.toJson()),
+      'workoutCount': entries.length,
+      'workoutIndex': [
+        for (final entry in entries)
+          {
+            'path': entry['path'],
+            'id': (entry['workout'] as Map)['id'],
+            'name': (entry['workout'] as Map)['name'],
+          },
+      ],
+      'workouts': page,
+      'offset': offset,
+      if (offset + page.length < entries.length)
+        'nextOffset': offset + page.length,
+      'partial': true,
+      'revisionHint':
+          'Use expectedDigest and edits with these absolute paths. This page is NOT a complete plan.',
+    };
   }
 
   Future<AgentToolResult> _workoutHistory(Map<String, dynamic> args) async {
@@ -395,7 +492,7 @@ class AgentToolRegistry {
   }
 
   Future<AgentToolResult> _proposeCreatePlan(Map<String, dynamic> args) async {
-    final plan = PlanTemplate.fromJson(_map(args['plan']));
+    final plan = _decodePlan(args['plan']);
     _validateTemplate(plan);
     final existing = await _ref
         .read(localPlanRepositoryProvider)
@@ -430,8 +527,35 @@ class AgentToolRegistry {
         .read(localPlanRepositoryProvider)
         .fetchStoredTemplate(templateId);
     if (existing == null) throw StateError('Plan not found.');
-    final plan = PlanTemplate.fromJson(_map(args['plan']));
+    if (args.containsKey('plan') == args.containsKey('edits')) {
+      throw const FormatException(
+        'Provide exactly one of edits or a complete plan. Prefer small edits with expectedDigest from get_plan.',
+      );
+    }
+    if (args.containsKey('edits') || args.containsKey('expectedDigest')) {
+      if (args['expectedDigest'] !=
+          agentPayloadDigest(existing.template.toJson())) {
+        throw const FormatException(
+          'The plan changed or expectedDigest is missing. Read get_plan again and use its expectedDigest.',
+        );
+      }
+    }
+    final plan = _decodePlan(
+      args.containsKey('edits')
+          ? applyAgentPlanEdits(existing.template, args['edits'])
+          : args['plan'],
+    );
+    if (plan.id != templateId) {
+      throw const FormatException(
+        'Preserve the original plan id. The app creates a safe copy when required.',
+      );
+    }
     _validateTemplate(plan);
+    final fieldChanges = agentPlanDifferences(
+      existing.template,
+      plan,
+      chinese: _isChinese,
+    );
     final active = await _ref
         .read(localInstanceRepositoryProvider)
         .fetchActiveInstance();
@@ -479,17 +603,7 @@ class AgentToolRegistry {
                 : 'Preserve current workout, training maxes, engine state and ${newExerciseIds.intersection(oldExerciseIds).length} matching exercise states; initialize ${added.length}; remove ${removed.length}.')
           : null,
       changes: [
-        if (existing.template.name != plan.name)
-          AgentMutationChange(
-            path: _isChinese ? '名称' : 'name',
-            before: existing.template.name,
-            after: plan.name,
-          ),
-        AgentMutationChange(
-          path: _isChinese ? '训练日' : 'workouts',
-          before: '${existing.template.workouts.length}',
-          after: '${plan.workouts.length}',
-        ),
+        ...fieldChanges,
         if (added.isNotEmpty)
           AgentMutationChange(
             path: _isChinese ? '新增动作' : 'exercises.added',
@@ -776,6 +890,16 @@ class AgentToolRegistry {
   void _validateTemplate(PlanTemplate plan) {
     final validation = TemplateValidation.validate(plan);
     if (!validation.isValid) throw StateError(validation.errors.join(' '));
+  }
+
+  PlanTemplate _decodePlan(Object? value) {
+    try {
+      return PlanTemplate.fromJson(_map(value));
+    } catch (_) {
+      throw const FormatException(
+        'Invalid plan structure. Required: id, name, description, phases[{id,name,workouts:[{id,name,exercises:[{id,exerciseId,name,stages:[{id,name,sets:[{targetReps,intensity}],rules:[]}]}]}]}]. For revisions read get_plan and use edits instead.',
+      );
+    }
   }
 
   void _validateLog(WorkoutLog log) {

@@ -164,7 +164,7 @@ void main() {
       'data: [DONE]\n\n',
       'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"p","function":{"name":"ping","arguments":"{}"}}]}}]}\n\n',
     ]) {
-      final result = await AgentConnectionTester(
+      final request = AgentConnectionTester(
         NativeAgentModelTransport(
           client: MockClient(
             (_) async => http.Response(
@@ -175,7 +175,20 @@ void main() {
           ),
         ),
       ).test(config: config, apiKey: 'fake-key');
-      expect(result.toolCallingSupported, isFalse);
+      if (response.contains('[DONE]')) {
+        expect((await request).toolCallingSupported, isFalse);
+      } else {
+        await expectLater(
+          request,
+          throwsA(
+            isA<AgentTransportException>().having(
+              (e) => e.code,
+              'code',
+              'incomplete_response',
+            ),
+          ),
+        );
+      }
     }
   });
 }

@@ -16,6 +16,166 @@ import 'package:http/testing.dart';
 
 void main() {
   test(
+    'approval closes remaining calls and a follow-up has paired history',
+    () async {
+      final proposal = AgentMutationProposal(
+        operationId: 'batch-proposal',
+        toolName: 'propose_revise_plan',
+        title: 'Revise',
+        summary: 'Preview',
+        argumentsJson: '{}',
+        targetType: 'plan',
+        targetId: 'plan',
+        expectedDigest: 'digest',
+        changes: const [],
+        createdAt: DateTime.now(),
+      );
+      final tools = _FakeTools(
+        AgentToolResult(
+          payload: const {'status': 'pending_user_approval'},
+          proposal: proposal,
+        ),
+      );
+      final transport = _TurnTransport([
+        [
+          const AgentToolCallDelta(
+            index: 0,
+            id: 'proposal',
+            name: 'propose_revise_plan',
+            argumentsDelta: '{}',
+          ),
+          const AgentToolCallDelta(
+            index: 1,
+            id: 'later',
+            name: 'read_summary',
+            argumentsDelta: '{}',
+          ),
+          const AgentModelCompleted(finishReason: 'tool_calls'),
+        ],
+        [
+          const AgentTextDelta('No changes were applied.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final container = _container(transport: transport, tools: tools);
+      addTearDown(container.dispose);
+      final controller = container.read(
+        agentHarnessControllerProvider.notifier,
+      );
+      await controller.submit('Revise');
+      expect(tools.calls, ['propose_revise_plan']);
+      expect(
+        container.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.awaitingApproval,
+      );
+      await controller.rejectProposal(proposal.operationId);
+      await controller.submit('What happened?');
+      final results = transport.requests.last.messages
+          .where((m) => m.role == 'tool')
+          .toList();
+      expect(results.map((m) => m.toolCallId), ['proposal', 'later']);
+      expect(results.last.content, contains('not_executed'));
+    },
+  );
+
+  test('malformed tool arguments are repaired within the same run', () async {
+    final transport = _TurnTransport([
+      [
+        const AgentToolCallDelta(
+          index: 0,
+          id: 'bad',
+          name: 'read_summary',
+          argumentsDelta: '{',
+        ),
+        const AgentModelCompleted(finishReason: 'tool_calls'),
+      ],
+      [
+        const AgentToolCallDelta(
+          index: 0,
+          id: 'fixed',
+          name: 'read_summary',
+          argumentsDelta: '{}',
+        ),
+        const AgentModelCompleted(finishReason: 'tool_calls'),
+      ],
+      [
+        const AgentTextDelta('Recovered'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final tools = _FakeTools(const AgentToolResult(payload: {'ok': true}));
+    final container = _container(transport: transport, tools: tools);
+    addTearDown(container.dispose);
+    await container
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Modify my plan');
+    expect(
+      container.read(agentHarnessControllerProvider).runState.phase,
+      AgentRunPhase.completed,
+    );
+    expect(tools.calls, ['read_summary']);
+    expect(
+      transport.requests[1].messages.last.content,
+      contains('invalid_arguments'),
+    );
+  });
+
+  test('length-truncated but valid tool JSON is never executed', () async {
+    final transport = _TurnTransport([
+      [
+        const AgentToolCallDelta(
+          index: 0,
+          id: 'cut',
+          name: 'read_summary',
+          argumentsDelta: '{}',
+        ),
+        const AgentModelCompleted(finishReason: 'length'),
+      ],
+      [
+        const AgentTextDelta('Please make a smaller change.'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final tools = _FakeTools(const AgentToolResult(payload: {'ok': true}));
+    final container = _container(transport: transport, tools: tools);
+    addTearDown(container.dispose);
+    await container
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Modify my plan');
+    expect(tools.calls, isEmpty);
+    expect(
+      transport.requests[1].messages.last.content,
+      contains('truncated_arguments'),
+    );
+  });
+
+  test(
+    'empty interrupted response is not stored as an assistant bubble',
+    () async {
+      final container = _container(
+        transport: _ScriptedTransport([
+          const AgentModelFailure(
+            code: 'network_unavailable',
+            message: 'Connection lost',
+          ),
+        ]),
+      );
+      addTearDown(container.dispose);
+      await container
+          .read(agentHarnessControllerProvider.notifier)
+          .submit('Modify my plan');
+      final run = container.read(agentHarnessControllerProvider).runState;
+      expect(run.phase, AgentRunPhase.failed);
+      expect(
+        run.conversation!.messages.where(
+          (m) => m.role == AgentMessageRole.assistant,
+        ),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
     'DeepSeek tool continuation survives a saved conversation reopen',
     () async {
       var requests = 0;
@@ -468,9 +628,12 @@ void main() {
             index: 0,
             id: 'broken-call',
             name: 'read_summary',
-            argumentsDelta: '{',
+            argumentsDelta: '{}',
           ),
-          const AgentModelCompleted(finishReason: 'tool_calls'),
+          const AgentModelFailure(
+            code: 'network_unavailable',
+            message: 'Connection lost',
+          ),
         ],
         [
           const AgentTextDelta('Recovered'),

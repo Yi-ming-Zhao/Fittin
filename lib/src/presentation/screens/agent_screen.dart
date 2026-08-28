@@ -8,6 +8,7 @@ import '../agent_ui_adapter.dart';
 import '../localization/app_strings.dart';
 import '../theme/fittin_theme.dart';
 import '../widgets/fittin_card.dart';
+import '../widgets/agent_markdown.dart';
 import '../widgets/fittin_primitives.dart';
 import 'agent_settings_screen.dart';
 
@@ -458,7 +459,7 @@ class _ConversationBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final conversation = state.runState.conversation;
     final messages = conversation?.messages ?? const <AgentMessage>[];
-    final isInitial = messages.isEmpty && state.insights.isEmpty;
+    final isInitial = messages.isEmpty;
 
     return ListView(
       key: const ValueKey('agent-conversation-list'),
@@ -473,7 +474,8 @@ class _ConversationBody extends StatelessWidget {
           ),
         for (final message in messages)
           if (message.role == AgentMessageRole.user ||
-              message.role == AgentMessageRole.assistant)
+              (message.role == AgentMessageRole.assistant &&
+                  message.content.trim().isNotEmpty))
             _AgentMessageCard(message: message, theme: theme),
         if (state.runState.phase == AgentRunPhase.usingTools ||
             state.runState.activeToolName != null)
@@ -489,8 +491,6 @@ class _ConversationBody extends StatelessWidget {
             label: strings.agentStreaming,
             streaming: true,
           ),
-        for (final insight in state.insights)
-          _AgentInsightCard(insight: insight, theme: theme, strings: strings),
         if (state.runState.pendingProposal case final proposal?)
           _AgentMutationCard(
             proposal: proposal,
@@ -598,10 +598,12 @@ class _AgentMessageCard extends StatelessWidget {
             width: 0.75,
           ),
         ),
-        child: Text(
-          message.content,
-          style: theme.uiStyle(14, theme.fg).copyWith(height: 1.5),
-        ),
+        child: isUser
+            ? Text(
+                message.content,
+                style: theme.uiStyle(14, theme.fg).copyWith(height: 1.5),
+              )
+            : AgentMarkdown(data: message.content, theme: theme),
       ),
     );
   }
@@ -640,47 +642,6 @@ class _AgentToolActivityCard extends StatelessWidget {
           const SizedBox(width: 11),
           Expanded(child: Text(label, style: theme.uiStyle(12, theme.fgDim))),
         ],
-      ),
-    );
-  }
-}
-
-class _AgentInsightCard extends StatelessWidget {
-  const _AgentInsightCard({
-    required this.insight,
-    required this.theme,
-    required this.strings,
-  });
-
-  final AgentInsightCardData insight;
-  final FittinTheme theme;
-  final AppStrings strings;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: FittinCard(
-        key: const ValueKey('agent-insight-card'),
-        theme: theme,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FittinEyebrow(theme, strings.agentInsights),
-            const SizedBox(height: 12),
-            Text(insight.value, style: theme.numStyle(32, theme.accent)),
-            const SizedBox(height: 4),
-            Text(
-              insight.title,
-              style: theme.uiStyle(15, theme.fg, FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              insight.detail,
-              style: theme.uiStyle(13, theme.fgDim).copyWith(height: 1.45),
-            ),
-          ],
-        ),
       ),
     );
   }

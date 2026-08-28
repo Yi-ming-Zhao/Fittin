@@ -13,6 +13,74 @@ import '../support/in_memory_database_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('failed empty and tool-only replies render only the error', (
+    tester,
+  ) async {
+    final now = DateTime(2026, 8, 28);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          agentProviderSettingsStoreProvider.overrideWithValue(
+            _MemorySettingsStore(
+              const AgentProviderConfig(
+                baseUrl: 'https://example.com',
+                model: 'test',
+                hasApiKey: true,
+                toolCallingVerified: true,
+              ),
+            ),
+          ),
+          agentUiStateProvider.overrideWithValue(
+            AgentUiState(
+              runState: AgentRunState(
+                phase: AgentRunPhase.failed,
+                errorMessage: 'Connection lost',
+                conversation: AgentConversation(
+                  id: 'failure',
+                  title: 'Failure',
+                  createdAt: now,
+                  updatedAt: now,
+                  messages: [
+                    AgentMessage(
+                      id: 'empty',
+                      role: AgentMessageRole.assistant,
+                      createdAt: now,
+                      content: '   ',
+                      isPartial: true,
+                    ),
+                    AgentMessage(
+                      id: 'tool-only',
+                      role: AgentMessageRole.assistant,
+                      createdAt: now,
+                      toolCalls: const [
+                        AgentToolCall(
+                          id: 'call',
+                          name: 'get_plan',
+                          argumentsJson: '{}',
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          agentUiBridgeProvider.overrideWithValue(_RecordingBridge()),
+        ],
+        child: const MaterialApp(home: AgentScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('agent-error-card')), findsOneWidget);
+    expect(find.text('Connection lost'), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-message-empty')), findsNothing);
+    expect(find.byKey(const ValueKey('agent-message-tool-only')), findsNothing);
+    expect(find.byKey(const ValueKey('agent-insight-card')), findsNothing);
+  });
+
   testWidgets('shows bilingual configuration empty state', (tester) async {
     await tester.binding.setSurfaceSize(const Size(390, 568));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -152,7 +220,7 @@ void main() {
 
       expect(find.text('Review my fatigue.'), findsOneWidget);
       expect(find.byKey(const ValueKey('agent-tool-status')), findsOneWidget);
-      expect(find.byKey(const ValueKey('agent-insight-card')), findsOneWidget);
+      expect(find.byKey(const ValueKey('agent-insight-card')), findsNothing);
       expect(
         find.byKey(const ValueKey('agent-mutation-proposal')),
         findsOneWidget,
