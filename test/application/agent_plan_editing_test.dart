@@ -12,9 +12,57 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/in_memory_database_repository.dart';
+import '../support/fake_today_workout_gateway.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'active drafts block both preview and a previously generated revision',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      await repository.saveTemplate(fakePlanTemplate, isBuiltIn: true);
+      final active = await repository.activateTemplate(fakePlanTemplate.id);
+      final c = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          agentLocalRepositoryProvider.overrideWithValue(
+            InMemoryAgentLocalRepository(),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      final tools = c.read(agentToolRegistryProvider);
+      final input = {
+        'templateId': fakePlanTemplate.id,
+        'expectedDigest': agentPayloadDigest(fakePlanTemplate.toJson()),
+        'edits': [
+          {'op': 'replace', 'path': '/name', 'value': 'Revised'},
+        ],
+      };
+      final preview = await tools.execute('propose_revise_plan', input);
+      expect(preview.isError, false, reason: preview.encoded);
+      final draft = fakeWorkoutSessionState.copyWith(
+        instanceId: active.instanceId,
+        templateId: active.templateId,
+      );
+      await repository.saveActiveSessionDraft(draft);
+      final blocked = await tools.execute('propose_revise_plan', input);
+      expect(blocked.isError, true);
+      await expectLater(
+        c.read(agentMutationCoordinatorProvider).confirm(preview.proposal!),
+        throwsA(isA<AgentMutationConflict>()),
+      );
+      expect(
+        (await repository.fetchActiveSessionDraft(active.instanceId))!.toJson(),
+        draft.toJson(),
+      );
+      expect(
+        (await repository.fetchActiveInstance())!.instanceId,
+        active.instanceId,
+      );
+    },
+  );
 
   test(
     'paged built-in plan edit confirms, preserves progress, and undoes',

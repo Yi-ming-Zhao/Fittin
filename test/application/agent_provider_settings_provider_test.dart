@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
 import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/data/remote/agent_model_transport.dart';
@@ -5,10 +6,89 @@ import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _DelayedTestTransport implements AgentModelTransport {
+  _DelayedTestTransport(this.gate);
+  final Completer<void> gate;
+  @override
+  void dispose() {}
+  @override
+  Stream<AgentModelEvent> stream({
+    required AgentProviderConfig config,
+    required String apiKey,
+    required AgentChatCompletionRequest request,
+    AgentCancellationToken? cancellationToken,
+  }) async* {
+    await gate.future;
+    yield const AgentToolCallDelta(
+      index: 0,
+      id: 'ping',
+      name: 'ping',
+      argumentsDelta: '{}',
+    );
+    yield const AgentModelCompleted(finishReason: 'tool_calls');
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test(
+    'clearing settings cancels a pending test and cannot resurrect its key',
+    () async {
+      final gate = Completer<void>();
+      final store = PlatformAgentProviderSettingsStore(
+        secretStore: InMemoryAgentSecretStore(),
+        isWebOverride: false,
+      );
+      final controller = AgentProviderSettingsController(
+        store,
+        AgentConnectionTester(_DelayedTestTransport(gate)),
+      );
+      addTearDown(controller.dispose);
+      final testing = controller.testConnection(
+        baseUrl: 'https://provider.example/v1',
+        model: 'm',
+        apiKey: 'ephemeral-test',
+      );
+      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await controller.clear();
+      gate.complete();
+      await testing;
+      expect(await store.loadApiKey(), isNull);
+      expect((await store.load()).baseUrl, isEmpty);
+    },
+  );
+
+  test(
+    'capability profile is local and invalidates on config or key save',
+    () async {
+      final store = PlatformAgentProviderSettingsStore(
+        secretStore: InMemoryAgentSecretStore(),
+        isWebOverride: false,
+      );
+      await store.save(
+        baseUrl: 'https://provider.example/v1',
+        model: 'm',
+        apiKey: 'test-key',
+        toolCallingVerified: true,
+        capabilities: AgentProviderCapabilityProfile(
+          testedAt: DateTime.now(),
+          functionCalling: true,
+          streaming: true,
+        ),
+      );
+      expect((await store.load()).capabilities!.streaming, true);
+      await store.save(
+        baseUrl: 'https://provider.example/v1',
+        model: 'm',
+        apiKey: 'replacement',
+      );
+      expect((await store.load()).capabilities, isNull);
+      expect((await store.load()).toolCallingVerified, false);
+    },
+  );
 
   test('native store persists key only through secure storage', () async {
     final preferences = await SharedPreferences.getInstance();

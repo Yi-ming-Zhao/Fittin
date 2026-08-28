@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'package:fittin_v2/src/data/models/agent_runtime_collection.dart';
 
 import 'package:isar/isar.dart';
 import 'package:fittin_v2/src/data/models/app_state_collection.dart';
@@ -44,9 +45,15 @@ Future<void> initializeTestIsarCore() async {
   await Isar.initializeIsarCore(libraries: libraries);
 }
 
-Future<({Isar isar, Directory directory})> openTestIsar(String name) async {
+Future<({Isar isar, Directory directory})> openTestIsar(
+  String name, {
+  bool includeAgentRuntime = true,
+  Directory? existingDirectory,
+}) async {
   await initializeTestIsarCore();
-  final directory = await Directory.systemTemp.createTemp('fittin_$name');
+  final directory =
+      existingDirectory ??
+      await Directory.systemTemp.createTemp('fittin_$name');
   final isar = await Isar.open(
     [
       AppStateCollectionSchema,
@@ -58,6 +65,7 @@ Future<({Isar isar, Directory directory})> openTestIsar(String name) async {
       WorkoutLogCollectionSchema,
       AgentConversationCollectionSchema,
       AgentActionCollectionSchema,
+      if (includeAgentRuntime) AgentRuntimeCollectionSchema,
     ],
     directory: directory.path,
     name: name,

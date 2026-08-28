@@ -8,6 +8,182 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
 void main() {
+  test(
+    'retry honors Retry-After and never retries once writes were committed',
+    () async {
+      var attempts = 0;
+      final client = _StreamingClient((_) async {
+        attempts++;
+        return attempts == 1
+            ? http.StreamedResponse(
+                Stream.value(utf8.encode('{}')),
+                429,
+                headers: {'retry-after': '0'},
+              )
+            : http.StreamedResponse(
+                Stream.value(
+                  utf8.encode(
+                    '{"choices":[{"message":{"content":"ok"},"finish_reason":"stop"}]}',
+                  ),
+                ),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+      });
+      final transport = NativeAgentModelTransport(client: client);
+      const config = AgentProviderConfig(
+        baseUrl: 'https://provider.example/v1',
+        model: 'm',
+      );
+      const request = AgentChatCompletionRequest(model: 'm', messages: []);
+      await transport
+          .stream(config: config, apiKey: 'test-key', request: request)
+          .toList();
+      expect(attempts, 2);
+      attempts = 0;
+      await expectLater(
+        transport
+            .stream(
+              config: config,
+              apiKey: 'test-key',
+              request: const AgentChatCompletionRequest(
+                model: 'm',
+                messages: [],
+                allowRetries: false,
+              ),
+            )
+            .toList(),
+        throwsA(isA<AgentTransportException>()),
+      );
+      expect(attempts, 1);
+    },
+  );
+  test('first response and idle timeouts have distinct stable codes', () async {
+    const config = AgentProviderConfig(
+      baseUrl: 'https://provider.example/v1',
+      model: 'm',
+    );
+    const request = AgentChatCompletionRequest(model: 'm', messages: []);
+    final first = NativeAgentModelTransport(
+      client: _StreamingClient(
+        (_) => Completer<http.StreamedResponse>().future,
+      ),
+      firstResponseTimeout: const Duration(milliseconds: 5),
+    );
+    await expectLater(
+      first.stream(config: config, apiKey: 'test', request: request).toList(),
+      throwsA(
+        isA<AgentTransportException>().having(
+          (e) => e.code,
+          'code',
+          'first_byte_timeout',
+        ),
+      ),
+    );
+    final source = StreamController<List<int>>();
+    final idle = NativeAgentModelTransport(
+      client: _StreamingClient(
+        (_) async => http.StreamedResponse(
+          source.stream,
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+      idleTimeout: const Duration(milliseconds: 5),
+    );
+    await expectLater(
+      idle.stream(config: config, apiKey: 'test', request: request).toList(),
+      throwsA(
+        isA<AgentTransportException>().having(
+          (e) => e.code,
+          'code',
+          'stream_idle_timeout',
+        ),
+      ),
+    );
+    await source.close();
+  });
+  test(
+    'continuous streaming outlives first-response timeout and records usage',
+    () async {
+      Stream<List<int>> body() async* {
+        for (var i = 0; i < 8; i++) {
+          yield utf8.encode(
+            'data: {"choices":[{"delta":{"content":"x"}}]}\n\n',
+          );
+          await Future<void>.delayed(const Duration(milliseconds: 5));
+        }
+        yield utf8.encode(
+          'data: {"choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":8,"total_tokens":20}}\n\n',
+        );
+      }
+
+      final transport = NativeAgentModelTransport(
+        client: _StreamingClient(
+          (_) async => http.StreamedResponse(
+            body(),
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
+        ),
+        firstResponseTimeout: const Duration(milliseconds: 10),
+        idleTimeout: const Duration(milliseconds: 50),
+        timeout: const Duration(seconds: 1),
+      );
+      final events = await transport
+          .stream(
+            config: const AgentProviderConfig(
+              baseUrl: 'https://provider.example/v1',
+              model: 'm',
+            ),
+            apiKey: 'test',
+            request: const AgentChatCompletionRequest(model: 'm', messages: []),
+          )
+          .toList();
+      expect(events.whereType<AgentTextDelta>(), hasLength(8));
+      expect(events.whereType<AgentUsage>().single.tokens['total_tokens'], 20);
+    },
+  );
+  test(
+    'relay typed auth failures are not retried as 502 and provider codes cannot leak keys',
+    () async {
+      var calls = 0;
+      final transport = NativeAgentModelTransport(
+        client: _StreamingClient((_) async {
+          calls++;
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode('{"error":"no","code":"provider_auth_failed"}'),
+            ),
+            502,
+          );
+        }),
+      );
+      await expectLater(
+        transport
+            .stream(
+              config: const AgentProviderConfig(
+                baseUrl: 'https://provider.example/v1',
+                model: 'm',
+              ),
+              apiKey: 'test',
+              request: const AgentChatCompletionRequest(
+                model: 'm',
+                messages: [],
+              ),
+            )
+            .toList(),
+        throwsA(
+          isA<AgentTransportException>().having(
+            (e) => e.code,
+            'code',
+            'provider_auth_failed',
+          ),
+        ),
+      );
+      expect(calls, 1);
+    },
+  );
   const config = AgentProviderConfig(
     baseUrl: 'https://provider.example/v1',
     model: 'test-model',

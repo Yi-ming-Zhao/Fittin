@@ -15,6 +15,10 @@ class WebStoreNames {
   static const syncQueue = 'sync_queue';
   static const agentConversations = 'agent_conversations';
   static const agentActions = 'agent_actions';
+  static const agentRuns = 'agent_runs';
+  static const agentCheckpoints = 'agent_checkpoints';
+  static const agentMemory = 'agent_memory';
+  static const agentDiagnostics = 'agent_diagnostics';
 
   static const all = [
     appState,
@@ -26,6 +30,10 @@ class WebStoreNames {
     syncQueue,
     agentConversations,
     agentActions,
+    agentRuns,
+    agentCheckpoints,
+    agentMemory,
+    agentDiagnostics,
   ];
 }
 
@@ -46,17 +54,23 @@ class WebLocalStore {
   WebLocalStore._(this._database);
 
   static const _databaseName = 'fittin_v2_web_store';
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
   static Future<WebLocalStore>? _instance;
 
   final web.IDBDatabase _database;
 
-  static Future<WebLocalStore> open() {
+  static Future<WebLocalStore> open({String? databaseName}) {
+    if (databaseName != null) return _openInternal(databaseName);
     return _instance ??= _openInternal();
   }
 
-  static Future<WebLocalStore> _openInternal() async {
-    final request = web.window.indexedDB.open(_databaseName, _databaseVersion);
+  void close() => _database.close();
+
+  static Future<WebLocalStore> _openInternal([String? databaseName]) async {
+    final request = web.window.indexedDB.open(
+      databaseName ?? _databaseName,
+      _databaseVersion,
+    );
     final completer = Completer<web.IDBDatabase>();
 
     request.onupgradeneeded = ((web.Event _) {

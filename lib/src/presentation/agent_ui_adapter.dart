@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/agent_harness_controller.dart';
 import '../domain/models/agent_models.dart';
+import '../domain/models/agent_runtime.dart';
 
 /// Presentation-ready metric emitted by the Agent orchestration layer.
 ///
@@ -25,12 +26,16 @@ class AgentUiState {
     this.conversations = const [],
     this.actions = const [],
     this.insights = const [],
+    this.events = const [],
+    this.hasMoreHistory = false,
   });
 
   final AgentRunState runState;
   final List<AgentConversation> conversations;
   final List<AgentActionRecord> actions;
   final List<AgentInsightCardData> insights;
+  final List<AgentRunEvent> events;
+  final bool hasMoreHistory;
 }
 
 /// Bridge point for the application Agent runner.
@@ -48,6 +53,7 @@ abstract interface class AgentUiBridge {
   Future<void> confirmProposal(String operationId);
   Future<void> rejectProposal(String operationId);
   Future<void> undoAction(String actionId);
+  Future<void> loadMoreHistory();
 }
 
 class HarnessAgentUiBridge implements AgentUiBridge {
@@ -81,10 +87,13 @@ class HarnessAgentUiBridge implements AgentUiBridge {
   Future<void> stop() => _controller.stop();
 
   @override
-  Future<void> submit(String prompt) => _controller.submit(prompt);
+  Future<void> submit(String prompt) => _controller.steer(prompt);
 
   @override
   Future<void> undoAction(String actionId) => _controller.undoAction(actionId);
+
+  @override
+  Future<void> loadMoreHistory() => _controller.loadMoreHistory();
 }
 
 final agentUiStateProvider = Provider<AgentUiState>((ref) {
@@ -93,6 +102,8 @@ final agentUiStateProvider = Provider<AgentUiState>((ref) {
     runState: harness.runState,
     conversations: harness.conversations,
     actions: harness.actions,
+    events: harness.events,
+    hasMoreHistory: harness.hasMoreHistory,
     insights: [
       for (final insight in harness.insights)
         AgentInsightCardData(
@@ -106,6 +117,6 @@ final agentUiStateProvider = Provider<AgentUiState>((ref) {
 
 final agentUiBridgeProvider = Provider<AgentUiBridge>((ref) {
   return HarnessAgentUiBridge(
-    ref.read(agentHarnessControllerProvider.notifier),
+    ref.watch(agentHarnessControllerProvider.notifier),
   );
 });

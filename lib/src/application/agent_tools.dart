@@ -1,4 +1,11 @@
 import 'dart:convert';
+import '../data/agent_entity_version.dart';
+import '../data/agent_local_repository.dart';
+import 'agent_owner_scope.dart';
+import 'agent_mutation_diff.dart';
+import 'agent_workout_input.dart';
+import 'agent_tool_input.dart';
+import 'active_session_provider.dart';
 
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/agent_plan_tools.dart';
@@ -69,7 +76,10 @@ class AgentToolRegistry {
     _tool(
       'list_plans',
       'List visible training plans and whether they are active.',
-      _object({'limit': _integer(1, 50)}, required: const []),
+      _object({
+        'limit': _integer(1, 50),
+        'cursor': _string(),
+      }, required: const []),
     ),
     _tool(
       'get_active_plan',
@@ -163,20 +173,15 @@ class AgentToolRegistry {
       'propose_create_workout_log',
       'Propose adding a historical workout log without advancing current plan progress.',
       _object(
-        {
-          'log': const {'type': 'object'},
-        },
+        {'workoutId': _string(), 'log': AgentWorkoutInput.schema},
         required: const ['log'],
       ),
     ),
     _tool(
       'propose_update_workout_log',
-      'Propose correcting a workout log. Include the complete revised log JSON.',
+      'Propose correcting a workout log using editable fields only. Read get_workout_history first; never include snapshots or internal IDs in log.',
       _object(
-        {
-          'logId': _string(),
-          'log': const {'type': 'object'},
-        },
+        {'logId': _string(), 'log': AgentWorkoutInput.schema},
         required: const ['logId', 'log'],
       ),
     ),
@@ -206,8 +211,19 @@ class AgentToolRegistry {
     String name,
     Map<String, dynamic> arguments,
   ) async {
+    final owner = _ref.read(agentOwnerScopeProvider);
     try {
-      return switch (name) {
+      final definition = definitions
+          .where((d) => (d['function'] as Map)['name'] == name)
+          .firstOrNull;
+      if (definition == null) {
+        return _error('unsupported_tool', 'This operation is not available.');
+      }
+      AgentToolInput.validate(
+        arguments,
+        ((definition['function'] as Map)['parameters'] as Map).cast(),
+      );
+      final result = switch (name) {
         'list_plans' => await _listPlans(arguments),
         'get_active_plan' => await _activePlan(arguments),
         'get_plan' => await _getPlan(arguments),
@@ -225,6 +241,10 @@ class AgentToolRegistry {
         'propose_delete_body_metric' => await _proposeDeleteMetric(arguments),
         _ => _error('unsupported_tool', 'This operation is not available.'),
       };
+      if (_ref.read(agentOwnerScopeProvider).epoch != owner.epoch) {
+        return _error('owner_changed', 'Account changed. Read the data again.');
+      }
+      return result;
     } catch (error) {
       return _error('tool_failed', _safeError(error));
     }
@@ -246,9 +266,11 @@ class AgentToolRegistry {
         .read(localInstanceRepositoryProvider)
         .fetchActiveInstance();
     final limit = _boundedInt(args['limit'], fallback: 20, max: 50);
+    final offset = _decodeCursor(args['cursor']);
     return AgentToolResult(
       payload: {
         'plans': records
+            .skip(offset)
             .take(limit)
             .map(
               (record) => {
@@ -264,7 +286,9 @@ class AgentToolRegistry {
               },
             )
             .toList(),
-        'truncated': records.length > limit,
+        'truncated': records.length > offset + limit,
+        if (records.length > offset + limit)
+          'nextCursor': _encodeCursor(offset + limit),
       },
     );
   }
@@ -384,7 +408,15 @@ class AgentToolRegistry {
     final nextOffset = offset + page.length;
     return AgentToolResult(
       payload: {
-        'logs': page.map((log) => log.toJson()).toList(),
+        'logs': page
+            .map(
+              (log) => {
+                'logId': log.logId,
+                'workoutName': log.workoutName,
+                'editable': AgentWorkoutInput.editable(log),
+              },
+            )
+            .toList(),
         'totalInRange': filtered.length,
         'truncated': nextOffset < filtered.length,
         if (nextOffset < filtered.length)
@@ -398,9 +430,14 @@ class AgentToolRegistry {
     final logs = await _ref
         .read(localWorkoutLogRepositoryProvider)
         .fetchAllWorkoutLogs();
-    final cutoff = DateTime.now().subtract(Duration(days: days));
+    final now = DateTime.now();
+    final cutoff = now.subtract(Duration(days: days));
     final filtered = logs
-        .where((log) => !log.completedAt.isBefore(cutoff))
+        .where(
+          (log) =>
+              !log.completedAt.isBefore(cutoff) &&
+              !log.completedAt.isAfter(now),
+        )
         .toList();
     final library = await _ref.read(exerciseLibraryProvider.future);
     final formula = _ref.read(analyticsFormulaProvider);
@@ -412,6 +449,11 @@ class AgentToolRegistry {
     final advanced = buildAdvancedAnalytics(
       logs: filtered,
       exerciseLibrary: library,
+      now: now,
+      muscleLoadPeriod: AnalyticsDateRange(
+        startInclusive: cutoff,
+        endInclusive: now,
+      ),
       activeInstance: await _ref
           .read(localInstanceRepositoryProvider)
           .fetchActiveInstance(),
@@ -420,9 +462,20 @@ class AgentToolRegistry {
     return AgentToolResult(
       payload: {
         'rangeDays': days,
+        'start': cutoff.toUtc().toIso8601String(),
+        'end': now.toUtc().toIso8601String(),
+        'asOf': now.toUtc().toIso8601String(),
+        'timezone': now.timeZoneName,
+        'unit': 'kg',
+        'sourceCount': filtered.length,
         'completedWorkouts': progress.completedWorkoutCount,
-        'trainingDays': progress.recentTrainingDays,
-        'volume': progress.recentVolume,
+        'trainingDays': filtered
+            .map(
+              (l) => l.completedAt.toLocal().toIso8601String().substring(0, 10),
+            )
+            .toSet()
+            .length,
+        'volume': filtered.fold<double>(0, (sum, log) => sum + _volume(log)),
         'exercises': progress.exerciseSummaries
             .take(30)
             .map(
@@ -560,6 +613,21 @@ class AgentToolRegistry {
         .read(localInstanceRepositoryProvider)
         .fetchActiveInstance();
     final activeRevision = active?.templateId == templateId;
+    if (activeRevision) {
+      final draft = await _ref
+          .read(databaseRepositoryProvider)
+          .fetchActiveSessionDraft(
+            active!.instanceId,
+            ownerUserId: _ref.read(agentOwnerScopeProvider).ownerUserId,
+          );
+      if (draft != null ||
+          (_ref.exists(activeSessionProvider) &&
+              _ref.read(activeSessionProvider).activeWorkout != null)) {
+        throw StateError(
+          'Finish or cancel the current workout before revising its plan.',
+        );
+      }
+    }
     final oldExerciseIds = existing.template.workouts
         .expand((workout) => workout.exercises)
         .map((exercise) => exercise.id)
@@ -592,6 +660,8 @@ class AgentToolRegistry {
           'activeInstanceId': active!.instanceId,
         if (activeInstanceDigest != null)
           'activeInstanceDigest': activeInstanceDigest,
+        if (activeInstanceDigest != null)
+          'activeInstanceVersion': active!.version,
       },
       targetType: 'plan',
       targetId: templateId,
@@ -652,10 +722,47 @@ class AgentToolRegistry {
   }
 
   Future<AgentToolResult> _proposeCreateLog(Map<String, dynamic> args) async {
-    var log = WorkoutLog.fromJson(_map(args['log']));
-    if (log.logId.isEmpty) {
-      log = log.copyWith(logId: const Uuid().v4());
+    final active = await _ref
+        .read(localInstanceRepositoryProvider)
+        .fetchActiveInstance();
+    if (active == null) {
+      throw StateError('Choose a training plan before adding history.');
     }
+    final template = await _ref
+        .read(localPlanRepositoryProvider)
+        .fetchStoredTemplate(active.templateId);
+    if (template == null) throw StateError('The plan is unavailable.');
+    final workout = args['workoutId'] == null
+        ? template.template.workoutByIndex(active.currentWorkoutIndex)
+        : template.template.findWorkoutById(args['workoutId'] as String);
+    final base = WorkoutLog(
+      logId: const Uuid().v4(),
+      instanceId: active.instanceId,
+      workoutId: workout.id,
+      workoutName: workout.name,
+      dayLabel: workout.name,
+      completedAt: DateTime.now(),
+      exercises: [
+        for (final e in workout.exercises)
+          ExerciseLog(
+            exerciseId: e.id,
+            exerciseDefinitionId: e.exerciseId,
+            exerciseName: e.name,
+            stageId: e.stages.first.id,
+            sets: [
+              for (final s in e.stages.first.sets)
+                SetLog(
+                  role: 'working',
+                  targetReps: s.targetReps,
+                  completedReps: 0,
+                  targetWeight: e.initialBaseWeight,
+                  weight: e.initialBaseWeight,
+                ),
+            ],
+          ),
+      ],
+    );
+    final log = AgentWorkoutInput.apply(args['log'], base);
     _validateLog(log);
     return _proposal(
       toolName: 'propose_create_workout_log',
@@ -689,7 +796,7 @@ class AgentToolRegistry {
         .read(localWorkoutLogRepositoryProvider)
         .fetchWorkoutLogById(id);
     if (existing == null) throw StateError('Workout log not found.');
-    final revised = WorkoutLog.fromJson(_map(args['log'])).copyWith(logId: id);
+    final revised = AgentWorkoutInput.apply(args['log'], existing);
     _validateLog(revised);
     return _proposal(
       toolName: 'propose_update_workout_log',
@@ -805,7 +912,7 @@ class AgentToolRegistry {
     );
   }
 
-  AgentToolResult _proposal({
+  Future<AgentToolResult> _proposal({
     required String toolName,
     required String title,
     required String summary,
@@ -816,7 +923,14 @@ class AgentToolRegistry {
     required Object? after,
     required List<AgentMutationChange> changes,
     String? progressionEffect,
-  }) {
+  }) async {
+    final completeChanges = AgentMutationDiff.between(
+      before,
+      after,
+      chinese: _isChinese,
+    );
+    if (completeChanges.isEmpty) throw StateError('No changes were requested.');
+    final scope = _ref.read(agentOwnerScopeProvider);
     final proposal = AgentMutationProposal(
       operationId: const Uuid().v4(),
       toolName: toolName,
@@ -826,7 +940,15 @@ class AgentToolRegistry {
       targetType: targetType,
       targetId: targetId,
       expectedDigest: agentPayloadDigest(before),
-      changes: changes,
+      expectedVersion: await agentEntityVersion(
+        _ref.read(agentLocalRepositoryProvider),
+        targetType,
+        targetId,
+        scope.ownerUserId,
+      ),
+      changes: completeChanges,
+      ownerUserId: scope.ownerUserId,
+      authEpoch: scope.epoch,
       createdAt: DateTime.now(),
       progressionEffect: progressionEffect,
     );
@@ -837,7 +959,7 @@ class AgentToolRegistry {
         'operationId': proposal.operationId,
         'title': title,
         'summary': summary,
-        'changes': changes.map((change) => change.toJson()).toList(),
+        'changes': completeChanges.map((change) => change.toJson()).toList(),
         if (progressionEffect != null) 'progressionEffect': progressionEffect,
       },
     );
@@ -881,7 +1003,11 @@ class AgentToolRegistry {
         fallback?.bodyFatPercent,
       ),
       waistCm: _nullableDouble(args, 'waistCm', fallback?.waistCm),
-      note: args.containsKey('note') ? args['note'] as String? : fallback?.note,
+      note: args.containsKey('note')
+          ? ((args['note'] as String?)?.trim().isEmpty == true
+                ? null
+                : args['note'] as String?)
+          : fallback?.note,
     );
     validateAgentBodyMetric(metric);
     return metric;
@@ -1010,15 +1136,29 @@ class AgentToolRegistry {
     'additionalProperties': false,
   };
 
-  static Map<String, dynamic> _bodyMetricSchema({required bool includeId}) =>
-      _object({
-        if (includeId) 'metricId': _string(),
-        'timestamp': {'type': 'string', 'format': 'date-time'},
-        'weightKg': {'type': 'number', 'minimum': 20, 'maximum': 500},
-        'bodyFatPercent': {'type': 'number', 'minimum': 1, 'maximum': 75},
-        'waistCm': {'type': 'number', 'minimum': 30, 'maximum': 250},
-        'note': {'type': 'string', 'maxLength': 500},
-      }, required: includeId ? const ['metricId'] : const []);
+  static Map<String, dynamic> _bodyMetricSchema({
+    required bool includeId,
+  }) => _object({
+    if (includeId) 'metricId': _string(),
+    'timestamp': {'type': 'string', 'format': 'date-time'},
+    'weightKg': _nullableMetricNumber(20, 500),
+    'bodyFatPercent': _nullableMetricNumber(1, 75),
+    'waistCm': _nullableMetricNumber(30, 250),
+    'note': {
+      'type': ['string', 'null'],
+      'maxLength': 500,
+      'description':
+          'Omit to preserve; use null to clear. Empty text is normalized to null.',
+    },
+  }, required: includeId ? const ['metricId'] : const []);
+
+  static Map<String, dynamic> _nullableMetricNumber(num min, num max) => {
+    'type': ['number', 'null'],
+    'minimum': min,
+    'maximum': max,
+    'description':
+        'Omit to preserve the existing value; use null to explicitly clear this field.',
+  };
 
   static Map<String, dynamic> _string() => const {'type': 'string'};
 

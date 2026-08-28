@@ -9,12 +9,186 @@ import 'package:fittin_v2/src/application/agent_tools.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/remote/agent_model_transport.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
+import 'package:fittin_v2/src/application/agent_owner_scope.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test(
+    'rejection resumes the original run with the exact tool decision',
+    () async {
+      final proposal = _pendingProposal('resume-reject');
+      final transport = _TurnTransport([
+        _proposalTurn(),
+        [
+          const AgentTextDelta('No change; continuing with analysis.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final c = _container(
+        transport: transport,
+        tools: _FakeTools(
+          AgentToolResult(
+            payload: const {'status': 'pending_user_approval'},
+            proposal: proposal,
+          ),
+        ),
+      );
+      addTearDown(c.dispose);
+      final controller = c.read(agentHarnessControllerProvider.notifier);
+      await controller.submit('Change my plan and explain the result');
+      final runId = c.read(agentHarnessControllerProvider).runState.runId;
+      await controller.rejectProposal(proposal.operationId);
+      expect(transport.requests, hasLength(2));
+      final result = transport.requests.last.messages.singleWhere(
+        (m) => m.toolCallId == 'approval-call',
+      );
+      expect(jsonDecode(result.content!)['status'], 'rejected');
+      expect(
+        c.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.completed,
+      );
+      expect(c.read(agentHarnessControllerProvider).runState.runId, runId);
+    },
+  );
+
+  test(
+    'restart restores approval without a model call and requires manual continuation',
+    () async {
+      final repository = InMemoryAgentLocalRepository();
+      final proposal = _pendingProposal('restart');
+      final firstTransport = _TurnTransport([_proposalTurn()]);
+      final first = _container(
+        transport: firstTransport,
+        local: repository,
+        tools: _FakeTools(
+          AgentToolResult(
+            payload: const {'status': 'pending_user_approval'},
+            proposal: proposal,
+          ),
+        ),
+      );
+      await first
+          .read(agentHarnessControllerProvider.notifier)
+          .submit('Modify and analyze');
+      first.dispose();
+      final transport = _TurnTransport([
+        [
+          const AgentTextDelta('Resumed'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final second = _container(transport: transport, local: repository);
+      addTearDown(second.dispose);
+      second.read(agentHarnessControllerProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      expect(
+        second.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.awaitingApproval,
+      );
+      expect(transport.requests, isEmpty);
+      await second
+          .read(agentHarnessControllerProvider.notifier)
+          .rejectProposal('restart');
+      expect(transport.requests, isEmpty);
+      expect(
+        second.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.interrupted,
+      );
+      await second.read(agentHarnessControllerProvider.notifier).resume();
+      expect(transport.requests, hasLength(1));
+    },
+  );
+
+  test(
+    'commit audit reconciles a checkpoint left before the decision',
+    () async {
+      final repository = InMemoryAgentLocalRepository();
+      final proposal = _pendingProposal('committed-before-crash');
+      final first = _container(
+        transport: _TurnTransport([_proposalTurn()]),
+        local: repository,
+        tools: _FakeTools(
+          AgentToolResult(
+            payload: const {'status': 'pending_user_approval'},
+            proposal: proposal,
+          ),
+        ),
+      );
+      await first
+          .read(agentHarnessControllerProvider.notifier)
+          .submit('Change');
+      first.dispose();
+      await repository.saveAction(
+        AgentActionRecord(
+          id: proposal.operationId,
+          ownerUserId: null,
+          toolName: proposal.toolName,
+          title: 'Done',
+          targetType: 'plan',
+          targetId: 'safe-copy',
+          beforeJson: '{}',
+          afterJson: '{}',
+          afterDigest: 'digest',
+          createdAt: DateTime.now(),
+        ),
+      );
+      final transport = _TurnTransport([
+        [
+          const AgentTextDelta('The committed change was recovered'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final second = _container(transport: transport, local: repository);
+      addTearDown(second.dispose);
+      second.read(agentHarnessControllerProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 15));
+      final run = second.read(agentHarnessControllerProvider).runState;
+      expect(run.phase, AgentRunPhase.interrupted);
+      expect(run.pendingProposal, isNull);
+      expect(
+        run.conversation!.messages
+            .singleWhere((m) => m.toolCallId == 'approval-call')
+            .content,
+        contains('committed'),
+      );
+      expect(transport.requests, isEmpty);
+      await second.read(agentHarnessControllerProvider.notifier).resume();
+      expect(transport.requests.single.allowRetries, false);
+      expect(await repository.fetchActions(), hasLength(1));
+    },
+  );
+
+  test('old-owner checkpoints never appear in a new owner scope', () async {
+    final repository = InMemoryAgentLocalRepository();
+    final first = _container(
+      transport: _ScriptedTransport([
+        const AgentTextDelta('private'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ]),
+      local: repository,
+    );
+    await first
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Private task');
+    first.dispose();
+    final second = ProviderContainer(
+      overrides: [
+        agentOwnerScopeProvider.overrideWithValue(AgentOwnerScope('new-owner')),
+        agentLocalRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(second.dispose);
+    second.read(agentHarnessControllerProvider);
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+    expect(second.read(agentHarnessControllerProvider).conversations, isEmpty);
+    expect(
+      second.read(agentHarnessControllerProvider).runState.conversation,
+      isNull,
+    );
+  });
   test(
     'approval closes remaining calls and a follow-up has paired history',
     () async {
@@ -724,6 +898,7 @@ ProviderContainer _container({
   required AgentModelTransport transport,
   AgentToolRegistry? tools,
   AgentProviderSettingsStore? settingsStore,
+  AgentLocalRepository? local,
 }) {
   final store = settingsStore ?? _ReadySettingsStore();
   return ProviderContainer(
@@ -732,7 +907,7 @@ ProviderContainer _container({
         (ref) => AppLocaleNotifier(ref, initialLocale: AppLocale.en),
       ),
       agentLocalRepositoryProvider.overrideWithValue(
-        InMemoryAgentLocalRepository(),
+        local ?? InMemoryAgentLocalRepository(),
       ),
       agentProviderSettingsStoreProvider.overrideWithValue(store),
       agentModelTransportProvider.overrideWithValue(transport),
@@ -743,6 +918,29 @@ ProviderContainer _container({
     ],
   );
 }
+
+AgentMutationProposal _pendingProposal(String id) => AgentMutationProposal(
+  operationId: id,
+  toolName: 'propose_revise_plan',
+  title: 'Change',
+  summary: '',
+  argumentsJson: '{}',
+  targetType: 'plan',
+  targetId: 'plan',
+  expectedDigest: 'digest',
+  changes: const [],
+  createdAt: DateTime.now(),
+);
+
+List<AgentModelEvent> _proposalTurn() => [
+  const AgentToolCallDelta(
+    index: 0,
+    id: 'approval-call',
+    name: 'propose_revise_plan',
+    argumentsDelta: '{}',
+  ),
+  const AgentModelCompleted(finishReason: 'tool_calls'),
+];
 
 class _ReadySettingsStore implements AgentProviderSettingsStore {
   _ReadySettingsStore({this.loadGate});
@@ -772,6 +970,8 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     required String model,
     String? apiKey,
     bool toolCallingVerified = false,
+    int contextWindowTokens = 32768,
+    AgentProviderCapabilityProfile? capabilities,
   }) async => AgentProviderConfig(
     baseUrl: baseUrl,
     model: model,

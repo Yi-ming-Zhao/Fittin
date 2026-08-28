@@ -2,6 +2,11 @@ import 'dart:convert';
 
 import 'package:fittin_v2/src/application/agent_mutation_coordinator.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/plan_library_provider.dart';
+import 'package:fittin_v2/src/application/template_editor_provider.dart';
+import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
+import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/application/body_metrics_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
@@ -24,13 +29,26 @@ void main() {
     () async {
       final progress = InMemoryProgressRepository();
       final actions = InMemoryAgentLocalRepository();
+      var libraryLoads = 0;
       final container = ProviderContainer(
         overrides: [
           progressRepositoryProvider.overrideWithValue(progress),
           agentLocalRepositoryProvider.overrideWithValue(actions),
+          planLibraryItemsProvider.overrideWith((ref) async {
+            ref.watch(syncRefreshProvider);
+            libraryLoads++;
+            return const [];
+          }),
         ],
       );
       addTearDown(container.dispose);
+      final librarySubscription = container.listen(
+        planLibraryItemsProvider,
+        (_, _) {},
+      );
+      addTearDown(librarySubscription.close);
+      await container.read(planLibraryItemsProvider.future);
+      expect(libraryLoads, 1);
       final before = BodyMetric(
         metricId: 'metric-1',
         timestamp: DateTime(2026, 8, 13),
@@ -55,6 +73,22 @@ void main() {
 
       final coordinator = container.read(agentMutationCoordinatorProvider);
       final first = await coordinator.confirm(proposal);
+      await container.read(planLibraryItemsProvider.future);
+      expect(libraryLoads, 2);
+      for (final initialized in [
+        container.exists(templateLibraryProvider),
+        container.exists(todayWorkoutSummaryProvider),
+        container.exists(activeTemplateProvider),
+        container.exists(activeSessionProvider),
+        container.exists(advancedAnalyticsDataProvider),
+        container.exists(bodyMetricsProvider),
+      ]) {
+        expect(
+          initialized,
+          false,
+          reason: 'A mutation must not start an unopened page reader.',
+        );
+      }
       final second = await coordinator.confirm(proposal);
 
       expect(first.id, second.id);

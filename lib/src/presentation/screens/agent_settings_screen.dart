@@ -9,6 +9,7 @@ import '../theme/fittin_theme.dart';
 import '../widgets/dashboard_primitives.dart';
 import '../widgets/fittin_card.dart';
 import '../widgets/fittin_primitives.dart';
+import '../widgets/agent_local_settings.dart';
 
 class AgentSettingsScreen extends ConsumerStatefulWidget {
   const AgentSettingsScreen({super.key});
@@ -23,6 +24,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
   final _baseUrlController = TextEditingController();
   final _modelController = TextEditingController();
   final _apiKeyController = TextEditingController();
+  final _contextController = TextEditingController(text: '32768');
   bool _obscureKey = true;
   bool _seeded = false;
 
@@ -31,6 +33,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     _baseUrlController.dispose();
     _modelController.dispose();
     _apiKeyController.dispose();
+    _contextController.dispose();
     super.dispose();
   }
 
@@ -39,6 +42,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     _seeded = true;
     _baseUrlController.text = state.config.baseUrl;
     _modelController.text = state.config.model;
+    _contextController.text = '${state.config.contextWindowTokens}';
   }
 
   Future<void> _save(AppStrings strings) async {
@@ -49,6 +53,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
           baseUrl: _baseUrlController.text,
           model: _modelController.text,
           apiKey: _apiKeyController.text,
+          contextWindowTokens: int.tryParse(_contextController.text),
         );
     if (!mounted || !saved) return;
     _apiKeyController.clear();
@@ -62,6 +67,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     await ref
         .read(agentProviderSettingsControllerProvider.notifier)
         .testConnection(
+          contextWindowTokens: int.tryParse(_contextController.text),
           baseUrl: _baseUrlController.text,
           model: _modelController.text,
           apiKey: _apiKeyController.text,
@@ -162,6 +168,24 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                _AgentSettingsField(
+                  theme: theme,
+                  controller: _contextController,
+                  label: strings.isChinese
+                      ? '上下文窗口（令牌数）'
+                      : 'Context window (tokens)',
+                  hint: '32768',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final n = int.tryParse(value ?? '');
+                    return n == null || n < 8192 || n > 262144
+                        ? (strings.isChinese
+                              ? '请输入8192至262144'
+                              : 'Enter 8192–262144')
+                        : null;
+                  },
+                ),
+                const SizedBox(height: 12),
                 Text(
                   kIsWeb
                       ? strings.agentWebKeyStorage
@@ -195,6 +219,25 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                     message: result.toolCallingSupported
                         ? strings.agentConnectionVerified
                         : strings.agentConnectionChatOnly,
+                  ),
+                ],
+                if (state.config.capabilities case final profile?) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    strings.isChinese
+                        ? '实测：${profile.streaming == true
+                              ? '流式'
+                              : profile.streaming == false
+                              ? 'JSON 回退'
+                              : '流式未知'} · 函数调用${profile.functionCalling ? '通过' : '未通过'}\n并行工具与最大上下文未探测时不作保证。'
+                        : 'Observed: ${profile.streaming == true
+                              ? 'streaming'
+                              : profile.streaming == false
+                              ? 'JSON fallback'
+                              : 'streaming unknown'} · tools ${profile.functionCalling ? 'verified' : 'unverified'}\nParallel tools and maximum context remain unknown unless measured.',
+                    style: theme
+                        .uiStyle(11, theme.fgMuted)
+                        .copyWith(height: 1.5),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -239,6 +282,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
           title: strings.agentTestConnection,
           detail: strings.agentProviderCostDisclosure,
         ),
+        const SizedBox(height: 24),
+        AgentLocalSettings(theme: theme, strings: strings),
         const SizedBox(height: 24),
         DashboardSectionLabel(label: strings.agentPrivacyTitle),
         const SizedBox(height: 10),

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 
 enum AgentMessageRole { system, user, assistant, tool }
 
@@ -11,11 +12,59 @@ enum AgentRunPhase {
   completed,
   cancelled,
   failed,
+  queued,
+  resuming,
+  interrupted,
+  compacting,
 }
 
 enum AgentProposalStatus { pending, confirmed, rejected, stale }
 
 enum AgentActionStatus { applied, undone, conflicted }
+
+/// Observed capabilities, not promises inferred from a provider/model name.
+/// Null means the connection test did not establish that capability.
+class AgentProviderCapabilityProfile {
+  const AgentProviderCapabilityProfile({
+    required this.testedAt,
+    required this.functionCalling,
+    this.streaming,
+    this.parallelTools,
+    this.reasoningFields,
+    this.usageReporting,
+    this.maxContextTokens,
+    this.errorFormat,
+  });
+  final DateTime testedAt;
+  final bool functionCalling;
+  final bool? streaming;
+  final bool? parallelTools;
+  final bool? reasoningFields;
+  final bool? usageReporting;
+  final int? maxContextTokens;
+  final String? errorFormat;
+  Map<String, dynamic> toJson() => {
+    'testedAt': testedAt.toUtc().toIso8601String(),
+    'functionCalling': functionCalling,
+    'streaming': streaming,
+    'parallelTools': parallelTools,
+    'reasoningFields': reasoningFields,
+    'usageReporting': usageReporting,
+    'maxContextTokens': maxContextTokens,
+    'errorFormat': errorFormat,
+  };
+  factory AgentProviderCapabilityProfile.fromJson(Map<String, dynamic> j) =>
+      AgentProviderCapabilityProfile(
+        testedAt: DateTime.parse(j['testedAt'] as String),
+        functionCalling: j['functionCalling'] == true,
+        streaming: j['streaming'] as bool?,
+        parallelTools: j['parallelTools'] as bool?,
+        reasoningFields: j['reasoningFields'] as bool?,
+        usageReporting: j['usageReporting'] as bool?,
+        maxContextTokens: j['maxContextTokens'] as int?,
+        errorFormat: j['errorFormat'] as String?,
+      );
+}
 
 class AgentProviderConfig {
   const AgentProviderConfig({
@@ -23,12 +72,16 @@ class AgentProviderConfig {
     required this.model,
     this.hasApiKey = false,
     this.toolCallingVerified = false,
+    this.contextWindowTokens = 32768,
+    this.capabilities,
   });
 
   final String baseUrl;
   final String model;
   final bool hasApiKey;
   final bool toolCallingVerified;
+  final int contextWindowTokens;
+  final AgentProviderCapabilityProfile? capabilities;
 
   bool get isReady =>
       baseUrl.trim().isNotEmpty && model.trim().isNotEmpty && hasApiKey;
@@ -38,12 +91,19 @@ class AgentProviderConfig {
     String? model,
     bool? hasApiKey,
     bool? toolCallingVerified,
+    int? contextWindowTokens,
+    AgentProviderCapabilityProfile? capabilities,
+    bool clearCapabilities = false,
   }) {
     return AgentProviderConfig(
       baseUrl: baseUrl ?? this.baseUrl,
       model: model ?? this.model,
       hasApiKey: hasApiKey ?? this.hasApiKey,
       toolCallingVerified: toolCallingVerified ?? this.toolCallingVerified,
+      contextWindowTokens: contextWindowTokens ?? this.contextWindowTokens,
+      capabilities: clearCapabilities
+          ? null
+          : capabilities ?? this.capabilities,
     );
   }
 
@@ -52,6 +112,8 @@ class AgentProviderConfig {
     'model': model,
     'hasApiKey': hasApiKey,
     'toolCallingVerified': toolCallingVerified,
+    'contextWindowTokens': contextWindowTokens,
+    'capabilities': capabilities?.toJson(),
   };
 
   factory AgentProviderConfig.fromJson(Map<String, dynamic> json) {
@@ -60,6 +122,12 @@ class AgentProviderConfig {
       model: json['model'] as String? ?? '',
       hasApiKey: json['hasApiKey'] as bool? ?? false,
       toolCallingVerified: json['toolCallingVerified'] as bool? ?? false,
+      contextWindowTokens: json['contextWindowTokens'] as int? ?? 32768,
+      capabilities: json['capabilities'] is Map
+          ? AgentProviderCapabilityProfile.fromJson(
+              (json['capabilities'] as Map).cast(),
+            )
+          : null,
     );
   }
 }
@@ -253,6 +321,9 @@ class AgentMutationProposal {
     required this.changes,
     required this.createdAt,
     this.progressionEffect,
+    this.expectedVersion,
+    this.ownerUserId,
+    this.authEpoch,
     this.status = AgentProposalStatus.pending,
   });
 
@@ -267,23 +338,31 @@ class AgentMutationProposal {
   final List<AgentMutationChange> changes;
   final DateTime createdAt;
   final String? progressionEffect;
+  final int? expectedVersion;
+  final String? ownerUserId;
+  final String? authEpoch;
   final AgentProposalStatus status;
 
-  AgentMutationProposal copyWith({AgentProposalStatus? status}) =>
-      AgentMutationProposal(
-        operationId: operationId,
-        toolName: toolName,
-        title: title,
-        summary: summary,
-        argumentsJson: argumentsJson,
-        targetType: targetType,
-        targetId: targetId,
-        expectedDigest: expectedDigest,
-        changes: changes,
-        createdAt: createdAt,
-        progressionEffect: progressionEffect,
-        status: status ?? this.status,
-      );
+  AgentMutationProposal copyWith({
+    AgentProposalStatus? status,
+    String? authEpoch,
+  }) => AgentMutationProposal(
+    operationId: operationId,
+    toolName: toolName,
+    title: title,
+    summary: summary,
+    argumentsJson: argumentsJson,
+    targetType: targetType,
+    targetId: targetId,
+    expectedDigest: expectedDigest,
+    changes: changes,
+    createdAt: createdAt,
+    progressionEffect: progressionEffect,
+    expectedVersion: expectedVersion,
+    ownerUserId: ownerUserId,
+    authEpoch: authEpoch ?? this.authEpoch,
+    status: status ?? this.status,
+  );
 
   Map<String, dynamic> toJson() => {
     'operationId': operationId,
@@ -297,6 +376,9 @@ class AgentMutationProposal {
     'changes': changes.map((change) => change.toJson()).toList(),
     'createdAt': createdAt.toUtc().toIso8601String(),
     'progressionEffect': progressionEffect,
+    'expectedVersion': expectedVersion,
+    'ownerUserId': ownerUserId,
+    'authEpoch': authEpoch,
     'status': status.name,
   };
 
@@ -315,6 +397,9 @@ class AgentMutationProposal {
             .toList(),
         createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
         progressionEffect: json['progressionEffect'] as String?,
+        expectedVersion: json['expectedVersion'] as int?,
+        ownerUserId: json['ownerUserId'] as String?,
+        authEpoch: json['authEpoch'] as String?,
         status: AgentProposalStatus.values.byName(
           json['status'] as String? ?? AgentProposalStatus.pending.name,
         ),
@@ -334,6 +419,8 @@ class AgentActionRecord {
     required this.afterDigest,
     required this.createdAt,
     this.undoneAt,
+    this.authEpoch,
+    this.afterVersion,
     this.status = AgentActionStatus.applied,
   });
 
@@ -348,6 +435,8 @@ class AgentActionRecord {
   final String afterDigest;
   final DateTime createdAt;
   final DateTime? undoneAt;
+  final String? authEpoch;
+  final int? afterVersion;
   final AgentActionStatus status;
 
   AgentActionRecord copyWith({AgentActionStatus? status, DateTime? undoneAt}) =>
@@ -363,6 +452,8 @@ class AgentActionRecord {
         afterDigest: afterDigest,
         createdAt: createdAt,
         undoneAt: undoneAt ?? this.undoneAt,
+        authEpoch: authEpoch,
+        afterVersion: afterVersion,
         status: status ?? this.status,
       );
 
@@ -378,6 +469,8 @@ class AgentActionRecord {
     'afterDigest': afterDigest,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'undoneAt': undoneAt?.toUtc().toIso8601String(),
+    'authEpoch': authEpoch,
+    'afterVersion': afterVersion,
     'status': status.name,
   };
 
@@ -392,6 +485,8 @@ class AgentActionRecord {
         beforeJson: json['beforeJson'] as String? ?? 'null',
         afterJson: json['afterJson'] as String? ?? 'null',
         afterDigest: json['afterDigest'] as String? ?? '',
+        authEpoch: json['authEpoch'] as String?,
+        afterVersion: json['afterVersion'] as int?,
         createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
         undoneAt: json['undoneAt'] == null
             ? null
@@ -411,6 +506,8 @@ class AgentRunState {
     this.errorMessage,
     this.modelTurns = 0,
     this.toolCalls = 0,
+    this.runId,
+    this.errorCode,
   });
 
   final AgentRunPhase phase;
@@ -420,11 +517,16 @@ class AgentRunState {
   final String? errorMessage;
   final int modelTurns;
   final int toolCalls;
+  final String? runId;
+  final String? errorCode;
 
   bool get isBusy => const {
     AgentRunPhase.connecting,
     AgentRunPhase.streaming,
     AgentRunPhase.usingTools,
+    AgentRunPhase.queued,
+    AgentRunPhase.resuming,
+    AgentRunPhase.compacting,
   }.contains(phase);
 
   AgentRunState copyWith({
@@ -435,6 +537,8 @@ class AgentRunState {
     String? errorMessage,
     int? modelTurns,
     int? toolCalls,
+    String? runId,
+    String? errorCode,
     bool clearProposal = false,
     bool clearTool = false,
     bool clearError = false,
@@ -448,6 +552,8 @@ class AgentRunState {
     errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     modelTurns: modelTurns ?? this.modelTurns,
     toolCalls: toolCalls ?? this.toolCalls,
+    runId: runId ?? this.runId,
+    errorCode: clearError ? null : errorCode ?? this.errorCode,
   );
 }
 
@@ -465,6 +571,17 @@ String canonicalJson(Object? value) {
 }
 
 String agentPayloadDigest(Object? value) {
+  // Normalize generated model objects before recursively sorting their keys.
+  final normalized = jsonDecode(jsonEncode(value));
+  return 'sha256:${sha256.convert(utf8.encode(canonicalJson(normalized)))}';
+}
+
+bool agentDigestMatches(Object? value, String expected) =>
+    expected.startsWith('sha256:')
+    ? agentPayloadDigest(value) == expected
+    : _legacyAgentPayloadDigest(value) == expected;
+
+String _legacyAgentPayloadDigest(Object? value) {
   final input = utf8.encode(canonicalJson(value));
   // Fixed-width arithmetic keeps digests identical on Dart VM and Web.
   // This is a concurrency fingerprint, not a cryptographic secret hash.

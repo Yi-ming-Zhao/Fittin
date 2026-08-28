@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import '../data/agent_entity_version.dart';
+import 'agent_owner_scope.dart';
 
 import 'package:fittin_v2/src/application/active_session_provider.dart';
-import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/body_metrics_provider.dart';
-import 'package:fittin_v2/src/application/plan_library_provider.dart';
-import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
-import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/agent_atomic_mutation.dart';
 import 'package:fittin_v2/src/data/agent_business_transaction.dart';
@@ -48,19 +46,48 @@ class AgentMutationCoordinator {
   Future<void>? _mutationInFlight;
 
   Future<AgentActionRecord> confirm(AgentMutationProposal proposal) async {
+    final scope = _ref.read(agentOwnerScopeProvider);
+    final store = _ref.read(agentLocalRepositoryProvider);
     AgentActionRecord? result;
     await _serialize(() async {
-      result = await _confirmUnlocked(proposal);
+      result = await AgentBusinessTransaction(store).run(() async {
+        _assertScope(scope, proposal);
+        final action = await _confirmUnlocked(proposal);
+        _assertScope(scope, proposal);
+        return action;
+      });
     });
+    await _refresh();
     return result!;
   }
 
   Future<AgentActionRecord> undo(String actionId) async {
-    AgentActionRecord? result;
+    final scope = _ref.read(agentOwnerScopeProvider);
+    final store = _ref.read(agentLocalRepositoryProvider);
+    ({AgentActionRecord? action, AgentMutationConflict? conflict})? result;
     await _serialize(() async {
-      result = await _undoUnlocked(actionId);
+      result = await AgentBusinessTransaction(store).run(() async {
+        _assertScope(scope);
+        final action = await _undoUnlocked(actionId);
+        _assertScope(scope);
+        return action;
+      });
     });
-    return result!;
+    if (result!.conflict case final conflict?) throw conflict;
+    await _refresh();
+    return result!.action!;
+  }
+
+  void _assertScope(AgentOwnerScope scope, [AgentMutationProposal? proposal]) {
+    final current = _ref.read(agentOwnerScopeProvider);
+    if (current.epoch != scope.epoch ||
+        (proposal?.authEpoch != null &&
+            (proposal!.authEpoch != scope.epoch ||
+                proposal.ownerUserId != scope.ownerUserId))) {
+      throw const AgentMutationConflict(
+        'The account changed. Generate a fresh proposal.',
+      );
+    }
   }
 
   Future<void> _serialize(Future<void> Function() operation) async {
@@ -100,7 +127,19 @@ class AgentMutationCoordinator {
       proposal.targetType,
       proposal.targetId,
     );
-    if (agentPayloadDigest(before) != proposal.expectedDigest) {
+    final currentVersion = await agentEntityVersion(
+      actionStore,
+      proposal.targetType,
+      proposal.targetId,
+      ownerUserId,
+    );
+    if (proposal.expectedVersion != null &&
+        currentVersion != proposal.expectedVersion) {
+      throw const AgentMutationConflict(
+        'The target version changed. Generate a fresh proposal.',
+      );
+    }
+    if (!agentDigestMatches(before, proposal.expectedDigest)) {
       throw const AgentMutationConflict(
         'The target changed on this or another device. Generate a fresh proposal.',
       );
@@ -126,6 +165,17 @@ class AgentMutationCoordinator {
         afterJson: jsonEncode(applied.after),
         afterDigest: agentPayloadDigest(applied.currentTarget),
         createdAt: DateTime.now(),
+        authEpoch: _ref.read(agentOwnerScopeProvider).epoch,
+        afterVersion:
+            _isBodyMetricTool(proposal.toolName) &&
+                atomicWriter.supportsBodyMetrics
+            ? (currentVersion ?? 0) + 1
+            : await agentEntityVersion(
+                actionStore,
+                applied.targetType ?? proposal.targetType,
+                applied.targetId,
+                ownerUserId,
+              ),
       );
       if (utf8.encode(action.beforeJson).length +
               utf8.encode(action.afterJson).length >
@@ -146,16 +196,15 @@ class AgentMutationCoordinator {
           action: action,
           delete: metricJson == null,
         );
-      } else {
-        await actionStore.saveAction(action);
       }
+      await actionStore.saveAction(action);
       return action;
     });
-    _refresh();
     return action;
   }
 
-  Future<AgentActionRecord> _undoUnlocked(String actionId) async {
+  Future<({AgentActionRecord? action, AgentMutationConflict? conflict})>
+  _undoUnlocked(String actionId) async {
     final ownerUserId = _ref.read(currentUserIdProvider);
     final actionStore = _ref.read(agentLocalRepositoryProvider);
     final action = await actionStore.fetchAction(
@@ -165,17 +214,61 @@ class AgentMutationCoordinator {
     if (action == null) {
       throw StateError('Agent action not found.');
     }
-    if (action.status == AgentActionStatus.undone) return action;
+    if (action.status == AgentActionStatus.undone) {
+      return (action: action, conflict: null);
+    }
     if (action.status != AgentActionStatus.applied) {
-      throw const AgentMutationConflict('This action cannot be undone.');
+      return (
+        action: null,
+        conflict: const AgentMutationConflict('This action cannot be undone.'),
+      );
     }
     final current = await _actionCurrentSnapshot(action);
-    if (agentPayloadDigest(current) != action.afterDigest) {
-      final conflicted = action.copyWith(status: AgentActionStatus.conflicted);
-      await actionStore.saveAction(conflicted);
-      throw const AgentMutationConflict(
-        'The target changed after this action. Undo was safely refused.',
+    final version = await agentEntityVersion(
+      actionStore,
+      action.targetType,
+      action.targetId,
+      ownerUserId,
+    );
+    if (!agentDigestMatches(current, action.afterDigest) ||
+        (action.afterVersion != null && version != action.afterVersion)) {
+      // This is an expected, read-only rejection: release the transaction
+      // normally and report the conflict to the caller outside its lifetime.
+      // Actual mutation failures still throw and roll back all writes.
+      return (
+        action: null,
+        conflict: const AgentMutationConflict(
+          'The target changed after this action. Undo was safely refused.',
+        ),
       );
+    }
+
+    if (action.targetType == 'plan_revision') {
+      final migrated = _map(jsonDecode(action.afterJson))['migratedInstance'];
+      if (migrated != null) {
+        final instanceId = _map(migrated)['instanceId'] as String;
+        final database = _ref.read(databaseRepositoryProvider);
+        final hasHistory = await database.hasWorkoutHistoryForInstance(
+          instanceId,
+          ownerUserId: ownerUserId,
+        );
+        final draft = await database.fetchActiveSessionDraft(
+          instanceId,
+          ownerUserId: ownerUserId,
+        );
+        final hasLiveWorkout =
+            _ref.exists(activeSessionProvider) &&
+            _ref.read(activeSessionProvider).activeWorkout?.instanceId ==
+                instanceId;
+        if (hasHistory || draft != null || hasLiveWorkout) {
+          return (
+            action: null,
+            conflict: const AgentMutationConflict(
+              'This plan now has a workout or training history. Undo was safely refused.',
+            ),
+          );
+        }
+      }
     }
 
     final beforePayload = jsonDecode(action.beforeJson);
@@ -195,15 +288,13 @@ class AgentMutationCoordinator {
         action: undone,
         delete: beforePayload == null,
       );
-      _refresh();
-      return undone;
+      return (action: undone, conflict: null);
     }
     await AgentBusinessTransaction(actionStore).run(() async {
       await _revert(action);
       await actionStore.saveAction(undone);
     });
-    _refresh();
-    return undone;
+    return (action: undone, conflict: null);
   }
 
   Future<_AppliedMutation> _apply(
@@ -325,6 +416,24 @@ class AgentMutationCoordinator {
     Map<String, dynamic> args,
   ) async {
     if (proposal.toolName != 'propose_revise_plan') return;
+    final activeForDraft = await _ref
+        .read(localInstanceRepositoryProvider)
+        .fetchActiveInstance();
+    if (activeForDraft?.templateId == args['templateId']) {
+      final draft = await _ref
+          .read(databaseRepositoryProvider)
+          .fetchActiveSessionDraft(
+            activeForDraft!.instanceId,
+            ownerUserId: _ref.read(currentUserIdProvider),
+          );
+      if (draft != null ||
+          (_ref.exists(activeSessionProvider) &&
+              _ref.read(activeSessionProvider).activeWorkout != null)) {
+        throw const AgentMutationConflict(
+          'Finish or cancel the current workout before revising its plan.',
+        );
+      }
+    }
     final expectedInstanceId = args['activeInstanceId'] as String?;
     final expectedDigest = args['activeInstanceDigest'] as String?;
     if (expectedInstanceId == null || expectedDigest == null) return;
@@ -332,6 +441,8 @@ class AgentMutationCoordinator {
         .read(localInstanceRepositoryProvider)
         .fetchActiveInstance();
     if (active?.instanceId != expectedInstanceId ||
+        (args['activeInstanceVersion'] != null &&
+            active?.version != args['activeInstanceVersion']) ||
         agentPayloadDigest(
               active == null ? null : _instanceConcurrencySnapshot(active),
             ) !=
@@ -604,7 +715,7 @@ class AgentMutationCoordinator {
         'log': currentLog,
         'progressionInstance': currentInstance == null
             ? null
-            : _instanceToJson(currentInstance),
+            : _instanceSnapshotForAudit(currentInstance, progressionJson),
       };
     }
     if (action.targetType != 'plan_revision') {
@@ -636,22 +747,28 @@ class AgentMutationCoordinator {
       if (sourceJson != null)
         'sourceInactiveInstance': source == null
             ? null
-            : _instanceToJson(source),
-      'migratedInstance': instance == null ? null : _instanceToJson(instance),
+            : _instanceSnapshotForAudit(source, sourceJson),
+      'migratedInstance': instance == null
+          ? null
+          : _instanceSnapshotForAudit(instance, migratedJson),
       'activeInstanceId': active?.instanceId,
     };
   }
 
-  void _refresh() {
+  Future<void> _refresh() async {
+    // Cached plan/analytics providers already watch this revision. Calling
+    // Ref.invalidate on unopened providers also initializes them in Riverpod's
+    // debug dependency checks, starting unowned seed/read jobs that can outlive
+    // the container and race native database shutdown.
     _ref.read(syncRefreshProvider.notifier).state++;
-    _ref.invalidate(planLibraryItemsProvider);
-    _ref.invalidate(templateLibraryProvider);
-    _ref.invalidate(todayWorkoutSummaryProvider);
-    _ref.invalidate(activeTemplateProvider);
-    _ref.invalidate(activeSessionProvider);
-    _ref.invalidate(progressAnalyticsOverviewProvider);
-    _ref.invalidate(advancedAnalyticsDataProvider);
-    _ref.read(bodyMetricsProvider.notifier).reload();
+    if (_ref.exists(activeSessionProvider)) {
+      _ref.invalidate(activeSessionProvider);
+    }
+    // Do not start a new background database reader just to invalidate a page
+    // that has never been opened; await any reader that is already visible.
+    if (_ref.exists(bodyMetricsProvider)) {
+      await _ref.read(bodyMetricsProvider.notifier).reload();
+    }
   }
 
   static Map<String, dynamic> _decodeMap(String value) =>
@@ -674,8 +791,11 @@ class AgentMutationCoordinator {
   }
 
   static Map<String, dynamic> _map(Object? value) {
-    if (value is Map<String, dynamic>) return value;
-    if (value is Map) return value.cast<String, dynamic>();
+    // Freezed toJson maps can still contain nested model instances. Normalize
+    // snapshots before feeding them to fromJson, just as persisted audits do.
+    if (value is Map) {
+      return jsonDecode(jsonEncode(value)) as Map<String, dynamic>;
+    }
     throw const FormatException('Expected an object.');
   }
 
@@ -686,12 +806,25 @@ class AgentMutationCoordinator {
     'templateId': instance.templateId,
     'currentWorkoutIndex': instance.currentWorkoutIndex,
     'ownerUserId': instance.ownerUserId,
+    'version': instance.version,
     'trainingMaxProfile': instance.trainingMaxProfile.toJson(),
     'engineState': instance.engineState,
     'states': instance.states.map((state) => state.toJson()).toList(),
     'createdAt': instance.createdAt.toUtc().toIso8601String(),
     'updatedAt': instance.updatedAt.toUtc().toIso8601String(),
   };
+
+  static Map<String, dynamic> _instanceSnapshotForAudit(
+    StoredTrainingInstance instance,
+    Object? recorded,
+  ) {
+    final snapshot = _instanceToJson(instance);
+    // Existing v1.1.x audits predate secondary-entity version fields.
+    if (!_map(recorded).containsKey('version')) {
+      snapshot.remove('version');
+    }
+    return snapshot;
+  }
 
   static Map<String, dynamic> _instanceConcurrencySnapshot(
     StoredTrainingInstance instance,
@@ -710,6 +843,7 @@ class AgentMutationCoordinator {
         templateId: json['templateId'] as String,
         currentWorkoutIndex: json['currentWorkoutIndex'] as int,
         ownerUserId: json['ownerUserId'] as String?,
+        version: json['version'] as int? ?? 1,
         trainingMaxProfile: TrainingMaxProfile.fromJson(
           _map(json['trainingMaxProfile']),
         ),

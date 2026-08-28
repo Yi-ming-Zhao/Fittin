@@ -34,7 +34,7 @@ func LoadConfig() (Config, error) {
 		MaxUploadBytes:  int64(envIntOrDefault("FITTIN_MAX_UPLOAD_BYTES", 10<<20)),
 		RateLimitPerMin: envIntOrDefault("FITTIN_RATE_LIMIT_PER_MINUTE", 60),
 
-		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 120)) * time.Second,
+		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 300)) * time.Second,
 		AgentMaxRequestBytes:      int64(envIntOrDefault("FITTIN_AGENT_MAX_REQUEST_BYTES", 512<<10)),
 		AgentMaxResponseBytes:     int64(envIntOrDefault("FITTIN_AGENT_MAX_RESPONSE_BYTES", 8<<20)),
 		AgentMaxConcurrentPerUser: envIntOrDefault("FITTIN_AGENT_MAX_CONCURRENT_PER_USER", 2),

@@ -21,7 +21,7 @@ import (
 const (
 	defaultAgentMaxRequestBytes      = int64(512 << 10)
 	defaultAgentMaxResponseBytes     = int64(8 << 20)
-	defaultAgentUpstreamTimeout      = 120 * time.Second
+	defaultAgentUpstreamTimeout      = 5 * time.Minute
 	defaultAgentMaxConcurrentPerUser = 2
 	defaultAgentRateLimitPerMin      = 12
 	maxAgentRateEntries              = 20_000
@@ -92,6 +92,10 @@ var agentBlockedPrefixes = []netip.Prefix{
 }
 
 func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	termination := agentTermRejected
+	var responseBytes int64
+	defer func() { s.recordAgentRelay(termination, responseBytes, time.Since(started)) }()
 	if r.Method != http.MethodPost {
 		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
 		return
@@ -165,22 +169,30 @@ func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Reque
 			_ = upstreamResponse.Body.Close()
 		}
 		if r.Context().Err() != nil {
+			termination = agentTermCancelled
 			return
 		}
 		switch {
 		case errors.Is(err, errAgentRedirectBlocked):
 			writeError(w, http.StatusBadGateway, "provider_redirect_blocked", "provider redirects are not allowed")
 		case errors.Is(err, context.DeadlineExceeded), errors.Is(requestContext.Err(), context.DeadlineExceeded):
+			termination = agentTermTimeout
 			writeError(w, http.StatusGatewayTimeout, "provider_timeout", "provider response timed out")
 		default:
+			termination = agentTermUnavailable
 			writeError(w, http.StatusBadGateway, "provider_unavailable", "provider is unavailable")
 		}
 		return
 	}
 	defer upstreamResponse.Body.Close()
+	upstreamResponse.Body = &agentIdleBody{ReadCloser: upstreamResponse.Body, idle: 60 * time.Second}
 
 	if upstreamResponse.StatusCode < http.StatusOK || upstreamResponse.StatusCode >= http.StatusMultipleChoices {
-		drainAgentResponse(upstreamResponse.Body, s.agentMaxResponseBytes())
+		// The error body may contain secrets. Closing the per-request client is
+		// sufficient; do not buffer or log the upstream payload.
+		if delay := safeAgentRetryAfter(upstreamResponse.Header.Get("Retry-After"), time.Now()); delay != "" {
+			w.Header().Set("Retry-After", delay)
+		}
 		writeAgentUpstreamError(w, upstreamResponse.StatusCode)
 		return
 	}
@@ -188,11 +200,16 @@ func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Reque
 	mediaType := normalizedAgentMediaType(upstreamResponse.Header.Get("Content-Type"))
 	switch mediaType {
 	case "text/event-stream":
-		s.streamAgentResponse(w, upstreamResponse)
+		termination, responseBytes = s.streamAgentResponse(w, upstreamResponse)
 	case "application/json":
-		s.writeAgentJSONResponse(w, upstreamResponse)
+		termination, responseBytes = s.writeAgentJSONResponse(w, upstreamResponse)
 	default:
 		writeError(w, http.StatusBadGateway, "provider_response_invalid", "provider returned an unsupported response type")
+	}
+	if r.Context().Err() != nil {
+		termination = agentTermCancelled
+	} else if requestContext.Err() != nil {
+		termination = agentTermTimeout
 	}
 }
 
@@ -352,14 +369,15 @@ func newPinnedAgentHTTPClient(target agentPinnedTarget, cfg Config) *http.Client
 		KeepAlive: 30 * time.Second,
 	}
 	transport := &http.Transport{
-		Proxy:               nil,
-		ForceAttemptHTTP2:   true,
-		DisableCompression:  true,
-		MaxIdleConns:        4,
-		MaxIdleConnsPerHost: maxConnections,
-		MaxConnsPerHost:     maxConnections,
-		IdleConnTimeout:     30 * time.Second,
-		TLSHandshakeTimeout: 10 * time.Second,
+		Proxy:                 nil,
+		ForceAttemptHTTP2:     true,
+		DisableCompression:    true,
+		MaxIdleConns:          4,
+		MaxIdleConnsPerHost:   maxConnections,
+		MaxConnsPerHost:       maxConnections,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 45 * time.Second,
 		TLSClientConfig: &tls.Config{
 			MinVersion: tls.VersionTLS12,
 			ServerName: target.Hostname,
@@ -423,36 +441,42 @@ func (s *Server) agentUpstreamTimeout() time.Duration {
 	return defaultAgentUpstreamTimeout
 }
 
-func (s *Server) writeAgentJSONResponse(w http.ResponseWriter, upstreamResponse *http.Response) {
+func (s *Server) writeAgentJSONResponse(w http.ResponseWriter, upstreamResponse *http.Response) (agentTermination, int64) {
 	maxBytes := s.agentMaxResponseBytes()
 	body, err := io.ReadAll(io.LimitReader(upstreamResponse.Body, maxBytes+1))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "provider_unavailable", "provider response could not be read")
-		return
+		return agentTermUnavailable, 0
 	}
 	if int64(len(body)) > maxBytes {
 		writeError(w, http.StatusBadGateway, "provider_response_too_large", "provider response exceeded the relay limit")
-		return
+		return agentTermSizeLimit, 0
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(upstreamResponse.StatusCode)
-	_, _ = w.Write(body)
+	written, writeErr := w.Write(body)
+	if writeErr != nil {
+		return agentTermCancelled, int64(written)
+	}
+	return agentTermCompleted, int64(written)
 }
 
-func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *http.Response) {
+func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *http.Response) (agentTermination, int64) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		writeError(w, http.StatusInternalServerError, "streaming_unavailable", "streaming is unavailable")
-		return
+		return agentTermUnavailable, 0
 	}
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
+	w.Header().Set("Trailer", "X-Fittin-Agent-Termination")
 	w.WriteHeader(upstreamResponse.StatusCode)
 	flusher.Flush()
 
 	remaining := s.agentMaxResponseBytes()
+	var total int64
 	buffer := make([]byte, 16<<10)
 	for remaining > 0 {
 		readSize := len(buffer)
@@ -463,15 +487,27 @@ func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *ht
 		if count > 0 {
 			written, writeErr := w.Write(buffer[:count])
 			remaining -= int64(written)
+			total += int64(written)
 			if writeErr != nil || written != count {
-				return
+				w.Header().Set("X-Fittin-Agent-Termination", string(agentTermCancelled))
+				return agentTermCancelled, total
 			}
 			flusher.Flush()
 		}
 		if readErr != nil {
-			return
+			reason := agentTermUnavailable
+			if errors.Is(readErr, io.EOF) {
+				reason = agentTermCompleted
+			}
+			if errors.Is(readErr, errAgentIdleTimeout) {
+				reason = agentTermIdleTimeout
+			}
+			w.Header().Set("X-Fittin-Agent-Termination", string(reason))
+			return reason, total
 		}
 	}
+	w.Header().Set("X-Fittin-Agent-Termination", string(agentTermSizeLimit))
+	return agentTermSizeLimit, total
 }
 
 func writeAgentUpstreamError(w http.ResponseWriter, status int) {

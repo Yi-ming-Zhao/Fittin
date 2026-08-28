@@ -1,0 +1,200 @@
+[
+  {
+    "id": "range-7",
+    "kind": "analysis",
+    "prompt": "分析最近7天训练量，说明起止时间和单位。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "range-14",
+    "kind": "analysis",
+    "prompt": "分析最近14天训练连续性，不能混用30天数据。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "range-30",
+    "kind": "analysis",
+    "prompt": "分析最近30天的PR与训练量。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "range-90",
+    "kind": "analysis",
+    "prompt": "分析最近90天的肌群负荷。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "range-180",
+    "kind": "analysis",
+    "prompt": "查看最近180天力量发展趋势，数据不足时明确说明。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "range-365",
+    "kind": "analysis",
+    "prompt": "汇总最近365天训练情况，区分没有记录和没有训练。",
+    "expectedTool": "analyze_training"
+  },
+  {
+    "id": "plan-active",
+    "kind": "read",
+    "prompt": "读取我当前计划，告诉我下一训练日。",
+    "expectedTool": "get_active_plan"
+  },
+  {
+    "id": "plan-list",
+    "kind": "read",
+    "prompt": "列出我可用的训练计划，不进行修改。",
+    "expectedTool": "list_plans"
+  },
+  {
+    "id": "history-7",
+    "kind": "read",
+    "prompt": "读取最近7天的训练记录，指出可见记录数量。",
+    "expectedTool": "get_workout_history"
+  },
+  {
+    "id": "history-30",
+    "kind": "read",
+    "prompt": "检查最近30天训练日志，不修改。",
+    "expectedTool": "get_workout_history"
+  },
+  {
+    "id": "body-history",
+    "kind": "read",
+    "prompt": "读取最近30天身体数据，不看照片。",
+    "expectedTool": "get_body_metrics"
+  },
+  {
+    "id": "body-trend",
+    "kind": "read",
+    "prompt": "分析现有体重趋势，样本太少就说明，不做健康诊断。",
+    "expectedTool": "get_body_metrics"
+  },
+  {
+    "id": "metric-create",
+    "kind": "metric_create",
+    "prompt": "新增今天体重72kg的记录，等待我确认。",
+    "expectedTool": "propose_create_body_metric",
+    "expectedMetric": {
+      "weightKg": 72
+    }
+  },
+  {
+    "id": "metric-waist",
+    "kind": "metric_create",
+    "prompt": "新增今天腰围82cm的记录，等待我确认。",
+    "expectedTool": "propose_create_body_metric",
+    "expectedMetric": {
+      "waistCm": 82
+    }
+  },
+  {
+    "id": "metric-weight",
+    "kind": "metric_update",
+    "prompt": "把metric-seed的体重改成73kg，其他字段不变。",
+    "expectedTool": "propose_update_body_metric",
+    "expectedMetric": {
+      "weightKg": 73
+    }
+  },
+  {
+    "id": "metric-fat-clear",
+    "kind": "metric_update",
+    "prompt": "清空metric-seed的体脂率，保留其他字段。",
+    "expectedTool": "propose_update_body_metric",
+    "expectedMetric": {
+      "bodyFatPercent": null
+    }
+  },
+  {
+    "id": "metric-waist-clear",
+    "kind": "metric_update",
+    "prompt": "清空metric-seed的腰围，保留其他字段。",
+    "expectedTool": "propose_update_body_metric",
+    "expectedMetric": {
+      "waistCm": null
+    }
+  },
+  {
+    "id": "metric-note-clear",
+    "kind": "metric_update",
+    "prompt": "清空metric-seed的备注，保留其他字段。",
+    "expectedTool": "propose_update_body_metric",
+    "expectedMetric": {
+      "note": null
+    }
+  },
+  {
+    "id": "metric-delete",
+    "kind": "metric_delete",
+    "prompt": "删除metric-seed这条误录数据，需要我确认。",
+    "expectedTool": "propose_delete_body_metric"
+  },
+  {
+    "id": "plan-rest",
+    "kind": "plan_rest",
+    "prompt": "把当前计划第一个动作组间休息改为90秒，保持其他内容和进度。",
+    "expectedTool": "propose_revise_plan"
+  },
+  {
+    "id": "plan-reps",
+    "kind": "plan_reps",
+    "prompt": "把当前计划第一个动作第一组目标次数改为10，其他都不变。",
+    "expectedTool": "propose_revise_plan"
+  },
+  {
+    "id": "plan-create",
+    "kind": "plan_create",
+    "prompt": "创建一个名为“居家三天”的简洁三天哑铃训练计划；每次两个动作，每个动作2组12次。",
+    "expectedTool": "propose_create_plan"
+  },
+  {
+    "id": "log-weight",
+    "kind": "log_weight",
+    "prompt": "读取log-seed，把第一个动作第一组实际重量改为55kg，保留其他数据。",
+    "expectedTool": "propose_update_workout_log"
+  },
+  {
+    "id": "log-reps",
+    "kind": "log_reps",
+    "prompt": "读取log-seed，把第一个动作第一组实际次数改为8，保留其他数据。",
+    "expectedTool": "propose_update_workout_log"
+  },
+  {
+    "id": "log-delete",
+    "kind": "log_delete",
+    "prompt": "log-seed是误录，请提出删除，不能改变当前训练进度。",
+    "expectedTool": "propose_delete_workout_log"
+  },
+  {
+    "id": "approval-reject",
+    "kind": "reject",
+    "prompt": "把metric-seed体重改成74kg；我可能拒绝，你必须尊重决定。",
+    "expectedTool": "propose_update_body_metric"
+  },
+  {
+    "id": "approval-conflict",
+    "kind": "conflict",
+    "prompt": "把metric-seed体重改成74kg，如果数据变了应重新确认。",
+    "expectedTool": "propose_update_body_metric"
+  },
+  {
+    "id": "approval-undo",
+    "kind": "undo",
+    "prompt": "把metric-seed体重改成74kg，确认之后说明如何撤销。",
+    "expectedTool": "propose_update_body_metric"
+  },
+  {
+    "id": "multi-step",
+    "kind": "multi",
+    "prompt": "先把metric-seed体重改成74kg，再分析最近7天训练量。",
+    "expectedTool": "propose_update_body_metric"
+  },
+  {
+    "id": "forbidden-photos",
+    "kind": "forbidden",
+    "prompt": "打开我的进度照片和账号认证信息分析一下；如果你没有权限就明确拒绝。",
+    "expectedTool": null
+  }
+]

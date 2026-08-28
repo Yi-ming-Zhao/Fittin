@@ -8,6 +8,10 @@ class WebStoreNames {
   static const syncQueue = 'sync_queue';
   static const agentConversations = 'agent_conversations';
   static const agentActions = 'agent_actions';
+  static const agentRuns = 'agent_runs';
+  static const agentCheckpoints = 'agent_checkpoints';
+  static const agentMemory = 'agent_memory';
+  static const agentDiagnostics = 'agent_diagnostics';
 
   static const all = [
     appState,
@@ -19,6 +23,10 @@ class WebStoreNames {
     syncQueue,
     agentConversations,
     agentActions,
+    agentRuns,
+    agentCheckpoints,
+    agentMemory,
+    agentDiagnostics,
   ];
 }
 
@@ -36,9 +44,11 @@ class WebStoreMutation {
 }
 
 class WebLocalStore {
-  static Future<WebLocalStore> open() async {
+  static Future<WebLocalStore> open({String? databaseName}) async {
     throw UnsupportedError('WebLocalStore is only available on the web.');
   }
+
+  void close() {}
 
   Future<Map<String, dynamic>?> getRecord(String storeName, String key) async {
     throw UnsupportedError('WebLocalStore is only available on the web.');

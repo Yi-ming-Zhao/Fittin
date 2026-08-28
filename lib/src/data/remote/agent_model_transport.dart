@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
@@ -34,11 +35,13 @@ class AgentTransportException implements Exception {
     this.message, {
     this.code = 'transport_error',
     this.statusCode,
+    this.retryAfter,
   });
 
   final String code;
   final String message;
   final int? statusCode;
+  final Duration? retryAfter;
 
   @override
   String toString() => message;
@@ -80,6 +83,8 @@ class NativeAgentModelTransport extends _HttpAgentModelTransport {
   NativeAgentModelTransport({
     super.client,
     super.timeout,
+    super.firstResponseTimeout,
+    super.idleTimeout,
     super.maxErrorBytes,
     super.maxResponseBytes,
   });
@@ -113,6 +118,8 @@ class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
     required this.accessTokenLoader,
     super.client,
     super.timeout,
+    super.firstResponseTimeout,
+    super.idleTimeout,
     super.maxErrorBytes,
     super.maxResponseBytes,
   });
@@ -173,13 +180,19 @@ Map<String, dynamic> _providerRequestBody(
   final deepSeek =
       host == 'api.deepseek.com' ||
       config.model.toLowerCase().contains('deepseek');
-  return request.toJson(includeReasoningContent: deepSeek);
+  final body = request.toJson(includeReasoningContent: deepSeek);
+  if (deepSeek && body.containsKey('max_completion_tokens')) {
+    body['max_tokens'] = body.remove('max_completion_tokens');
+  }
+  return body;
 }
 
 abstract class _HttpAgentModelTransport implements AgentModelTransport {
   _HttpAgentModelTransport({
     http.Client? client,
-    this.timeout = const Duration(seconds: 90),
+    this.timeout = const Duration(minutes: 5),
+    this.firstResponseTimeout = const Duration(seconds: 45),
+    this.idleTimeout = const Duration(seconds: 60),
     this.maxErrorBytes = 32 * 1024,
     this.maxResponseBytes = AgentRunLimits.maxProviderResponseBytes,
   }) : _client = client ?? http.Client(),
@@ -188,6 +201,8 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
   final http.Client _client;
   final bool _ownsClient;
   final Duration timeout;
+  final Duration firstResponseTimeout;
+  final Duration idleTimeout;
   final int maxErrorBytes;
   final int maxResponseBytes;
 
@@ -209,6 +224,62 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
     AgentCancellationToken? cancellationToken,
   }) async* {
     final token = cancellationToken ?? AgentCancellationToken();
+    final watch = Stopwatch()..start();
+    for (var attempt = 0; ; attempt++) {
+      var observable = false;
+      try {
+        await for (final event in _streamAttempt(
+          config: config,
+          apiKey: apiKey,
+          request: request,
+          cancellationToken: token,
+          remaining: timeout - watch.elapsed,
+        )) {
+          if (event is! AgentResponseMetadata) observable = true;
+          yield event;
+        }
+        return;
+      } on AgentTransportException catch (error) {
+        final status = error.statusCode;
+        final retryable =
+            !{
+              'provider_auth_failed',
+              'provider_rejected',
+              'provider_request_rejected',
+              'invalid_provider_url',
+              'relay_auth_required',
+            }.contains(error.code) &&
+            (status == 408 ||
+                status == 429 ||
+                (status != null && status >= 500 && status <= 599));
+        if (!request.allowRetries ||
+            observable ||
+            !retryable ||
+            attempt >= 2 ||
+            watch.elapsed >= timeout) {
+          rethrow;
+        }
+        final delay =
+            error.retryAfter ??
+            Duration(
+              milliseconds:
+                  500 * (1 << attempt) + DateTime.now().millisecond % 200,
+            );
+        if (delay >= timeout - watch.elapsed) rethrow;
+        await Future.any([Future<void>.delayed(delay), token.whenCancelled]);
+        token.throwIfCancelled();
+      }
+    }
+  }
+
+  Stream<AgentModelEvent> _streamAttempt({
+    required AgentProviderConfig config,
+    required String apiKey,
+    required AgentChatCompletionRequest request,
+    required AgentCancellationToken cancellationToken,
+    required Duration remaining,
+  }) async* {
+    final token = cancellationToken;
     token.throwIfCancelled();
     final trimmedKey = apiKey.trim();
     if (trimmedKey.isEmpty) {
@@ -221,7 +292,14 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
     final uri = endpointFor(config);
     final abort = Completer<void>();
     var timedOut = false;
-    final timeoutTimer = Timer(timeout, () {
+    var timeoutCode = 'request_timeout';
+    if (remaining <= Duration.zero) {
+      throw const AgentTransportException(
+        'The model request timed out.',
+        code: 'request_timeout',
+      );
+    }
+    final timeoutTimer = Timer(remaining, () {
       timedOut = true;
       if (!abort.isCompleted) abort.complete();
     });
@@ -237,23 +315,67 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         uri,
         abortTrigger: abort.future,
       );
-      outgoing.headers.addAll(await headersFor(trimmedKey).timeout(timeout));
+      outgoing.headers.addAll(
+        await Future.any([
+          headersFor(trimmedKey).timeout(
+            remaining < firstResponseTimeout ? remaining : firstResponseTimeout,
+          ),
+          token.whenCancelled.then<Map<String, String>>(
+            (_) => throw const AgentRequestCancelledException(),
+          ),
+        ]),
+      );
+      token.throwIfCancelled();
       outgoing.body = jsonEncode(
         bodyFor(config: config, apiKey: trimmedKey, request: request),
       );
+      if (utf8.encode(outgoing.body).length > 512 * 1024) {
+        throw const AgentTransportException(
+          'The context is too large. Read smaller pages or start a focused task.',
+          code: 'request_too_large',
+        );
+      }
 
-      final response = await _client.send(outgoing).timeout(timeout);
+      final response = await _client
+          .send(outgoing)
+          .timeout(
+            firstResponseTimeout,
+            onTimeout: () {
+              timeoutCode = 'first_byte_timeout';
+              timedOut = true;
+              if (!abort.isCompleted) abort.complete();
+              throw TimeoutException('First response timed out');
+            },
+          );
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        final bytes = await _readBounded(response.stream, maxErrorBytes);
+        final bytes = await _readBounded(
+          response.stream,
+          maxErrorBytes,
+        ).timeout(idleTimeout);
         throw _errorFromResponse(
           statusCode: response.statusCode,
           bytes: bytes,
           secrets: [trimmedKey],
+          retryAfter: _retryAfter(response.headers['retry-after']),
         );
       }
 
+      yield AgentResponseMetadata(
+        streaming:
+            response.headers['content-type']?.contains('text/event-stream') ==
+            true,
+      );
+      final body = response.stream.timeout(
+        idleTimeout,
+        onTimeout: (sink) {
+          timeoutCode = 'stream_idle_timeout';
+          timedOut = true;
+          sink.addError(TimeoutException('Stream idle timeout'));
+          if (!abort.isCompleted) abort.complete();
+        },
+      );
       await for (final event in parseAgentChatCompletionResponse(
-        _limitResponseBytes(response.stream, maxResponseBytes),
+        _limitResponseBytes(body, maxResponseBytes),
         contentType: response.headers['content-type'],
       )) {
         token.throwIfCancelled();
@@ -270,16 +392,16 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
       rethrow;
     } on http.RequestAbortedException {
       if (timedOut) {
-        throw const AgentTransportException(
+        throw AgentTransportException(
           'The model request timed out.',
-          code: 'request_timeout',
+          code: timeoutCode,
         );
       }
       throw const AgentRequestCancelledException();
     } on TimeoutException {
-      throw const AgentTransportException(
+      throw AgentTransportException(
         'The model request timed out.',
-        code: 'request_timeout',
+        code: timeoutCode,
       );
     } on http.ClientException {
       if (token.isCancelled) throw const AgentRequestCancelledException();
@@ -302,6 +424,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         _safeMessage(error.message, secrets: [trimmedKey]),
         code: _safeCode(error.code),
         statusCode: error.statusCode,
+        retryAfter: error.retryAfter,
       );
     } catch (error) {
       if (token.isCancelled) throw const AgentRequestCancelledException();
@@ -404,6 +527,7 @@ AgentTransportException _errorFromResponse({
   required int statusCode,
   required List<int> bytes,
   required Iterable<String> secrets,
+  Duration? retryAfter,
 }) {
   String code = switch (statusCode) {
     401 || 403 => 'provider_auth_failed',
@@ -418,10 +542,11 @@ AgentTransportException _errorFromResponse({
       final error = decoded['error'];
       final source = error is Map ? error : decoded;
       final candidateCode = source['code'];
-      final candidateMessage = source['message'] ?? source['error'];
-      if (candidateCode is String && candidateCode.isNotEmpty) {
+      if (candidateCode is String &&
+          _safeCode(candidateCode) != 'provider_error') {
         code = candidateCode;
       }
+      final candidateMessage = source['message'] ?? source['error'];
       if (candidateMessage is String && candidateMessage.isNotEmpty) {
         message = candidateMessage;
       }
@@ -433,14 +558,60 @@ AgentTransportException _errorFromResponse({
     _safeMessage(message, secrets: secrets),
     code: _safeCode(code),
     statusCode: statusCode,
+    retryAfter: retryAfter,
   );
 }
 
-String _safeCode(String value) {
-  final normalized = value.trim();
-  if (RegExp(r'^[a-zA-Z0-9_.-]{1,64}$').hasMatch(normalized)) {
-    return normalized;
+Duration? _retryAfter(String? value) {
+  final seconds = int.tryParse(value ?? '');
+  if (seconds != null) return Duration(seconds: seconds.clamp(0, 300));
+  if (value != null) {
+    try {
+      final date = DateFormat(
+        "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+        'en_US',
+      ).parseStrict(value, true);
+      return Duration(
+        seconds: date
+            .difference(DateTime.now().toUtc())
+            .inSeconds
+            .clamp(0, 300),
+      );
+    } catch (_) {
+      /* Invalid Retry-After uses bounded backoff. */
+    }
   }
+  return null;
+}
+
+String _safeCode(String value) {
+  // Never persist arbitrary provider strings in diagnostic metadata. A code
+  // supplied by a gateway can contain a credential just like its message.
+  const codes = {
+    'cancelled',
+    'api_key_required',
+    'relay_auth_required',
+    'relay_unavailable',
+    'request_timeout',
+    'first_byte_timeout',
+    'stream_idle_timeout',
+    'request_too_large',
+    'provider_response_too_large',
+    'invalid_response',
+    'provider_auth_failed',
+    'provider_rate_limited',
+    'provider_unavailable',
+    'provider_rejected',
+    'provider_request_rejected',
+    'invalid_provider_url',
+    'network_unavailable',
+    'transport_error',
+    'invalid_json',
+    'invalid_utf8',
+    'invalid_tool_call',
+    'incomplete_response',
+  };
+  if (codes.contains(value)) return value;
   return 'provider_error';
 }
 

@@ -166,7 +166,8 @@ class DatabaseRepository {
     final instances = await _database.instanceCollections.where().findAll();
     final counts = <String, int>{};
     for (final instance in instances) {
-      if (!_ownerMatches(instance.ownerUserId, ownerUserId)) {
+      if (instance.deletedAt != null ||
+          !_ownerMatches(instance.ownerUserId, ownerUserId)) {
         continue;
       }
       counts.update(
@@ -210,6 +211,19 @@ class DatabaseRepository {
     if (await _instanceCountForTemplate(templateId, ownerUserId: ownerUserId) >
         0) {
       throw StateError('A plan with training history cannot be deleted.');
+    }
+    final instances = await _database.instanceCollections
+        .filter()
+        .templateIdEqualTo(templateId)
+        .ownerUserIdEqualTo(ownerUserId)
+        .findAll();
+    for (final instance in instances) {
+      if (await hasWorkoutHistoryForInstance(
+        instance.instanceId,
+        ownerUserId: ownerUserId,
+      )) {
+        throw StateError('A plan with training history cannot be deleted.');
+      }
     }
     existing
       ..deletedAt = DateTime.now()
@@ -551,7 +565,9 @@ class DatabaseRepository {
         .findAll();
     final filtered = collections
         .where(
-          (collection) => _ownerMatches(collection.ownerUserId, ownerUserId),
+          (collection) =>
+              collection.deletedAt == null &&
+              _ownerMatches(collection.ownerUserId, ownerUserId),
         )
         .toList();
     if (filtered.isEmpty) {
@@ -775,6 +791,25 @@ class DatabaseRepository {
 
   // ---------- Workflow Logs ---------- //
 
+  /// Includes tombstones so undoing a log deletion cannot restore an orphan.
+  Future<bool> hasWorkoutHistoryForInstance(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    if (_isar == null) {
+      return (await fetchWorkoutLogs(
+        instanceId,
+        ownerUserId: ownerUserId,
+      )).isNotEmpty;
+    }
+    return await _database.workoutLogCollections
+            .filter()
+            .instanceIdEqualTo(instanceId)
+            .ownerUserIdEqualTo(ownerUserId)
+            .findFirst() !=
+        null;
+  }
+
   Future<void> logWorkout(
     WorkoutLog logRecord, {
     String? ownerUserId,
@@ -933,7 +968,11 @@ class DatabaseRepository {
         .templateIdEqualTo(templateId)
         .findAll();
     return instances
-        .where((instance) => _ownerMatches(instance.ownerUserId, ownerUserId))
+        .where(
+          (instance) =>
+              instance.deletedAt == null &&
+              _ownerMatches(instance.ownerUserId, ownerUserId),
+        )
         .length;
   }
 

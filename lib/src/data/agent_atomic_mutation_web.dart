@@ -39,10 +39,12 @@ class AgentAtomicMutationWriter {
         metric?.timestamp ?? parseStoredDateTime(existing?['timestamp']) ?? now,
       ),
       'ownerUserId': resolvedOwner,
-      'weightKg': metric?.weightKg ?? existing?['weightKg'],
-      'bodyFatPercent': metric?.bodyFatPercent ?? existing?['bodyFatPercent'],
-      'waistCm': metric?.waistCm ?? existing?['waistCm'],
-      'note': metric?.note ?? existing?['note'],
+      'weightKg': delete ? (existing?['weightKg']) : metric?.weightKg,
+      'bodyFatPercent': delete
+          ? (existing?['bodyFatPercent'])
+          : metric?.bodyFatPercent,
+      'waistCm': delete ? (existing?['waistCm']) : metric?.waistCm,
+      'note': delete ? (existing?['note']) : metric?.note,
       'deletedAt': delete ? serializeStoredDateTime(now) : null,
       'lastSyncedAt': existing?['lastSyncedAt'],
       'version': (existing?['version'] as int? ?? 0) + 1,
