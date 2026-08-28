@@ -11,6 +11,18 @@ Confirmation and undo SHALL read preconditions, validate owner and active draft 
 - **WHEN** a newly populated optional metric is undone
 - **THEN** its original null value is restored exactly
 
+#### Scenario: Undo a plan revision with new history or a draft
+- **WHEN** the revised plan has acquired a training draft or training history, including soft-deleted logs
+- **THEN** undo is refused without changing the active instance, plan, logs, draft or applied audit status
+
+#### Scenario: Safely restore a revised plan
+- **WHEN** a revision with no subsequent data changes is undone
+- **THEN** the original plan instance and stable progress are restored, the unused copy is soft-deleted, and closing and reopening native storage preserves the result
+
+#### Scenario: Mutation refresh does not start unopened pages
+- **WHEN** a mutation commits or is undone
+- **THEN** subscribed pages receive a refresh while unopened page providers do not start background database readers or seed writers
+
 ### Requirement: Complete semantic mutation previews
 Every proposal SHALL contain all changed business fields, including dates and individual sets, SHALL reject no-ops, and SHALL protect active training drafts from plan migration.
 

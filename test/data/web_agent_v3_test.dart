@@ -18,9 +18,24 @@ import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/data/web_database_repository.dart';
 import 'package:fittin_v2/src/data/web_progress_repository.dart';
+import '../support/agent_plan_undo_checks.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final scenario in agentPlanUndoScenarios) {
+    test('Web plan undo: $scenario', () async {
+      final store = await WebLocalStore.open(
+        databaseName:
+            'fittin_plan_undo_${scenario}_${DateTime.now().microsecondsSinceEpoch}',
+      );
+      addTearDown(store.close);
+      await checkAgentPlanUndoScenario(
+        database: WebDatabaseRepository(store),
+        actions: WebAgentLocalRepository(store),
+        scenario: scenario,
+      );
+    });
+  }
   test(
     'separate Web connections reject stale previews and undo without partial writes',
     () async {

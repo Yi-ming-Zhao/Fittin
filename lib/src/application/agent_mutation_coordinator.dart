@@ -4,13 +4,9 @@ import '../data/agent_entity_version.dart';
 import 'agent_owner_scope.dart';
 
 import 'package:fittin_v2/src/application/active_session_provider.dart';
-import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/body_metrics_provider.dart';
-import 'package:fittin_v2/src/application/plan_library_provider.dart';
-import 'package:fittin_v2/src/application/progress_analytics_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
-import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/agent_atomic_mutation.dart';
 import 'package:fittin_v2/src/data/agent_business_transaction.dart';
@@ -245,6 +241,34 @@ class AgentMutationCoordinator {
           'The target changed after this action. Undo was safely refused.',
         ),
       );
+    }
+
+    if (action.targetType == 'plan_revision') {
+      final migrated = _map(jsonDecode(action.afterJson))['migratedInstance'];
+      if (migrated != null) {
+        final instanceId = _map(migrated)['instanceId'] as String;
+        final database = _ref.read(databaseRepositoryProvider);
+        final hasHistory = await database.hasWorkoutHistoryForInstance(
+          instanceId,
+          ownerUserId: ownerUserId,
+        );
+        final draft = await database.fetchActiveSessionDraft(
+          instanceId,
+          ownerUserId: ownerUserId,
+        );
+        final hasLiveWorkout =
+            _ref.exists(activeSessionProvider) &&
+            _ref.read(activeSessionProvider).activeWorkout?.instanceId ==
+                instanceId;
+        if (hasHistory || draft != null || hasLiveWorkout) {
+          return (
+            action: null,
+            conflict: const AgentMutationConflict(
+              'This plan now has a workout or training history. Undo was safely refused.',
+            ),
+          );
+        }
+      }
     }
 
     final beforePayload = jsonDecode(action.beforeJson);
@@ -732,14 +756,14 @@ class AgentMutationCoordinator {
   }
 
   Future<void> _refresh() async {
+    // Cached plan/analytics providers already watch this revision. Calling
+    // Ref.invalidate on unopened providers also initializes them in Riverpod's
+    // debug dependency checks, starting unowned seed/read jobs that can outlive
+    // the container and race native database shutdown.
     _ref.read(syncRefreshProvider.notifier).state++;
-    _ref.invalidate(planLibraryItemsProvider);
-    _ref.invalidate(templateLibraryProvider);
-    _ref.invalidate(todayWorkoutSummaryProvider);
-    _ref.invalidate(activeTemplateProvider);
-    _ref.invalidate(activeSessionProvider);
-    _ref.invalidate(progressAnalyticsOverviewProvider);
-    _ref.invalidate(advancedAnalyticsDataProvider);
+    if (_ref.exists(activeSessionProvider)) {
+      _ref.invalidate(activeSessionProvider);
+    }
     // Do not start a new background database reader just to invalidate a page
     // that has never been opened; await any reader that is already visible.
     if (_ref.exists(bodyMetricsProvider)) {

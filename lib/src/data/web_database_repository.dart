@@ -214,6 +214,17 @@ class WebDatabaseRepository extends DatabaseRepository {
     )) {
       throw StateError('A plan with training history cannot be deleted.');
     }
+    for (final instance in instances.where(
+      (row) =>
+          row['templateId'] == templateId && row['ownerUserId'] == ownerUserId,
+    )) {
+      if (await hasWorkoutHistoryForInstance(
+        instance['instanceId'] as String,
+        ownerUserId: ownerUserId,
+      )) {
+        throw StateError('A plan with training history cannot be deleted.');
+      }
+    }
     existing['deletedAt'] = serializeStoredDateTime(DateTime.now());
     existing['lastModifiedAt'] = serializeStoredDateTime(DateTime.now());
     existing['version'] = (existing['version'] as int? ?? 0) + 1;
@@ -789,6 +800,19 @@ class WebDatabaseRepository extends DatabaseRepository {
       ownerUserId: existing['ownerUserId'] as String?,
       operationType: SyncOperationTypes.delete,
       syncStatus: existing['syncStatusKey'] as String,
+    );
+  }
+
+  @override
+  Future<bool> hasWorkoutHistoryForInstance(
+    String instanceId, {
+    String? ownerUserId,
+  }) async {
+    final docs = await store.getAllRecords(WebStoreNames.workoutLogs);
+    return docs.any(
+      (doc) =>
+          doc['instanceId'] == instanceId &&
+          _ownerMatches(doc['ownerUserId'] as String?, ownerUserId),
     );
   }
 

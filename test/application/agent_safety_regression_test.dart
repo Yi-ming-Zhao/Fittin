@@ -17,17 +17,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/isar_test_helper.dart';
+import '../support/agent_plan_undo_checks.dart';
 import '../support/in_memory_database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/shenshi_five_day_seed.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final scenario in agentPlanUndoScenarios) {
+    test('native plan undo: $scenario', () async {
+      final opened = await openTestIsar('agent_plan_undo_$scenario');
+      try {
+        await checkAgentPlanUndoScenario(
+          database: DatabaseRepository(opened.isar),
+          actions: IsarAgentLocalRepository(opened.isar),
+          scenario: scenario,
+          sourcePlan: await ShenshiFiveDaySeed.loadTemplate(),
+        );
+      } finally {
+        await opened.isar.close();
+        final reopened = await openTestIsar(
+          'agent_plan_undo_$scenario',
+          existingDirectory: opened.directory,
+        );
+        expect(
+          await DatabaseRepository(reopened.isar).fetchActiveInstance(),
+          isNotNull,
+        );
+        await reopened.isar.close();
+        await opened.directory.delete(recursive: true);
+      }
+    });
+  }
   test(
     'plan undo also rejects ABA changes to the migrated training instance',
     () async {
       final opened = await openTestIsar('agent_plan_aba');
       addTearDown(() async {
-        await opened.isar.close(deleteFromDisk: true);
+        await opened.isar.close();
         await opened.directory.delete(recursive: true);
       });
       final database = DatabaseRepository(opened.isar);
@@ -144,7 +170,7 @@ void main() {
   test('native versions reject ABA changes in confirmation and undo', () async {
     final opened = await openTestIsar('agent_aba');
     addTearDown(() async {
-      await opened.isar.close(deleteFromDisk: true);
+      await opened.isar.close();
       await opened.directory.delete(recursive: true);
     });
     final progress = ProgressRepository(opened.isar);
@@ -198,7 +224,7 @@ void main() {
     () async {
       final opened = await openTestIsar('nullable_agent');
       addTearDown(() async {
-        await opened.isar.close(deleteFromDisk: true);
+        await opened.isar.close();
         await opened.directory.delete(recursive: true);
       });
       final progress = ProgressRepository(opened.isar);
