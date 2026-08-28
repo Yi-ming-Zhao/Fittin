@@ -27,9 +27,6 @@ void main() {
     () async {
       final opened = await openTestIsar('agent_plan_aba');
       addTearDown(() async {
-        // Drain Isar's worker queue after a rolled-back write transaction before
-        // closing the native test handle (the app keeps its database open).
-        await opened.isar.txn(() async {});
         await opened.isar.close(deleteFromDisk: true);
         await opened.directory.delete(recursive: true);
       });
@@ -71,14 +68,23 @@ void main() {
       final action = await coordinator.confirm(proposal.proposal!);
       final active = (await database.fetchActiveInstance())!;
       await database.saveInstance(active);
-      await expectLater(
-        coordinator.undo(action.id),
-        throwsA(isA<AgentMutationConflict>()),
-      );
+      for (var attempt = 0; attempt < 20; attempt++) {
+        await expectLater(
+          coordinator.undo(action.id),
+          throwsA(isA<AgentMutationConflict>()),
+        );
+      }
       expect(
         (await database.fetchActiveInstance())!.instanceId,
         active.instanceId,
       );
+      final unchanged = (await database.fetchActiveInstance())!;
+      expect(unchanged.version, active.version + 1);
+      expect(unchanged.states, active.states);
+      expect(unchanged.currentWorkoutIndex, active.currentWorkoutIndex);
+      final actions = await c.read(agentLocalRepositoryProvider).fetchActions();
+      expect(actions, hasLength(1));
+      expect(actions.single.status, AgentActionStatus.applied);
     },
   );
 

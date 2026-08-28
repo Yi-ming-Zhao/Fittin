@@ -68,7 +68,7 @@ class AgentMutationCoordinator {
   Future<AgentActionRecord> undo(String actionId) async {
     final scope = _ref.read(agentOwnerScopeProvider);
     final store = _ref.read(agentLocalRepositoryProvider);
-    AgentActionRecord? result;
+    ({AgentActionRecord? action, AgentMutationConflict? conflict})? result;
     await _serialize(() async {
       result = await AgentBusinessTransaction(store).run(() async {
         _assertScope(scope);
@@ -77,8 +77,9 @@ class AgentMutationCoordinator {
         return action;
       });
     });
+    if (result!.conflict case final conflict?) throw conflict;
     await _refresh();
-    return result!;
+    return result!.action!;
   }
 
   void _assertScope(AgentOwnerScope scope, [AgentMutationProposal? proposal]) {
@@ -206,7 +207,8 @@ class AgentMutationCoordinator {
     return action;
   }
 
-  Future<AgentActionRecord> _undoUnlocked(String actionId) async {
+  Future<({AgentActionRecord? action, AgentMutationConflict? conflict})>
+  _undoUnlocked(String actionId) async {
     final ownerUserId = _ref.read(currentUserIdProvider);
     final actionStore = _ref.read(agentLocalRepositoryProvider);
     final action = await actionStore.fetchAction(
@@ -216,9 +218,14 @@ class AgentMutationCoordinator {
     if (action == null) {
       throw StateError('Agent action not found.');
     }
-    if (action.status == AgentActionStatus.undone) return action;
+    if (action.status == AgentActionStatus.undone) {
+      return (action: action, conflict: null);
+    }
     if (action.status != AgentActionStatus.applied) {
-      throw const AgentMutationConflict('This action cannot be undone.');
+      return (
+        action: null,
+        conflict: const AgentMutationConflict('This action cannot be undone.'),
+      );
     }
     final current = await _actionCurrentSnapshot(action);
     final version = await agentEntityVersion(
@@ -229,8 +236,14 @@ class AgentMutationCoordinator {
     );
     if (!agentDigestMatches(current, action.afterDigest) ||
         (action.afterVersion != null && version != action.afterVersion)) {
-      throw const AgentMutationConflict(
-        'The target changed after this action. Undo was safely refused.',
+      // This is an expected, read-only rejection: release the transaction
+      // normally and report the conflict to the caller outside its lifetime.
+      // Actual mutation failures still throw and roll back all writes.
+      return (
+        action: null,
+        conflict: const AgentMutationConflict(
+          'The target changed after this action. Undo was safely refused.',
+        ),
       );
     }
 
@@ -251,13 +264,13 @@ class AgentMutationCoordinator {
         action: undone,
         delete: beforePayload == null,
       );
-      return undone;
+      return (action: undone, conflict: null);
     }
     await AgentBusinessTransaction(actionStore).run(() async {
       await _revert(action);
       await actionStore.saveAction(undone);
     });
-    return undone;
+    return (action: undone, conflict: null);
   }
 
   Future<_AppliedMutation> _apply(
