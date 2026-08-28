@@ -352,7 +352,9 @@ class AgentMutationCoordinator {
     final sourceId = args['templateId'] as String;
     final draft = PlanTemplate.fromJson(_map(args['plan']));
     final oldActive = await instanceRepository.fetchActiveInstance();
-    final oldPlan = PlanTemplate.fromJson(_map(before));
+    // Freezed's toJson is shallow in memory (phases remain Phase objects).
+    // Normalize the snapshot exactly as storage does before decoding it.
+    final oldPlan = PlanTemplate.fromJson(_decodeMap(jsonEncode(before)));
     StoredTemplateRecord? saved;
     StoredTrainingInstance? migrated;
     try {

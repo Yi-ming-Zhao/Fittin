@@ -177,7 +177,10 @@ Stream<AgentModelEvent> parseAgentChatCompletionResponse(
       }
     }
     if (!emittedCompletion && !emittedFailure) {
-      yield const AgentModelCompleted();
+      throw const AgentProtocolException(
+        'The model response was interrupted. Retry to continue.',
+        code: 'incomplete_response',
+      );
     }
     return;
   }

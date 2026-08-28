@@ -5,6 +5,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/agent_mutation_coordinator.dart';
 import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/application/agent_tools.dart';
+import 'package:fittin_v2/src/application/agent_run_protocol.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/remote/agent_model_transport.dart';
@@ -197,7 +198,7 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
           clearError: true,
         );
 
-        final fragments = <int, _ToolCallBuilder>{};
+        final turn = AgentTurnAccumulator();
         await for (final event
             in _ref
                 .read(agentModelTransportProvider)
@@ -212,6 +213,7 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
                   ),
                   cancellationToken: token,
                 )) {
+          turn.add(event);
           if (event is AgentTextDelta) {
             assistant = assistant.copyWith(
               content: redactAgentSecrets(
@@ -233,21 +235,22 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
                 secrets: [apiKey],
               ),
             );
-          } else if (event is AgentToolCallDelta) {
-            fragments
-                .putIfAbsent(event.index, _ToolCallBuilder.new)
-                .append(event);
           } else if (event is AgentModelFailure) {
             throw AgentTransportException(event.message, code: event.code);
           }
         }
         token.throwIfCancelled();
 
-        final completedCalls = fragments.entries
-            .toList()
-            .sortedByKey()
-            .map((entry) => entry.value.build(entry.key, secrets: [apiKey]))
-            .toList();
+        final completedCalls = turn.finish(messageId: assistantId, key: apiKey);
+        if (completedCalls.isEmpty &&
+            (turn.truncated || assistant.content.trim().isEmpty)) {
+          throw AgentProtocolException(
+            turn.truncated
+                ? 'The response reached the output limit. Try a smaller request.'
+                : 'The provider returned no visible response. Please retry.',
+            code: turn.truncated ? 'output_limit' : 'empty_response',
+          );
+        }
         assistant = AgentMessage(
           id: assistant.id,
           role: assistant.role,
@@ -288,17 +291,18 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
             toolCalls: toolCalls,
             activeToolName: call.name,
           );
-          final arguments = _decodeArguments(call.argumentsJson);
-          final result = await _ref
-              .read(agentToolRegistryProvider)
-              .execute(call.name, arguments);
+          final result = await executeAgentToolCall(
+            call,
+            _ref.read(agentToolRegistryProvider),
+            truncated: turn.truncated,
+          );
           token.throwIfCancelled();
           conversation = _append(
             conversation,
             AgentMessage(
               id: const Uuid().v4(),
               role: AgentMessageRole.tool,
-              content: result.encoded,
+              content: redactAgentSecrets(result.encoded, secrets: [apiKey]),
               toolCallId: call.id,
               createdAt: DateTime.now(),
             ),
@@ -310,6 +314,13 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
           }
           final proposal = result.proposal;
           if (proposal != null) {
+            conversation = conversation.copyWith(
+              messages: completeAgentToolHistory(
+                conversation.messages,
+                skippedReason:
+                    'Not executed: another proposal requires user approval. Reissue only after the user decides.',
+              ),
+            );
             await _persistConversation(conversation);
             _setRun(
               phase: AgentRunPhase.awaitingApproval,
@@ -331,6 +342,9 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
             : 'The Agent reached the model-turn safety limit.',
       );
     } on AgentRequestCancelledException {
+      conversation = conversation.copyWith(
+        messages: completeAgentToolHistory(conversation.messages),
+      );
       _setRun(
         phase: AgentRunPhase.cancelled,
         conversation: conversation,
@@ -340,6 +354,9 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       );
       await _persistConversation(conversation);
     } catch (error) {
+      conversation = conversation.copyWith(
+        messages: completeAgentToolHistory(conversation.messages),
+      );
       final message = redactAgentSecrets(
         _safeRunError(error),
         secrets: [apiKey],
@@ -516,7 +533,10 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     AgentConversation conversation,
   ) => [
     const AgentChatMessagePayload(role: 'system', content: _systemPrompt),
-    for (final message in conversation.messages)
+    for (final message in completeAgentToolHistory(
+      conversation.messages,
+      keepPartialText: false,
+    ))
       if (!message.isPartial)
         AgentChatMessagePayload(
           role: message.role.name,
@@ -691,12 +711,6 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     );
   }
 
-  static Map<String, dynamic> _decodeArguments(String source) {
-    final decoded = jsonDecode(source.isEmpty ? '{}' : source);
-    if (decoded is! Map) throw const FormatException('Invalid tool arguments.');
-    return decoded.cast<String, dynamic>();
-  }
-
   List<AgentStructuredInsight> _analyticsInsights(
     Map<String, dynamic> payload,
   ) => [
@@ -740,6 +754,7 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
   String _safeRunError(Object error) {
     final source = switch (error) {
       AgentTransportException(:final message) => message,
+      AgentProtocolException(:final message) => message,
       AgentMutationConflict(:final message) => message,
       FormatException(:final message) => message,
       StateError(:final message) => message,
@@ -752,6 +767,16 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
   }
 
   static String _localizeOwnedError(String source) => switch (source) {
+    'The model response was interrupted. Retry to continue.' =>
+      '模型响应中断，请重试。已完成的本机操作不会重复执行。',
+    'The response reached the output limit. Try a smaller request.' =>
+      '模型输出达到上限，请将请求拆小后重试。',
+    'The provider returned no visible response. Please retry.' =>
+      '模型没有返回正文，请重试。',
+    'The provider stopped the response without completing it.' =>
+      '模型服务提前结束了响应，请调整请求后重试。',
+    'The model request timed out.' => '模型响应超时，请重试或将计划修改拆小。',
+    'The model provider is unreachable.' => '无法连接模型服务，请检查网络后重试。',
     'This proposal expired. Ask the Agent to generate it again.' =>
       '这个修改预览已过期，请让 Agent 重新生成。',
     'The target changed on this or another device. Generate a fresh proposal.' =>
@@ -768,34 +793,6 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
   };
 }
 
-class _ToolCallBuilder {
-  String? id;
-  var name = '';
-  var arguments = '';
-
-  void append(AgentToolCallDelta delta) {
-    id ??= delta.id;
-    if (delta.name != null) name += delta.name!;
-    arguments += delta.argumentsDelta;
-  }
-
-  AgentToolCall build(int index, {Iterable<String> secrets = const []}) {
-    if (name.isEmpty) throw const FormatException('Tool name is missing.');
-    return AgentToolCall(
-      id: id ?? 'tool-call-$index-${const Uuid().v4()}',
-      name: name,
-      argumentsJson: arguments.isEmpty
-          ? '{}'
-          : redactAgentSecrets(arguments, secrets: secrets),
-    );
-  }
-}
-
-extension on List<MapEntry<int, _ToolCallBuilder>> {
-  List<MapEntry<int, _ToolCallBuilder>> sortedByKey() =>
-      this..sort((a, b) => a.key.compareTo(b.key));
-}
-
 extension<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
@@ -809,4 +806,13 @@ Every write must use a propose_* tool and must stop for explicit user approval.
 Never claim a proposal has been applied. Do not request or expose API keys,
 authentication, account settings, app settings, progress photos or photo
 metadata. Keep answers useful, concise and in the user's language.
+Use Markdown for readable headings, lists and tables. Do not output remote images.
+For plan changes first read get_active_plan or get_plan. These return paged
+workout details with absolute JSON-pointer paths and a full-plan digest. Read
+additional pages only when needed. Prefer propose_revise_plan with expectedDigest
+and small edits (op/path/value), never rewrite the entire plan for a small change.
+Keep stable IDs and every unrelated field. Preserve localized names when renaming.
+Tool errors are recoverable: inspect the error, correct the arguments, and retry
+within this run. Do not repeat the same failed call. Never treat pending approval
+or not_executed as a completed write. Call only one proposal tool per turn.
 ''';

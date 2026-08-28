@@ -4,6 +4,29 @@ import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('SSE EOF without completion is an interruption, not success', () async {
+    final stream = parseAgentChatCompletionResponse(
+      Stream.value(
+        utf8.encode('data: {"choices":[{"delta":{"content":"partial"}}]}\n\n'),
+      ),
+      contentType: 'text/event-stream',
+    );
+    await expectLater(
+      stream,
+      emitsInOrder([
+        isA<AgentTextDelta>(),
+        emitsError(
+          isA<AgentProtocolException>().having(
+            (e) => e.code,
+            'code',
+            'incomplete_response',
+          ),
+        ),
+        emitsDone,
+      ]),
+    );
+  });
+
   test('encodes the common Chat Completions tool contract', () {
     final request = AgentChatCompletionRequest(
       model: 'gpt-compatible',
@@ -165,12 +188,13 @@ void main() {
   test(
     'allows many bounded SSE events delivered in one network chunk',
     () async {
-      final body = List.generate(
+      final chunks = List.generate(
         20,
         (index) =>
             'data: {"choices":[{"delta":{"content":"$index"},'
             '"finish_reason":null}]}\n\n',
-      ).join();
+      )..add('data: [DONE]\n\n');
+      final body = chunks.join();
 
       final events = await parseAgentChatCompletionResponse(
         Stream.value(utf8.encode(body)),

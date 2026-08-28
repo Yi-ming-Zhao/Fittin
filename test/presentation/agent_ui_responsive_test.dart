@@ -74,10 +74,12 @@ void main() {
           await tester.scrollUntilVisible(
             find.byKey(const ValueKey('agent-confirm-proposal')),
             360,
-            scrollable: find.descendant(
-              of: find.byKey(const ValueKey('agent-conversation-list')),
-              matching: find.byType(Scrollable),
-            ),
+            scrollable: find
+                .descendant(
+                  of: find.byKey(const ValueKey('agent-conversation-list')),
+                  matching: find.byType(Scrollable),
+                )
+                .first,
             maxScrolls: 20,
           );
           await tester.pump();

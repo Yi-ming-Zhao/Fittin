@@ -11,6 +11,7 @@ void main() {
     expect(AgentToolRegistry.exposedReadToolsForTesting, {
       'list_plans',
       'get_active_plan',
+      'get_plan',
       'get_workout_history',
       'analyze_training',
       'get_body_metrics',
