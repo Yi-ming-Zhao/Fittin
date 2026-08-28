@@ -226,6 +226,13 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
               modelTurns: modelTurns,
               toolCalls: toolCalls,
             );
+          } else if (event is AgentReasoningDelta) {
+            assistant = assistant.copyWith(
+              reasoningContent: redactAgentSecrets(
+                '${assistant.reasoningContent ?? ''}${event.text}',
+                secrets: [apiKey],
+              ),
+            );
           } else if (event is AgentToolCallDelta) {
             fragments
                 .putIfAbsent(event.index, _ToolCallBuilder.new)
@@ -246,6 +253,7 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
           role: assistant.role,
           createdAt: assistant.createdAt,
           content: assistant.content,
+          reasoningContent: assistant.reasoningContent,
           toolCalls: completedCalls,
         );
         conversation = _replaceMessage(conversation, assistant);
@@ -513,6 +521,7 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
         AgentChatMessagePayload(
           role: message.role.name,
           content: message.content.isEmpty ? null : message.content,
+          reasoningContent: message.reasoningContent,
           toolCallId: message.toolCallId,
           toolCalls: [
             for (final call in message.toolCalls)

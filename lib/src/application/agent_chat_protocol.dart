@@ -9,6 +9,7 @@ class AgentChatMessagePayload {
     this.name,
     this.toolCallId,
     this.toolCalls = const [],
+    this.reasoningContent,
   });
 
   final String role;
@@ -16,13 +17,16 @@ class AgentChatMessagePayload {
   final String? name;
   final String? toolCallId;
   final List<Map<String, dynamic>> toolCalls;
+  final String? reasoningContent;
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeReasoningContent = false}) => {
     'role': role,
     if (content != null) 'content': content,
     if (name != null) 'name': name,
     if (toolCallId != null) 'tool_call_id': toolCallId,
     if (toolCalls.isNotEmpty) 'tool_calls': toolCalls,
+    if (includeReasoningContent && role == 'assistant')
+      'reasoning_content': reasoningContent ?? '',
   };
 }
 
@@ -67,9 +71,14 @@ class AgentChatCompletionRequest {
   final double? temperature;
   final int? maxCompletionTokens;
 
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeReasoningContent = false}) => {
     'model': model,
-    'messages': messages.map((message) => message.toJson()).toList(),
+    'messages': messages
+        .map(
+          (message) =>
+              message.toJson(includeReasoningContent: includeReasoningContent),
+        )
+        .toList(),
     'stream': stream,
     if (tools.isNotEmpty)
       'tools': tools.map((definition) => definition.toJson()).toList(),
@@ -86,6 +95,13 @@ sealed class AgentModelEvent {
 
 class AgentTextDelta extends AgentModelEvent {
   const AgentTextDelta(this.text);
+
+  final String text;
+}
+
+/// Provider continuation metadata, never visible chat text.
+class AgentReasoningDelta extends AgentModelEvent {
+  const AgentReasoningDelta(this.text);
 
   final String text;
 }
@@ -234,6 +250,8 @@ Iterable<AgentModelEvent> _eventsFromPayload(
   final rawMessage = choice['delta'] ?? choice['message'];
   if (rawMessage is Map) {
     final message = rawMessage.cast<String, dynamic>();
+    final reasoning = message['reasoning_content'];
+    if (reasoning is String) yield AgentReasoningDelta(reasoning);
     final content = _textContent(message['content']);
     if (content.isNotEmpty) yield AgentTextDelta(content);
 

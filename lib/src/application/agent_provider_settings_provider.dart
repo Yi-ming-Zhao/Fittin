@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -191,8 +193,11 @@ class AgentConnectionTester {
     required String apiKey,
     AgentCancellationToken? cancellationToken,
   }) async {
-    var receivedValidEvent = false;
+    var receivedContent = false;
+    var completedToolCall = false;
     final toolNames = <int, String>{};
+    final toolIds = <int, String>{};
+    final toolArguments = <int, String>{};
     await for (final event in _transport.stream(
       config: config,
       apiKey: apiKey,
@@ -217,10 +222,9 @@ class AgentConnectionTester {
             },
           ),
         ],
-        toolChoice: const {
-          'type': 'function',
-          'function': {'name': 'ping'},
-        },
+        // DeepSeek reasoning models can reject named-tool forcing even though
+        // they support tools. Readiness still requires a real valid ping call.
+        toolChoice: 'auto',
       ),
     )) {
       if (event is AgentModelFailure) {
@@ -230,12 +234,39 @@ class AgentConnectionTester {
           ),
         );
       }
-      receivedValidEvent = true;
-      if (event is AgentToolCallDelta && event.name != null) {
-        toolNames[event.index] = '${toolNames[event.index] ?? ''}${event.name}';
+      if (event is AgentTextDelta && event.text.isNotEmpty) {
+        receivedContent = true;
+      } else if (event is AgentToolCallDelta) {
+        if (event.name != null) {
+          toolNames[event.index] =
+              '${toolNames[event.index] ?? ''}${event.name}';
+        }
+        if (event.id != null) {
+          toolIds[event.index] = '${toolIds[event.index] ?? ''}${event.id}';
+        }
+        toolArguments[event.index] =
+            '${toolArguments[event.index] ?? ''}${event.argumentsDelta}';
+      } else if (event is AgentModelCompleted &&
+          (event.finishReason == 'tool_calls' ||
+              event.finishReason == 'function_call')) {
+        completedToolCall = true;
       }
     }
-    final supportsTools = toolNames.values.any((name) => name == 'ping');
+    final supportsTools =
+        completedToolCall &&
+        toolNames.length == 1 &&
+        toolNames.entries.any((entry) {
+          if (entry.value != 'ping' || (toolIds[entry.key] ?? '').isEmpty) {
+            return false;
+          }
+          try {
+            final arguments = jsonDecode(toolArguments[entry.key] ?? '');
+            return arguments is Map && arguments.isEmpty;
+          } on FormatException {
+            return false;
+          }
+        });
+    final receivedValidEvent = receivedContent || toolNames.isNotEmpty;
     return AgentConnectionTestResult(
       chatCapable: receivedValidEvent,
       toolCallingSupported: supportsTools,
