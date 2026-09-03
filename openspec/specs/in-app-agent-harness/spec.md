@@ -24,7 +24,7 @@ The application SHALL offer a disclosed, minimal real request that verifies auth
 - **THEN** the configuration is reported as chat-capable but unavailable for Fittin Agent tools
 
 ### Requirement: Bounded streaming Agent runs
-The Agent SHALL stream visible output, support cancellation and retry, preserve interrupted user input, and stop after eight model turns or twelve tool calls.
+The Agent SHALL stream visible output, support cancellation and retry, preserve interrupted user input, and stop after eight model turns or twelve tool calls. Submit, retry and resume commands MUST share one controller-side occupancy guard so rapid repeated controls cannot launch concurrent provider runs for the same conversation.
 
 #### Scenario: User cancels a slow response
 - **WHEN** the user taps stop while a response is streaming
@@ -33,6 +33,11 @@ The Agent SHALL stream visible output, support cancellation and retry, preserve 
 #### Scenario: A write proposal is generated
 - **WHEN** the model calls a proposal-only write tool
 - **THEN** the run pauses with one pending approval card and performs no further model or write calls until the user decides
+
+#### Scenario: User rapidly retries or resumes
+- **WHEN** several retry or resume commands arrive before the first command yields a visible busy state
+- **THEN** the controller starts one continuation and one provider stream
+- **AND** all duplicate commands observe that same in-flight operation without creating another run identifier.
 
 ### Requirement: Device-local conversation history
 The application SHALL persist user-visible messages and compact tool/action summaries locally, SHALL allow starting and deleting conversations, and SHALL not sync raw model traffic or conversation history.

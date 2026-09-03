@@ -16,7 +16,7 @@ The system MUST provide a prominent hero card on the Home Dashboard that display
 - **AND** the displayed week/day position reflects the newly active plan instance.
 
 ### Requirement: Seamless Session Launch
-The system MUST allow users to tap the hero card to smoothly transition into the Active Session Screen with the full multi-exercise workout context loaded or resumed. The Home summary and the launched session MUST resolve to the same active instance and scheduled workout at the moment the launch command is accepted.
+The system MUST allow users to tap the hero card to smoothly transition into the Active Session Screen with the full multi-exercise workout context loaded or resumed. The Home summary and the launched session MUST resolve to the same active instance and scheduled workout at the moment the launch command is accepted. Concluding the session MUST atomically persist the workout log, progressed active instance and associated sync work, and repeated submission of the same conclusion MUST be idempotent.
 
 #### Scenario: User starts the daily workout
 - **WHEN** the user taps the "Today's Workout" hero card
@@ -35,3 +35,8 @@ The system MUST allow users to tap the hero card to smoothly transition into the
 #### Scenario: User taps the hero card repeatedly
 - **WHEN** multiple taps arrive before the first session launch finishes
 - **THEN** the app performs one session load and opens one Active Session route.
+
+#### Scenario: Workout conclusion fails between records
+- **WHEN** local persistence fails while concluding a workout
+- **THEN** neither the workout log nor the progressed active instance is partially committed
+- **AND** retrying the same conclusion creates exactly one log and one progression update.

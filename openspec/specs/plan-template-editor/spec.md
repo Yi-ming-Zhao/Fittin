@@ -5,7 +5,7 @@ Define the in-app editing surface for creating and customizing training plan tem
 
 ## Requirements
 ### Requirement: Template Editing Surface
-The system MUST provide an in-app editing flow for training templates that allows users to update plan metadata, workout metadata, and ordered workout composition without editing raw JSON.
+The system MUST provide an in-app editing flow for training templates that allows users to update plan metadata, workout metadata, and ordered workout composition without editing raw JSON. Every icon-only editor action MUST expose a localized unique accessible name, and dense rule fields MUST wrap or stack without overlap at 320 logical pixels and large text.
 
 The editor MUST choose its primary navigation model from template metadata:
 - templates with `scheduleMode: linear` MUST expose a direct editor for the reusable workout structure
@@ -27,6 +27,11 @@ The editor MUST choose its primary navigation model from template metadata:
 - **WHEN** a user opens the editor for a template whose `scheduleMode` is `periodized`
 - **THEN** the app first lets them choose a concrete week/day slot such as `W1D1`
 - **AND** editing that slot only changes the selected day's prescription instead of showing the entire multi-month cycle in one long page.
+
+#### Scenario: Assistive user edits a narrow plan
+- **WHEN** the editor is used at 320 pixels wide or with large text
+- **THEN** reorder, duplicate and delete controls retain distinct localized names and 44-pixel targets
+- **AND** progression fields reflow vertically without clipped values or unreachable delete actions.
 
 ### Requirement: Exercise and Set Customization
 The system MUST allow users to create, edit, duplicate, reorder, and delete exercises, stages, and sets within a workout template, including all core runtime fields.

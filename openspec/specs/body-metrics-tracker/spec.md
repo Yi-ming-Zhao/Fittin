@@ -64,7 +64,7 @@ The chart module MUST act as the primary progress surface when weight data exist
 - **AND** the page does not collapse into a visually empty hero region.
 
 ### Requirement: Metric Grid Comparison
-The system MUST support body fat, waist circumference, and check-in count in a responsive metric composition. On narrow phones, body fat and waist MUST use two readable columns and Check-ins MUST use a full-width row; at widths of at least 520 px, all three MAY share a row.
+The system MUST support body fat, waist circumference, and check-in count in a responsive metric composition. On narrow phones, body fat and waist MUST use two readable columns and Check-ins MUST use a full-width row; at widths of at least 520 px, all three MAY share a row. Each metric summary MUST resolve its current and previous values from the most recent records where that specific field is present, and MUST only use records owned by the active user.
 
 #### Scenario: Reviewing body summaries on a narrow phone
 - **WHEN** the user views Body Metrics below 520 px wide
@@ -81,6 +81,11 @@ The system MUST support body fat, waist circumference, and check-in count in a r
 - **THEN** the relevant card shows the latest value
 - **AND** the card explains that trend comparison is not available yet
 - **AND** the page avoids displaying a misleading zero-change or blank delta treatment.
+
+#### Scenario: User switches accounts on the same device
+- **WHEN** authentication changes from one user to another while the Body tab remains mounted
+- **THEN** the provider reloads only the new owner's measurements
+- **AND** edit or delete operations cannot address rows owned by the previous account.
 
 ### Requirement: Progress Photo Vault
 The system MUST support storing and viewing progress photos, specifically enabling a side-by-side comparison mode between two selected dates.

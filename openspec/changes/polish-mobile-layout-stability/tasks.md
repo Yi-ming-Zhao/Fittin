@@ -23,8 +23,8 @@
 ## 4. Verification and release
 
 - [x] 4.1 Run focused Flutter data, controller, widget and browser tests plus `git diff --check`.
-- [ ] 4.2 Run Flutter analyze/test, Android release, iOS no-codesign, Web release, backend Go tests and OpenSpec validation.
+- [x] 4.2 Run Flutter analyze/test, Android release, iOS no-codesign, Web release, backend Go tests and OpenSpec validation.
 - [x] 4.3 Perform bilingual five-theme visual regression at 320×568, 390×844, 390×926 and desktop Web, including large text and keyboard states.
-- [ ] 4.4 Set `1.2.1+25`, update release notes, open and self-review the PR, and merge only after CI is green.
-- [ ] 4.5 Tag `v1.2.1`, verify signed CI artifacts/checksums and install the APK over public v1.2.0 without data loss.
-- [ ] 4.6 Fast-forward the 241 repository, activate the immutable Alibaba Cloud Web release with rollback retained, verify public readiness/Web, and update `latest.json` last.
+- [x] 4.4 Set `1.2.1+25`, update release notes, open and self-review the PR, and merge only after CI is green.
+- [x] 4.5 Tag `v1.2.1`, verify signed CI artifacts/checksums and install the APK over public v1.2.0 without data loss.
+- [x] 4.6 Fast-forward the 241 repository, activate the immutable Alibaba Cloud Web release with rollback retained, verify public readiness/Web, and update `latest.json` last.
