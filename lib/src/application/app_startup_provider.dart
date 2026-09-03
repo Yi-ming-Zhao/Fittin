@@ -72,7 +72,9 @@ final appStartupReadinessProvider = FutureProvider<AppStartupReadiness>((
     await ref.watch(initialHomeValidationProvider.future);
     return AppStartupReadiness(
       userId: expectedUserId,
-      degraded: syncState.stage == SyncStage.retryNeeded,
+      degraded:
+          syncState.stage == SyncStage.retryNeeded ||
+          syncState.stage == SyncStage.conflict,
     );
   }
 

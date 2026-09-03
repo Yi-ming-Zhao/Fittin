@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:isar/isar.dart';
 import 'package:fittin_v2/src/data/models/app_state_collection.dart';
 import 'package:fittin_v2/src/data/models/instance_collection.dart';
@@ -810,6 +811,84 @@ class DatabaseRepository {
         null;
   }
 
+  /// Commits a completed workout as one local business transaction.
+  ///
+  /// Returns `false` when the same deterministic log ID was already committed.
+  /// The log, progressed instance, and their sync queue entries either all
+  /// persist or all roll back.
+  Future<bool> commitWorkoutConclusion({
+    required WorkoutLog logRecord,
+    required StoredTrainingInstance expectedInstance,
+    required StoredTrainingInstance postInstance,
+    required String? ownerUserId,
+    String? syncStatus,
+  }) async {
+    validateWorkoutConclusionCommit(
+      logRecord: logRecord,
+      expectedInstance: expectedInstance,
+      postInstance: postInstance,
+      ownerUserId: ownerUserId,
+    );
+
+    Future<bool> operation() async {
+      final current = await fetchInstance(expectedInstance.instanceId);
+      if (current == null ||
+          current.deletedAt != null ||
+          current.ownerUserId != ownerUserId) {
+        throw StateError(
+          'The active training instance is no longer available.',
+        );
+      }
+
+      final existingCollection = await _database.workoutLogCollections
+          .getByLogId(logRecord.logId);
+      if (existingCollection != null) {
+        if (existingCollection.deletedAt != null ||
+            existingCollection.ownerUserId != ownerUserId) {
+          throw StateError('The workout conclusion ID is no longer available.');
+        }
+        final existingLog = _logFromCollection(existingCollection);
+        validateMatchingWorkoutConclusion(existingLog, logRecord);
+        final existingPost = existingLog.postConclusionSnapshot!;
+        if (instanceMatchesWorkoutProgressionSnapshot(current, existingPost)) {
+          return false;
+        }
+      }
+
+      final expectedSnapshot = logRecord.preConclusionSnapshot!;
+      if (current.version != expectedInstance.version ||
+          !instanceMatchesWorkoutProgressionSnapshot(
+            current,
+            expectedSnapshot,
+          )) {
+        throw StateError(
+          'The training instance changed before the workout could be saved.',
+        );
+      }
+
+      final resolvedSyncStatus = syncStatus ?? _defaultSyncStatus(ownerUserId);
+      if (existingCollection == null) {
+        await logWorkout(
+          logRecord,
+          ownerUserId: ownerUserId,
+          syncStatus: resolvedSyncStatus,
+        );
+      }
+      await saveInstance(
+        postInstance.copyWith(version: expectedInstance.version + 1),
+        syncStatus: resolvedSyncStatus,
+      );
+      return true;
+    }
+
+    if (Zone.current[agentTransactionZoneKey] == true) {
+      return operation();
+    }
+    return _database.writeTxn(
+      () => runZoned(operation, zoneValues: {agentTransactionZoneKey: true}),
+    );
+  }
+
   Future<void> logWorkout(
     WorkoutLog logRecord, {
     String? ownerUserId,
@@ -1438,6 +1517,78 @@ class StoredTrainingInstance {
           lastModifiedByDeviceId ?? this.lastModifiedByDeviceId,
     );
   }
+}
+
+void validateWorkoutConclusionCommit({
+  required WorkoutLog logRecord,
+  required StoredTrainingInstance expectedInstance,
+  required StoredTrainingInstance postInstance,
+  required String? ownerUserId,
+}) {
+  if (logRecord.logId.isEmpty ||
+      logRecord.instanceId != expectedInstance.instanceId ||
+      postInstance.instanceId != expectedInstance.instanceId ||
+      expectedInstance.ownerUserId != ownerUserId ||
+      postInstance.ownerUserId != ownerUserId ||
+      logRecord.preConclusionSnapshot == null ||
+      logRecord.postConclusionSnapshot == null ||
+      !instanceMatchesWorkoutProgressionSnapshot(
+        expectedInstance,
+        logRecord.preConclusionSnapshot!,
+      ) ||
+      !instanceMatchesWorkoutProgressionSnapshot(
+        postInstance,
+        logRecord.postConclusionSnapshot!,
+      )) {
+    throw StateError('Invalid workout conclusion transaction.');
+  }
+}
+
+void validateMatchingWorkoutConclusion(
+  WorkoutLog existing,
+  WorkoutLog requested,
+) {
+  if (existing.instanceId != requested.instanceId ||
+      existing.workoutId != requested.workoutId ||
+      existing.postConclusionSnapshot == null ||
+      requested.postConclusionSnapshot == null ||
+      !workoutProgressionSnapshotsMatch(
+        existing.postConclusionSnapshot!,
+        requested.postConclusionSnapshot!,
+      )) {
+    throw StateError('The workout conclusion ID is already in use.');
+  }
+}
+
+bool instanceMatchesWorkoutProgressionSnapshot(
+  StoredTrainingInstance instance,
+  WorkoutProgressionSnapshot snapshot,
+) {
+  return workoutProgressionSnapshotsMatch(
+    WorkoutProgressionSnapshot(
+      templateId: instance.templateId,
+      currentWorkoutIndex: instance.currentWorkoutIndex,
+      trainingMaxProfile: instance.trainingMaxProfile,
+      engineState: instance.engineState,
+      states: instance.states,
+    ),
+    snapshot,
+  );
+}
+
+bool workoutProgressionSnapshotsMatch(
+  WorkoutProgressionSnapshot left,
+  WorkoutProgressionSnapshot right,
+) {
+  const equality = DeepCollectionEquality();
+  return left.templateId == right.templateId &&
+      left.currentWorkoutIndex == right.currentWorkoutIndex &&
+      equality.equals(
+        left.trainingMaxProfile.values,
+        right.trainingMaxProfile.values,
+      ) &&
+      equality.equals(left.engineState, right.engineState) &&
+      equality.equals(left.states, right.states);
 }
 
 class TrainingMaxSetupRequirement {

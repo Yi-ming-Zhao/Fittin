@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
 import 'package:fittin_v2/src/application/agent_harness_controller.dart';
+import 'package:fittin_v2/src/application/agent_mutation_coordinator.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/application/agent_tools.dart';
@@ -51,6 +52,116 @@ void main() {
         AgentRunPhase.completed,
       );
       expect(c.read(agentHarnessControllerProvider).runState.runId, runId);
+    },
+  );
+
+  test(
+    'confirmation owns the command lane while conversation lists reload',
+    () async {
+      final proposal = _pendingProposal('confirm-reload-lane');
+      final repository = _ReloadGateRepository();
+      final transport = _TurnTransport([
+        _proposalTurn(),
+        [
+          const AgentTextDelta('Continued once after confirmation.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+        [
+          const AgentTextDelta('Unexpected duplicate continuation.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final container = _container(
+        transport: transport,
+        local: repository,
+        tools: _FakeTools(
+          AgentToolResult(
+            payload: const {'status': 'pending_user_approval'},
+            proposal: proposal,
+          ),
+        ),
+        successfulMutations: true,
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        agentHarnessControllerProvider.notifier,
+      );
+
+      await controller.submit('Apply the change');
+      repository.blockNextReload();
+      final decision = controller.confirmProposal(proposal.operationId);
+      await repository.reloadStarted;
+
+      final continuation = controller.resume();
+      await Future<void>.delayed(Duration.zero);
+      expect(transport.requests, hasLength(1));
+
+      repository.releaseReload();
+      await Future.wait([decision, continuation]);
+
+      expect(transport.requests, hasLength(2));
+      expect(
+        container.read(agentHarnessControllerProvider).runState.phase,
+        AgentRunPhase.completed,
+      );
+    },
+  );
+
+  test(
+    'confirmation keeps resume serialized and queues a distinct prompt while key loads',
+    () async {
+      final proposal = _pendingProposal('confirm-key-lane');
+      final store = _ApiKeyGateSettingsStore();
+      final transport = _TurnTransport([
+        _proposalTurn(),
+        [
+          const AgentTextDelta('Confirmed and continued.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+        [
+          const AgentTextDelta('Answered the queued follow-up.'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final container = _container(
+        transport: transport,
+        settingsStore: store,
+        tools: _FakeTools(
+          AgentToolResult(
+            payload: const {'status': 'pending_user_approval'},
+            proposal: proposal,
+          ),
+        ),
+        successfulMutations: true,
+      );
+      addTearDown(container.dispose);
+      final controller = container.read(
+        agentHarnessControllerProvider.notifier,
+      );
+
+      await controller.submit('Apply the change');
+      store.blockNextApiKeyLoad();
+      final decision = controller.confirmProposal(proposal.operationId);
+      await store.apiKeyLoadStarted;
+
+      final continuation = controller.resume();
+      final followUp = controller.submit('Explain what changed');
+      await Future<void>.delayed(Duration.zero);
+      expect(transport.requests, hasLength(1));
+
+      store.releaseApiKeyLoad();
+      await Future.wait([decision, continuation, followUp]);
+
+      expect(transport.requests, hasLength(3));
+      expect(store.apiKeyLoadCount, 3);
+      final prompts = container
+          .read(agentHarnessControllerProvider)
+          .runState
+          .conversation!
+          .messages
+          .where((message) => message.role == AgentMessageRole.user)
+          .map((message) => message.content);
+      expect(prompts, ['Apply the change', 'Explain what changed']);
     },
   );
 
@@ -715,7 +826,7 @@ void main() {
     final controller = container.read(agentHarnessControllerProvider.notifier);
 
     final first = controller.submit('First');
-    final second = controller.submit('Second');
+    final second = controller.submit('First');
     loadGate.complete();
     await Future.wait([first, second]);
 
@@ -727,6 +838,38 @@ void main() {
         .messages
         .where((message) => message.role == AgentMessageRole.user);
     expect(userMessages.map((message) => message.content), ['First']);
+  });
+
+  test('a distinct submit prompt is queued behind the occupied lane', () async {
+    final loadGate = Completer<void>();
+    final store = _ReadySettingsStore(loadGate: loadGate);
+    final transport = _TurnTransport([
+      [
+        const AgentTextDelta('First response'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+      [
+        const AgentTextDelta('Second response'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final container = _container(transport: transport, settingsStore: store);
+    addTearDown(container.dispose);
+    final controller = container.read(agentHarnessControllerProvider.notifier);
+
+    final first = controller.submit('First');
+    final second = controller.submit('Second');
+    loadGate.complete();
+    await Future.wait([first, second]);
+
+    expect(transport.requests, hasLength(2));
+    final userMessages = container
+        .read(agentHarnessControllerProvider)
+        .runState
+        .conversation!
+        .messages
+        .where((message) => message.role == AgentMessageRole.user);
+    expect(userMessages.map((message) => message.content), ['First', 'Second']);
   });
 
   test('stop keeps partial output and performs no tool call', () async {
@@ -844,6 +987,60 @@ void main() {
     },
   );
 
+  test('fast duplicate retry starts only one continuation', () async {
+    final transport = _TurnTransport([
+      [
+        const AgentModelFailure(
+          code: 'network_unavailable',
+          message: 'Connection lost',
+        ),
+      ],
+      [
+        const AgentTextDelta('Recovered once'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final container = _container(transport: transport);
+    addTearDown(container.dispose);
+    final controller = container.read(agentHarnessControllerProvider.notifier);
+
+    await controller.submit('Try once');
+    final runId = container.read(agentHarnessControllerProvider).runState.runId;
+    await Future.wait(List.generate(10, (_) => controller.retry()));
+
+    expect(transport.requests, hasLength(2));
+    expect(
+      container.read(agentHarnessControllerProvider).runState.runId,
+      runId,
+    );
+  });
+
+  test('fast duplicate resume starts only one continuation', () async {
+    final transport = _TurnTransport([
+      [
+        const AgentTextDelta('Initial'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+      [
+        const AgentTextDelta('Continued once'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final container = _container(transport: transport);
+    addTearDown(container.dispose);
+    final controller = container.read(agentHarnessControllerProvider.notifier);
+
+    await controller.submit('Start');
+    final runId = container.read(agentHarnessControllerProvider).runState.runId;
+    await Future.wait(List.generate(10, (_) => controller.resume()));
+
+    expect(transport.requests, hasLength(2));
+    expect(
+      container.read(agentHarnessControllerProvider).runState.runId,
+      runId,
+    );
+  });
+
   test(
     'pending approval cannot be hidden by starting a new conversation',
     () async {
@@ -899,6 +1096,7 @@ ProviderContainer _container({
   AgentToolRegistry? tools,
   AgentProviderSettingsStore? settingsStore,
   AgentLocalRepository? local,
+  bool successfulMutations = false,
 }) {
   final store = settingsStore ?? _ReadySettingsStore();
   return ProviderContainer(
@@ -915,6 +1113,10 @@ ProviderContainer _container({
         AgentConnectionTester(transport),
       ),
       if (tools != null) agentToolRegistryProvider.overrideWithValue(tools),
+      if (successfulMutations)
+        agentMutationCoordinatorProvider.overrideWith(
+          _SuccessfulMutationCoordinator.new,
+        ),
     ],
   );
 }
@@ -978,6 +1180,98 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     hasApiKey: true,
     toolCallingVerified: toolCallingVerified,
   );
+}
+
+class _ApiKeyGateSettingsStore extends _ReadySettingsStore {
+  Completer<void>? _started;
+  Completer<void>? _release;
+  var _blockNext = false;
+  int apiKeyLoadCount = 0;
+
+  Future<void> get apiKeyLoadStarted => _started!.future;
+
+  void blockNextApiKeyLoad() {
+    _blockNext = true;
+    _started = Completer<void>();
+    _release = Completer<void>();
+  }
+
+  void releaseApiKeyLoad() => _release!.complete();
+
+  @override
+  Future<String?> loadApiKey() async {
+    apiKeyLoadCount += 1;
+    final started = _started;
+    final release = _release;
+    if (_blockNext && started != null && release != null) {
+      _blockNext = false;
+      started.complete();
+      await release.future;
+    }
+    return super.loadApiKey();
+  }
+}
+
+class _ReloadGateRepository extends InMemoryAgentLocalRepository {
+  Completer<void>? _started;
+  Completer<void>? _release;
+  var _blockNext = false;
+  var _fetchesBeforeBlock = 0;
+
+  Future<void> get reloadStarted => _started!.future;
+
+  void blockNextReload() {
+    _blockNext = true;
+    _fetchesBeforeBlock = 1;
+    _started = Completer<void>();
+    _release = Completer<void>();
+  }
+
+  void releaseReload() => _release!.complete();
+
+  @override
+  Future<List<AgentConversation>> fetchConversations({
+    String? ownerUserId,
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    final started = _started;
+    final release = _release;
+    if (_blockNext && started != null && release != null) {
+      if (_fetchesBeforeBlock > 0) {
+        _fetchesBeforeBlock -= 1;
+      } else {
+        _blockNext = false;
+        started.complete();
+        await release.future;
+      }
+    }
+    return super.fetchConversations(
+      ownerUserId: ownerUserId,
+      offset: offset,
+      limit: limit,
+    );
+  }
+}
+
+class _SuccessfulMutationCoordinator extends AgentMutationCoordinator {
+  _SuccessfulMutationCoordinator(super.ref);
+
+  @override
+  Future<AgentActionRecord> confirm(AgentMutationProposal proposal) async {
+    return AgentActionRecord(
+      id: proposal.operationId,
+      ownerUserId: proposal.ownerUserId,
+      toolName: proposal.toolName,
+      title: proposal.title,
+      targetType: proposal.targetType,
+      targetId: proposal.targetId,
+      beforeJson: '{}',
+      afterJson: '{}',
+      afterDigest: 'confirmed',
+      createdAt: DateTime.now(),
+    );
+  }
 }
 
 class _DeepSeekSettingsStore extends _ReadySettingsStore {

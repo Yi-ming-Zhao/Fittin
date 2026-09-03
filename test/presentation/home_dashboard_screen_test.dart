@@ -157,6 +157,63 @@ void main() {
     );
   });
 
+  testWidgets('narrow width and larger text use a scroll-safe layout', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    for (final layout in const [
+      (size: Size(320, 844), textScale: 1.0),
+      (size: Size(390, 844), textScale: 1.2),
+    ]) {
+      await tester.binding.setSurfaceSize(layout.size);
+      final repository = InMemoryDatabaseRepository();
+      final fakeGateway = FakeTodayWorkoutGateway();
+      await tester.pumpWidget(
+        ProviderScope(
+          key: ValueKey('home-${layout.size.width}-${layout.textScale}'),
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            todayWorkoutGatewayProvider.overrideWithValue(fakeGateway),
+            homeDashboardDataProvider.overrideWith(
+              (ref) async => _fakeHomeData(),
+            ),
+          ],
+          child: MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: layout.size,
+                textScaler: TextScaler.linear(layout.textScale),
+              ),
+              child: const HomeDashboardScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final verticalScrollables = tester
+          .widgetList<Scrollable>(find.byType(Scrollable))
+          .where(
+            (widget) =>
+                (widget.axisDirection == AxisDirection.down ||
+                    widget.axisDirection == AxisDirection.up) &&
+                widget.physics is! NeverScrollableScrollPhysics,
+          );
+      expect(verticalScrollables, isNotEmpty);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('today-quick-action-1')),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(
+        tester.takeException(),
+        isNull,
+        reason: '${layout.size}/${layout.textScale}',
+      );
+    }
+  });
+
   testWidgets(
     'Big Three e1RM pages swipe and reflow on short and tall phones',
     (tester) async {

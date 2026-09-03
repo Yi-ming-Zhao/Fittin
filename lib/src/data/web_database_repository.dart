@@ -683,6 +683,88 @@ class WebDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<bool> commitWorkoutConclusion({
+    required WorkoutLog logRecord,
+    required StoredTrainingInstance expectedInstance,
+    required StoredTrainingInstance postInstance,
+    required String? ownerUserId,
+    String? syncStatus,
+  }) async {
+    validateWorkoutConclusionCommit(
+      logRecord: logRecord,
+      expectedInstance: expectedInstance,
+      postInstance: postInstance,
+      ownerUserId: ownerUserId,
+    );
+    return store.runInTransaction(
+      [
+        WebStoreNames.workoutLogs,
+        WebStoreNames.instances,
+        WebStoreNames.syncQueue,
+      ],
+      () async {
+        final instanceDoc = await store.getRecord(
+          WebStoreNames.instances,
+          expectedInstance.instanceId,
+        );
+        if (instanceDoc == null ||
+            parseStoredDateTime(instanceDoc['deletedAt']) != null ||
+            instanceDoc['ownerUserId'] != ownerUserId) {
+          throw StateError(
+            'The active training instance is no longer available.',
+          );
+        }
+        final current = storedTrainingInstanceFromDoc(instanceDoc);
+        final existingDoc = await store.getRecord(
+          WebStoreNames.workoutLogs,
+          logRecord.logId,
+        );
+        if (existingDoc != null) {
+          if (parseStoredDateTime(existingDoc['deletedAt']) != null ||
+              existingDoc['ownerUserId'] != ownerUserId) {
+            throw StateError(
+              'The workout conclusion ID is no longer available.',
+            );
+          }
+          final existingLog = workoutLogFromDoc(existingDoc);
+          validateMatchingWorkoutConclusion(existingLog, logRecord);
+          if (instanceMatchesWorkoutProgressionSnapshot(
+            current,
+            existingLog.postConclusionSnapshot!,
+          )) {
+            return false;
+          }
+        }
+
+        if (current.version != expectedInstance.version ||
+            !instanceMatchesWorkoutProgressionSnapshot(
+              current,
+              logRecord.preConclusionSnapshot!,
+            )) {
+          throw StateError(
+            'The training instance changed before the workout could be saved.',
+          );
+        }
+
+        final resolvedSyncStatus =
+            syncStatus ?? _defaultSyncStatus(ownerUserId);
+        if (existingDoc == null) {
+          await logWorkout(
+            logRecord,
+            ownerUserId: ownerUserId,
+            syncStatus: resolvedSyncStatus,
+          );
+        }
+        await saveInstance(
+          postInstance.copyWith(version: expectedInstance.version + 1),
+          syncStatus: resolvedSyncStatus,
+        );
+        return true;
+      },
+    );
+  }
+
+  @override
   Future<void> logWorkout(
     WorkoutLog logRecord, {
     String? ownerUserId,

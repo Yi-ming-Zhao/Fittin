@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,33 +65,42 @@ class ShareScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 20),
               if (qrValidation?.isValid ?? false)
-                Container(
-                  key: const ValueKey('plan-share-qr'),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: ExportPalette.canvas,
-                    borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: ExportPalette.ink.withValues(alpha: 0.26),
-                        blurRadius: 30,
-                        offset: const Offset(0, 18),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    const qrPadding = 18.0;
+                    final qrSize = math.min(
+                      260.0,
+                      math.max(0.0, constraints.maxWidth - (qrPadding * 2)),
+                    );
+                    return Container(
+                      key: const ValueKey('plan-share-qr'),
+                      padding: const EdgeInsets.all(qrPadding),
+                      decoration: BoxDecoration(
+                        color: ExportPalette.canvas,
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ExportPalette.ink.withValues(alpha: 0.26),
+                            blurRadius: 30,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: QrImageView.withQr(
-                    qr: qrValidation!.qrCode!,
-                    size: 260,
-                    backgroundColor: ExportPalette.qrBackground,
-                    eyeStyle: const QrEyeStyle(
-                      eyeShape: QrEyeShape.circle,
-                      color: ExportPalette.qrForeground,
-                    ),
-                    dataModuleStyle: const QrDataModuleStyle(
-                      dataModuleShape: QrDataModuleShape.circle,
-                      color: ExportPalette.qrForeground,
-                    ),
-                  ),
+                      child: QrImageView.withQr(
+                        qr: qrValidation!.qrCode!,
+                        size: qrSize,
+                        backgroundColor: ExportPalette.qrBackground,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.circle,
+                          color: ExportPalette.qrForeground,
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.circle,
+                          color: ExportPalette.qrForeground,
+                        ),
+                      ),
+                    );
+                  },
                 )
               else
                 Container(

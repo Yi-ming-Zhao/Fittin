@@ -32,7 +32,7 @@ class LocalProgressRepository {
   }
 
   Future<void> deleteBodyMetric(String metricId) {
-    return _repository.deleteBodyMetric(metricId);
+    return _repository.deleteBodyMetric(metricId, ownerUserId: _ownerUserId);
   }
 
   Future<void> saveProgressPhoto(ProgressPhoto photo) {

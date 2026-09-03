@@ -180,6 +180,81 @@ void main() {
     },
   );
 
+  testWidgets(
+    'new output follows near the bottom without stealing an older reading position',
+    (tester) async {
+      const viewport = Size(390, 568);
+      await tester.binding.setSurfaceSize(viewport);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          agentProviderSettingsStoreProvider.overrideWithValue(
+            _ReadySettingsStore(),
+          ),
+          agentUiStateProvider.overrideWith(
+            (ref) => ref.watch(_scrollAgentStateProvider),
+          ),
+          agentUiBridgeProvider.overrideWithValue(const _NoopAgentUiBridge()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: AgentScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find
+          .descendant(
+            of: find.byKey(const ValueKey('agent-conversation-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      final position = tester.state<ScrollableState>(scrollable).position;
+      await tester.drag(scrollable, const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+
+      container.read(_scrollAgentStateProvider.notifier).state =
+          _scrollAgentState(1);
+      await tester.pump();
+      await tester.pump();
+      expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+
+      await tester.drag(scrollable, const Offset(0, 260));
+      await tester.pump(const Duration(milliseconds: 300));
+      final readingOffset = position.pixels;
+      expect(
+        position.maxScrollExtent - readingOffset,
+        greaterThan(_agentNearBottomTestDistance),
+      );
+      expect(
+        find.byKey(const ValueKey('agent-jump-to-latest')),
+        findsOneWidget,
+      );
+
+      container.read(_scrollAgentStateProvider.notifier).state =
+          _scrollAgentState(2);
+      await tester.pump();
+      await tester.pump();
+      expect(position.pixels, closeTo(readingOffset, 1));
+
+      await tester.tap(find.byKey(const ValueKey('agent-jump-to-latest')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 240));
+      await tester.pump();
+      expect(position.extentAfter, lessThanOrEqualTo(1));
+      expect(find.byKey(const ValueKey('agent-jump-to-latest')), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('settings remain scrollable at narrow width with keyboard', (
     tester,
   ) async {
@@ -224,6 +299,8 @@ void main() {
       find.byKey(const ValueKey('agent-api-key-field')),
       viewport,
     );
+    final settingsList = tester.widget<ListView>(find.byType(ListView).first);
+    expect((settingsList.padding! as EdgeInsets).bottom, 40);
     expect(find.byType(Scrollable), findsWidgets);
     expect(tester.takeException(), isNull);
   });
@@ -276,6 +353,50 @@ void main() {
       }
     }
   });
+}
+
+const _agentNearBottomTestDistance = 72.0;
+
+final _scrollAgentStateProvider = StateProvider<AgentUiState>(
+  (ref) => _scrollAgentState(0),
+);
+
+AgentUiState _scrollAgentState(int revision) {
+  final now = DateTime(2026, 8, 13, 12);
+  final messages = <AgentMessage>[
+    for (var index = 0; index < 10; index++)
+      AgentMessage(
+        id: 'scroll-message-$index',
+        role: AgentMessageRole.assistant,
+        createdAt: now.add(Duration(minutes: index)),
+        content: List.filled(
+          3,
+          'A complete training explanation stays readable while the Agent continues.',
+        ).join(' '),
+      ),
+    for (var index = 1; index <= revision; index++)
+      AgentMessage(
+        id: 'scroll-update-$index',
+        role: AgentMessageRole.assistant,
+        createdAt: now.add(Duration(hours: index)),
+        content: List.filled(6, 'New streamed update $index.').join(' '),
+        isPartial: true,
+      ),
+  ];
+  final conversation = AgentConversation(
+    id: 'scroll-conversation',
+    title: 'Scroll behavior',
+    createdAt: now,
+    updatedAt: now.add(Duration(hours: revision)),
+    messages: messages,
+  );
+  return AgentUiState(
+    runState: AgentRunState(
+      phase: revision == 0 ? AgentRunPhase.completed : AgentRunPhase.streaming,
+      conversation: conversation,
+    ),
+    conversations: [conversation],
+  );
 }
 
 void _expectHorizontallyBounded(
@@ -400,6 +521,40 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     hasApiKey: true,
     toolCallingVerified: toolCallingVerified,
   );
+}
+
+class _NoopAgentUiBridge implements AgentUiBridge {
+  const _NoopAgentUiBridge();
+
+  @override
+  Future<void> confirmProposal(String operationId) async {}
+
+  @override
+  Future<void> deleteConversation(String conversationId) async {}
+
+  @override
+  Future<void> loadMoreHistory() async {}
+
+  @override
+  Future<void> newConversation() async {}
+
+  @override
+  Future<void> openConversation(String conversationId) async {}
+
+  @override
+  Future<void> rejectProposal(String operationId) async {}
+
+  @override
+  Future<void> retry() async {}
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> submit(String prompt) async {}
+
+  @override
+  Future<void> undoAction(String actionId) async {}
 }
 
 void _expectInsideViewport(WidgetTester tester, Finder finder, Size viewport) {

@@ -9,7 +9,7 @@ final syncControllerProvider =
       return SyncController(ref);
     });
 
-enum SyncStage { idle, hydrating, syncing, synced, retryNeeded }
+enum SyncStage { idle, hydrating, syncing, synced, conflict, retryNeeded }
 
 class SyncControllerState {
   const SyncControllerState({
@@ -17,12 +17,14 @@ class SyncControllerState {
     this.activeUserId,
     this.lastSyncedAt,
     this.errorMessage,
+    this.conflictCount = 0,
   });
 
   final SyncStage stage;
   final String? activeUserId;
   final DateTime? lastSyncedAt;
   final String? errorMessage;
+  final int conflictCount;
 
   bool get isRunning =>
       stage == SyncStage.hydrating || stage == SyncStage.syncing;
@@ -32,13 +34,16 @@ class SyncControllerState {
     String? activeUserId,
     DateTime? lastSyncedAt,
     String? errorMessage,
+    int? conflictCount,
     bool clearError = false,
+    bool clearConflicts = false,
   }) {
     return SyncControllerState(
       stage: stage ?? this.stage,
       activeUserId: activeUserId ?? this.activeUserId,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      conflictCount: clearConflicts ? 0 : conflictCount ?? this.conflictCount,
     );
   }
 }
@@ -113,6 +118,7 @@ class SyncController extends StateNotifier<SyncControllerState> {
           activeUserId: userId,
           lastSyncedAt: DateTime.now(),
           clearError: true,
+          clearConflicts: true,
         );
       }
     } catch (_) {
@@ -129,6 +135,16 @@ class SyncController extends StateNotifier<SyncControllerState> {
     final requestedGeneration = _generation;
     try {
       await synchronize(hydrate: hydrate);
+    } on SyncConflictException catch (error) {
+      if (requestedUserId != null &&
+          _ownsCurrentScope(requestedUserId, requestedGeneration)) {
+        state = state.copyWith(
+          stage: SyncStage.conflict,
+          activeUserId: requestedUserId,
+          conflictCount: error.count,
+          clearError: true,
+        );
+      }
     } catch (error) {
       if (requestedUserId != null &&
           _ownsCurrentScope(requestedUserId, requestedGeneration)) {

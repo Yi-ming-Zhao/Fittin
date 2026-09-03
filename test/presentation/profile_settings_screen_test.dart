@@ -1,3 +1,6 @@
+// Keep Flutter 3.35 compatibility until the repository minimum moves to 3.41.
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +22,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final repository = InMemoryDatabaseRepository();
+    final semantics = tester.ensureSemantics();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -36,6 +40,16 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('English interface'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('English. English interface')),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
 
     final cardMode = find.byKey(const ValueKey('recording-mode-card'));
     await tester.scrollUntilVisible(
@@ -60,6 +74,23 @@ void main() {
     );
     expect(find.text('卡片记录'), findsOneWidget);
     expect(find.text('Card logger'), findsNothing);
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 1000),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('中文. 中文界面')),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
   });
 
   testWidgets('profile settings exposes the set type guide entry', (
@@ -223,9 +254,6 @@ void main() {
       );
       expect(
         tester.getSemantics(espresso),
-        // Flutter 3.41 replaces this with isSemantics, which is unavailable on
-        // our supported Flutter 3.35 SDK. This matcher abstracts bool/Tristate.
-        // ignore: deprecated_member_use
         containsSemantics(hasSelectedState: true, isSelected: true),
       );
       semantics.dispose();
@@ -320,6 +348,7 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final repository = InMemoryDatabaseRepository();
+    final semantics = tester.ensureSemantics();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -345,6 +374,19 @@ void main() {
     );
     await tester.ensureVisible(traditional);
     await tester.pumpAndSettle();
+    final cardSemantics = find.bySemanticsLabel(RegExp(r'^Card logger\.'));
+    final traditionalSemantics = find.bySemanticsLabel(
+      RegExp(r'^Traditional logger\.'),
+    );
+    expect(tester.getRect(cardSemantics).height, greaterThanOrEqualTo(44));
+    expect(
+      tester.getSemantics(cardSemantics),
+      containsSemantics(hasSelectedState: true, isSelected: true),
+    );
+    expect(
+      tester.getSemantics(traditionalSemantics),
+      containsSemantics(hasSelectedState: true, isSelected: false),
+    );
     await tester.tap(traditional);
     await tester.pumpAndSettle();
 
@@ -352,6 +394,17 @@ void main() {
       ProviderScope.containerOf(context).read(workoutRecordingModeProvider),
       WorkoutRecordingMode.traditional,
     );
+    expect(
+      tester.getSemantics(traditionalSemantics),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
   });
 
   testWidgets('profile settings exposes the about entry', (

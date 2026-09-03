@@ -1,6 +1,5 @@
 import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Stable identifiers persisted for the five curated appearance palettes.
 enum FittinPaletteId {
@@ -357,43 +356,30 @@ class FittinTheme {
     Color color, {
     double letterSpacing = 0,
   }) {
-    late final TextStyle style;
-    if (family.contains('Fraunces')) {
-      style = GoogleFonts.fraunces(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    } else if (family.contains('JetBrains Mono')) {
-      style = GoogleFonts.jetBrainsMono(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    } else if (family.contains('Instrument Serif')) {
-      style = GoogleFonts.instrumentSerif(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    } else if (family.contains('Instrument Sans')) {
-      style = GoogleFonts.instrumentSans(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    } else {
-      style = GoogleFonts.inter(
-        fontSize: size,
-        fontWeight: weight,
-        color: color,
-        letterSpacing: letterSpacing,
-      );
-    }
+    final axisRange = switch (family) {
+      'Instrument Sans' => (400.0, 700.0),
+      'JetBrains Mono' => (100.0, 800.0),
+      'Instrument Serif' => null,
+      _ => (100.0, 900.0),
+    };
+    final style = TextStyle(
+      fontFamily: family,
+      fontSize: size,
+      fontWeight: weight,
+      color: color,
+      letterSpacing: letterSpacing,
+      fontVariations: axisRange == null
+          ? null
+          : [
+              FontVariation(
+                'wght',
+                weight.value
+                    .toDouble()
+                    .clamp(axisRange.$1, axisRange.$2)
+                    .toDouble(),
+              ),
+            ],
+    );
     return AppTypography.withCjkFallback(style);
   }
 

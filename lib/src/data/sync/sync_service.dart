@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/models/body_metric_collection.dart';
+import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
@@ -14,6 +15,15 @@ import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+
+class SyncConflictException implements Exception {
+  const SyncConflictException(this.count);
+
+  final int count;
+
+  @override
+  String toString() => 'SyncConflictException: $count conflict(s) preserved';
+}
 
 final syncServiceProvider = Provider<SyncService>((ref) {
   final database = ref.watch(databaseRepositoryProvider);
@@ -65,6 +75,43 @@ class SyncService {
     await _pullRemote(ownerUserId);
     await _pushPending(ownerUserId);
     await _pullRemote(ownerUserId);
+    final conflicts = await _countConflicts(ownerUserId);
+    if (conflicts > 0) throw SyncConflictException(conflicts);
+  }
+
+  Future<int> _countConflicts(String ownerUserId) async {
+    final List<int> counts = await Future.wait<int>(<Future<int>>[
+      _isar.templateCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+      _isar.instanceCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+      _isar.workoutLogCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+      _isar.bodyMetricCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+      _isar.progressPhotoCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+    ]);
+    var total = 0;
+    for (final count in counts) {
+      total += count;
+    }
+    return total;
   }
 
   Future<void> _pushPending(String ownerUserId) async {
@@ -110,7 +157,8 @@ class SyncService {
             } else {
               await _remoteRepository.upsertPlan(collection);
             }
-            await _markTemplateSynced(collection);
+            await _completeTemplatePush(item, collection);
+            return;
           }
           break;
         }
@@ -133,7 +181,8 @@ class SyncService {
             } else {
               await _remoteRepository.upsertInstance(instance);
             }
-            await _markInstanceSynced(item.entityId);
+            await _completeInstancePush(item, instance);
+            return;
           }
           break;
         }
@@ -156,7 +205,8 @@ class SyncService {
             } else {
               await _remoteRepository.upsertWorkoutLog(collection);
             }
-            await _markWorkoutLogSynced(collection);
+            await _completeWorkoutLogPush(item, collection);
+            return;
           }
           break;
         }
@@ -180,7 +230,8 @@ class SyncService {
             } else {
               await _remoteRepository.upsertBodyMetric(collection);
             }
-            await _markBodyMetricSynced(collection);
+            await _completeBodyMetricPush(item, collection);
+            return;
           }
           break;
         }
@@ -212,15 +263,14 @@ class SyncService {
                 storagePath: storagePath,
               );
             }
-            await _markProgressPhotoSynced(collection);
+            await _completeProgressPhotoPush(item, collection);
+            return;
           }
           break;
         }
     }
 
-    await _isar.writeTxn(() async {
-      await _isar.syncQueueCollections.deleteByQueueKey(item.queueKey);
-    });
+    await _deleteQueueItemIfEntityStillMissing(item);
   }
 
   Future<void> _pullRemote(String ownerUserId) async {
@@ -528,13 +578,22 @@ class SyncService {
     }
   }
 
-  Future<void> _markTemplateSynced(TemplateCollection collection) async {
-    collection.syncStatusKey = SyncStatusKeys.synced;
-    collection.lastSyncedAt = DateTime.now();
-    await _isar.writeTxn(() async {
-      await _isar.templateCollections.putByTemplateId(collection);
-    });
-  }
+  Future<void> _completeTemplatePush(
+    SyncQueueCollection item,
+    TemplateCollection uploaded,
+  ) => _completePushIfUnchanged<TemplateCollection, TemplateCollection>(
+    item: item,
+    uploaded: uploaded,
+    readCurrent: () =>
+        _isar.templateCollections.getByTemplateId(uploaded.templateId),
+    matches: _sameTemplateUpload,
+    markSynced: (current, syncedAt) async {
+      current
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastSyncedAt = syncedAt;
+      await _isar.templateCollections.putByTemplateId(current);
+    },
+  );
 
   Future<void> _markTemplateConflict(TemplateCollection collection) async {
     collection.syncStatusKey = SyncStatusKeys.conflict;
@@ -543,26 +602,38 @@ class SyncService {
     });
   }
 
-  Future<void> _markInstanceSynced(String instanceId) async {
-    final existing = await _databaseRepository.fetchInstance(instanceId);
-    if (existing == null) {
-      return;
-    }
-    await _databaseRepository.saveRemoteInstance(
-      existing.copyWith(
-        syncStatus: SyncStatusKeys.synced,
-        lastSyncedAt: DateTime.now(),
-      ),
-    );
-  }
+  Future<void> _completeInstancePush(
+    SyncQueueCollection item,
+    StoredTrainingInstance uploaded,
+  ) => _completePushIfUnchanged<StoredTrainingInstance, InstanceCollection>(
+    item: item,
+    uploaded: uploaded,
+    readCurrent: () =>
+        _isar.instanceCollections.getByInstanceId(uploaded.instanceId),
+    matches: _sameInstanceUpload,
+    markSynced: (current, syncedAt) async {
+      current
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastSyncedAt = syncedAt;
+      await _isar.instanceCollections.putByInstanceId(current);
+    },
+  );
 
-  Future<void> _markWorkoutLogSynced(WorkoutLogCollection collection) async {
-    collection.syncStatusKey = SyncStatusKeys.synced;
-    collection.lastSyncedAt = DateTime.now();
-    await _isar.writeTxn(() async {
-      await _isar.workoutLogCollections.putByLogId(collection);
-    });
-  }
+  Future<void> _completeWorkoutLogPush(
+    SyncQueueCollection item,
+    WorkoutLogCollection uploaded,
+  ) => _completePushIfUnchanged<WorkoutLogCollection, WorkoutLogCollection>(
+    item: item,
+    uploaded: uploaded,
+    readCurrent: () => _isar.workoutLogCollections.getByLogId(uploaded.logId),
+    matches: _sameWorkoutLogUpload,
+    markSynced: (current, syncedAt) async {
+      current
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastSyncedAt = syncedAt;
+      await _isar.workoutLogCollections.putByLogId(current);
+    },
+  );
 
   Future<void> _markWorkoutLogConflict(WorkoutLogCollection collection) async {
     collection.syncStatusKey = SyncStatusKeys.conflict;
@@ -571,13 +642,24 @@ class SyncService {
     });
   }
 
-  Future<void> _markBodyMetricSynced(BodyMetricCollection collection) async {
-    collection.syncStatusKey = SyncStatusKeys.synced;
-    collection.lastSyncedAt = DateTime.now();
-    await _isar.writeTxn(() async {
-      await _isar.bodyMetricCollections.put(collection);
-    });
-  }
+  Future<void> _completeBodyMetricPush(
+    SyncQueueCollection item,
+    BodyMetricCollection uploaded,
+  ) => _completePushIfUnchanged<BodyMetricCollection, BodyMetricCollection>(
+    item: item,
+    uploaded: uploaded,
+    readCurrent: () => _isar.bodyMetricCollections
+        .filter()
+        .metricIdEqualTo(uploaded.metricId)
+        .findFirst(),
+    matches: _sameBodyMetricUpload,
+    markSynced: (current, syncedAt) async {
+      current
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastSyncedAt = syncedAt;
+      await _isar.bodyMetricCollections.put(current);
+    },
+  );
 
   Future<void> _markBodyMetricConflict(BodyMetricCollection collection) async {
     collection.syncStatusKey = SyncStatusKeys.conflict;
@@ -586,14 +668,203 @@ class SyncService {
     });
   }
 
-  Future<void> _markProgressPhotoSynced(
-    ProgressPhotoCollection collection,
-  ) async {
-    collection.syncStatusKey = SyncStatusKeys.synced;
-    collection.lastSyncedAt = DateTime.now();
+  Future<void> _completeProgressPhotoPush(
+    SyncQueueCollection item,
+    ProgressPhotoCollection uploaded,
+  ) =>
+      _completePushIfUnchanged<
+        ProgressPhotoCollection,
+        ProgressPhotoCollection
+      >(
+        item: item,
+        uploaded: uploaded,
+        readCurrent: () => _isar.progressPhotoCollections
+            .filter()
+            .photoIdEqualTo(uploaded.photoId)
+            .findFirst(),
+        matches: _sameProgressPhotoUpload,
+        markSynced: (current, syncedAt) async {
+          current
+            ..syncStatusKey = SyncStatusKeys.synced
+            ..lastSyncedAt = syncedAt;
+          await _isar.progressPhotoCollections.put(current);
+        },
+      );
+
+  Future<void> _completePushIfUnchanged<TUploaded, TCurrent>({
+    required SyncQueueCollection item,
+    required TUploaded uploaded,
+    required Future<TCurrent?> Function() readCurrent,
+    required bool Function(TCurrent current, TUploaded uploaded) matches,
+    required Future<void> Function(TCurrent current, DateTime syncedAt)
+    markSynced,
+  }) async {
     await _isar.writeTxn(() async {
-      await _isar.progressPhotoCollections.put(collection);
+      final currentQueue = await _isar.syncQueueCollections.getByQueueKey(
+        item.queueKey,
+      );
+      if (!_sameQueueItem(currentQueue, item)) return;
+      final current = await readCurrent();
+      if (current == null || !matches(current, uploaded)) return;
+      await markSynced(current, DateTime.now());
+      await _isar.syncQueueCollections.deleteByQueueKey(item.queueKey);
     });
+  }
+
+  Future<void> _deleteQueueItemIfEntityStillMissing(
+    SyncQueueCollection item,
+  ) async {
+    await _isar.writeTxn(() async {
+      final currentQueue = await _isar.syncQueueCollections.getByQueueKey(
+        item.queueKey,
+      );
+      if (!_sameQueueItem(currentQueue, item)) return;
+      final exists = switch (item.entityType) {
+        SyncEntityTypes.template =>
+          await _isar.templateCollections.getByTemplateId(item.entityId) !=
+              null,
+        SyncEntityTypes.instance =>
+          await _isar.instanceCollections.getByInstanceId(item.entityId) !=
+              null,
+        SyncEntityTypes.workoutLog =>
+          await _isar.workoutLogCollections.getByLogId(item.entityId) != null,
+        SyncEntityTypes.bodyMetric =>
+          await _isar.bodyMetricCollections
+                  .filter()
+                  .metricIdEqualTo(item.entityId)
+                  .findFirst() !=
+              null,
+        SyncEntityTypes.progressPhoto =>
+          await _isar.progressPhotoCollections
+                  .filter()
+                  .photoIdEqualTo(item.entityId)
+                  .findFirst() !=
+              null,
+        _ => false,
+      };
+      if (!exists) {
+        await _isar.syncQueueCollections.deleteByQueueKey(item.queueKey);
+      }
+    });
+  }
+
+  bool _sameQueueItem(
+    SyncQueueCollection? current,
+    SyncQueueCollection uploaded,
+  ) {
+    return current != null &&
+        current.queueKey == uploaded.queueKey &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.entityType == uploaded.entityType &&
+        current.entityId == uploaded.entityId &&
+        current.operationType == uploaded.operationType &&
+        _sameInstant(current.createdAt, uploaded.createdAt) &&
+        _sameInstant(current.updatedAt, uploaded.updatedAt);
+  }
+
+  bool _sameTemplateUpload(
+    TemplateCollection current,
+    TemplateCollection uploaded,
+  ) {
+    return current.templateId == uploaded.templateId &&
+        current.name == uploaded.name &&
+        current.description == uploaded.description &&
+        current.isBuiltIn == uploaded.isBuiltIn &&
+        current.sourceTemplateId == uploaded.sourceTemplateId &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatusKey &&
+        _sameInstant(current.createdAt, uploaded.createdAt) &&
+        _sameInstant(current.lastModifiedAt, uploaded.lastModifiedAt) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt) &&
+        current.rawJsonPayload == uploaded.rawJsonPayload;
+  }
+
+  bool _sameInstanceUpload(
+    InstanceCollection current,
+    StoredTrainingInstance uploaded,
+  ) {
+    final uploadedStates = uploaded.states
+        .map((state) => jsonEncode(state.toJson()))
+        .toList();
+    return current.instanceId == uploaded.instanceId &&
+        current.templateId == uploaded.templateId &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatus &&
+        current.currentWorkoutIndex == uploaded.currentWorkoutIndex &&
+        _sameInstant(current.createdAt, uploaded.createdAt) &&
+        _sameInstant(current.lastModifiedAt, uploaded.updatedAt) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt) &&
+        current.trainingMaxProfileJson ==
+            jsonEncode(uploaded.trainingMaxProfile.toJson()) &&
+        current.engineStateJson == jsonEncode(uploaded.engineState) &&
+        _sameStringList(current.currentStatesJson, uploadedStates);
+  }
+
+  bool _sameWorkoutLogUpload(
+    WorkoutLogCollection current,
+    WorkoutLogCollection uploaded,
+  ) {
+    return current.logId == uploaded.logId &&
+        current.instanceId == uploaded.instanceId &&
+        current.workoutId == uploaded.workoutId &&
+        current.workoutName == uploaded.workoutName &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatusKey &&
+        _sameInstant(current.completedAt, uploaded.completedAt) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt) &&
+        current.rawJsonPayload == uploaded.rawJsonPayload;
+  }
+
+  bool _sameBodyMetricUpload(
+    BodyMetricCollection current,
+    BodyMetricCollection uploaded,
+  ) {
+    return current.metricId == uploaded.metricId &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatusKey &&
+        _sameInstant(current.timestamp, uploaded.timestamp) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt) &&
+        current.weightKg == uploaded.weightKg &&
+        current.bodyFatPercent == uploaded.bodyFatPercent &&
+        current.waistCm == uploaded.waistCm &&
+        current.note == uploaded.note;
+  }
+
+  bool _sameProgressPhotoUpload(
+    ProgressPhotoCollection current,
+    ProgressPhotoCollection uploaded,
+  ) {
+    return current.photoId == uploaded.photoId &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatusKey &&
+        _sameInstant(current.timestamp, uploaded.timestamp) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt) &&
+        current.filePath == uploaded.filePath &&
+        current.label == uploaded.label &&
+        current.metadataJson == uploaded.metadataJson;
+  }
+
+  bool _sameStringList(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
+
+  bool _sameInstant(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return a == b;
+    return a.isAtSameMomentAs(b);
   }
 
   Future<void> _markProgressPhotoConflict(

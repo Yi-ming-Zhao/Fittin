@@ -88,6 +88,26 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
 
   @override
   Future<void> concludeWorkoutSession(WorkoutSessionState session) async {
+    final logId = _workoutConclusionLogId(session);
+    final existingLog = await _repository.fetchWorkoutLogById(
+      logId,
+      ownerUserId: ownerUserId,
+    );
+    if (existingLog != null) {
+      if (existingLog.instanceId != session.instanceId ||
+          existingLog.workoutId != session.workoutId) {
+        throw StateError('The workout conclusion ID is already in use.');
+      }
+      final current = await _repository.fetchInstance(session.instanceId);
+      final existingPost = existingLog.postConclusionSnapshot;
+      if (current != null &&
+          current.ownerUserId == ownerUserId &&
+          existingPost != null &&
+          instanceMatchesWorkoutProgressionSnapshot(current, existingPost)) {
+        return;
+      }
+    }
+
     final context = await _loadContext();
     final engine = ProgramEngineDispatcher.resolve(
       context.template.engineFamily,
@@ -127,19 +147,10 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       engineState: result.updatedEngineState,
       states: result.updatedStates,
     );
-    final logId = const Uuid().v5(
-      Namespace.url.value,
-      'fittin:workout-conclusion:${context.instance.instanceId}:'
-      '${scheduledSession.scheduleToken}',
-    );
-    final existingLog = await _repository.fetchWorkoutLogById(
-      logId,
-      ownerUserId: ownerUserId,
-    );
     final completedAt = existingLog?.completedAt ?? DateTime.now();
 
-    await _repository.logWorkout(
-      WorkoutLog(
+    await _repository.commitWorkoutConclusion(
+      logRecord: WorkoutLog(
         instanceId: context.instance.instanceId,
         workoutId: canonicalSession.workoutId,
         logId: logId,
@@ -150,11 +161,9 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
         preConclusionSnapshot: _snapshotFromInstance(context.instance),
         postConclusionSnapshot: _snapshotFromInstance(postInstance),
       ),
+      expectedInstance: context.instance,
+      postInstance: postInstance,
       ownerUserId: ownerUserId,
-    );
-
-    await _repository.saveInstance(
-      postInstance,
       syncStatus: ownerUserId == null
           ? SyncStatusKeys.localOnly
           : SyncStatusKeys.pendingUpload,
@@ -195,6 +204,13 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   Future<ExerciseLibrary> _exerciseLibrary() {
     return _exerciseLibraryFuture ??= _exerciseLibraryLoader();
   }
+}
+
+String _workoutConclusionLogId(WorkoutSessionState session) {
+  return const Uuid().v5(
+    Namespace.url.value,
+    'fittin:workout-conclusion:${session.instanceId}:${session.scheduleToken}',
+  );
 }
 
 WorkoutSessionState _withCanonicalExerciseIds({

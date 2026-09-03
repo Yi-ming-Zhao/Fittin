@@ -202,13 +202,20 @@ class _SignedInCard extends StatelessWidget {
       SyncStage.hydrating => strings.syncHydrating,
       SyncStage.syncing => strings.syncInProgress,
       SyncStage.synced => strings.syncComplete,
+      SyncStage.conflict => strings.syncConflictPreserved(
+        syncState.conflictCount,
+      ),
       SyncStage.retryNeeded =>
         syncState.errorMessage == null
             ? strings.syncRetryNeeded
             : '${strings.syncRetryNeeded} ${syncState.errorMessage!}',
       SyncStage.idle => strings.syncReady,
     };
-    final syncButtonLabel = syncState.stage == SyncStage.retryNeeded
+    final syncButtonLabel =
+        const {
+          SyncStage.retryNeeded,
+          SyncStage.conflict,
+        }.contains(syncState.stage)
         ? strings.retrySync
         : strings.syncNow;
     return DashboardSurfaceCard(

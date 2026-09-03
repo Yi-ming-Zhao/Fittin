@@ -447,6 +447,73 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<bool> commitWorkoutConclusion({
+    required WorkoutLog logRecord,
+    required StoredTrainingInstance expectedInstance,
+    required StoredTrainingInstance postInstance,
+    required String? ownerUserId,
+    String? syncStatus,
+  }) async {
+    validateWorkoutConclusionCommit(
+      logRecord: logRecord,
+      expectedInstance: expectedInstance,
+      postInstance: postInstance,
+      ownerUserId: ownerUserId,
+    );
+    final current = _instances[expectedInstance.instanceId];
+    if (current == null || current.ownerUserId != ownerUserId) {
+      throw StateError('The active training instance is no longer available.');
+    }
+    WorkoutLog? existingLog;
+    for (final log in _workoutLogs) {
+      if (log.logId == logRecord.logId) {
+        existingLog = log;
+        break;
+      }
+    }
+    if (existingLog != null) {
+      validateMatchingWorkoutConclusion(existingLog, logRecord);
+      if (instanceMatchesWorkoutProgressionSnapshot(
+        current,
+        existingLog.postConclusionSnapshot!,
+      )) {
+        return false;
+      }
+    }
+    if (current.version != expectedInstance.version ||
+        !instanceMatchesWorkoutProgressionSnapshot(
+          current,
+          logRecord.preConclusionSnapshot!,
+        )) {
+      throw StateError(
+        'The training instance changed before the workout could be saved.',
+      );
+    }
+
+    final previousLogs = [..._workoutLogs];
+    try {
+      if (existingLog == null) {
+        await logWorkout(
+          logRecord,
+          ownerUserId: ownerUserId,
+          syncStatus: syncStatus,
+        );
+      }
+      await saveInstance(
+        postInstance.copyWith(version: expectedInstance.version + 1),
+        syncStatus: syncStatus,
+      );
+      return true;
+    } catch (_) {
+      _workoutLogs
+        ..clear()
+        ..addAll(previousLogs);
+      _instances[expectedInstance.instanceId] = current;
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> logWorkout(
     WorkoutLog logRecord, {
     String? ownerUserId,

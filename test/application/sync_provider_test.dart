@@ -55,6 +55,13 @@ class _FailingAfterHydrationSyncService implements SyncService {
   }
 }
 
+class _ConflictedSyncService implements SyncService {
+  @override
+  Future<void> synchronize() async {
+    throw const SyncConflictException(2);
+  }
+}
+
 class _ControlledSyncService implements SyncService {
   final Completer<void> completion = Completer<void>();
   int calls = 0;
@@ -109,6 +116,26 @@ void main() {
       );
     },
   );
+
+  test('preserved conflicts never publish a successful sync state', () async {
+    final container = ProviderContainer(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('sync-user'),
+        syncServiceProvider.overrideWithValue(_ConflictedSyncService()),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(syncControllerProvider.notifier)
+        .synchronizeWithRecovery(hydrate: true);
+
+    final state = container.read(syncControllerProvider);
+    expect(state.stage, SyncStage.conflict);
+    expect(state.conflictCount, 2);
+    expect(state.lastSyncedAt, isNull);
+    expect(container.read(syncRefreshProvider), 1);
+  });
 
   test('concurrent synchronization callers await the same operation', () async {
     final service = _ControlledSyncService();

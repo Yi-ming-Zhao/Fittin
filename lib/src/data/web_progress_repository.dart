@@ -65,10 +65,16 @@ class WebProgressRepository extends ProgressRepository {
   }
 
   @override
-  Future<void> deleteBodyMetric(String metricId) async {
+  Future<void> deleteBodyMetric(
+    String metricId, {
+    required String? ownerUserId,
+  }) async {
     final existing = await store.getRecord(WebStoreNames.bodyMetrics, metricId);
     if (existing == null) {
       return;
+    }
+    if (existing['ownerUserId'] != ownerUserId) {
+      throw StateError('Cannot delete a body metric owned by another user.');
     }
     existing['deletedAt'] = serializeStoredDateTime(DateTime.now());
     existing['version'] = (existing['version'] as int? ?? 0) + 1;

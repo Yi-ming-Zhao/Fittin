@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -63,6 +64,18 @@ class _ConflictingMetricRemoteRepository extends FakeSupabaseRemoteRepository {
       statusCode: 409,
       code: 'sync_conflict',
     );
+  }
+}
+
+class _PausedMetricRemoteRepository extends FakeSupabaseRemoteRepository {
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<void> upsertBodyMetric(BodyMetricCollection collection) async {
+    if (!started.isCompleted) started.complete();
+    await release.future;
+    await super.upsertBodyMetric(collection);
   }
 }
 
@@ -410,6 +423,55 @@ void main() {
     },
   );
 
+  test(
+    'late upload success preserves a newer local metric and queue',
+    () async {
+      final pausedRemote = _PausedMetricRemoteRepository();
+      syncService = SyncService(
+        databaseRepository: databaseRepository,
+        progressRepository: progressRepository,
+        remoteRepository: pausedRemote,
+        ownerUserId: 'user-123',
+      );
+      final timestamp = DateTime(2026, 9, 4, 8);
+      await progressRepository.saveBodyMetric(
+        BodyMetric(
+          metricId: 'metric-edited-during-upload',
+          timestamp: timestamp,
+          weightKg: 80,
+        ),
+        ownerUserId: 'user-123',
+        deviceId: 'device-local',
+      );
+
+      final synchronization = syncService.synchronize();
+      await pausedRemote.started.future;
+      await progressRepository.saveBodyMetric(
+        BodyMetric(
+          metricId: 'metric-edited-during-upload',
+          timestamp: timestamp,
+          weightKg: 81,
+        ),
+        ownerUserId: 'user-123',
+        deviceId: 'device-local',
+      );
+      pausedRemote.release.complete();
+      await synchronization;
+
+      final metric = await isar.bodyMetricCollections
+          .filter()
+          .metricIdEqualTo('metric-edited-during-upload')
+          .findFirst();
+      final queue = await isar.syncQueueCollections.getByQueueKey(
+        '${SyncEntityTypes.bodyMetric}:metric-edited-during-upload',
+      );
+      expect(metric?.weightKg, 81);
+      expect(metric?.version, 2);
+      expect(metric?.syncStatusKey, SyncStatusKeys.pendingUpload);
+      expect(queue, isNotNull);
+    },
+  );
+
   test('synchronize propagates soft deletes for body metrics', () async {
     await progressRepository.saveBodyMetric(
       BodyMetric(
@@ -419,7 +481,10 @@ void main() {
       ),
       ownerUserId: 'user-123',
     );
-    await progressRepository.deleteBodyMetric('metric-delete');
+    await progressRepository.deleteBodyMetric(
+      'metric-delete',
+      ownerUserId: 'user-123',
+    );
 
     await syncService.synchronize();
 
@@ -483,7 +548,10 @@ void main() {
         },
       ];
 
-      await syncService.synchronize();
+      await expectLater(
+        syncService.synchronize(),
+        throwsA(isA<SyncConflictException>()),
+      );
 
       final conflictedMetric = await isar.bodyMetricCollections
           .filter()
@@ -513,7 +581,10 @@ void main() {
       deviceId: 'device-local',
     );
 
-    await syncService.synchronize();
+    await expectLater(
+      syncService.synchronize(),
+      throwsA(isA<SyncConflictException>()),
+    );
 
     final metric = await isar.bodyMetricCollections
         .filter()

@@ -30,6 +30,28 @@ class WebStoreNames {
   ];
 }
 
+class WebLocalStoreOpenException implements Exception {
+  const WebLocalStoreOpenException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'WebLocalStoreOpenException: $message';
+}
+
+class WebLocalStoreBlockedException extends WebLocalStoreOpenException {
+  const WebLocalStoreBlockedException(super.message);
+}
+
+class WebLocalStoreInvalidatedException implements Exception {
+  const WebLocalStoreInvalidatedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'WebLocalStoreInvalidatedException: $message';
+}
+
 class WebStoreMutation {
   const WebStoreMutation.put(this.storeName, this.key, this.value)
     : isDelete = false;
@@ -44,7 +66,11 @@ class WebStoreMutation {
 }
 
 class WebLocalStore {
-  static Future<WebLocalStore> open({String? databaseName}) async {
+  static Future<WebLocalStore> open({
+    String? databaseName,
+    int databaseVersion = 3,
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
     throw UnsupportedError('WebLocalStore is only available on the web.');
   }
 

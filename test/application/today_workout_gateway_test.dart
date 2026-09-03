@@ -295,7 +295,7 @@ void main() {
     );
   });
 
-  test('conclusion retry upserts one deterministic workout log', () async {
+  test('failed conclusion rolls back and retry commits only once', () async {
     final repository = _FailOnceInstanceSaveRepository();
     final template = await GzclpSeed.loadTemplate();
     final instance = StoredTrainingInstance(
@@ -315,10 +315,7 @@ void main() {
       gateway.concludeWorkoutSession(session),
       throwsA(isA<StateError>()),
     );
-    expect(
-      await repository.fetchWorkoutLogs(instance.instanceId),
-      hasLength(1),
-    );
+    expect(await repository.fetchWorkoutLogs(instance.instanceId), isEmpty);
     expect(
       (await repository.fetchInstance(
         instance.instanceId,
@@ -326,6 +323,7 @@ void main() {
       0,
     );
 
+    await gateway.concludeWorkoutSession(session);
     await gateway.concludeWorkoutSession(session);
 
     final logs = await repository.fetchWorkoutLogs(instance.instanceId);

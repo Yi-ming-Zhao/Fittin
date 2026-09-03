@@ -97,7 +97,20 @@ void main() {
         ownerUserId: 'user-123',
       );
 
-      await repository.deleteBodyMetric('metric-delete');
+      await expectLater(
+        repository.deleteBodyMetric('metric-delete', ownerUserId: 'other-user'),
+        throwsA(isA<StateError>()),
+      );
+      final untouched = await isar.bodyMetricCollections
+          .filter()
+          .metricIdEqualTo('metric-delete')
+          .findFirst();
+      expect(untouched?.deletedAt, isNull);
+
+      await repository.deleteBodyMetric(
+        'metric-delete',
+        ownerUserId: 'user-123',
+      );
 
       final visibleMetrics = await repository.fetchBodyMetrics(
         ownerUserId: 'user-123',

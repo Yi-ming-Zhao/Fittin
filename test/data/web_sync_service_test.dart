@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/data/web_database_repository.dart';
 import 'package:fittin_v2/src/data/web_local_store.dart';
 import 'package:fittin_v2/src/data/web_progress_repository.dart';
@@ -39,6 +42,14 @@ class _MemoryWebLocalStore extends WebLocalStore {
   Future<void> deleteRecord(String storeName, String key) async {
     _records[storeName]?.remove(key);
   }
+
+  @override
+  Future<T> runInTransaction<T>(
+    List<String> storeNames,
+    Future<T> Function() operation,
+  ) {
+    return operation();
+  }
 }
 
 class _FakeWebRemoteRepository extends FakeSupabaseRemoteRepository {
@@ -73,6 +84,18 @@ class _FailingFirstWebPullRemoteRepository extends _FakeWebRemoteRepository {
       timestampColumn: timestampColumn,
       since: since,
     );
+  }
+}
+
+class _PausedWebInstanceRemoteRepository extends _FakeWebRemoteRepository {
+  final started = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<void> upsertInstance(instance) async {
+    if (!started.isCompleted) started.complete();
+    await release.future;
+    await super.upsertInstance(instance);
   }
 }
 
@@ -145,6 +168,85 @@ void main() {
     expect(active?.templateId, 'powerbuilding-4day-12week');
     expect(remoteInstance, isNotNull);
   });
+
+  test(
+    'late Web upload success preserves a newer workout conclusion and queue',
+    () async {
+      const ownerUserId = 'user-123';
+      final remote = _PausedWebInstanceRemoteRepository();
+      syncService = WebSyncService(
+        databaseRepository: databaseRepository,
+        progressRepository: progressRepository,
+        remoteRepository: remote,
+        ownerUserId: ownerUserId,
+      );
+      await databaseRepository.saveInstance(
+        StoredTrainingInstance(
+          instanceId: 'instance-concurrent',
+          templateId: 'template-concurrent',
+          currentWorkoutIndex: 0,
+          ownerUserId: ownerUserId,
+          states: const [],
+          engineState: const {'week': 0},
+        ),
+        deviceId: 'device-local',
+      );
+      final before = (await databaseRepository.fetchInstance(
+        'instance-concurrent',
+      ))!;
+      final after = before.copyWith(
+        currentWorkoutIndex: 1,
+        engineState: const {'week': 1},
+      );
+      final log = WorkoutLog(
+        logId: 'conclusion-concurrent',
+        instanceId: before.instanceId,
+        workoutId: 'workout-a',
+        workoutName: 'Workout A',
+        dayLabel: 'Day 1',
+        completedAt: DateTime.utc(2026, 9, 4),
+        exercises: const [],
+        preConclusionSnapshot: _snapshot(before),
+        postConclusionSnapshot: _snapshot(after),
+      );
+
+      final synchronization = syncService.synchronize();
+      await remote.started.future;
+      expect(
+        await databaseRepository.commitWorkoutConclusion(
+          logRecord: log,
+          expectedInstance: before,
+          postInstance: after,
+          ownerUserId: ownerUserId,
+        ),
+        isTrue,
+      );
+      remote.release.complete();
+      await synchronization;
+
+      final stored = await databaseRepository.fetchInstance(before.instanceId);
+      final queue = await databaseRepository.store.getAllRecords(
+        WebStoreNames.syncQueue,
+      );
+      expect(stored?.currentWorkoutIndex, 1);
+      expect(stored?.version, 2);
+      expect(stored?.syncStatus, SyncStatusKeys.pendingUpload);
+      expect(queue.map((item) => item['entityType']).toSet(), {
+        SyncEntityTypes.instance,
+        SyncEntityTypes.workoutLog,
+      });
+    },
+  );
+}
+
+WorkoutProgressionSnapshot _snapshot(StoredTrainingInstance instance) {
+  return WorkoutProgressionSnapshot(
+    templateId: instance.templateId,
+    currentWorkoutIndex: instance.currentWorkoutIndex,
+    trainingMaxProfile: instance.trainingMaxProfile,
+    engineState: instance.engineState,
+    states: instance.states,
+  );
 }
 
 Future<void> _seedLocalPowerbuildingData(

@@ -468,21 +468,29 @@ class _WorkoutEditorCard extends StatelessWidget {
       actions: allowPeriodizedSlotFocus
           ? null
           : [
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey('workout-$workoutIndex-move-up'),
                 onPressed: () => notifier.moveWorkout(workoutIndex, -1),
-                icon: const Icon(Icons.arrow_upward_rounded),
+                label: strings.moveWorkoutUp,
+                icon: Icons.arrow_upward_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey('workout-$workoutIndex-move-down'),
                 onPressed: () => notifier.moveWorkout(workoutIndex, 1),
-                icon: const Icon(Icons.arrow_downward_rounded),
+                label: strings.moveWorkoutDown,
+                icon: Icons.arrow_downward_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey('workout-$workoutIndex-duplicate'),
                 onPressed: () => notifier.duplicateWorkout(workoutIndex),
-                icon: const Icon(Icons.copy_rounded),
+                label: strings.duplicateWorkout,
+                icon: Icons.copy_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey('workout-$workoutIndex-delete'),
                 onPressed: () => notifier.removeWorkout(workoutIndex),
-                icon: const Icon(Icons.delete_outline_rounded),
+                label: strings.deleteWorkout,
+                icon: Icons.delete_outline_rounded,
               ),
             ],
       child: Column(
@@ -600,25 +608,41 @@ class _ExerciseEditorCard extends StatelessWidget {
                   ),
                 ),
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey(
+                  'exercise-$workoutIndex-$exerciseIndex-move-up',
+                ),
                 onPressed: () =>
                     notifier.moveExercise(workoutIndex, exerciseIndex, -1),
-                icon: const Icon(Icons.arrow_upward_rounded),
+                label: strings.moveExerciseUp,
+                icon: Icons.arrow_upward_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey(
+                  'exercise-$workoutIndex-$exerciseIndex-move-down',
+                ),
                 onPressed: () =>
                     notifier.moveExercise(workoutIndex, exerciseIndex, 1),
-                icon: const Icon(Icons.arrow_downward_rounded),
+                label: strings.moveExerciseDown,
+                icon: Icons.arrow_downward_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey(
+                  'exercise-$workoutIndex-$exerciseIndex-duplicate',
+                ),
                 onPressed: () =>
                     notifier.duplicateExercise(workoutIndex, exerciseIndex),
-                icon: const Icon(Icons.copy_rounded),
+                label: strings.duplicateExercise,
+                icon: Icons.copy_rounded,
               ),
-              IconButton(
+              _EditorActionButton(
+                controlKey: ValueKey(
+                  'exercise-$workoutIndex-$exerciseIndex-delete',
+                ),
                 onPressed: () =>
                     notifier.removeExercise(workoutIndex, exerciseIndex),
-                icon: const Icon(Icons.delete_outline_rounded),
+                label: strings.deleteExercise,
+                icon: Icons.delete_outline_rounded,
               ),
             ],
           ),
@@ -889,57 +913,77 @@ class _StageEditorCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stageActions = [
+      _EditorActionButton(
+        controlKey: ValueKey(
+          'stage-$workoutIndex-$exerciseIndex-$stageIndex-move-up',
+        ),
+        onPressed: () =>
+            notifier.moveStage(workoutIndex, exerciseIndex, stageIndex, -1),
+        label: '${strings.stage} · ${strings.moveUp}',
+        icon: Icons.arrow_upward_rounded,
+      ),
+      _EditorActionButton(
+        controlKey: ValueKey(
+          'stage-$workoutIndex-$exerciseIndex-$stageIndex-move-down',
+        ),
+        onPressed: () =>
+            notifier.moveStage(workoutIndex, exerciseIndex, stageIndex, 1),
+        label: '${strings.stage} · ${strings.moveDown}',
+        icon: Icons.arrow_downward_rounded,
+      ),
+      _EditorActionButton(
+        controlKey: ValueKey(
+          'stage-$workoutIndex-$exerciseIndex-$stageIndex-duplicate',
+        ),
+        onPressed: () =>
+            notifier.duplicateStage(workoutIndex, exerciseIndex, stageIndex),
+        label: '${strings.stage} · ${strings.duplicate}',
+        icon: Icons.copy_rounded,
+      ),
+      _EditorActionButton(
+        controlKey: ValueKey(
+          'stage-$workoutIndex-$exerciseIndex-$stageIndex-delete',
+        ),
+        onPressed: () =>
+            notifier.removeStage(workoutIndex, exerciseIndex, stageIndex),
+        label: '${strings.stage} · ${strings.delete}',
+        icon: Icons.delete_outline_rounded,
+      ),
+    ];
     return DashboardSurfaceCard(
       radius: 20,
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  stage.name,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton(
-                onPressed: () => notifier.moveStage(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                  -1,
-                ),
-                icon: const Icon(Icons.arrow_upward_rounded),
-              ),
-              IconButton(
-                onPressed: () => notifier.moveStage(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                  1,
-                ),
-                icon: const Icon(Icons.arrow_downward_rounded),
-              ),
-              IconButton(
-                onPressed: () => notifier.duplicateStage(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                ),
-                icon: const Icon(Icons.copy_rounded),
-              ),
-              IconButton(
-                onPressed: () => notifier.removeStage(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                ),
-                icon: const Icon(Icons.delete_outline_rounded),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final title = Text(
+                stage.name,
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              );
+              if (constraints.maxWidth < 280) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    title,
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Wrap(children: stageActions),
+                    ),
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: title),
+                  ...stageActions,
+                ],
+              );
+            },
           ),
           _DraftTextField(
             label: strings.stageName,
@@ -1053,6 +1097,7 @@ class _SetEditorRow extends StatelessWidget {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: setDefinition.kind,
                   decoration: InputDecoration(labelText: strings.role),
                   items: [
@@ -1140,6 +1185,7 @@ class _SetEditorRow extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: setDefinition.resolvedSetType,
             decoration: InputDecoration(labelText: strings.setType),
             items: [
@@ -1358,73 +1404,97 @@ class _RuleActionEditorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 2,
-          child: DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: action.type,
-            decoration: InputDecoration(labelText: strings.ruleAction),
-            items: [
-              DropdownMenuItem(
-                value: 'STAY_STAGE',
-                child: Text(strings.ruleActionStay),
-              ),
-              DropdownMenuItem(
-                value: 'ADD_WEIGHT',
-                child: Text(strings.ruleActionAddWeight),
-              ),
-              DropdownMenuItem(
-                value: 'MULTIPLY_WEIGHT',
-                child: Text(strings.ruleActionMultiply),
-              ),
-              DropdownMenuItem(
-                value: 'JUMP_TO_STAGE',
-                child: Text(strings.ruleActionJumpStage),
-              ),
-            ],
-            onChanged: (value) {
-              if (value != null) onTypeChanged(value);
-            },
-          ),
+    final typeField = DropdownButtonFormField<String>(
+      isExpanded: true,
+      initialValue: action.type,
+      decoration: InputDecoration(labelText: strings.ruleAction),
+      items: [
+        DropdownMenuItem(
+          value: 'STAY_STAGE',
+          child: Text(strings.ruleActionStay),
         ),
-        const SizedBox(width: 8),
-        if (action.type == 'ADD_WEIGHT')
-          Expanded(
-            child: _DraftDoubleField(
-              label: strings.amount,
-              value: action.amount ?? 2.5,
-              onChanged: onAmountChanged,
-            ),
-          )
-        else if (action.type == 'MULTIPLY_WEIGHT')
-          Expanded(
-            child: _DraftDoubleField(
-              label: strings.multiplier,
-              value: action.multiplier ?? 0.9,
-              onChanged: onMultiplierChanged,
-            ),
-          )
-        else if (action.type == 'JUMP_TO_STAGE')
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              initialValue: action.targetStageId,
-              decoration: InputDecoration(labelText: strings.stage),
-              items: [
-                for (final stageId in stageIds)
-                  DropdownMenuItem(value: stageId, child: Text(stageId)),
-              ],
-              onChanged: onTargetStageChanged,
-            ),
-          )
-        else
-          const Spacer(),
-        IconButton(
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline_rounded),
+        DropdownMenuItem(
+          value: 'ADD_WEIGHT',
+          child: Text(strings.ruleActionAddWeight),
+        ),
+        DropdownMenuItem(
+          value: 'MULTIPLY_WEIGHT',
+          child: Text(strings.ruleActionMultiply),
+        ),
+        DropdownMenuItem(
+          value: 'JUMP_TO_STAGE',
+          child: Text(strings.ruleActionJumpStage),
         ),
       ],
+      onChanged: (value) {
+        if (value != null) onTypeChanged(value);
+      },
+    );
+    final detailField = switch (action.type) {
+      'ADD_WEIGHT' => _DraftDoubleField(
+        label: strings.amount,
+        value: action.amount ?? 2.5,
+        onChanged: onAmountChanged,
+      ),
+      'MULTIPLY_WEIGHT' => _DraftDoubleField(
+        label: strings.multiplier,
+        value: action.multiplier ?? 0.9,
+        onChanged: onMultiplierChanged,
+      ),
+      'JUMP_TO_STAGE' => DropdownButtonFormField<String>(
+        initialValue: action.targetStageId,
+        decoration: InputDecoration(labelText: strings.stage),
+        items: [
+          for (final stageId in stageIds)
+            DropdownMenuItem(value: stageId, child: Text(stageId)),
+        ],
+        onChanged: onTargetStageChanged,
+      ),
+      _ => null,
+    };
+    final deleteButton = IconButton(
+      onPressed: onDelete,
+      tooltip: strings.delete,
+      icon: const Icon(Icons.delete_outline_rounded),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(14) >= 20;
+        final compact = constraints.maxWidth < 340 || largeText;
+        if (compact) {
+          return Column(
+            key: const ValueKey('plan-rule-action-compact'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              typeField,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (detailField != null)
+                    Expanded(child: detailField)
+                  else
+                    const Spacer(),
+                  const SizedBox(width: 8),
+                  deleteButton,
+                ],
+              ),
+            ],
+          );
+        }
+        return Row(
+          key: const ValueKey('plan-rule-action-wide'),
+          children: [
+            Expanded(flex: 2, child: typeField),
+            const SizedBox(width: 8),
+            if (detailField != null)
+              Expanded(child: detailField)
+            else
+              const Spacer(),
+            deleteButton,
+          ],
+        );
+      },
     );
   }
 }
@@ -1473,6 +1543,36 @@ class _EditorCard extends StatelessWidget {
   }
 }
 
+class _EditorActionButton extends StatelessWidget {
+  const _EditorActionButton({
+    required this.controlKey,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final Key controlKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      button: true,
+      onTap: onPressed,
+      excludeSemantics: true,
+      child: IconButton(
+        key: controlKey,
+        tooltip: label,
+        onPressed: onPressed,
+        icon: Icon(icon),
+      ),
+    );
+  }
+}
+
 class _ModeTile extends StatelessWidget {
   const _ModeTile({
     required this.selected,
@@ -1489,36 +1589,45 @@ class _ModeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = refTheme(context);
-    return InkWell(
+    return Semantics(
+      label: title,
+      button: true,
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: selected ? theme.accentDim : theme.surfaceHi,
-          border: Border.all(
-            color: selected
-                ? theme.accent.withValues(alpha: 0.8)
-                : theme.border,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            color: selected ? theme.accentDim : theme.surfaceHi,
+            border: Border.all(
+              color: selected
+                  ? theme.accent.withValues(alpha: 0.8)
+                  : theme.border,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: theme
-                  .uiStyle(15, theme.fg)
-                  .copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
-            ),
-          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme
+                    .uiStyle(15, theme.fg)
+                    .copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                subtitle,
+                style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1540,20 +1649,34 @@ class _SlotChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Semantics(
+      label: label,
+      button: true,
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? theme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          border: selected ? null : Border.all(color: theme.border, width: 0.5),
-        ),
-        child: Text(
-          label,
-          style: theme
-              .uiStyle(13.0, selected ? theme.accentInk : theme.fgDim)
-              ?.copyWith(fontWeight: FontWeight.w600),
+      excludeSemantics: true,
+      child: GestureDetector(
+        excludeFromSemantics: true,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? theme.accent : Colors.transparent,
+            borderRadius: BorderRadius.circular(18),
+            border: selected
+                ? null
+                : Border.all(color: theme.border, width: 0.5),
+          ),
+          child: Text(
+            label,
+            style: theme
+                .uiStyle(13.0, selected ? theme.accentInk : theme.fgDim)
+                ?.copyWith(fontWeight: FontWeight.w600),
+          ),
         ),
       ),
     );

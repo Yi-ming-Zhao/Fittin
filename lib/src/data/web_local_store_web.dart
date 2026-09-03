@@ -5,6 +5,28 @@ import 'package:web/web.dart' as web;
 
 final Object _transactionZoneKey = Object();
 
+class WebLocalStoreOpenException implements Exception {
+  const WebLocalStoreOpenException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'WebLocalStoreOpenException: $message';
+}
+
+class WebLocalStoreBlockedException extends WebLocalStoreOpenException {
+  const WebLocalStoreBlockedException(super.message);
+}
+
+class WebLocalStoreInvalidatedException implements Exception {
+  const WebLocalStoreInvalidatedException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'WebLocalStoreInvalidatedException: $message';
+}
+
 class WebStoreNames {
   static const appState = 'app_state';
   static const templates = 'templates';
@@ -51,27 +73,97 @@ class WebStoreMutation {
 }
 
 class WebLocalStore {
-  WebLocalStore._(this._database);
+  WebLocalStore._(this._database, {required Object? defaultToken})
+    : _defaultToken = defaultToken;
 
   static const _databaseName = 'fittin_v2_web_store';
   static const _databaseVersion = 3;
   static Future<WebLocalStore>? _instance;
+  static Object? _instanceToken;
 
   final web.IDBDatabase _database;
+  final Object? _defaultToken;
+  String? _invalidationMessage;
 
-  static Future<WebLocalStore> open({String? databaseName}) {
-    if (databaseName != null) return _openInternal(databaseName);
-    return _instance ??= _openInternal();
+  static Future<WebLocalStore> open({
+    String? databaseName,
+    int databaseVersion = _databaseVersion,
+    Duration timeout = const Duration(seconds: 8),
+  }) {
+    if (databaseName != null || databaseVersion != _databaseVersion) {
+      return _openInternal(
+        databaseName: databaseName ?? _databaseName,
+        databaseVersion: databaseVersion,
+        timeout: timeout,
+      );
+    }
+    final cached = _instance;
+    if (cached != null) return cached;
+    final token = Object();
+    _instanceToken = token;
+    return _instance = _openDefault(timeout, token);
   }
 
-  void close() => _database.close();
-
-  static Future<WebLocalStore> _openInternal([String? databaseName]) async {
-    final request = web.window.indexedDB.open(
-      databaseName ?? _databaseName,
-      _databaseVersion,
+  void close() {
+    _invalidate(
+      'This browser storage connection is closed. Open WebLocalStore again before accessing data.',
     );
+  }
+
+  void _invalidate(String message) {
+    if (_invalidationMessage != null) return;
+    _invalidationMessage = message;
+    _database.close();
+    final token = _defaultToken;
+    if (token != null && identical(_instanceToken, token)) {
+      _instance = null;
+      _instanceToken = null;
+    }
+  }
+
+  void _ensureUsable() {
+    final message = _invalidationMessage;
+    if (message != null) throw WebLocalStoreInvalidatedException(message);
+  }
+
+  static Future<WebLocalStore> _openDefault(
+    Duration timeout,
+    Object token,
+  ) async {
+    try {
+      return await _openInternal(
+        databaseName: _databaseName,
+        databaseVersion: _databaseVersion,
+        timeout: timeout,
+        defaultToken: token,
+      );
+    } catch (_) {
+      // A failed future must not poison every later startup retry.
+      if (identical(_instanceToken, token)) {
+        _instance = null;
+        _instanceToken = null;
+      }
+      rethrow;
+    }
+  }
+
+  static Future<WebLocalStore> _openInternal({
+    required String databaseName,
+    required int databaseVersion,
+    required Duration timeout,
+    Object? defaultToken,
+  }) async {
+    final request = web.window.indexedDB.open(databaseName, databaseVersion);
     final completer = Completer<web.IDBDatabase>();
+    final timeoutTimer = Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.completeError(
+          const WebLocalStoreOpenException(
+            'Opening browser storage timed out. Close other Fittin tabs and retry.',
+          ),
+        );
+      }
+    });
 
     request.onupgradeneeded = ((web.Event _) {
       final database = request.result as web.IDBDatabase;
@@ -83,19 +175,56 @@ class WebLocalStore {
     }).toJS;
 
     request.onsuccess = ((web.Event _) {
-      completer.complete(request.result as web.IDBDatabase);
+      final database = request.result as web.IDBDatabase;
+      if (completer.isCompleted) {
+        // IndexedDB requests cannot be cancelled. A request that succeeds after
+        // the caller has already received a timeout/blocked error must not leave
+        // another hidden connection behind.
+        database.close();
+        return;
+      }
+      completer.complete(database);
     }).toJS;
 
     request.onerror = ((web.Event _) {
-      completer.completeError(
-        request.error ?? StateError('Failed to open IndexedDB.'),
-      );
+      if (!completer.isCompleted) {
+        completer.completeError(
+          request.error ??
+              const WebLocalStoreOpenException(
+                'Failed to open browser storage.',
+              ),
+        );
+      }
     }).toJS;
 
-    return WebLocalStore._(await completer.future);
+    request.onblocked = ((web.Event _) {
+      if (!completer.isCompleted) {
+        completer.completeError(
+          const WebLocalStoreBlockedException(
+            'A previous Fittin tab is blocking a browser storage upgrade. Close it and retry.',
+          ),
+        );
+      }
+    }).toJS;
+
+    try {
+      final store = WebLocalStore._(
+        await completer.future,
+        defaultToken: defaultToken,
+      );
+      store._database.onversionchange = ((web.Event _) {
+        store._invalidate(
+          'This browser storage connection was invalidated by a version change. Open WebLocalStore again before accessing data.',
+        );
+      }).toJS;
+      return store;
+    } finally {
+      timeoutTimer.cancel();
+    }
   }
 
   Future<Map<String, dynamic>?> getRecord(String storeName, String key) async {
+    _ensureUsable();
     final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
     if (active != null) {
       final result = await _requestResult(
@@ -114,6 +243,7 @@ class WebLocalStore {
   }
 
   Future<List<Map<String, dynamic>>> getAllRecords(String storeName) async {
+    _ensureUsable();
     final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
     if (active != null) {
       final result = await _requestResult(
@@ -133,6 +263,7 @@ class WebLocalStore {
     String key,
     Map<String, dynamic> value,
   ) async {
+    _ensureUsable();
     final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
     if (active != null) {
       await _requestResult(
@@ -147,6 +278,7 @@ class WebLocalStore {
   }
 
   Future<void> deleteRecord(String storeName, String key) async {
+    _ensureUsable();
     final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
     if (active != null) {
       await _requestResult(active.objectStore(storeName).delete(key.toJS));
@@ -159,6 +291,7 @@ class WebLocalStore {
   }
 
   Future<void> applyMutations(List<WebStoreMutation> mutations) async {
+    _ensureUsable();
     if (mutations.isEmpty) return;
     final active = Zone.current[_transactionZoneKey] as web.IDBTransaction?;
     if (active != null) {
@@ -178,6 +311,7 @@ class WebLocalStore {
     List<String> storeNames,
     Future<T> Function() operation,
   ) async {
+    _ensureUsable();
     if (Zone.current[_transactionZoneKey] != null) return operation();
     final transaction = _database.transaction(
       storeNames.toSet().toList().jsify()!,

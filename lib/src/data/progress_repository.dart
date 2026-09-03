@@ -100,13 +100,19 @@ class ProgressRepository {
         .toList();
   }
 
-  Future<void> deleteBodyMetric(String metricId) async {
+  Future<void> deleteBodyMetric(
+    String metricId, {
+    required String? ownerUserId,
+  }) async {
     final existing = await _database.bodyMetricCollections
         .filter()
         .metricIdEqualTo(metricId)
         .findFirst();
     if (existing == null) {
       return;
+    }
+    if (existing.ownerUserId != ownerUserId) {
+      throw StateError('Cannot delete a body metric owned by another user.');
     }
     existing.deletedAt = DateTime.now();
     existing.version = existing.version + 1;
@@ -325,7 +331,16 @@ class InMemoryProgressRepository extends ProgressRepository {
   }
 
   @override
-  Future<void> deleteBodyMetric(String metricId) async {
+  Future<void> deleteBodyMetric(
+    String metricId, {
+    required String? ownerUserId,
+  }) async {
+    if (!_metricOwners.containsKey(metricId)) {
+      return;
+    }
+    if (_metricOwners[metricId] != ownerUserId) {
+      throw StateError('Cannot delete a body metric owned by another user.');
+    }
     _bodyMetrics.removeWhere((metric) => metric.metricId == metricId);
     _metricOwners.remove(metricId);
   }
