@@ -1,3 +1,6 @@
+// Keep Flutter 3.35 compatibility until the repository minimum moves to 3.41.
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -251,9 +254,6 @@ void main() {
       );
       expect(
         tester.getSemantics(espresso),
-        // Flutter 3.41 replaces this with isSemantics, which is unavailable on
-        // our supported Flutter 3.35 SDK. This matcher abstracts bool/Tristate.
-        // ignore: deprecated_member_use
         containsSemantics(hasSelectedState: true, isSelected: true),
       );
       semantics.dispose();
