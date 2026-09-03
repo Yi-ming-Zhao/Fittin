@@ -344,10 +344,15 @@ void main() {
     final card = find.byKey(const ValueKey('active-set-card'));
     final stage = find.byKey(const ValueKey('active-card-flex-stage'));
     final complete = find.byKey(const ValueKey('complete-current-set'));
+    final rpe = find.byKey(const ValueKey('current-rpe-editor'));
+    final switchExercise = find.byKey(const ValueKey('switch-exercise'));
     final shortCardHeight = tester.getSize(card).height;
     final shortStageHeight = tester.getSize(stage).height;
     expect(tester.takeException(), isNull);
     expect(tester.getBottomRight(complete).dy, lessThanOrEqualTo(568));
+    expect(tester.getSize(rpe).height, greaterThanOrEqualTo(44));
+    expect(tester.getSize(switchExercise).width, greaterThanOrEqualTo(44));
+    expect(tester.getSize(switchExercise).height, greaterThanOrEqualTo(44));
 
     tester.view.physicalSize = const Size(390, 926);
     await tester.pumpAndSettle();
@@ -382,6 +387,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const ValueKey('active-set-card')), findsNothing);
+    expect(
+      tester.getSize(find.byKey(const ValueKey('current-rpe-editor'))).height,
+      greaterThanOrEqualTo(44),
+    );
 
     await tester.tap(find.byKey(const ValueKey('current-weight-editor')));
     await tester.pumpAndSettle();

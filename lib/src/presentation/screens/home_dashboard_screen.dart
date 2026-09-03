@@ -43,10 +43,20 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final isCompact = constraints.maxHeight < 720;
+                final scaledBodySize = MediaQuery.textScalerOf(
+                  context,
+                ).scale(14);
+                final needsScrollableLayout =
+                    constraints.maxHeight < 720 ||
+                    constraints.maxWidth < 360 ||
+                    scaledBodySize > 15.4;
+                final useCondensedCards =
+                    constraints.maxHeight < 720 &&
+                    constraints.maxWidth >= 360 &&
+                    scaledBodySize <= 15.4;
                 final roomyProgress = ((constraints.maxHeight - 880) / 46)
                     .clamp(0.0, 1.0);
-                final sectionGap = isCompact
+                final sectionGap = useCondensedCards
                     ? 6.0
                     : 16.0 + (24.0 * roomyProgress);
                 final content = Column(
@@ -63,16 +73,17 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                       error: (_, __) => _FittinTopMetaRowSkeleton(theme: theme),
                     ),
                     SizedBox(height: sectionGap),
-                    TodayWorkoutHeroCard(compact: isCompact),
+                    TodayWorkoutHeroCard(compact: useCondensedCards),
                     SizedBox(height: sectionGap),
                     homeDataAsync.when(
                       data: (data) => _AtAGlanceSection(
                         data: data,
                         strings: strings,
                         theme: theme,
-                        compact: isCompact,
+                        compact: useCondensedCards,
                       ),
-                      loading: () => _HomeOverviewSkeleton(compact: isCompact),
+                      loading: () =>
+                          _HomeOverviewSkeleton(compact: useCondensedCards),
                       error: (error, _) => isMissingActivePlanError(error)
                           ? const SizedBox.shrink()
                           : _HomeOverviewError(
@@ -83,11 +94,11 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 );
                 final padding = EdgeInsets.fromLTRB(
                   theme.pad,
-                  isCompact ? 16 : 16 + (8 * roomyProgress),
+                  useCondensedCards ? 16 : 16 + (8 * roomyProgress),
                   theme.pad,
                   20,
                 );
-                if (!isCompact) {
+                if (!needsScrollableLayout) {
                   return Padding(padding: padding, child: content);
                 }
                 return SingleChildScrollView(padding: padding, child: content);
@@ -382,7 +393,7 @@ class _CycleProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       key: const ValueKey('today-cycle-card'),
-      height: compact ? 144 : 168,
+      height: _textScaleAwareHeight(context, compact ? 144 : 168),
       child: FittinCard(
         theme: theme,
         style: FittinCardStyle.glass,
@@ -483,7 +494,7 @@ class _HighlightLiftCardState extends State<_HighlightLiftCard> {
 
     return SizedBox(
       key: const ValueKey('today-e1rm-card'),
-      height: widget.compact ? 144 : 168,
+      height: _textScaleAwareHeight(context, widget.compact ? 144 : 168),
       child: FittinCard(
         theme: widget.theme,
         style: FittinCardStyle.glass,
@@ -712,7 +723,7 @@ class _ActivityCard extends StatelessWidget {
       },
       child: SizedBox(
         key: const ValueKey('today-activity-card'),
-        height: compact ? 74 : 90,
+        height: _textScaleAwareHeight(context, compact ? 74 : 90),
         child: historyCount == 0
             ? Center(
                 child: Text(
@@ -771,6 +782,12 @@ class _ActivityCard extends StatelessWidget {
       ),
     );
   }
+}
+
+double _textScaleAwareHeight(BuildContext context, double baseHeight) {
+  final scaled = MediaQuery.textScalerOf(context).scale(10) / 10;
+  final extra = ((scaled - 1).clamp(0.0, 1.0) * 120).toDouble();
+  return baseHeight + extra;
 }
 
 class _QuickActionsCard extends StatelessWidget {

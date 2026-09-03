@@ -1,17 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/local/local_progress_repository.dart';
+import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/data/remote/progress_photo_cache.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/domain/models/progress_photo.dart';
 import 'package:uuid/uuid.dart';
 
 final bodyMetricsProvider =
-    StateNotifierProvider<BodyMetricsNotifier, AsyncValue<List<BodyMetric>>>((
-      ref,
-    ) {
-      return BodyMetricsNotifier(ref);
-    });
+    StateNotifierProvider<BodyMetricsNotifier, AsyncValue<List<BodyMetric>>>(
+      (ref) => BodyMetricsNotifier(
+        ref.watch(progressRepositoryProvider),
+        ownerUserId: ref.watch(currentUserIdProvider),
+      ),
+    );
 
 final progressPhotosProvider =
     StateNotifierProvider<
@@ -72,11 +75,14 @@ class ProgressPhotosNotifier
 }
 
 class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
-  BodyMetricsNotifier(this._ref) : super(const AsyncValue.loading()) {
+  BodyMetricsNotifier(this._repository, {required String? ownerUserId})
+    : _ownerUserId = ownerUserId,
+      super(const AsyncValue.loading()) {
     _load();
   }
 
-  final Ref _ref;
+  final ProgressRepository _repository;
+  final String? _ownerUserId;
   int _loadRevision = 0;
 
   Future<void> _load() async {
@@ -84,9 +90,9 @@ class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
     final revision = ++_loadRevision;
     state = const AsyncValue.loading();
     try {
-      final metrics = await _ref
-          .read(localProgressRepositoryProvider)
-          .fetchBodyMetrics();
+      final metrics = await _repository.fetchBodyMetrics(
+        ownerUserId: _ownerUserId,
+      );
       if (mounted && revision == _loadRevision) {
         state = AsyncValue.data(metrics);
       }
@@ -128,7 +134,7 @@ class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
       note: note,
     );
 
-    await _ref.read(localProgressRepositoryProvider).saveBodyMetric(metric);
+    await _repository.saveBodyMetric(metric, ownerUserId: _ownerUserId);
     await _load();
   }
 
@@ -145,7 +151,7 @@ class BodyMetricsNotifier extends StateNotifier<AsyncValue<List<BodyMetric>>> {
   }
 
   Future<void> deleteMetric(String id) async {
-    await _ref.read(localProgressRepositoryProvider).deleteBodyMetric(id);
+    await _repository.deleteBodyMetric(id, ownerUserId: _ownerUserId);
     await _load();
   }
 }

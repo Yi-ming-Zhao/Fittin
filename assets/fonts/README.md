@@ -18,3 +18,13 @@ Split, while retaining every character from the previous subset.
 - Runtime subset SHA-256: `98c4a32582fff1574a94b4f5a0e26cf78ee3ea788f82ba20c846e678915ee829`
 - Runtime subset size: `276172` bytes
 - License: SIL Open Font License 1.1; see `OFL-NotoSansSC.txt`.
+
+## Curated Latin families
+
+Fittin bundles the variable Roman builds of Inter, JetBrains Mono,
+Instrument Sans and Fraunces plus Instrument Serif Regular. They are sourced
+from the official Google Fonts repository and replace runtime font downloads,
+so all five themes keep stable metrics on offline Android, iOS and Web starts.
+
+Each family is distributed under the SIL Open Font License 1.1 in its matching
+`OFL-*.txt` file.

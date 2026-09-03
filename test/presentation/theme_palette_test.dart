@@ -121,6 +121,34 @@ void main() {
     expect(ExportPalette.qrBackground, Colors.white);
   });
 
+  test('all curated theme fonts are bundled for offline startup', () {
+    const assets = {
+      'Inter': 'assets/fonts/Inter-Variable.ttf',
+      'JetBrains Mono': 'assets/fonts/JetBrainsMono-Variable.ttf',
+      'Instrument Sans': 'assets/fonts/InstrumentSans-Variable.ttf',
+      'Instrument Serif': 'assets/fonts/InstrumentSerif-Regular.ttf',
+      'Fraunces': 'assets/fonts/Fraunces-Variable.ttf',
+    };
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final themeSource = File(
+      'lib/src/presentation/theme/fittin_theme.dart',
+    ).readAsStringSync();
+    expect(pubspec, isNot(contains('google_fonts:')));
+    expect(themeSource, isNot(contains('package:google_fonts')));
+    for (final asset in assets.entries) {
+      final file = File(asset.value);
+      expect(file.existsSync(), isTrue, reason: '${asset.key} is missing');
+      expect(file.lengthSync(), greaterThan(40000));
+      expect(pubspec, contains('family: ${asset.key}'));
+      expect(pubspec, contains('asset: ${asset.value}'));
+    }
+    for (final theme in FittinPaletteRegistry.entries.values) {
+      expect(theme.displayStyle().fontFamily, theme.displayFontFamily);
+      expect(theme.uiStyle().fontFamily, theme.uiFontFamily);
+      expect(theme.numStyle().fontFamily, theme.numFontFamily);
+    }
+  });
+
   test('native and web launch surfaces avoid a platform-default white flash', () {
     final androidColor = File(
       'android/app/src/main/res/values/colors.xml',

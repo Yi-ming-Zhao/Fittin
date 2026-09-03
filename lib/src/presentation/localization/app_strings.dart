@@ -659,6 +659,9 @@ class AppStrings {
   String get syncComplete => isChinese ? '云端数据已同步。' : 'Cloud data is synced.';
   String get syncRetryNeeded =>
       isChinese ? '同步未完成，请重试。' : 'Sync did not complete. Retry is needed.';
+  String syncConflictPreserved(int count) => isChinese
+      ? '检测到 $count 项跨设备冲突，双方数据均已保留，未标记为同步成功。'
+      : '$count cross-device conflict(s) were preserved; sync was not marked successful.';
   String get syncNow => isChinese ? '立即同步' : 'Sync Now';
   String get retrySync => isChinese ? '重试同步' : 'Retry Sync';
   String get supabaseUnavailable =>
@@ -869,6 +872,14 @@ class AppStrings {
   String get moveUp => isChinese ? '上移' : 'Move up';
   String get moveDown => isChinese ? '下移' : 'Move down';
   String get duplicate => isChinese ? '复制' : 'Duplicate';
+  String get moveWorkoutUp => isChinese ? '上移训练日' : 'Move workout up';
+  String get moveWorkoutDown => isChinese ? '下移训练日' : 'Move workout down';
+  String get duplicateWorkout => isChinese ? '复制训练日' : 'Duplicate workout';
+  String get deleteWorkout => isChinese ? '删除训练日' : 'Delete workout';
+  String get moveExerciseUp => isChinese ? '上移动作' : 'Move exercise up';
+  String get moveExerciseDown => isChinese ? '下移动作' : 'Move exercise down';
+  String get duplicateExercise => isChinese ? '复制动作' : 'Duplicate exercise';
+  String get deleteExercise => isChinese ? '删除动作' : 'Delete exercise';
   String get ruleAction => isChinese ? '操作' : 'Action';
   String get ruleActionStay => isChinese ? '保持阶段' : 'Stay';
   String get ruleActionAddWeight => isChinese ? '增加重量' : 'Add Weight';

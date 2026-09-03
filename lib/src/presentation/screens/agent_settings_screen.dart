@@ -93,7 +93,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
 
     return DashboardPageScaffold(
       topPadding: 24,
-      bottomPadding: 40 + MediaQuery.viewInsetsOf(context).bottom,
+      bottomPadding: 40,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.agentSection,

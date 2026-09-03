@@ -110,7 +110,8 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     if (!_alive) throw const AgentRequestCancelledException();
   }
 
-  bool _submissionInFlight = false;
+  Future<void>? _runCommandInFlight;
+  Object? _runCommandKey;
   bool _decisionInFlight = false;
   bool _historyInFlight = false;
   bool get _isChinese => _ref.read(appLocaleProvider) == AppLocale.zh;
@@ -233,20 +234,40 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     );
   }
 
-  Future<void> submit(String rawPrompt) async {
+  Future<void> submit(String rawPrompt) {
     final prompt = rawPrompt.trim();
-    if (prompt.isEmpty || state.runState.isBusy || _submissionInFlight) return;
-    _submissionInFlight = true;
+    if (prompt.isEmpty) return Future<void>.value();
+    return _serializeRunCommand(
+      ('submit', prompt),
+      () => _submit(prompt),
+      queueWhenOccupied: true,
+    );
+  }
+
+  Future<void> _submit(String prompt) async {
     try {
       await _initialLoad;
       _checkAlive();
       if (state.runState.isBusy) return;
       if (state.runState.pendingProposal != null) {
-        await _fail(
-          _isChinese
-              ? '请先确认或拒绝待处理的修改，再开始新的请求。'
-              : 'Confirm or reject the pending change before starting another request.',
+        final conversation = state.runState.conversation;
+        if (conversation == null) return;
+        final queued = _append(
+          conversation,
+          AgentMessage(
+            id: const Uuid().v4(),
+            role: AgentMessageRole.user,
+            content: prompt,
+            createdAt: DateTime.now(),
+          ),
         );
+        await _setRun(
+          phase: AgentRunPhase.awaitingApproval,
+          conversation: queued,
+        );
+        await _ref
+            .read(agentMemoryControllerProvider.notifier)
+            .capture(prompt, conversation.id);
         return;
       }
       await _ref
@@ -328,8 +349,6 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       return;
     } catch (_) {
       _storageFailure();
-    } finally {
-      _submissionInFlight = false;
     }
   }
 
@@ -641,7 +660,11 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     _cancellationToken?.cancel();
   }
 
-  Future<void> retry() async {
+  Future<void> retry() {
+    return _serializeRunCommand(const ('continuation', ''), _retry);
+  }
+
+  Future<void> _retry() async {
     if (state.runState.isBusy) return;
     if (state.runState.errorCode == 'checkpoint_failed' && _record != null) {
       final raw = await _ref
@@ -651,10 +674,14 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       if (raw != null) await _restoreCheckpoint(AgentCheckpoint.fromJson(raw));
     }
     if (state.runState.pendingProposal != null) return;
-    await resume();
+    await _resume();
   }
 
-  Future<void> resume() async {
+  Future<void> resume() {
+    return _serializeRunCommand(const ('continuation', ''), _resume);
+  }
+
+  Future<void> _resume() async {
     await _initialLoad;
     _checkAlive();
     if (state.runState.isBusy ||
@@ -690,6 +717,56 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       toolCalls: 0,
     );
     await _run(config: settings.config, apiKey: key);
+  }
+
+  Future<void> _serializeRunCommand(
+    Object commandKey,
+    Future<void> Function() operation, {
+    bool queueWhenOccupied = false,
+  }) {
+    final existing = _runCommandInFlight;
+    if (existing != null) {
+      if (!queueWhenOccupied || _runCommandKey == commandKey) return existing;
+      return _queueRunCommand(existing, commandKey, operation);
+    }
+    final completer = Completer<void>();
+    final command = completer.future;
+    _runCommandInFlight = command;
+    _runCommandKey = commandKey;
+    unawaited(_completeRunCommand(operation, completer, command, commandKey));
+    return command;
+  }
+
+  Future<void> _queueRunCommand(
+    Future<void> existing,
+    Object commandKey,
+    Future<void> Function() operation,
+  ) async {
+    try {
+      await existing;
+    } catch (_) {
+      // A queued, distinct prompt still gets its own serialized attempt.
+    }
+    await _serializeRunCommand(commandKey, operation, queueWhenOccupied: true);
+  }
+
+  Future<void> _completeRunCommand(
+    Future<void> Function() operation,
+    Completer<void> completer,
+    Future<void> command,
+    Object commandKey,
+  ) async {
+    try {
+      await operation();
+      completer.complete();
+    } catch (error, stackTrace) {
+      completer.completeError(error, stackTrace);
+    } finally {
+      if (identical(_runCommandInFlight, command)) {
+        _runCommandInFlight = null;
+        if (_runCommandKey == commandKey) _runCommandKey = null;
+      }
+    }
   }
 
   Future<void> steer(String rawPrompt) async {
@@ -818,11 +895,17 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
     );
   }
 
-  Future<void> confirmProposal(String operationId) =>
-      _decide(operationId, true);
+  Future<void> confirmProposal(String operationId) => _serializeRunCommand(
+    ('decision', operationId),
+    () => _decide(operationId, true),
+    queueWhenOccupied: true,
+  );
 
-  Future<void> rejectProposal(String operationId) =>
-      _decide(operationId, false);
+  Future<void> rejectProposal(String operationId) => _serializeRunCommand(
+    ('decision', operationId),
+    () => _decide(operationId, false),
+    queueWhenOccupied: true,
+  );
 
   AgentConversation _withDecision(
     AgentConversation conversation,

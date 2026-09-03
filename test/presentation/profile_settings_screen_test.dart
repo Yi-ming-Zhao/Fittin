@@ -19,6 +19,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final repository = InMemoryDatabaseRepository();
+    final semantics = tester.ensureSemantics();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -36,6 +37,16 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('English interface'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('English. English interface')),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
 
     final cardMode = find.byKey(const ValueKey('recording-mode-card'));
     await tester.scrollUntilVisible(
@@ -60,6 +71,23 @@ void main() {
     );
     expect(find.text('卡片记录'), findsOneWidget);
     expect(find.text('Card logger'), findsNothing);
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 1000),
+      1000,
+    );
+    await tester.pumpAndSettle();
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('中文. 中文界面')),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
   });
 
   testWidgets('profile settings exposes the set type guide entry', (
@@ -320,6 +348,7 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final repository = InMemoryDatabaseRepository();
+    final semantics = tester.ensureSemantics();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -345,6 +374,19 @@ void main() {
     );
     await tester.ensureVisible(traditional);
     await tester.pumpAndSettle();
+    final cardSemantics = find.bySemanticsLabel(RegExp(r'^Card logger\.'));
+    final traditionalSemantics = find.bySemanticsLabel(
+      RegExp(r'^Traditional logger\.'),
+    );
+    expect(tester.getRect(cardSemantics).height, greaterThanOrEqualTo(44));
+    expect(
+      tester.getSemantics(cardSemantics),
+      containsSemantics(hasSelectedState: true, isSelected: true),
+    );
+    expect(
+      tester.getSemantics(traditionalSemantics),
+      containsSemantics(hasSelectedState: true, isSelected: false),
+    );
     await tester.tap(traditional);
     await tester.pumpAndSettle();
 
@@ -352,6 +394,17 @@ void main() {
       ProviderScope.containerOf(context).read(workoutRecordingModeProvider),
       WorkoutRecordingMode.traditional,
     );
+    expect(
+      tester.getSemantics(traditionalSemantics),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
   });
 
   testWidgets('profile settings exposes the about entry', (

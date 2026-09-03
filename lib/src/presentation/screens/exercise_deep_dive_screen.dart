@@ -82,88 +82,127 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     final current = summary.currentEstimatedOneRepMax;
     final change = summary.recentChange;
 
-    return Row(
-      children: [
-        Expanded(
-          child: DashboardSurfaceCard(
-            radius: 22,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.estimatedOneRepMaxAbbreviation,
-                  style: theme
-                      .uiStyle(10, theme.fgMuted)
-                      .copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                FittinBigNum(
-                  theme,
-                  current?.toStringAsFixed(1) ?? '—',
-                  size: 32,
-                  color: theme.fg,
-                ),
-              ],
+    Widget boundedValue(Widget child) => SizedBox(
+      width: double.infinity,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: child,
+      ),
+    );
+
+    final cards = <Widget>[
+      DashboardSurfaceCard(
+        key: const ValueKey('exercise-stat-e1rm'),
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              strings.estimatedOneRepMaxAbbreviation,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme
+                  .uiStyle(10, theme.fgMuted)
+                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DashboardSurfaceCard(
-            radius: 22,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.change30d,
-                  style: theme
-                      .uiStyle(10, theme.fgMuted)
-                      .copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                if (change != null)
-                  FittinDelta(theme, change)
-                else
-                  Text('—', style: theme.uiStyle(24, theme.fgDim)),
-              ],
+            const SizedBox(height: 8),
+            boundedValue(
+              FittinBigNum(
+                theme,
+                current?.toStringAsFixed(1) ?? '—',
+                size: 32,
+                color: theme.fg,
+              ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DashboardSurfaceCard(
-            radius: 22,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.encounterCount,
-                  style: theme
-                      .uiStyle(10, theme.fgMuted)
-                      .copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${summary.estimatedHistory.length}',
-                  style: theme.numStyle(32, theme.fg),
-                ),
-              ],
+      ),
+      DashboardSurfaceCard(
+        key: const ValueKey('exercise-stat-change'),
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              strings.change30d,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme
+                  .uiStyle(10, theme.fgMuted)
+                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0),
             ),
-          ),
+            const SizedBox(height: 8),
+            boundedValue(
+              change != null
+                  ? FittinDelta(theme, change)
+                  : Text('—', style: theme.uiStyle(24, theme.fgDim)),
+            ),
+          ],
         ),
-      ],
+      ),
+      DashboardSurfaceCard(
+        key: const ValueKey('exercise-stat-sessions'),
+        radius: 22,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              strings.encounterCount,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme
+                  .uiStyle(10, theme.fgMuted)
+                  .copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.0),
+            ),
+            const SizedBox(height: 8),
+            boundedValue(
+              Text(
+                '${summary.estimatedHistory.length}',
+                style: theme.numStyle(32, theme.fg),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 330) {
+          return Column(
+            children: [
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: cards[0]),
+                    const SizedBox(width: 12),
+                    Expanded(child: cards[1]),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(width: double.infinity, child: cards[2]),
+            ],
+          );
+        }
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[1]),
+              const SizedBox(width: 12),
+              Expanded(child: cards[2]),
+            ],
+          ),
+        );
+      },
     );
   }
 

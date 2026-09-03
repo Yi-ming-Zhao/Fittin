@@ -258,6 +258,8 @@ void main() {
     expect(historicalCell, findsOneWidget);
     expect(tester.widget<InkWell>(historicalCell).onTap, isNotNull);
 
+    await tester.ensureVisible(historicalCell);
+    await tester.pumpAndSettle();
     await tester.tap(historicalCell);
     await tester.pumpAndSettle();
     expect(find.text('Historical Session'), findsOneWidget);

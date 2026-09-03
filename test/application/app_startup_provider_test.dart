@@ -128,6 +128,40 @@ void main() {
     },
   );
 
+  test('preserved conflicts keep startup usable in degraded mode', () async {
+    final service = _ControlledSyncService(
+      failure: const SyncConflictException(3),
+    );
+    var validationCalls = 0;
+    final container = ProviderContainer(
+      overrides: [
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository(
+            initialUser: const AuthUser(
+              id: 'conflict-user',
+              email: 'conflict@test.dev',
+            ),
+          ),
+        ),
+        syncServiceProvider.overrideWithValue(service),
+        startupMinimumDurationProvider.overrideWithValue(Duration.zero),
+        startupTimeoutProvider.overrideWithValue(const Duration(minutes: 1)),
+        initialHomeValidationProvider.overrideWith((ref) async {
+          validationCalls += 1;
+        }),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final readiness = await container.read(appStartupReadinessProvider.future);
+
+    expect(readiness.degraded, isTrue);
+    expect(service.calls, 1);
+    expect(validationCalls, 1);
+    expect(container.read(syncControllerProvider).stage, SyncStage.conflict);
+    expect(container.read(syncControllerProvider).conflictCount, 3);
+  });
+
   test('startup coordinator bounds unresolved hydration', () async {
     final hydration = Completer<SyncControllerState>();
     final container = ProviderContainer(

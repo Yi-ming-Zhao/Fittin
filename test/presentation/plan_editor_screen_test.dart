@@ -176,6 +176,7 @@ void main() {
   testWidgets(
     'plan editor keeps linear templates in the reusable workout flow',
     (WidgetTester tester) async {
+      final semantics = tester.ensureSemantics();
       await _pumpScreen(tester, draft: _buildLinearTemplate());
 
       expect(
@@ -187,10 +188,43 @@ void main() {
       expect(find.textContaining('W1D1'), findsNothing);
       expect(find.text('Template'), findsWidgets);
       expect(find.text('Description'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Linear Plan')),
+        containsSemantics(
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          isInMutuallyExclusiveGroup: true,
+          hasTapAction: true,
+        ),
+      );
+
+      await _scrollUntilVisible(
+        tester,
+        find.byKey(const ValueKey('workout-0-move-up')),
+      );
+      for (final label in const [
+        'Move workout up',
+        'Move workout down',
+        'Duplicate workout',
+        'Delete workout',
+      ]) {
+        expect(find.byTooltip(label), findsOneWidget);
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+      }
 
       await _scrollUntilVisible(tester, find.text('Exercise Name'));
       expect(find.text('Exercise Name'), findsOneWidget);
       expect(find.text('动作名称'), findsNothing);
+      for (final label in const [
+        'Move exercise up',
+        'Move exercise down',
+        'Duplicate exercise',
+        'Delete exercise',
+      ]) {
+        expect(find.byTooltip(label), findsOneWidget);
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+      }
 
       await _scrollUntilVisible(tester, find.text('Equipment'));
       expect(find.text('Equipment'), findsOneWidget);
@@ -198,6 +232,15 @@ void main() {
 
       await _scrollUntilVisible(tester, find.text('Target RPE'));
       expect(find.text('Target RPE'), findsOneWidget);
+      for (final label in const [
+        'Stage · Move up',
+        'Stage · Move down',
+        'Stage · Duplicate',
+        'Stage · Delete',
+      ]) {
+        expect(find.byTooltip(label), findsOneWidget);
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+      }
 
       await _scrollUntilVisible(tester, find.text('Action'));
       expect(find.text('Action'), findsOneWidget);
@@ -209,6 +252,7 @@ void main() {
 
       await _scrollUntilVisible(tester, find.text('Add Workout'));
       expect(find.text('Add Workout'), findsOneWidget);
+      semantics.dispose();
     },
   );
 
@@ -237,6 +281,7 @@ void main() {
   testWidgets('plan editor focuses periodized templates by week and day slot', (
     WidgetTester tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await _pumpScreen(tester, draft: _buildPeriodizedTemplate());
 
     expect(
@@ -249,11 +294,56 @@ void main() {
     expect(find.text('Periodized Template'), findsWidgets);
     expect(find.text('On Success'), findsNothing);
     expect(find.text('On Failure'), findsNothing);
+    await _scrollUntilVisible(tester, find.text('D1'));
+    final daySlot = find.bySemanticsLabel('D1');
+    final weekSlot = find.bySemanticsLabel('W1');
+    expect(tester.getRect(daySlot).size.width, greaterThanOrEqualTo(44));
+    expect(tester.getRect(daySlot).size.height, greaterThanOrEqualTo(44));
+    expect(
+      tester.getSemantics(daySlot),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    expect(
+      tester.getSemantics(weekSlot),
+      containsSemantics(
+        isButton: true,
+        hasSelectedState: true,
+        isSelected: true,
+        isInMutuallyExclusiveGroup: true,
+        hasTapAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('plan editor stacks progression actions at 320px', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await _pumpScreen(tester, draft: _buildLinearTemplate());
+    await _scrollUntilVisible(tester, find.text('Action'));
+
+    expect(
+      find.byKey(const ValueKey('plan-rule-action-compact')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('plan editor renders its editing controls in Chinese', (
     WidgetTester tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     await _pumpScreen(
       tester,
       draft: _buildLinearTemplate(chinese: true),
@@ -276,9 +366,22 @@ void main() {
     expect(find.text('• 计划名称不能为空。'), findsOneWidget);
     expect(find.text('Template name is required.'), findsNothing);
 
+    await _scrollUntilVisible(
+      tester,
+      find.byKey(const ValueKey('workout-0-move-up')),
+    );
+    for (final label in const ['上移训练日', '下移训练日', '复制训练日', '删除训练日']) {
+      expect(find.byTooltip(label), findsOneWidget);
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+    }
+
     await _scrollUntilVisible(tester, find.text('动作名称'));
     expect(find.text('动作名称'), findsOneWidget);
     expect(find.text('Exercise Name'), findsNothing);
+    for (final label in const ['上移动作', '下移动作', '复制动作', '删除动作']) {
+      expect(find.byTooltip(label), findsOneWidget);
+      expect(find.bySemanticsLabel(label), findsOneWidget);
+    }
 
     await _scrollUntilVisible(tester, find.text('器械类型'));
     expect(find.text('器械类型'), findsOneWidget);
@@ -295,5 +398,6 @@ void main() {
     expect(find.text('增加重量'), findsOneWidget);
     expect(find.text('Action'), findsNothing);
     expect(find.text('Add Weight'), findsNothing);
+    semantics.dispose();
   });
 }

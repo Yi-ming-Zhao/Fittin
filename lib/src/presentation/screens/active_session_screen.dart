@@ -986,6 +986,7 @@ class _TraditionalSetLogger extends StatelessWidget {
             borderRadius: BorderRadius.circular(18),
             child: Container(
               width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 44),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
@@ -1445,6 +1446,10 @@ class _CardSetStackState extends State<_CardSetStack> {
                               onTap: widget.onEditRpe,
                               borderRadius: BorderRadius.circular(999),
                               child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: 44,
+                                ),
+                                alignment: Alignment.center,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 7,
@@ -2583,6 +2588,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
         ),
       ),
       child: PopupMenuButton<int>(
+        key: const ValueKey('switch-exercise'),
         tooltip: strings.switchExercise,
         onSelected: onSelect,
         offset: const Offset(0, 54),
@@ -2603,8 +2609,8 @@ class _ExerciseSwitchMenu extends StatelessWidget {
             ),
         ],
         child: Container(
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             color: theme.surface,

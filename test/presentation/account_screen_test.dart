@@ -175,4 +175,47 @@ void main() {
     expect(find.textContaining('Network timeout'), findsOneWidget);
     expect(find.text('Retry Sync'), findsOneWidget);
   });
+
+  testWidgets('account screen surfaces preserved sync conflicts', (
+    WidgetTester tester,
+  ) async {
+    final authRepository = FakeAuthRepository(
+      initialUser: const AuthUser(
+        id: 'conflict-user',
+        email: 'conflict@test.dev',
+      ),
+    );
+    final repository = InMemoryDatabaseRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          authRepositoryProvider.overrideWithValue(authRepository),
+          syncControllerProvider.overrideWith(
+            (ref) => _TestSyncController(
+              ref,
+              const SyncControllerState(
+                stage: SyncStage.conflict,
+                activeUserId: 'conflict-user',
+                conflictCount: 2,
+              ),
+            ),
+          ),
+          supabaseBootstrapProvider.overrideWithValue(
+            const SupabaseBootstrapState.configured(
+              url: 'https://example.supabase.co',
+              anonKey: 'anon-key',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: AccountScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2 cross-device conflict(s)'), findsOneWidget);
+    expect(find.textContaining('not marked successful'), findsOneWidget);
+    expect(find.text('Retry Sync'), findsOneWidget);
+  });
 }

@@ -396,7 +396,14 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
     List<BodyMetric> metrics,
     AppStrings strings,
   ) {
-    final latest = metrics.firstOrNull;
+    final bodyFatSnapshot = _findMetricSnapshot(
+      metrics,
+      (metric) => metric.bodyFatPercent,
+    );
+    final waistSnapshot = _findMetricSnapshot(
+      metrics,
+      (metric) => metric.waistCm,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -406,11 +413,9 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
           theme: theme,
           strings: strings,
           label: strings.bodyFat,
-          latestValue: latest?.bodyFatPercent,
-          previousValue: _findPreviousComparable(
-            metrics,
-            (metric) => metric.bodyFatPercent,
-          ),
+          latestValue: bodyFatSnapshot.latestValue,
+          previousValue: bodyFatSnapshot.previousValue,
+          latestTimestamp: bodyFatSnapshot.latestTimestamp,
           unit: strings.percentUnit,
         );
         final waistCard = _MetricCard(
@@ -418,11 +423,9 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
           theme: theme,
           strings: strings,
           label: strings.waist,
-          latestValue: latest?.waistCm,
-          previousValue: _findPreviousComparable(
-            metrics,
-            (metric) => metric.waistCm,
-          ),
+          latestValue: waistSnapshot.latestValue,
+          previousValue: waistSnapshot.previousValue,
+          latestTimestamp: waistSnapshot.latestTimestamp,
           unit: strings.centimeterUnit,
         );
         final checkInsCard = _MetricCard(
@@ -432,6 +435,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
           label: strings.checkIns,
           latestValue: metrics.isEmpty ? null : metrics.length.toDouble(),
           previousValue: null,
+          latestTimestamp: null,
           unit: '',
         );
 
@@ -511,21 +515,32 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
     );
   }
 
-  double? _findPreviousComparable(
+  _MetricSnapshot _findMetricSnapshot(
     List<BodyMetric> metrics,
     double? Function(BodyMetric metric) selector,
   ) {
-    if (metrics.length < 2) {
-      return null;
-    }
-
-    for (final metric in metrics.skip(1)) {
+    final sorted = [...metrics]
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    BodyMetric? latestMetric;
+    double? latestValue;
+    for (final metric in sorted) {
       final value = selector(metric);
-      if (value != null) {
-        return value;
+      if (value == null) continue;
+      if (latestMetric == null) {
+        latestMetric = metric;
+        latestValue = value;
+        continue;
       }
+      return _MetricSnapshot(
+        latestValue: latestValue,
+        previousValue: value,
+        latestTimestamp: latestMetric.timestamp,
+      );
     }
-    return null;
+    return _MetricSnapshot(
+      latestValue: latestValue,
+      latestTimestamp: latestMetric?.timestamp,
+    );
   }
 
   double? _calculateDelta(double? current, double? previous) {
@@ -948,6 +963,7 @@ class _MetricCard extends StatelessWidget {
     required this.label,
     required this.latestValue,
     required this.previousValue,
+    required this.latestTimestamp,
     required this.unit,
   });
 
@@ -956,6 +972,7 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final double? latestValue;
   final double? previousValue;
+  final DateTime? latestTimestamp;
   final String unit;
 
   @override
@@ -1013,10 +1030,31 @@ class _MetricCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: theme.uiStyle(11, theme.fgDim),
             ),
+          if (latestTimestamp != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              strings.shortMonthDay(latestTimestamp!),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.uiStyle(10, theme.fgMuted),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class _MetricSnapshot {
+  const _MetricSnapshot({
+    this.latestValue,
+    this.previousValue,
+    this.latestTimestamp,
+  });
+
+  final double? latestValue;
+  final double? previousValue;
+  final DateTime? latestTimestamp;
 }
 
 class _HistoryEntry extends StatelessWidget {

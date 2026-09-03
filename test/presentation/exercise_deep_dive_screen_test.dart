@@ -10,6 +10,34 @@ import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart
 import '../support/in_memory_database_repository.dart';
 
 void main() {
+  testWidgets('quick stats reflow without overflow on a 320px phone', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      locale: AppLocale.en,
+      summary: _summary(name: 'Bench Press'),
+      viewport: const Size(320, 568),
+    );
+
+    final e1rm = find.byKey(const ValueKey('exercise-stat-e1rm'));
+    final change = find.byKey(const ValueKey('exercise-stat-change'));
+    final sessions = find.byKey(const ValueKey('exercise-stat-sessions'));
+    expect(e1rm, findsOneWidget);
+    expect(change, findsOneWidget);
+    expect(sessions, findsOneWidget);
+    expect(
+      tester.getTopLeft(sessions).dy,
+      greaterThan(tester.getTopLeft(e1rm).dy),
+    );
+    for (final card in [e1rm, change, sessions]) {
+      final rect = tester.getRect(card);
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(320));
+    }
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('exercise deep dive renders English analytics copy and units', (
     tester,
   ) async {
@@ -102,8 +130,9 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required AppLocale locale,
   required ExerciseProgressSummary summary,
+  Size viewport = const Size(390, 926),
 }) async {
-  tester.view.physicalSize = const Size(390, 926);
+  tester.view.physicalSize = viewport;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);

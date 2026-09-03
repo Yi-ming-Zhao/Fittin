@@ -193,24 +193,34 @@ class FittinSegmented extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget buildOption(String o) {
       final active = o == value;
-      return GestureDetector(
+      return Semantics(
+        label: o,
+        button: true,
+        selected: active,
+        inMutuallyExclusiveGroup: true,
         onTap: () => onChange(o),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 42),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: active ? theme.accent : Colors.transparent,
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            o,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: theme
-                .uiStyle(12, active ? theme.accentInk : theme.fgDim)
-                .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.1),
+        excludeSemantics: true,
+        child: GestureDetector(
+          excludeFromSemantics: true,
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onChange(o),
+          child: Container(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? theme.accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              o,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: theme
+                  .uiStyle(12, active ? theme.accentInk : theme.fgDim)
+                  .copyWith(fontWeight: FontWeight.w600, letterSpacing: 0.1),
+            ),
           ),
         ),
       );

@@ -458,7 +458,7 @@ class _AgentConfigurationEmptyState extends StatelessWidget {
   }
 }
 
-class _ConversationBody extends StatelessWidget {
+class _ConversationBody extends StatefulWidget {
   const _ConversationBody({
     required this.controller,
     required this.state,
@@ -476,102 +476,290 @@ class _ConversationBody extends StatelessWidget {
   final AgentUiBridge bridge;
 
   @override
+  State<_ConversationBody> createState() => _ConversationBodyState();
+}
+
+class _ConversationBodyState extends State<_ConversationBody> {
+  static const _nearBottomDistance = 72.0;
+
+  late int _contentRevision;
+  bool _followingLatest = true;
+  bool _showJumpToLatest = false;
+  bool _movingToLatest = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _contentRevision = _revisionOf(widget.state);
+    widget.controller.addListener(_handleScroll);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ConversationBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleScroll);
+      widget.controller.addListener(_handleScroll);
+    }
+    final nextRevision = _revisionOf(widget.state);
+    if (nextRevision == _contentRevision) return;
+    _contentRevision = nextRevision;
+    final conversationChanged =
+        oldWidget.state.runState.conversation?.id !=
+        widget.state.runState.conversation?.id;
+    if (conversationChanged) {
+      _followingLatest = true;
+      _showJumpToLatest = false;
+    }
+    _followAfterLayout(force: conversationChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleScroll);
+    super.dispose();
+  }
+
+  int _revisionOf(AgentUiState state) {
+    final messages = state.runState.conversation?.messages;
+    final lastMessage = messages == null || messages.isEmpty
+        ? null
+        : messages.last;
+    final lastEvent = state.events.isEmpty ? null : state.events.last;
+    final lastAction = state.actions.isEmpty ? null : state.actions.last;
+    return Object.hash(
+      state.runState.conversation?.id,
+      messages?.length,
+      lastMessage?.id,
+      lastMessage?.content.hashCode,
+      lastMessage?.isPartial,
+      state.events.length,
+      lastEvent?.phase,
+      lastEvent?.toolName,
+      state.runState.phase,
+      state.runState.activeToolName,
+      state.runState.pendingProposal?.operationId,
+      state.runState.errorMessage,
+      state.actions.length,
+      lastAction?.id,
+      lastAction?.status,
+    );
+  }
+
+  void _handleScroll() {
+    if (_movingToLatest || !widget.controller.hasClients) return;
+    final position = widget.controller.position;
+    final nearBottom =
+        position.maxScrollExtent - position.pixels <= _nearBottomDistance;
+    if (nearBottom == _followingLatest && _showJumpToLatest == !nearBottom) {
+      return;
+    }
+    setState(() {
+      _followingLatest = nearBottom;
+      _showJumpToLatest = !nearBottom;
+    });
+  }
+
+  void _followAfterLayout({bool force = false}) {
+    final shouldFollow = force || _followingLatest;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.controller.hasClients) return;
+      if (shouldFollow) {
+        _jumpToLatest();
+      } else if (!_showJumpToLatest) {
+        setState(() => _showJumpToLatest = true);
+      }
+    });
+  }
+
+  void _jumpToLatest() {
+    if (!widget.controller.hasClients) return;
+    _movingToLatest = true;
+    widget.controller.jumpTo(widget.controller.position.maxScrollExtent);
+    _movingToLatest = false;
+    if (!mounted) return;
+    setState(() {
+      _followingLatest = true;
+      _showJumpToLatest = false;
+    });
+  }
+
+  Future<void> _animateToLatest() async {
+    if (!widget.controller.hasClients) return;
+    _movingToLatest = true;
+    try {
+      await widget.controller.animateTo(
+        widget.controller.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+      );
+    } finally {
+      _movingToLatest = false;
+      if (mounted) {
+        if (widget.controller.hasClients) {
+          widget.controller.jumpTo(widget.controller.position.maxScrollExtent);
+        }
+        setState(() {
+          _followingLatest = true;
+          _showJumpToLatest = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final theme = widget.theme;
+    final strings = widget.strings;
+    final bridge = widget.bridge;
     final conversation = state.runState.conversation;
     final messages = conversation?.messages ?? const <AgentMessage>[];
     final isInitial = messages.isEmpty;
 
-    return ListView(
-      key: const ValueKey('agent-conversation-list'),
-      controller: controller,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+    return Stack(
       children: [
-        if (isInitial)
-          _SuggestedPromptPanel(
-            theme: theme,
-            strings: strings,
-            onSuggestion: onSuggestion,
-          ),
-        for (final message in messages)
-          if (message.role == AgentMessageRole.user ||
-              (message.role == AgentMessageRole.assistant &&
-                  message.content.trim().isNotEmpty))
-            _AgentMessageCard(message: message, theme: theme)
-          else if (message.role == AgentMessageRole.tool)
-            AgentDecisionNotice(
-              message: message,
-              theme: theme,
-              strings: strings,
-            ),
-        if (state.events.isNotEmpty)
-          AgentRunTimeline(
-            events: state.events,
-            theme: theme,
-            strings: strings,
-          ),
-        if (state.runState.phase == AgentRunPhase.usingTools ||
-            state.runState.activeToolName != null)
-          _AgentToolActivityCard(
-            theme: theme,
-            label: state.runState.activeToolName == null
-                ? strings.agentToolWorking
-                : strings.agentToolWorkingNamed(state.runState.activeToolName!),
-          ),
-        if (state.runState.phase == AgentRunPhase.streaming)
-          _AgentToolActivityCard(
-            theme: theme,
-            label: strings.agentStreaming,
-            streaming: true,
-          ),
-        if (state.runState.pendingProposal case final proposal?)
-          _AgentMutationCard(
-            proposal: proposal,
-            theme: theme,
-            strings: strings,
-            onConfirm: () => bridge.confirmProposal(proposal.operationId),
-            onReject: () => bridge.rejectProposal(proposal.operationId),
-          ),
-        if (state.runState.phase == AgentRunPhase.failed)
-          _AgentErrorCard(
-            theme: theme,
-            strings: strings,
-            message: state.runState.errorMessage,
-            onRetry: bridge.retry,
-            code: state.runState.errorCode,
-          ),
-        if ({
-              AgentRunPhase.interrupted,
-              AgentRunPhase.cancelled,
-            }.contains(state.runState.phase) &&
-            state.runState.pendingProposal == null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  strings.isChinese
-                      ? '任务已保存在本机。点击继续才会再次调用模型；已提交的修改不会重复执行。'
-                      : 'This task is saved locally. Resume to contact the model; committed changes will not be replayed.',
-                  style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.5),
+        ListView(
+          key: const ValueKey('agent-conversation-list'),
+          controller: widget.controller,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 18),
+          children: [
+            if (isInitial)
+              _SuggestedPromptPanel(
+                theme: theme,
+                strings: strings,
+                onSuggestion: widget.onSuggestion,
+              ),
+            for (final message in messages)
+              if (message.role == AgentMessageRole.user ||
+                  (message.role == AgentMessageRole.assistant &&
+                      message.content.trim().isNotEmpty))
+                _AgentMessageCard(message: message, theme: theme)
+              else if (message.role == AgentMessageRole.tool)
+                AgentDecisionNotice(
+                  message: message,
+                  theme: theme,
+                  strings: strings,
                 ),
-                const SizedBox(height: 10),
-                FittinBtn(
-                  theme,
-                  strings.isChinese ? '继续任务' : 'Resume task',
-                  key: const ValueKey('agent-resume'),
-                  block: true,
-                  onPressed: bridge.retry,
+            if (state.events.isNotEmpty)
+              AgentRunTimeline(
+                events: state.events,
+                theme: theme,
+                strings: strings,
+              ),
+            if (state.runState.phase == AgentRunPhase.usingTools ||
+                state.runState.activeToolName != null)
+              _AgentToolActivityCard(
+                theme: theme,
+                label: state.runState.activeToolName == null
+                    ? strings.agentToolWorking
+                    : strings.agentToolWorkingNamed(
+                        state.runState.activeToolName!,
+                      ),
+              ),
+            if (state.runState.phase == AgentRunPhase.streaming)
+              _AgentToolActivityCard(
+                theme: theme,
+                label: strings.agentStreaming,
+                streaming: true,
+              ),
+            if (state.runState.pendingProposal case final proposal?)
+              _AgentMutationCard(
+                proposal: proposal,
+                theme: theme,
+                strings: strings,
+                onConfirm: () => bridge.confirmProposal(proposal.operationId),
+                onReject: () => bridge.rejectProposal(proposal.operationId),
+              ),
+            if (state.runState.phase == AgentRunPhase.failed)
+              _AgentErrorCard(
+                theme: theme,
+                strings: strings,
+                message: state.runState.errorMessage,
+                onRetry: bridge.retry,
+                code: state.runState.errorCode,
+              ),
+            if ({
+                  AgentRunPhase.interrupted,
+                  AgentRunPhase.cancelled,
+                }.contains(state.runState.phase) &&
+                state.runState.pendingProposal == null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      strings.isChinese
+                          ? '任务已保存在本机。点击继续才会再次调用模型；已提交的修改不会重复执行。'
+                          : 'This task is saved locally. Resume to contact the model; committed changes will not be replayed.',
+                      style: theme
+                          .uiStyle(12, theme.fgDim)
+                          .copyWith(height: 1.5),
+                    ),
+                    const SizedBox(height: 10),
+                    FittinBtn(
+                      theme,
+                      strings.isChinese ? '继续任务' : 'Resume task',
+                      key: const ValueKey('agent-resume'),
+                      block: true,
+                      onPressed: bridge.retry,
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            if (state.actions.isNotEmpty)
+              _AgentActionHistory(
+                actions: state.actions,
+                theme: theme,
+                strings: strings,
+                onUndo: bridge.undoAction,
+              ),
+          ],
+        ),
+        if (_showJumpToLatest)
+          Positioned(
+            right: 20,
+            bottom: 8,
+            child: Semantics(
+              button: true,
+              label: strings.isChinese ? '回到最新消息' : 'Jump to latest message',
+              child: Material(
+                color: theme.surfaceSolid,
+                shape: StadiumBorder(side: BorderSide(color: theme.borderHi)),
+                elevation: 2,
+                shadowColor: theme.shadowSoft,
+                child: InkWell(
+                  key: const ValueKey('agent-jump-to-latest'),
+                  customBorder: const StadiumBorder(),
+                  onTap: _animateToLatest,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minWidth: 44,
+                      minHeight: 44,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_downward_rounded,
+                            size: 17,
+                            color: theme.accent,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            strings.isChinese ? '最新' : 'Latest',
+                            style: theme.uiStyle(12, theme.fg, FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        if (state.actions.isNotEmpty)
-          _AgentActionHistory(
-            actions: state.actions,
-            theme: theme,
-            strings: strings,
-            onUndo: bridge.undoAction,
           ),
       ],
     );

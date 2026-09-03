@@ -5,10 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
 import 'package:fittin_v2/src/presentation/screens/body_metrics_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
+import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 import '../support/in_memory_database_repository.dart';
 
@@ -208,6 +210,145 @@ void main() {
     expect(find.text('79.2 kg'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('body metrics reloads when the signed-in owner changes', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(390, 926));
+    final ownerProvider = StateProvider<String?>((ref) => 'owner-a');
+    final progressRepository = InMemoryProgressRepository();
+    await progressRepository.saveBodyMetric(
+      BodyMetric(
+        metricId: 'owner-a-weight',
+        timestamp: DateTime(2026, 3, 18),
+        weightKg: 71,
+      ),
+      ownerUserId: 'owner-a',
+    );
+    await progressRepository.saveBodyMetric(
+      BodyMetric(
+        metricId: 'owner-b-weight',
+        timestamp: DateTime(2026, 3, 19),
+        weightKg: 83,
+      ),
+      ownerUserId: 'owner-b',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          currentUserIdProvider.overrideWith((ref) => ref.watch(ownerProvider)),
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(progressRepository),
+        ],
+        child: const MaterialApp(home: BodyMetricsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    InteractiveLineChart chart() => tester.widget<InteractiveLineChart>(
+      find.byKey(const ValueKey('body-weight-chart')),
+    );
+    expect(chart().series.single.points.single.value, 71);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(BodyMetricsScreen)),
+    );
+    container.read(ownerProvider.notifier).state = 'owner-b';
+    await tester.pumpAndSettle();
+
+    expect(chart().series.single.points.single.value, 83);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'snapshot cards use each metric latest two values and measurement date',
+    (tester) async {
+      _setViewport(tester, const Size(390, 926));
+      final progressRepository = InMemoryProgressRepository();
+      for (final metric in [
+        BodyMetric(
+          metricId: 'waist-previous',
+          timestamp: DateTime(2026, 1, 5),
+          waistCm: 90,
+        ),
+        BodyMetric(
+          metricId: 'body-fat-previous',
+          timestamp: DateTime(2026, 2, 1),
+          bodyFatPercent: 21,
+        ),
+        BodyMetric(
+          metricId: 'waist-latest',
+          timestamp: DateTime(2026, 3, 7),
+          waistCm: 88,
+        ),
+        BodyMetric(
+          metricId: 'body-fat-latest',
+          timestamp: DateTime(2026, 3, 10),
+          bodyFatPercent: 19,
+        ),
+        BodyMetric(
+          metricId: 'newest-note-only',
+          timestamp: DateTime(2026, 3, 18),
+          note: 'Recovery felt good',
+        ),
+      ]) {
+        await progressRepository.saveBodyMetric(metric);
+      }
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(
+              InMemoryDatabaseRepository(),
+            ),
+            progressRepositoryProvider.overrideWithValue(progressRepository),
+          ],
+          child: const MaterialApp(home: BodyMetricsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final bodyFatCard = find.byKey(
+        const ValueKey('body-metric-card-body-fat'),
+      );
+      final waistCard = find.byKey(const ValueKey('body-metric-card-waist'));
+      await _scrollUntilBuiltAndVisible(
+        tester,
+        target: waistCard,
+        scrollable: _verticalScrollable(),
+      );
+
+      final bodyFatValue = tester.widget<FittinBigNum>(
+        find.descendant(of: bodyFatCard, matching: find.byType(FittinBigNum)),
+      );
+      final bodyFatDelta = tester.widget<FittinDelta>(
+        find.descendant(of: bodyFatCard, matching: find.byType(FittinDelta)),
+      );
+      final waistValue = tester.widget<FittinBigNum>(
+        find.descendant(of: waistCard, matching: find.byType(FittinBigNum)),
+      );
+      final waistDelta = tester.widget<FittinDelta>(
+        find.descendant(of: waistCard, matching: find.byType(FittinDelta)),
+      );
+
+      expect(bodyFatValue.value, '19.0');
+      expect(bodyFatDelta.value, -2);
+      expect(
+        find.descendant(of: bodyFatCard, matching: find.text('Mar 10')),
+        findsOneWidget,
+      );
+      expect(waistValue.value, '88.0');
+      expect(waistDelta.value, -2);
+      expect(
+        find.descendant(of: waistCard, matching: find.text('Mar 7')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final viewport in const [Size(390, 926), Size(390, 568)]) {
     testWidgets(

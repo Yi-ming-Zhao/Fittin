@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
@@ -8,6 +9,7 @@ import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/powerbuilding_4day_12week_seed.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
@@ -25,6 +27,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   AppLocale _appLocale = AppLocale.en;
   OneRepMaxFormula _analyticsFormula = OneRepMaxFormula.epley;
   final List<WorkoutLog> _workoutLogs = [];
+  Future<void> _workoutConclusionTail = Future<void>.value();
   final Map<String, WorkoutSessionState> _sessionDraftsByScope = {};
   String? _deviceId;
   double _glassOpacity = 0.3;
@@ -466,6 +469,90 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     await saveInstance(instance);
     await saveActiveInstanceIdForUser(instance.instanceId, ownerUserId);
     return instance;
+  }
+
+  @override
+  Future<bool> commitWorkoutConclusion({
+    required WorkoutLog logRecord,
+    required StoredTrainingInstance expectedInstance,
+    required StoredTrainingInstance postInstance,
+    required String? ownerUserId,
+    String? syncStatus,
+  }) async {
+    validateWorkoutConclusionCommit(
+      logRecord: logRecord,
+      expectedInstance: expectedInstance,
+      postInstance: postInstance,
+      ownerUserId: ownerUserId,
+    );
+    final previous = _workoutConclusionTail;
+    final completer = Completer<void>();
+    _workoutConclusionTail = completer.future;
+    await previous;
+    try {
+      final current = _instances[expectedInstance.instanceId];
+      if (current == null ||
+          current.deletedAt != null ||
+          current.ownerUserId != ownerUserId) {
+        throw StateError(
+          'The active training instance is no longer available.',
+        );
+      }
+      WorkoutLog? existingLog;
+      for (final log in _workoutLogs) {
+        if (log.logId == logRecord.logId) {
+          existingLog = log;
+          break;
+        }
+      }
+      if (existingLog != null) {
+        validateMatchingWorkoutConclusion(existingLog, logRecord);
+        if (instanceMatchesWorkoutProgressionSnapshot(
+          current,
+          existingLog.postConclusionSnapshot!,
+        )) {
+          return false;
+        }
+      }
+      if (current.version != expectedInstance.version ||
+          !instanceMatchesWorkoutProgressionSnapshot(
+            current,
+            logRecord.preConclusionSnapshot!,
+          )) {
+        throw StateError(
+          'The training instance changed before the workout could be saved.',
+        );
+      }
+
+      final previousLogs = [..._workoutLogs];
+      final previousInstance = current;
+      try {
+        if (existingLog == null) {
+          await logWorkout(
+            logRecord,
+            ownerUserId: ownerUserId,
+            syncStatus: syncStatus,
+          );
+        }
+        await saveInstance(
+          postInstance.copyWith(version: expectedInstance.version + 1),
+          syncStatus:
+              syncStatus ??
+              (ownerUserId == null
+                  ? SyncStatusKeys.localOnly
+                  : SyncStatusKeys.pendingUpload),
+        );
+        return true;
+      } catch (_) {
+        _workoutLogs
+          ..clear()
+          ..addAll(previousLogs);
+        _instances[expectedInstance.instanceId] = previousInstance;
+        rethrow;
+      }
+    } finally {
+      completer.complete();
+    }
   }
 
   @override
