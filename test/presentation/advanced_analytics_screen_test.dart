@@ -4,8 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
@@ -79,6 +81,7 @@ void main() {
         overrides: [
           databaseRepositoryProvider.overrideWithValue(repository),
           exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
+          cardioRecordsProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: AdvancedAnalyticsScreen()),
       ),
@@ -94,10 +97,24 @@ void main() {
     dayCell.onTap!.call();
     await tester.pumpAndSettle();
 
+    expect(find.text('1 strength sessions'), findsOneWidget);
+    await tester.tap(find.text('1 strength sessions'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Workout Record Details'), findsOneWidget);
     expect(find.text('Lower A'), findsOneWidget);
     expect(find.text('Edit'), findsOneWidget);
     expect(find.text('Delete'), findsOneWidget);
+    for (final keyPrefix in const ['edit-workout-', 'delete-workout-']) {
+      final action = find.byWidgetPredicate(
+        (widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key! as ValueKey<String>).value.startsWith(keyPrefix),
+      );
+      expect(action, findsOneWidget);
+      expect(tester.getSize(action).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(action).height, greaterThanOrEqualTo(44));
+    }
 
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
@@ -153,6 +170,7 @@ void main() {
         overrides: [
           databaseRepositoryProvider.overrideWithValue(repository),
           exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
+          cardioRecordsProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: AdvancedAnalyticsScreen()),
       ),
@@ -241,6 +259,7 @@ void main() {
         overrides: [
           databaseRepositoryProvider.overrideWithValue(repository),
           exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
+          cardioRecordsProvider.overrideWith((ref) async => const []),
         ],
         child: const MaterialApp(home: AdvancedAnalyticsScreen()),
       ),
@@ -262,10 +281,104 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(historicalCell);
     await tester.pumpAndSettle();
+
+    expect(find.text('1 strength sessions'), findsOneWidget);
+    await tester.tap(find.text('1 strength sessions'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Historical Session'), findsOneWidget);
   });
 
-  for (final viewport in const [Size(390, 926), Size(390, 568)]) {
+  testWidgets(
+    'strength and cardio stay distinct by shape, summary and filter',
+    (tester) async {
+      final now = DateTime.now();
+      final recordedAt = DateTime(now.year, now.month, now.day, 8);
+      final repository = InMemoryDatabaseRepository();
+      await repository.logWorkout(
+        WorkoutLog(
+          instanceId: 'mixed-instance',
+          workoutId: 'strength-day',
+          workoutName: 'Strength',
+          dayLabel: 'Day 1',
+          completedAt: recordedAt,
+          exercises: const [
+            ExerciseLog(
+              exerciseId: 'squat',
+              exerciseName: 'Squat',
+              stageId: 'work',
+              sets: [
+                SetLog(
+                  role: 'working',
+                  targetReps: 5,
+                  completedReps: 5,
+                  targetWeight: 100,
+                  weight: 100,
+                  isCompleted: true,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      final run = CardioRecord(
+        id: 'cardio-record:mixed',
+        activityTypeId: 'cardio:running',
+        activityName: 'Running',
+        startedAt: recordedAt.add(const Duration(hours: 10)),
+        metrics: const {
+          CardioMetricKey.durationSeconds: 1800,
+          CardioMetricKey.distanceMeters: 5000,
+        },
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            exerciseLibraryProvider.overrideWith(
+              (ref) async => exerciseLibrary,
+            ),
+            cardioRecordsProvider.overrideWith((ref) async => [run]),
+          ],
+          child: const MaterialApp(home: AdvancedAnalyticsScreen()),
+        ),
+      );
+      await _pumpAnalytics(tester);
+
+      expect(find.text('Strength sessions'), findsOneWidget);
+      expect(find.text('Cardio sessions'), findsOneWidget);
+      Finder mixedDaySemantics() => find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            (widget.properties.label ?? '').contains('1 strength session') &&
+            (widget.properties.label ?? '').contains('1 cardio session'),
+      );
+      expect(mixedDaySemantics(), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('analytics-modality-cardio')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Strength sessions'), findsNothing);
+      expect(find.text('Cardio sessions'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Semantics &&
+              (widget.properties.label ?? '').contains('0 strength sessions') &&
+              (widget.properties.label ?? '').contains('1 cardio session'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final viewport in const [
+    Size(390, 926),
+    Size(390, 568),
+    Size(320, 568),
+  ]) {
     testWidgets(
       'advanced analytics remains scrollable at ${viewport.width.toInt()}x${viewport.height.toInt()}',
       (tester) async {
@@ -306,6 +419,7 @@ void main() {
               exerciseLibraryProvider.overrideWith(
                 (ref) async => exerciseLibrary,
               ),
+              cardioRecordsProvider.overrideWith((ref) async => const []),
             ],
             child: const MaterialApp(home: AdvancedAnalyticsScreen()),
           ),
@@ -313,11 +427,27 @@ void main() {
         await _pumpAnalytics(tester);
 
         expect(find.text('Trends & Analytics'), findsOneWidget);
-        expect(find.text('Training Consistency'), findsOneWidget);
-
         final verticalScroll = _verticalScrollable();
         final position = tester.state<ScrollableState>(verticalScroll).position;
         expect(position.maxScrollExtent, greaterThan(0));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'The analytics header must fit the viewport.',
+        );
+
+        final consistencyHeading = find.text('Training Consistency');
+        await _scrollUntilBuiltAndVisible(
+          tester,
+          target: consistencyHeading,
+          scrollable: verticalScroll,
+        );
+        expect(consistencyHeading, findsOneWidget);
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'The consistency section must fit the viewport.',
+        );
 
         final anatomy = find.byKey(const ValueKey('anatomy-front-diagram'));
         await _scrollUntilBuiltAndVisible(

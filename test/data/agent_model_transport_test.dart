@@ -262,6 +262,68 @@ void main() {
     expect((envelope['payload'] as Map)['model'], 'test-model');
   });
 
+  test(
+    'Web relay refreshes Fittin auth and retries one pre-stream 401',
+    () async {
+      var attempts = 0;
+      var accessToken = 'expired-fittin-access';
+      var refreshes = 0;
+      final client = _StreamingClient((outgoing) async {
+        attempts += 1;
+        expect(
+          outgoing.headers['authorization'],
+          'Bearer ${attempts == 1 ? 'expired-fittin-access' : 'fresh-fittin-access'}',
+        );
+        if (attempts == 1) {
+          return http.StreamedResponse(
+            Stream.value(
+              utf8.encode('{"error":"expired","code":"access_token_expired"}'),
+            ),
+            401,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              '{"choices":[{"message":{"content":"ok"},'
+              '"finish_reason":"stop"}]}',
+            ),
+          ),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+      final transport = WebRelayAgentModelTransport(
+        backendBaseUrl: 'https://fittin.example/api',
+        accessTokenLoader: () async => accessToken,
+        accessTokenRefresher: (failedAccessToken) async {
+          expect(failedAccessToken, 'expired-fittin-access');
+          refreshes += 1;
+          accessToken = 'fresh-fittin-access';
+          return accessToken;
+        },
+        client: client,
+      );
+
+      final events = await transport
+          .stream(
+            config: config,
+            apiKey: 'provider-key',
+            request: const AgentChatCompletionRequest(
+              model: 'm',
+              messages: [],
+              allowRetries: false,
+            ),
+          )
+          .toList();
+
+      expect(attempts, 2);
+      expect(refreshes, 1);
+      expect(events.whereType<AgentTextDelta>().single.text, 'ok');
+    },
+  );
+
   test('cancellation aborts an in-flight request', () async {
     final token = AgentCancellationToken();
     final client = _StreamingClient((request) async {

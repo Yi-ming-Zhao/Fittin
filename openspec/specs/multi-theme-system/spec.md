@@ -31,3 +31,17 @@ Every curated palette MUST meet readable contrast targets for normal text, selec
 - **THEN** normal primary text and on-accent content meet at least 4.5:1 contrast
 - **AND** secondary large content and important structural emphasis meet at least 3:1
 - **AND** no registered user-facing token falls in the prohibited cyan/teal hue range.
+
+### Requirement: Expanded restrained built-in palette set
+The palette registry SHALL include additional light and dark curated schemes with intentional typography and theme-derived strength/cardio series, and no palette role SHALL use cyan or teal.
+
+#### Scenario: User browses built-in palettes
+- **WHEN** the Appearance page renders every built-in palette
+- **THEN** each preview has a distinct restrained character, readable text, coherent status colors, and visually separable strength/cardio markers.
+
+### Requirement: Runtime custom palette resolution
+The Material theme and every Fittin component SHALL resolve a selected custom semantic palette through the same token object used for built-in palettes, with no screen-specific fallback colors.
+
+#### Scenario: User activates a custom palette
+- **WHEN** the custom palette passes validation and is selected
+- **THEN** all open routes update immediately and the selection restores on the next launch.

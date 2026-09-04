@@ -1,4 +1,5 @@
 import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
+import 'package:fittin_v2/src/domain/models/custom_theme_palette.dart';
 import 'package:flutter/material.dart';
 
 /// Stable identifiers persisted for the five curated appearance palettes.
@@ -8,6 +9,9 @@ enum FittinPaletteId {
   bordeauxVelvet,
   porcelainInk,
   espressoEmber,
+  graphiteOrchid,
+  inkSaffron,
+  oliveManuscript,
 }
 
 extension FittinPaletteIdStorage on FittinPaletteId {
@@ -18,6 +22,9 @@ extension FittinPaletteIdStorage on FittinPaletteId {
     FittinPaletteId.bordeauxVelvet => 'bordeauxVelvet',
     FittinPaletteId.porcelainInk => 'porcelainInk',
     FittinPaletteId.espressoEmber => 'espressoEmber',
+    FittinPaletteId.graphiteOrchid => 'graphiteOrchid',
+    FittinPaletteId.inkSaffron => 'inkSaffron',
+    FittinPaletteId.oliveManuscript => 'oliveManuscript',
   };
 }
 
@@ -212,6 +219,8 @@ class FittinTheme {
   /// Compatibility aliases for chart call sites being migrated separately.
   Color get chartStroke => chartSeries.first;
   Color get chartDot => chartSelection;
+  Color get strengthSeries => chartSeries.first;
+  Color get cardioSeries => chartSeries[1];
 
   /// Material widgets and custom Fittin widgets resolve from this same object.
   ColorScheme get colorScheme {
@@ -413,6 +422,9 @@ abstract final class FittinPaletteRegistry {
     FittinPaletteId.bordeauxVelvet: _bordeauxVelvet,
     FittinPaletteId.porcelainInk: _porcelainInk,
     FittinPaletteId.espressoEmber: _espressoEmber,
+    FittinPaletteId.graphiteOrchid: _graphiteOrchid,
+    FittinPaletteId.inkSaffron: _inkSaffron,
+    FittinPaletteId.oliveManuscript: _oliveManuscript,
   });
 
   static List<FittinPaletteId> get ids => List.unmodifiable(entries.keys);
@@ -787,3 +799,228 @@ final _espressoEmber = _darkPalette(
   displayFontFamily: 'Fraunces',
   numFontFamily: 'Instrument Sans',
 );
+
+final _graphiteOrchid = _darkPalette(
+  id: FittinPaletteId.graphiteOrchid,
+  bg: const Color(0xFF0D0D12),
+  bgDeep: const Color(0xFF07070A),
+  surface: const Color(0xFF15151C),
+  surfaceSolid: const Color(0xFF1B1B24),
+  surfaceHi: const Color(0xFF262532),
+  surfaceSelected: const Color(0xFF342F42),
+  fg: const Color(0xFFF5F1F7),
+  fgDim: const Color(0xFFC8C0CC),
+  fgMuted: const Color(0xFF958C9D),
+  fgFaint: const Color(0xFF706878),
+  borderSubtle: const Color(0xFF302E39),
+  border: const Color(0xFF484452),
+  borderHi: const Color(0xFF8C809B),
+  accent: const Color(0xFFC6A0DF),
+  accentInk: const Color(0xFF1D1026),
+  accentDim: const Color(0xFF3B2948),
+  accentPressed: const Color(0xFFB58BCD),
+  success: const Color(0xFF9AC57B),
+  successSubtle: const Color(0xFF26351F),
+  warning: const Color(0xFFE1B565),
+  warningSubtle: const Color(0xFF3C2E19),
+  danger: const Color(0xFFE27B82),
+  dangerSubtle: const Color(0xFF421F26),
+  info: const Color(0xFF91A8D8),
+  infoSubtle: const Color(0xFF242C45),
+  chartSeries: const [
+    Color(0xFFC6A0DF),
+    Color(0xFFE1A45F),
+    Color(0xFFE68199),
+    Color(0xFF91A8D8),
+    Color(0xFFA6C27B),
+    Color(0xFFD6C17B),
+  ],
+  anatomyBase: const Color(0xFF292731),
+  anatomyStroke: const Color(0xFF8F8799),
+  anatomyInactive: const Color(0xFF403C4B),
+  anatomySelected: const Color(0xFFD4AFE9),
+  loadLow: const Color(0xFF65455F),
+  loadHigh: const Color(0xFFE48377),
+  displayFontFamily: 'Instrument Serif',
+  numFontFamily: 'Instrument Sans',
+);
+
+final _inkSaffron = _darkPalette(
+  id: FittinPaletteId.inkSaffron,
+  bg: const Color(0xFF090A0E),
+  bgDeep: const Color(0xFF040509),
+  surface: const Color(0xFF11131A),
+  surfaceSolid: const Color(0xFF171A22),
+  surfaceHi: const Color(0xFF222631),
+  surfaceSelected: const Color(0xFF332E20),
+  fg: const Color(0xFFF4F1E9),
+  fgDim: const Color(0xFFC8C2B4),
+  fgMuted: const Color(0xFF918B80),
+  fgFaint: const Color(0xFF69655E),
+  borderSubtle: const Color(0xFF2D3038),
+  border: const Color(0xFF444854),
+  borderHi: const Color(0xFF8E8D86),
+  accent: const Color(0xFFE2B85D),
+  accentInk: const Color(0xFF201708),
+  accentDim: const Color(0xFF40351F),
+  accentPressed: const Color(0xFFCCA34C),
+  success: const Color(0xFF96C176),
+  successSubtle: const Color(0xFF24331C),
+  warning: const Color(0xFFE4AF58),
+  warningSubtle: const Color(0xFF3C2B16),
+  danger: const Color(0xFFE07970),
+  dangerSubtle: const Color(0xFF401E1B),
+  info: const Color(0xFFA58AD0),
+  infoSubtle: const Color(0xFF2B2340),
+  chartSeries: const [
+    Color(0xFFE2B85D),
+    Color(0xFFA58AD0),
+    Color(0xFFE07C72),
+    Color(0xFF899FCB),
+    Color(0xFF99BD73),
+    Color(0xFFD68B57),
+  ],
+  anatomyBase: const Color(0xFF26272B),
+  anatomyStroke: const Color(0xFF87888D),
+  anatomyInactive: const Color(0xFF3B3D44),
+  anatomySelected: const Color(0xFFF0C56D),
+  loadLow: const Color(0xFF615047),
+  loadHigh: const Color(0xFFE3885B),
+  displayFontFamily: 'JetBrains Mono',
+  numFontFamily: 'JetBrains Mono',
+);
+
+final _oliveManuscript = _darkPalette(
+  id: FittinPaletteId.oliveManuscript,
+  bg: const Color(0xFF0D0E09),
+  bgDeep: const Color(0xFF070804),
+  surface: const Color(0xFF15170F),
+  surfaceSolid: const Color(0xFF1C1F15),
+  surfaceHi: const Color(0xFF282C1D),
+  surfaceSelected: const Color(0xFF353A24),
+  fg: const Color(0xFFF2F0E1),
+  fgDim: const Color(0xFFC5C2AD),
+  fgMuted: const Color(0xFF918F7C),
+  fgFaint: const Color(0xFF6C6A5B),
+  borderSubtle: const Color(0xFF303326),
+  border: const Color(0xFF484C38),
+  borderHi: const Color(0xFF8D906E),
+  accent: const Color(0xFFBEC17A),
+  accentInk: const Color(0xFF171907),
+  accentDim: const Color(0xFF373A20),
+  accentPressed: const Color(0xFFA8AC63),
+  success: const Color(0xFF8FC271),
+  successSubtle: const Color(0xFF23341B),
+  warning: const Color(0xFFD9B15F),
+  warningSubtle: const Color(0xFF392D16),
+  danger: const Color(0xFFD97870),
+  dangerSubtle: const Color(0xFF3D1F1B),
+  info: const Color(0xFFAA8FC9),
+  infoSubtle: const Color(0xFF2E2540),
+  chartSeries: const [
+    Color(0xFFBEC17A),
+    Color(0xFFD58662),
+    Color(0xFFAA8FC9),
+    Color(0xFFD2AF65),
+    Color(0xFF879AC1),
+    Color(0xFFD47A86),
+  ],
+  anatomyBase: const Color(0xFF292B20),
+  anatomyStroke: const Color(0xFF898B72),
+  anatomyInactive: const Color(0xFF414431),
+  anatomySelected: const Color(0xFFD0D38A),
+  loadLow: const Color(0xFF5C5140),
+  loadHigh: const Color(0xFFD9855C),
+);
+
+FittinTheme themeFromCustomPalette(CustomThemePalette palette) {
+  palette.validate();
+  final baseId = FittinPaletteRegistry.decode(palette.basePaletteKey);
+  final base = FittinPaletteRegistry.themeOf(baseId);
+  final dark = palette.brightness == Brightness.dark;
+  final bg = palette.color('background');
+  final surface = palette.color('surface');
+  final fg = palette.color('foreground');
+  final fgMuted = palette.color('mutedForeground');
+  final accent = palette.color('accent');
+  final accentInk = palette.color('accentInk');
+  final strength = palette.color('strength');
+  final cardio = palette.color('cardio');
+  final success = palette.color('success');
+  final warning = palette.color('warning');
+  final danger = palette.color('danger');
+  Color mix(Color left, Color right, double amount) =>
+      Color.lerp(left, right, amount)!;
+  final surfaceHi = mix(surface, fg, dark ? 0.09 : 0.045);
+  final border = mix(surface, fg, dark ? 0.22 : 0.18);
+  final borderHi = mix(surface, fg, dark ? 0.48 : 0.54);
+  return FittinTheme(
+    paletteId: baseId,
+    brightness: palette.brightness,
+    bg: bg,
+    bgDeep: mix(bg, dark ? Colors.black : fg, dark ? 0.35 : 0.06),
+    surface: mix(bg, surface, 0.72),
+    surfaceSolid: surface,
+    surfaceHi: surfaceHi,
+    surfaceSelected: mix(surface, accent, dark ? 0.18 : 0.10),
+    fg: fg,
+    fgDim: mix(fgMuted, fg, 0.30),
+    fgMuted: fgMuted,
+    fgFaint: mix(fgMuted, bg, 0.28),
+    fgInverse: accentInk,
+    borderSubtle: mix(surface, fg, dark ? 0.13 : 0.10),
+    border: border,
+    borderHi: borderHi,
+    divider: mix(surface, fg, dark ? 0.13 : 0.10),
+    focusRing: accent,
+    shadowSoft: Colors.black.withValues(alpha: dark ? 0.32 : 0.12),
+    shadowStrong: Colors.black.withValues(alpha: dark ? 0.68 : 0.28),
+    scrim: Colors.black.withValues(alpha: dark ? 0.76 : 0.54),
+    accent: accent,
+    accentInk: accentInk,
+    accentDim: mix(surface, accent, dark ? 0.22 : 0.14),
+    accentPressed: mix(accent, accentInk, dark ? 0.12 : 0.16),
+    success: success,
+    successSubtle: mix(surface, success, dark ? 0.20 : 0.12),
+    warning: warning,
+    warningSubtle: mix(surface, warning, dark ? 0.20 : 0.12),
+    danger: danger,
+    dangerSubtle: mix(surface, danger, dark ? 0.20 : 0.12),
+    info: cardio,
+    infoSubtle: mix(surface, cardio, dark ? 0.18 : 0.10),
+    setCompleted: success,
+    setSkipped: danger,
+    setCurrent: accent,
+    setUpcoming: fgMuted,
+    gestureLog: success,
+    gestureSkip: danger,
+    gestureNavigate: cardio,
+    chartGrid: mix(surface, fg, dark ? 0.13 : 0.10),
+    chartAxis: borderHi,
+    chartLabel: mix(fgMuted, fg, 0.30),
+    chartSelection: accent,
+    chartTooltip: surfaceHi,
+    chartSeries: [strength, cardio, accent, warning, danger, success],
+    anatomyBase: mix(surface, fg, dark ? 0.08 : 0.12),
+    anatomyStroke: borderHi,
+    anatomyInactive: border,
+    anatomySelected: accent,
+    loadLow: mix(surface, strength, dark ? 0.28 : 0.18),
+    loadHigh: strength,
+    pressedOverlay: fg.withValues(alpha: dark ? 0.08 : 0.06),
+    selectedOverlay: accent.withValues(alpha: dark ? 0.14 : 0.10),
+    disabledOverlay: fg.withValues(alpha: 0.05),
+    displayFontFamily: base.displayFontFamily,
+    uiFontFamily: base.uiFontFamily,
+    numFontFamily: base.numFontFamily,
+    displayWeight: base.displayWeight,
+    numWeight: base.numWeight,
+    chartStyle: base.chartStyle,
+    radius: base.radius,
+    radiusSm: base.radiusSm,
+    pad: base.pad,
+    gap: base.gap,
+    titleSize: base.titleSize,
+    rowH: base.rowH,
+  );
+}

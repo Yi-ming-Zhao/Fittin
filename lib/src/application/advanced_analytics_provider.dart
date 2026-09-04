@@ -4,17 +4,42 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
 
 enum ConsistencyRange { week, month, plan }
+
+enum AnalyticsModality { all, strength, cardio }
+
+class ActivityRangeSummary {
+  const ActivityRangeSummary({
+    required this.start,
+    required this.end,
+    required this.strengthSessions,
+    required this.strengthVolumeKg,
+    required this.cardioSessions,
+    required this.cardioDurationSeconds,
+    required this.cardioDistanceMeters,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final int strengthSessions;
+  final double strengthVolumeKg;
+  final int cardioSessions;
+  final double cardioDurationSeconds;
+  final double cardioDistanceMeters;
+}
 
 class ConsistencyDayRecord {
   const ConsistencyDayRecord({
     required this.date,
     required this.logs,
+    this.cardioRecords = const [],
     required this.intensity,
     required this.isInRange,
     this.planWeekIndex,
@@ -22,11 +47,14 @@ class ConsistencyDayRecord {
 
   final DateTime date;
   final List<WorkoutLog> logs;
+  final List<CardioRecord> cardioRecords;
   final double intensity;
   final bool isInRange;
   final int? planWeekIndex;
 
-  bool get hasActivity => logs.isNotEmpty;
+  bool get hasStrength => logs.isNotEmpty;
+  bool get hasCardio => cardioRecords.isNotEmpty;
+  bool get hasActivity => hasStrength || hasCardio;
 }
 
 class ConsistencySection {
@@ -112,6 +140,54 @@ class AdvancedAnalyticsData {
 
   ConsistencyDayRecord? recordFor(DateTime date) =>
       dayRecords[DateTime(date.year, date.month, date.day)];
+
+  ActivityRangeSummary summaryFor(ConsistencyRange range) {
+    final days = (sectionsByRange[range] ?? const <ConsistencySection>[])
+        .expand((section) => section.days)
+        .where((day) => day.isInRange)
+        .toList(growable: false);
+    final now = DateTime.now();
+    final start = days.isEmpty ? now : days.first.date;
+    final end = days.isEmpty ? now : days.last.date;
+    return ActivityRangeSummary(
+      start: start,
+      end: end,
+      strengthSessions: days.fold(0, (sum, day) => sum + day.logs.length),
+      strengthVolumeKg: days.fold(
+        0,
+        (sum, day) =>
+            sum +
+            day.logs.fold<double>(
+              0,
+              (value, log) => value + _workoutVolume(log),
+            ),
+      ),
+      cardioSessions: days.fold(
+        0,
+        (sum, day) => sum + day.cardioRecords.length,
+      ),
+      cardioDurationSeconds: days.fold(
+        0,
+        (sum, day) =>
+            sum +
+            day.cardioRecords.fold<double>(
+              0,
+              (value, record) =>
+                  value + (record.metric(CardioMetricKey.durationSeconds) ?? 0),
+            ),
+      ),
+      cardioDistanceMeters: days.fold(
+        0,
+        (sum, day) =>
+            sum +
+            day.cardioRecords.fold<double>(
+              0,
+              (value, record) =>
+                  value + (record.metric(CardioMetricKey.distanceMeters) ?? 0),
+            ),
+      ),
+    );
+  }
 }
 
 final advancedAnalyticsDataProvider = FutureProvider<AdvancedAnalyticsData>((
@@ -123,8 +199,10 @@ final advancedAnalyticsDataProvider = FutureProvider<AdvancedAnalyticsData>((
     _activeTrainingInstanceProvider.future,
   );
   final logs = await repository.fetchAllWorkoutLogs();
+  final cardioRecords = await ref.watch(cardioRecordsProvider.future);
   return buildAdvancedAnalytics(
     logs: logs,
+    cardioRecords: cardioRecords,
     exerciseLibrary: exerciseLibrary,
     activeInstance: activeInstance,
   );
@@ -139,6 +217,7 @@ final _activeTrainingInstanceProvider = FutureProvider<StoredTrainingInstance?>(
 
 AdvancedAnalyticsData buildAdvancedAnalytics({
   required List<WorkoutLog> logs,
+  List<CardioRecord> cardioRecords = const [],
   required ExerciseLibrary exerciseLibrary,
   required StoredTrainingInstance? activeInstance,
   AnalyticsDateRange? muscleLoadPeriod,
@@ -149,11 +228,16 @@ AdvancedAnalyticsData buildAdvancedAnalytics({
     ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
 
   final byDay = <DateTime, List<WorkoutLog>>{};
+  final cardioByDay = <DateTime, List<CardioRecord>>{};
 
   for (final log in normalizedLogs) {
     final day = _normalizeDate(log.completedAt);
     final bucket = byDay.putIfAbsent(day, () => []);
     bucket.add(log);
+  }
+  for (final record in cardioRecords) {
+    final day = _normalizeDate(record.startedAt);
+    cardioByDay.putIfAbsent(day, () => []).add(record);
   }
 
   final maxDailyVolume = byDay.values.fold<double>(0, (maximum, dayLogs) {
@@ -163,23 +247,40 @@ AdvancedAnalyticsData buildAdvancedAnalytics({
     );
     return math.max(maximum, dailyVolume);
   });
+  final maxDailyCardioSeconds = cardioByDay.values.fold<double>(
+    0,
+    (maximum, records) => math.max(
+      maximum,
+      records.fold<double>(
+        0,
+        (sum, record) =>
+            sum + (record.metric(CardioMetricKey.durationSeconds) ?? 0),
+      ),
+    ),
+  );
 
   final sectionMap = <ConsistencyRange, List<ConsistencySection>>{
     ConsistencyRange.week: _buildRecentWeekSections(
       byDay,
       referenceNow,
       maxDailyVolume,
+      cardioByDay,
+      maxDailyCardioSeconds,
     ),
     ConsistencyRange.month: _buildMonthSections(
       byDay,
       referenceNow,
       maxDailyVolume,
+      cardioByDay,
+      maxDailyCardioSeconds,
     ),
     ConsistencyRange.plan: _buildPlanSections(
       byDay,
       referenceNow,
       maxDailyVolume,
       activeInstance?.createdAt,
+      cardioByDay,
+      maxDailyCardioSeconds,
     ),
   };
 
@@ -188,9 +289,16 @@ AdvancedAnalyticsData buildAdvancedAnalytics({
     exerciseLibrary: exerciseLibrary,
     period: muscleLoadPeriod,
   );
+  final activityDates = {...byDay.keys, ...cardioByDay.keys};
   final dayRecords = <DateTime, ConsistencyDayRecord>{
-    for (final entry in byDay.entries)
-      entry.key: _dayRecord(byDay, entry.key, maxDailyVolume: maxDailyVolume),
+    for (final date in activityDates)
+      date: _dayRecord(
+        byDay,
+        date,
+        maxDailyVolume: maxDailyVolume,
+        cardioByDay: cardioByDay,
+        maxDailyCardioSeconds: maxDailyCardioSeconds,
+      ),
   };
   return AdvancedAnalyticsData(
     sectionsByRange: sectionMap,
@@ -203,6 +311,8 @@ List<ConsistencySection> _buildRecentWeekSections(
   Map<DateTime, List<WorkoutLog>> byDay,
   DateTime now,
   double maxDailyVolume,
+  Map<DateTime, List<CardioRecord>> cardioByDay,
+  double maxDailyCardioSeconds,
 ) {
   const weekCount = 8;
   final currentWeekStart = _startOfWeek(_normalizeDate(now));
@@ -213,7 +323,13 @@ List<ConsistencySection> _buildRecentWeekSections(
     );
     final days = List.generate(7, (dayIndex) {
       final date = _addCalendarDays(start, dayIndex);
-      return _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
+      return _dayRecord(
+        byDay,
+        date,
+        maxDailyVolume: maxDailyVolume,
+        cardioByDay: cardioByDay,
+        maxDailyCardioSeconds: maxDailyCardioSeconds,
+      );
     });
     return ConsistencySection(label: _weekLabel(start), days: days);
   });
@@ -223,6 +339,8 @@ List<ConsistencySection> _buildMonthSections(
   Map<DateTime, List<WorkoutLog>> byDay,
   DateTime now,
   double maxDailyVolume,
+  Map<DateTime, List<CardioRecord>> cardioByDay,
+  double maxDailyCardioSeconds,
 ) {
   final targetMonth = DateTime(now.year, now.month);
   final monthStart = DateTime(targetMonth.year, targetMonth.month, 1);
@@ -235,10 +353,17 @@ List<ConsistencySection> _buildMonthSections(
     final start = _addCalendarDays(gridStart, index * 7);
     final days = List.generate(7, (dayIndex) {
       final date = _addCalendarDays(start, dayIndex);
-      final record = _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
+      final record = _dayRecord(
+        byDay,
+        date,
+        maxDailyVolume: maxDailyVolume,
+        cardioByDay: cardioByDay,
+        maxDailyCardioSeconds: maxDailyCardioSeconds,
+      );
       return ConsistencyDayRecord(
         date: record.date,
         logs: record.logs,
+        cardioRecords: record.cardioRecords,
         intensity: record.intensity,
         isInRange: date.month == targetMonth.month,
       );
@@ -252,8 +377,10 @@ List<ConsistencySection> _buildPlanSections(
   DateTime now,
   double maxDailyVolume,
   DateTime? planStart,
+  Map<DateTime, List<CardioRecord>> cardioByDay,
+  double maxDailyCardioSeconds,
 ) {
-  if (byDay.isEmpty) {
+  if (byDay.isEmpty && cardioByDay.isEmpty) {
     final anchor = _startOfWeek(_normalizeDate(planStart ?? now));
     return [
       ConsistencySection(
@@ -263,6 +390,7 @@ List<ConsistencySection> _buildPlanSections(
           return ConsistencyDayRecord(
             date: date,
             logs: const [],
+            cardioRecords: const [],
             intensity: 0,
             isInRange: true,
             planWeekIndex: 0,
@@ -272,7 +400,8 @@ List<ConsistencySection> _buildPlanSections(
     ];
   }
 
-  final earliestLogDate = byDay.keys.reduce((a, b) => a.isBefore(b) ? a : b);
+  final dates = {...byDay.keys, ...cardioByDay.keys};
+  final earliestLogDate = dates.reduce((a, b) => a.isBefore(b) ? a : b);
   final anchor = _startOfWeek(_normalizeDate(planStart ?? earliestLogDate));
   final end = _normalizeDate(now);
   final totalWeeks = math.max(
@@ -284,10 +413,17 @@ List<ConsistencySection> _buildPlanSections(
     final start = _addCalendarDays(anchor, weekIndex * 7);
     final days = List.generate(7, (dayIndex) {
       final date = _addCalendarDays(start, dayIndex);
-      final record = _dayRecord(byDay, date, maxDailyVolume: maxDailyVolume);
+      final record = _dayRecord(
+        byDay,
+        date,
+        maxDailyVolume: maxDailyVolume,
+        cardioByDay: cardioByDay,
+        maxDailyCardioSeconds: maxDailyCardioSeconds,
+      );
       return ConsistencyDayRecord(
         date: record.date,
         logs: record.logs,
+        cardioRecords: record.cardioRecords,
         intensity: record.intensity,
         isInRange: !date.isAfter(end),
         planWeekIndex: weekIndex,
@@ -301,18 +437,32 @@ ConsistencyDayRecord _dayRecord(
   Map<DateTime, List<WorkoutLog>> byDay,
   DateTime date, {
   required double maxDailyVolume,
+  required Map<DateTime, List<CardioRecord>> cardioByDay,
+  required double maxDailyCardioSeconds,
 }) {
   final logs = byDay[date] ?? const [];
+  final cardioRecords = cardioByDay[date] ?? const [];
   final volume = logs.fold<double>(0, (sum, log) => sum + _workoutVolume(log));
-  final intensity = logs.isEmpty
+  final strengthIntensity = logs.isEmpty
       ? 0.0
       : (maxDailyVolume <= 0
             ? 1.0
             : (volume / maxDailyVolume).clamp(0.18, 1.0));
+  final cardioSeconds = cardioRecords.fold<double>(
+    0,
+    (sum, record) =>
+        sum + (record.metric(CardioMetricKey.durationSeconds) ?? 0),
+  );
+  final cardioIntensity = cardioRecords.isEmpty
+      ? 0.0
+      : (maxDailyCardioSeconds <= 0
+            ? 1.0
+            : (cardioSeconds / maxDailyCardioSeconds).clamp(0.18, 1.0));
   return ConsistencyDayRecord(
     date: date,
     logs: logs,
-    intensity: intensity,
+    cardioRecords: cardioRecords,
+    intensity: math.max(strengthIntensity, cardioIntensity),
     isInRange: true,
   );
 }

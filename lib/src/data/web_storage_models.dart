@@ -153,6 +153,20 @@ Map<String, dynamic> planRowFromTemplateDoc(Map<String, dynamic> doc) {
   };
 }
 
+Map<String, dynamic> userContentRowFromDoc(Map<String, dynamic> doc) {
+  return {
+    'id': doc['contentId'],
+    'user_id': doc['ownerUserId'],
+    'kind': doc['kindKey'],
+    'payload_json': doc['rawJsonPayload'],
+    'created_at': doc['createdAt'],
+    'updated_at': doc['lastModifiedAt'],
+    'deleted_at': doc['deletedAt'],
+    'version': doc['version'],
+    'last_modified_by_device_id': doc['lastModifiedByDeviceId'],
+  };
+}
+
 Map<String, dynamic> workoutLogRowFromDoc(Map<String, dynamic> doc) {
   return {
     'id': doc['logId'],

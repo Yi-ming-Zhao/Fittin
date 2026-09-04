@@ -7,26 +7,30 @@ import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
+enum DashboardPageLayout { root, detail }
+
 class DashboardPageScaffold extends StatelessWidget {
   const DashboardPageScaffold({
     super.key,
     required this.children,
-    this.bottomPadding = 24,
-    this.topPadding = 54,
+    this.layout = DashboardPageLayout.root,
+    this.bottomPadding,
+    this.topPadding,
     this.floatingActionButton,
     this.extendBody = false,
     this.scrollable = true,
-    this.safeAreaBottom = false,
+    this.safeAreaBottom,
     this.maxContentWidth = 430,
   });
 
   final List<Widget> children;
-  final double bottomPadding;
-  final double topPadding;
+  final DashboardPageLayout layout;
+  final double? bottomPadding;
+  final double? topPadding;
   final Widget? floatingActionButton;
   final bool extendBody;
   final bool scrollable;
-  final bool safeAreaBottom;
+  final bool? safeAreaBottom;
   final double maxContentWidth;
 
   @override
@@ -34,6 +38,11 @@ class DashboardPageScaffold extends StatelessWidget {
     return Consumer(
       builder: (context, ref, _) {
         final fittinTheme = ref.watch(resolvedFittinThemeProvider);
+        final resolvedTopPadding =
+            topPadding ?? (layout == DashboardPageLayout.root ? 24.0 : 20.0);
+        final resolvedBottomPadding = bottomPadding ?? 24.0;
+        final resolvedSafeAreaBottom =
+            safeAreaBottom ?? layout == DashboardPageLayout.detail;
         return Scaffold(
           backgroundColor: Colors.transparent,
           floatingActionButton: floatingActionButton,
@@ -51,26 +60,27 @@ class DashboardPageScaffold extends StatelessWidget {
               ),
             ),
             child: SafeArea(
-              bottom: safeAreaBottom,
+              bottom: resolvedSafeAreaBottom,
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
                   child: scrollable
                       ? ListView(
+                          key: const ValueKey('dashboard-page-scroll'),
                           padding: EdgeInsets.fromLTRB(
                             20,
-                            topPadding,
+                            resolvedTopPadding,
                             20,
-                            bottomPadding,
+                            resolvedBottomPadding,
                           ),
                           children: children,
                         )
                       : Padding(
                           padding: EdgeInsets.fromLTRB(
                             20,
-                            topPadding,
+                            resolvedTopPadding,
                             20,
-                            bottomPadding,
+                            resolvedBottomPadding,
                           ),
                           child: Column(children: children),
                         ),
@@ -105,39 +115,63 @@ class DashboardScreenHeader extends StatelessWidget {
     return Consumer(
       builder: (context, ref, _) {
         final theme = ref.watch(resolvedFittinThemeProvider);
-        return Row(
+        final titleBlock = Column(
+          key: const ValueKey('dashboard-header-title-block'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (showBackButton) ...[
-              DashboardBackButton(theme: theme),
-              const SizedBox(width: 14),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FittinEyebrow(theme, eyebrow),
-                  const SizedBox(height: 10),
-                  Text(
-                    title,
-                    style: theme
-                        .displayStyle(32, theme.fg)
-                        .copyWith(height: 0.98),
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 10),
-                    Text(
-                      subtitle!,
-                      style: theme
-                          .uiStyle(15, theme.fgDim)
-                          .copyWith(height: 1.45),
-                    ),
-                  ],
-                ],
-              ),
+            FittinEyebrow(theme, eyebrow),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.displayStyle(32, theme.fg).copyWith(height: 0.98),
             ),
-            if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+            if (subtitle != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                subtitle!,
+                style: theme.uiStyle(15, theme.fgDim).copyWith(height: 1.45),
+              ),
+            ],
           ],
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final useCompactHeader =
+                constraints.maxWidth < 320 &&
+                (showBackButton || trailing != null);
+            if (useCompactHeader) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    key: const ValueKey('dashboard-header-utility-row'),
+                    children: [
+                      if (showBackButton) DashboardBackButton(theme: theme),
+                      const Spacer(),
+                      if (trailing != null) trailing!,
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  titleBlock,
+                ],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (showBackButton) ...[
+                  DashboardBackButton(theme: theme),
+                  const SizedBox(width: 14),
+                ],
+                Expanded(child: titleBlock),
+                if (trailing != null) ...[const SizedBox(width: 16), trailing!],
+              ],
+            );
+          },
         );
       },
     );

@@ -45,7 +45,7 @@ class _ProfilePreferencesScreenState
     return Scaffold(
       backgroundColor: theme.bg,
       body: DashboardPageScaffold(
-        bottomPadding: 40,
+        layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.profile,
@@ -81,32 +81,51 @@ class _ProfilePreferencesScreenState
                   ),
                 ),
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton(
-                        key: const ValueKey('save-profile-display-name'),
-                        onPressed: () async {
-                          await ref
-                              .read(homeDisplayNamePreferenceProvider.notifier)
-                              .save(_controller.text);
-                        },
-                        child: Text(strings.save),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: FilledButton.tonal(
-                        key: const ValueKey('clear-profile-display-name'),
-                        onPressed: () async {
-                          await ref
-                              .read(homeDisplayNamePreferenceProvider.notifier)
-                              .clear();
-                        },
-                        child: Text(strings.clearDisplayName),
-                      ),
-                    ),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final useStackedActions =
+                        constraints.maxWidth < 320 ||
+                        MediaQuery.textScalerOf(context).scale(14) > 18;
+                    final saveButton = FilledButton(
+                      key: const ValueKey('save-profile-display-name'),
+                      onPressed: () async {
+                        await ref
+                            .read(homeDisplayNamePreferenceProvider.notifier)
+                            .save(_controller.text);
+                      },
+                      child: Text(strings.save),
+                    );
+                    final clearButton = FilledButton.tonal(
+                      key: const ValueKey('clear-profile-display-name'),
+                      onPressed: () async {
+                        await ref
+                            .read(homeDisplayNamePreferenceProvider.notifier)
+                            .clear();
+                      },
+                      child: Text(strings.clearDisplayName),
+                    );
+                    if (useStackedActions) {
+                      return Column(
+                        key: const ValueKey(
+                          'profile-preference-actions-stacked',
+                        ),
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          saveButton,
+                          const SizedBox(height: 10),
+                          clearButton,
+                        ],
+                      );
+                    }
+                    return Row(
+                      key: const ValueKey('profile-preference-actions-row'),
+                      children: [
+                        Expanded(child: saveButton),
+                        const SizedBox(width: 12),
+                        Expanded(child: clearButton),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

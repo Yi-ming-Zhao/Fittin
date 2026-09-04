@@ -158,7 +158,14 @@ void main() {
           );
         }
         final run = c.read(agentHarnessControllerProvider).runState;
-        expect(run.phase, AgentRunPhase.completed, reason: run.errorMessage);
+        expect(
+          run.phase,
+          AgentRunPhase.completed,
+          reason: [
+            run.errorMessage,
+            _sanitizedTrace(run.conversation),
+          ].whereType<String>().where((value) => value.isNotEmpty).join('\n'),
+        );
         final calls = run.conversation!.messages
             .expand((m) => m.toolCalls)
             .map((call) => call.name)
@@ -262,6 +269,46 @@ void main() {
       timeout: const Timeout(Duration(minutes: 15)),
     );
   }
+}
+
+String _sanitizedTrace(AgentConversation? conversation) {
+  if (conversation == null) return 'No conversation was retained.';
+  final rows = <String>[];
+  for (final message in conversation.messages) {
+    for (final call in message.toolCalls) {
+      var detail = '';
+      if (call.name == 'list_exercises') {
+        try {
+          final input = jsonDecode(call.argumentsJson);
+          if (input is Map) {
+            detail =
+                ':${jsonEncode({
+                  for (final key in ['query', 'movement', 'equipment', 'primaryMuscle', 'tags', 'source', 'limit', 'cursor'])
+                    if (input[key] != null) key: input[key],
+                })}';
+          }
+        } catch (_) {}
+      }
+      rows.add('call:${call.name}$detail');
+    }
+    if (message.role != AgentMessageRole.tool) continue;
+    try {
+      final decoded = jsonDecode(message.content);
+      if (decoded is Map) {
+        final error = decoded['error'];
+        if (error is Map) {
+          rows.add(
+            'result:error:${error['code'] ?? 'unknown'}:${error['message'] ?? ''}',
+          );
+        } else {
+          rows.add('result:${decoded['status'] ?? 'completed'}');
+        }
+      }
+    } catch (_) {
+      rows.add('result:unparseable');
+    }
+  }
+  return rows.join(' -> ');
 }
 
 class _RealProviderTestBinding extends AutomatedTestWidgetsFlutterBinding {

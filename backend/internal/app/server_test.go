@@ -45,6 +45,19 @@ func TestWithCORSPermitsPublicWebOrigin(t *testing.T) {
 	if got := recorder.Header().Get("Access-Control-Allow-Origin"); got != "https://fittin.hammerscholar.net" {
 		t.Fatalf("expected allow-origin header for public web origin, got %q", got)
 	}
+	if got := recorder.Header().Get("Access-Control-Allow-Credentials"); got != "true" {
+		t.Fatalf("expected credentialed CORS, got %q", got)
+	}
+	allowedHeaders := recorder.Header().Get("Access-Control-Allow-Headers")
+	for _, required := range []string{
+		"X-Fittin-Auth-Version",
+		"X-Fittin-Auth-Platform",
+		"X-Fittin-Device-Id",
+	} {
+		if !strings.Contains(allowedHeaders, required) {
+			t.Fatalf("CORS headers missing %q: %q", required, allowedHeaders)
+		}
+	}
 }
 
 func TestWithCORSHandlesPreflight(t *testing.T) {

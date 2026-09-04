@@ -25,32 +25,41 @@ final supabaseRemoteRepositoryProvider = Provider<SupabaseRemoteRepository>((
     baseUrl: bootstrap.url,
     accessTokenLoader: () =>
         ref.read(authRepositoryProvider).currentAccessToken(),
+    accessTokenRefresher: (failedAccessToken) => ref
+        .read(authRepositoryProvider)
+        .refreshAccessToken(failedAccessToken: failedAccessToken),
   );
   ref.onDispose(repository.dispose);
   return repository;
 });
 
 typedef AccessTokenLoader = Future<String?> Function();
+typedef AccessTokenRefresher =
+    Future<String?> Function(String failedAccessToken);
 
 class SupabaseRemoteRepository {
   SupabaseRemoteRepository.unavailable()
     : _baseUrl = null,
       _httpClient = null,
       _accessTokenLoader = null,
+      _accessTokenRefresher = null,
       _ownsClient = false;
 
   SupabaseRemoteRepository.http({
     required String baseUrl,
     required AccessTokenLoader accessTokenLoader,
+    AccessTokenRefresher? accessTokenRefresher,
     http.Client? httpClient,
   }) : _baseUrl = baseUrl,
        _httpClient = httpClient ?? http.Client(),
        _accessTokenLoader = accessTokenLoader,
+       _accessTokenRefresher = accessTokenRefresher,
        _ownsClient = httpClient == null;
 
   final String? _baseUrl;
   final http.Client? _httpClient;
   final AccessTokenLoader? _accessTokenLoader;
+  final AccessTokenRefresher? _accessTokenRefresher;
   final bool _ownsClient;
   static const requestTimeout = Duration(seconds: 12);
 
@@ -109,18 +118,19 @@ class SupabaseRemoteRepository {
     required String localFilePath,
   }) async {
     final bytes = await readLocalFileBytes(localFilePath);
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_requireBaseUrl/v1/files/progress-photos'),
-    );
-    request.headers.addAll(await _headers());
-    request.fields['userId'] = userId;
-    request.fields['photoId'] = photoId;
-    request.files.add(
-      http.MultipartFile.fromBytes('file', bytes, filename: '$photoId.jpg'),
-    );
-
-    final response = await _sendMultipart(request);
+    final response = await _sendAuthenticated((headers) {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_requireBaseUrl/v1/files/progress-photos'),
+      );
+      request.headers.addAll(headers);
+      request.fields['userId'] = userId;
+      request.fields['photoId'] = photoId;
+      request.files.add(
+        http.MultipartFile.fromBytes('file', bytes, filename: '$photoId.jpg'),
+      );
+      return _sendMultipart(request);
+    });
     final payload = _decodeJson(response);
     _ensureSuccess(response, payload);
     final storagePath = payload['storagePath'] as String?;
@@ -131,12 +141,14 @@ class SupabaseRemoteRepository {
   }
 
   Future<List<int>> downloadProgressPhoto(String photoId) async {
-    final headers = await _headers(contentType: false);
-    final response = await _guardRequest(
-      () => _requireClient.get(
-        Uri.parse('$_requireBaseUrl/v1/files/progress-photos/$photoId'),
-        headers: headers,
+    final response = await _sendAuthenticated(
+      (headers) => _guardRequest(
+        () => _requireClient.get(
+          Uri.parse('$_requireBaseUrl/v1/files/progress-photos/$photoId'),
+          headers: headers,
+        ),
       ),
+      contentType: false,
     );
     final payload = _decodeJson(response);
     _ensureSuccess(response, payload);
@@ -164,16 +176,17 @@ class SupabaseRemoteRepository {
     int? version,
     String? deviceId,
   }) async {
-    final headers = await _headers();
-    final response = await _guardRequest(
-      () => _requireClient.delete(
-        Uri.parse('$_requireBaseUrl/v1/sync/$table/$id').replace(
-          queryParameters: {
-            if (version != null) 'version': '$version',
-            if (deviceId != null && deviceId.isNotEmpty) 'deviceId': deviceId,
-          },
+    final response = await _sendAuthenticated(
+      (headers) => _guardRequest(
+        () => _requireClient.delete(
+          Uri.parse('$_requireBaseUrl/v1/sync/$table/$id').replace(
+            queryParameters: {
+              if (version != null) 'version': '$version',
+              if (deviceId != null && deviceId.isNotEmpty) 'deviceId': deviceId,
+            },
+          ),
+          headers: headers,
         ),
-        headers: headers,
       ),
     );
     _ensureSuccess(response, _decodeJson(response));
@@ -183,12 +196,13 @@ class SupabaseRemoteRepository {
     required String table,
     required Map<String, dynamic> row,
   }) async {
-    final headers = await _headers();
-    final response = await _guardRequest(
-      () => _requireClient.post(
-        Uri.parse('$_requireBaseUrl/v1/sync/upsert/$table'),
-        headers: headers,
-        body: jsonEncode(row),
+    final response = await _sendAuthenticated(
+      (headers) => _guardRequest(
+        () => _requireClient.post(
+          Uri.parse('$_requireBaseUrl/v1/sync/upsert/$table'),
+          headers: headers,
+          body: jsonEncode(row),
+        ),
       ),
     );
     _ensureSuccess(response, _decodeJson(response));
@@ -214,9 +228,9 @@ class SupabaseRemoteRepository {
           if (cursorId != null) 'cursorId': cursorId,
         },
       );
-      final headers = await _headers();
-      final response = await _guardRequest(
-        () => _requireClient.get(uri, headers: headers),
+      final response = await _sendAuthenticated(
+        (headers) =>
+            _guardRequest(() => _requireClient.get(uri, headers: headers)),
       );
       final payload = _decodeJson(response);
       _ensureSuccess(response, payload);
@@ -243,12 +257,37 @@ class SupabaseRemoteRepository {
     return results;
   }
 
-  Future<Map<String, String>> _headers({bool contentType = true}) async {
-    final token = await _accessTokenLoader?.call();
+  Map<String, String> _headersForToken(
+    String? token, {
+    bool contentType = true,
+  }) {
     return {
       if (contentType) 'Content-Type': 'application/json',
       if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
     };
+  }
+
+  Future<http.Response> _sendAuthenticated(
+    Future<http.Response> Function(Map<String, String> headers) request, {
+    bool contentType = true,
+  }) async {
+    final token = await _accessTokenLoader?.call();
+    var response = await request(
+      _headersForToken(token, contentType: contentType),
+    );
+    final refresher = _accessTokenRefresher;
+    if (response.statusCode != 401 ||
+        refresher == null ||
+        token == null ||
+        token.isEmpty) {
+      return response;
+    }
+    final refreshed = await refresher(token);
+    if (refreshed == null || refreshed.isEmpty) return response;
+    response = await request(
+      _headersForToken(refreshed, contentType: contentType),
+    );
+    return response;
   }
 
   Map<String, dynamic> _decodeJson(http.Response response) {

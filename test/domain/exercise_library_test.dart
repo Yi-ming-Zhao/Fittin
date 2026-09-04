@@ -24,9 +24,9 @@ void main() {
       final provided = await container.read(exerciseLibraryProvider.future);
 
       expect(provided.schemaVersion, 1);
-      expect(provided.catalogVersion, '1.0.0');
+      expect(provided.catalogVersion, '1.1.0');
       expect(provided.sourceRevision, isNotEmpty);
-      expect(provided.definitions, hasLength(42));
+      expect(provided.definitions, hasLength(52));
     },
   );
 
@@ -56,6 +56,27 @@ void main() {
         reason: 'Unresolved built-in plan exerciseId: $id',
       );
     }
+  });
+
+  test('home dumbbell catalog covers a complete three-day routine', () {
+    final dumbbell = library.definitions
+        .where((item) => item.equipment == ExerciseEquipment.dumbbell)
+        .toList();
+    expect(dumbbell.length, greaterThanOrEqualTo(12));
+    expect(
+      dumbbell.map((item) => item.movement).toSet(),
+      containsAll({
+        ExerciseMovement.squat,
+        ExerciseMovement.hinge,
+        ExerciseMovement.horizontalPress,
+        ExerciseMovement.horizontalPull,
+        ExerciseMovement.verticalPress,
+        ExerciseMovement.elbowFlexion,
+        ExerciseMovement.elbowExtension,
+      }),
+    );
+    expect(library.findKnown(name: 'Dumbbell Row')?.id, 'one_arm_dumbbell_row');
+    expect(library.findKnown(name: '哑铃卧推')?.id, 'dumbbell_bench_press');
   });
 
   test('canonical IDs, legacy IDs, names, and aliases never cross-resolve', () {

@@ -70,8 +70,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     }
 
     return DashboardPageScaffold(
-      bottomPadding: 24,
-      safeAreaBottom: true,
+      layout: DashboardPageLayout.detail,
       children: [
         Row(
           children: [

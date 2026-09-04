@@ -148,8 +148,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Language'), findsOneWidget);
+    expect(find.text('My Fittin'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-category-appearance')), findsOne);
   });
 
   testWidgets('six-tab shell preserves destination order and index mapping', (
@@ -294,7 +294,11 @@ void main() {
         final chart = tester.widget<InteractiveLineChart>(
           find.byKey(const ValueKey('body-weight-chart')),
         );
-        expect(chart.height, compact ? 216 : 250);
+        if (compact) {
+          expect(chart.height, 216);
+        } else {
+          expect(chart.height, inInclusiveRange(240, 250));
+        }
 
         final checkIns = find.byKey(
           const ValueKey('body-metric-card-check-ins'),

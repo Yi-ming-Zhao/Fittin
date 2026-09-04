@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/calendar_month.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart'
     show FittinTheme;
@@ -24,6 +25,7 @@ class AdvancedAnalyticsScreen extends ConsumerStatefulWidget {
 class _AdvancedAnalyticsScreenState
     extends ConsumerState<AdvancedAnalyticsScreen> {
   ConsistencyRange _selectedRange = ConsistencyRange.week;
+  AnalyticsModality _selectedModality = AnalyticsModality.all;
   CalendarMonthSelection _selectedMonth = CalendarMonthSelection.today();
 
   @override
@@ -36,6 +38,7 @@ class _AdvancedAnalyticsScreenState
       backgroundColor: fittinTheme.bg,
       body: dataAsync.when(
         data: (data) => DashboardPageScaffold(
+          layout: DashboardPageLayout.detail,
           children: [
             DashboardScreenHeader(
               eyebrow: strings.insights,
@@ -43,9 +46,20 @@ class _AdvancedAnalyticsScreenState
               subtitle: strings.advancedAnalyticsSubtitle,
               showBackButton: true,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 18),
+            _ModalitySelector(
+              selected: _selectedModality,
+              onChanged: (value) => setState(() => _selectedModality = value),
+            ),
+            const SizedBox(height: 12),
+            _RangeSummaryCards(
+              summary: data.summaryFor(_selectedRange),
+              modality: _selectedModality,
+            ),
+            const SizedBox(height: 18),
             _ConsistencyExplorer(
               range: _selectedRange,
+              modality: _selectedModality,
               data: data,
               selectedMonth: _selectedMonth,
               onRangeChanged: (value) {
@@ -63,7 +77,6 @@ class _AdvancedAnalyticsScreenState
             _buildVolumeDistribution(context, strings, data, fittinTheme),
             const SizedBox(height: 32),
             AnatomyLoadMap(overview: data.muscleLoad),
-            const SizedBox(height: 80),
           ],
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -128,6 +141,7 @@ class _AdvancedAnalyticsScreenState
 class _ConsistencyExplorer extends ConsumerWidget {
   const _ConsistencyExplorer({
     required this.range,
+    required this.modality,
     required this.data,
     required this.selectedMonth,
     required this.onRangeChanged,
@@ -135,6 +149,7 @@ class _ConsistencyExplorer extends ConsumerWidget {
   });
 
   final ConsistencyRange range;
+  final AnalyticsModality modality;
   final AdvancedAnalyticsData data;
   final CalendarMonthSelection selectedMonth;
   final ValueChanged<ConsistencyRange> onRangeChanged;
@@ -151,8 +166,8 @@ class _ConsistencyExplorer extends ConsumerWidget {
       localeCode: strings.isChinese ? 'zh_CN' : 'en',
     );
     final contentHeight = range == ConsistencyRange.month
-        ? 112.0 + (calendar.weeks.length * 52.0)
-        : 78.0 + (sections.length * 56.0);
+        ? 142.0 + (calendar.weeks.length * 52.0)
+        : 112.0 + (sections.length * 56.0);
 
     return ChartContainer(
       title: strings.trainingConsistency,
@@ -163,6 +178,7 @@ class _ConsistencyExplorer extends ConsumerWidget {
               month: calendar,
               data: data,
               selection: selectedMonth,
+              modality: modality,
               onSelectionChanged: onMonthChanged,
             )
           : sections.isEmpty
@@ -181,15 +197,373 @@ class _ConsistencyExplorer extends ConsumerWidget {
                     context,
                   ).textTheme.bodySmall?.copyWith(color: theme.fgDim),
                 ),
+                const SizedBox(height: 10),
+                const _ModalityLegend(),
                 const SizedBox(height: 14),
                 _DayHeader(strings: strings),
                 const SizedBox(height: 8),
                 for (final section in sections) ...[
-                  _WeekRow(section: section),
+                  _WeekRow(section: section, modality: modality),
                   const SizedBox(height: 8),
                 ],
               ],
             ),
+    );
+  }
+}
+
+class _ModalityLegend extends ConsumerWidget {
+  const _ModalityLegend();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _LegendItem(
+          color: theme.strengthSeries,
+          label: strings.isChinese ? '力量' : 'Strength',
+          circular: false,
+        ),
+        _LegendItem(
+          color: theme.cardioSeries,
+          label: strings.isChinese ? '有氧' : 'Cardio',
+          circular: true,
+        ),
+      ],
+    );
+  }
+}
+
+class _ModalitySelector extends ConsumerWidget {
+  const _ModalitySelector({required this.selected, required this.onChanged});
+
+  final AnalyticsModality selected;
+  final ValueChanged<AnalyticsModality> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    return SegmentedButton<AnalyticsModality>(
+      showSelectedIcon: false,
+      segments: [
+        ButtonSegment(
+          value: AnalyticsModality.all,
+          label: Text(
+            strings.isChinese ? '全部' : 'All',
+            key: const ValueKey('analytics-modality-all'),
+          ),
+        ),
+        ButtonSegment(
+          value: AnalyticsModality.strength,
+          label: Text(
+            strings.isChinese ? '力量' : 'Strength',
+            key: const ValueKey('analytics-modality-strength'),
+          ),
+          icon: const Icon(Icons.crop_square_rounded, size: 16),
+        ),
+        ButtonSegment(
+          value: AnalyticsModality.cardio,
+          label: Text(
+            strings.isChinese ? '有氧' : 'Cardio',
+            key: const ValueKey('analytics-modality-cardio'),
+          ),
+          icon: const Icon(Icons.circle_outlined, size: 15),
+        ),
+      ],
+      selected: {selected},
+      onSelectionChanged: (value) => onChanged(value.first),
+    );
+  }
+}
+
+class _RangeSummaryCards extends ConsumerWidget {
+  const _RangeSummaryCards({required this.summary, required this.modality});
+
+  final ActivityRangeSummary summary;
+  final AnalyticsModality modality;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    final showStrength = modality != AnalyticsModality.cardio;
+    final showCardio = modality != AnalyticsModality.strength;
+    final cards = <Widget>[
+      if (showStrength)
+        _SummaryMetric(
+          theme: theme,
+          color: theme.strengthSeries,
+          shape: BoxShape.rectangle,
+          label: strings.isChinese ? '力量训练' : 'Strength sessions',
+          value: '${summary.strengthSessions}',
+          caption: strings.isChinese
+              ? '${(summary.strengthVolumeKg / 1000).toStringAsFixed(1)} 吨容量'
+              : '${(summary.strengthVolumeKg / 1000).toStringAsFixed(1)} t volume',
+        ),
+      if (showCardio)
+        _SummaryMetric(
+          theme: theme,
+          color: theme.cardioSeries,
+          shape: BoxShape.circle,
+          label: strings.isChinese ? '有氧训练' : 'Cardio sessions',
+          value: '${summary.cardioSessions}',
+          caption: strings.isChinese
+              ? '${(summary.cardioDurationSeconds / 60).round()} 分钟 · ${(summary.cardioDistanceMeters / 1000).toStringAsFixed(1)} 公里'
+              : '${(summary.cardioDurationSeconds / 60).round()} min · ${(summary.cardioDistanceMeters / 1000).toStringAsFixed(1)} km',
+        ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final card in cards)
+            SizedBox(
+              width: cards.length == 1 || constraints.maxWidth < 340
+                  ? constraints.maxWidth
+                  : (constraints.maxWidth - 10) / 2,
+              child: card,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({
+    required this.theme,
+    required this.color,
+    required this.shape,
+    required this.label,
+    required this.value,
+    required this.caption,
+  });
+
+  final FittinTheme theme;
+  final Color color;
+  final BoxShape shape;
+  final String label;
+  final String value;
+  final String caption;
+
+  @override
+  Widget build(BuildContext context) => DashboardSurfaceCard(
+    padding: const EdgeInsets.all(14),
+    child: Row(
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(
+            color: color,
+            shape: shape,
+            borderRadius: shape == BoxShape.rectangle
+                ? BorderRadius.circular(2)
+                : null,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: theme.uiStyle(11, theme.fgMuted)),
+              const SizedBox(height: 4),
+              Text(value, style: theme.numStyle(24, theme.fg)),
+              Text(caption, style: theme.uiStyle(10, theme.fgMuted)),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({
+    required this.color,
+    required this.label,
+    required this.circular,
+  });
+
+  final Color color;
+  final String label;
+  final bool circular;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 9,
+        height: 9,
+        decoration: BoxDecoration(
+          color: color,
+          shape: circular ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: circular ? null : BorderRadius.circular(2),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Text(label),
+    ],
+  );
+}
+
+Color _activityBackground(
+  FittinTheme theme, {
+  required bool hasStrength,
+  required bool hasCardio,
+  required double intensity,
+  double inactiveAlpha = 0.055,
+}) {
+  if (!hasStrength && !hasCardio) {
+    return theme.fg.withValues(alpha: inactiveAlpha);
+  }
+  final alpha = 0.10 + intensity.clamp(0, 1) * 0.30;
+  var result = theme.surfaceSolid;
+  if (hasStrength) {
+    result = Color.alphaBlend(
+      theme.strengthSeries.withValues(alpha: alpha),
+      result,
+    );
+  }
+  if (hasCardio) {
+    result = Color.alphaBlend(
+      theme.cardioSeries.withValues(alpha: hasStrength ? alpha * 0.72 : alpha),
+      result,
+    );
+  }
+  return result;
+}
+
+void _openTrainingDay(BuildContext context, ConsistencyDayRecord record) {
+  Navigator.of(context).push(
+    MaterialPageRoute(builder: (_) => _TrainingDayDetailScreen(record: record)),
+  );
+}
+
+ConsistencyDayRecord _recordForModality(
+  ConsistencyDayRecord record,
+  AnalyticsModality modality,
+) => ConsistencyDayRecord(
+  date: record.date,
+  logs: modality == AnalyticsModality.cardio ? const [] : record.logs,
+  cardioRecords: modality == AnalyticsModality.strength
+      ? const []
+      : record.cardioRecords,
+  intensity: record.intensity,
+  isInRange: record.isInRange,
+  planWeekIndex: record.planWeekIndex,
+);
+
+class _TrainingDayDetailScreen extends ConsumerWidget {
+  const _TrainingDayDetailScreen({required this.record});
+
+  final ConsistencyDayRecord record;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.watch(resolvedFittinThemeProvider);
+    return DashboardPageScaffold(
+      layout: DashboardPageLayout.detail,
+      children: [
+        DashboardScreenHeader(
+          eyebrow: strings.isChinese ? '训练日' : 'TRAINING DAY',
+          title:
+              '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}',
+          subtitle: strings.isChinese
+              ? '力量使用方形标记，有氧使用圆形标记。'
+              : 'Strength uses square markers; cardio uses circles.',
+          showBackButton: true,
+        ),
+        if (record.logs.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          DashboardSectionLabel(label: strings.isChinese ? '力量' : 'STRENGTH'),
+          const SizedBox(height: 10),
+          DashboardSurfaceCard(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => WorkoutRecordDetailScreen(
+                  date: record.date,
+                  logs: record.logs,
+                ),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: theme.strengthSeries,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    strings.isChinese
+                        ? '${record.logs.length} 次力量训练'
+                        : '${record.logs.length} strength sessions',
+                    style: theme.uiStyle(14, theme.fg, FontWeight.w700),
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
+        ],
+        if (record.cardioRecords.isNotEmpty) ...[
+          const SizedBox(height: 20),
+          DashboardSectionLabel(label: strings.isChinese ? '有氧' : 'CARDIO'),
+          const SizedBox(height: 10),
+          for (final cardio in record.cardioRecords) ...[
+            DashboardSurfaceCard(
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: theme.cardioSeries,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          cardio.activityName,
+                          style: theme.uiStyle(14, theme.fg, FontWeight.w700),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          [
+                            '${((cardio.metric(CardioMetricKey.durationSeconds) ?? 0) / 60).round()} min',
+                            if (cardio.metric(CardioMetricKey.distanceMeters)
+                                case final distance?)
+                              '${(distance / 1000).toStringAsFixed(2)} km',
+                          ].join(' · '),
+                          style: theme.uiStyle(12, theme.fgMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ],
+      ],
     );
   }
 }
@@ -199,12 +573,14 @@ class _CalendarMonthView extends ConsumerWidget {
     required this.month,
     required this.data,
     required this.selection,
+    required this.modality,
     required this.onSelectionChanged,
   });
 
   final CalendarMonth month;
   final AdvancedAnalyticsData data;
   final CalendarMonthSelection selection;
+  final AnalyticsModality modality;
   final ValueChanged<CalendarMonthSelection> onSelectionChanged;
 
   @override
@@ -226,6 +602,8 @@ class _CalendarMonthView extends ConsumerWidget {
 
     return Column(
       children: [
+        const Align(alignment: Alignment.centerLeft, child: _ModalityLegend()),
+        const SizedBox(height: 6),
         Row(
           children: [
             IconButton(
@@ -262,9 +640,7 @@ class _CalendarMonthView extends ConsumerWidget {
               onPressed: () => onSelectionChanged(selection.jumpToToday()),
               child: Text(strings.calendarToday),
             ),
-          )
-        else
-          const SizedBox(height: 40),
+          ),
         Row(
           children: [
             for (final label in month.weekdayLabels)
@@ -290,6 +666,7 @@ class _CalendarMonthView extends ConsumerWidget {
                     child: _CalendarDayCell(
                       day: day,
                       record: data.recordFor(day.date),
+                      modality: modality,
                     ),
                   ),
                 ),
@@ -303,87 +680,115 @@ class _CalendarMonthView extends ConsumerWidget {
 }
 
 class _CalendarDayCell extends ConsumerWidget {
-  const _CalendarDayCell({required this.day, required this.record});
+  const _CalendarDayCell({
+    required this.day,
+    required this.record,
+    required this.modality,
+  });
 
   final CalendarDay day;
   final ConsistencyDayRecord? record;
+  final AnalyticsModality modality;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
     final theme = ref.watch(resolvedFittinThemeProvider);
-    final hasActivity = record?.hasActivity ?? false;
+    final hasStrength =
+        (record?.hasStrength ?? false) && modality != AnalyticsModality.cardio;
+    final hasCardio =
+        (record?.hasCardio ?? false) && modality != AnalyticsModality.strength;
+    final hasActivity = hasStrength || hasCardio;
     final intensity = record?.intensity ?? 0;
-    final background = hasActivity
-        ? Color.alphaBlend(
-            theme.accent.withValues(alpha: 0.18 + intensity * 0.5),
-            theme.surfaceSolid,
-          )
-        : theme.fg.withValues(alpha: day.isInMonth ? 0.05 : 0.018);
-    final foreground = hasActivity && intensity >= 0.58
-        ? theme.accentInk
-        : theme.fg;
-    final sessionCount = record?.logs.length ?? 0;
+    final background = _activityBackground(
+      theme,
+      hasStrength: hasStrength,
+      hasCardio: hasCardio,
+      intensity: intensity,
+      inactiveAlpha: day.isInMonth ? 0.05 : 0.018,
+    );
+    final foreground = theme.fg;
+    final strengthSessions = hasStrength ? record?.logs.length ?? 0 : 0;
+    final cardioSessions = hasCardio ? record?.cardioRecords.length ?? 0 : 0;
 
     return Semantics(
-      label: strings.calendarDaySemantics(day.date, sessionCount),
+      label: strings.activityDaySemantics(
+        day.date,
+        strengthSessions: strengthSessions,
+        cardioSessions: cardioSessions,
+      ),
       button: hasActivity,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          key: ValueKey('calendar-day-${day.date.toIso8601String()}'),
-          onTap: !hasActivity
-              ? null
-              : () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => WorkoutRecordDetailScreen(
-                        date: day.date,
-                        logs: record!.logs,
-                      ),
-                    ),
-                  );
-                },
-          borderRadius: BorderRadius.circular(13),
-          child: Ink(
-            height: 44,
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: day.isToday
-                    ? theme.fg.withValues(alpha: 0.7)
-                    : hasActivity
-                    ? theme.accent.withValues(alpha: 0.32)
-                    : theme.border,
+      child: ExcludeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: ValueKey('calendar-day-${day.date.toIso8601String()}'),
+            onTap: !hasActivity
+                ? null
+                : () {
+                    _openTrainingDay(
+                      context,
+                      _recordForModality(record!, modality),
+                    );
+                  },
+            borderRadius: BorderRadius.circular(13),
+            child: Ink(
+              height: 44,
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(13),
+                border: Border.all(
+                  color: day.isToday
+                      ? theme.fg.withValues(alpha: 0.7)
+                      : hasActivity
+                      ? (hasStrength
+                                ? theme.strengthSeries
+                                : theme.cardioSeries)
+                            .withValues(alpha: 0.48)
+                      : theme.border,
+                ),
               ),
-            ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  '${day.date.day}',
-                  style: theme
-                      .uiStyle(13, foreground, FontWeight.w800)
-                      .copyWith(
-                        color: foreground.withValues(
-                          alpha: day.isInMonth ? 1 : 0.32,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Text(
+                    '${day.date.day}',
+                    style: theme
+                        .uiStyle(13, foreground, FontWeight.w800)
+                        .copyWith(
+                          color: foreground.withValues(
+                            alpha: day.isInMonth ? 1 : 0.32,
+                          ),
+                        ),
+                  ),
+                  if (hasStrength)
+                    Positioned(
+                      left: 5,
+                      bottom: 5,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: theme.strengthSeries,
+                          borderRadius: BorderRadius.circular(1),
                         ),
                       ),
-                ),
-                if (hasActivity)
-                  Positioned(
-                    bottom: 5,
-                    child: Container(
-                      width: 4,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: foreground.withValues(alpha: 0.82),
-                        shape: BoxShape.circle,
+                    ),
+                  if (hasCardio)
+                    Positioned(
+                      right: 5,
+                      bottom: 5,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: theme.cardioSeries,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -458,9 +863,10 @@ class _DayHeader extends ConsumerWidget {
 }
 
 class _WeekRow extends ConsumerWidget {
-  const _WeekRow({required this.section});
+  const _WeekRow({required this.section, required this.modality});
 
   final ConsistencySection section;
+  final AnalyticsModality modality;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -487,7 +893,9 @@ class _WeekRow extends ConsumerWidget {
         ),
         const SizedBox(width: 6),
         for (var index = 0; index < section.days.length; index++) ...[
-          Expanded(child: _DayCell(record: section.days[index])),
+          Expanded(
+            child: _DayCell(record: section.days[index], modality: modality),
+          ),
           if (index < section.days.length - 1) const SizedBox(width: 6),
         ],
       ],
@@ -496,83 +904,108 @@ class _WeekRow extends ConsumerWidget {
 }
 
 class _DayCell extends ConsumerWidget {
-  const _DayCell({required this.record});
+  const _DayCell({required this.record, required this.modality});
 
   final ConsistencyDayRecord record;
+  final AnalyticsModality modality;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
     final theme = ref.watch(resolvedFittinThemeProvider);
+    final hasStrength =
+        record.hasStrength && modality != AnalyticsModality.cardio;
+    final hasCardio =
+        record.hasCardio && modality != AnalyticsModality.strength;
+    final hasActivity = hasStrength || hasCardio;
     final dayLabel = '${record.date.day}';
-    final foreground = record.hasActivity && record.intensity >= 0.58
-        ? theme.accentInk
-        : theme.fg;
+    final foreground = theme.fg;
     final background = !record.isInRange
         ? theme.fg.withValues(alpha: 0.02)
-        : record.hasActivity
-        ? Color.alphaBlend(
-            theme.accent.withValues(
-              alpha: 0.12 + record.intensity.clamp(0, 1) * 0.52,
-            ),
-            theme.surfaceSolid,
-          )
-        : theme.fg.withValues(alpha: 0.055);
+        : _activityBackground(
+            theme,
+            hasStrength: hasStrength,
+            hasCardio: hasCardio,
+            intensity: record.intensity,
+          );
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        key: ValueKey('consistency-day-${record.date.toIso8601String()}'),
-        onTap: !record.hasActivity
-            ? null
-            : () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => WorkoutRecordDetailScreen(
-                      date: record.date,
-                      logs: record.logs,
-                    ),
-                  ),
-                );
-              },
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          height: 44,
-          decoration: BoxDecoration(
-            color: background,
+    return Semantics(
+      label: strings.activityDaySemantics(
+        record.date,
+        strengthSessions: hasStrength ? record.logs.length : 0,
+        cardioSessions: hasCardio ? record.cardioRecords.length : 0,
+      ),
+      button: hasActivity,
+      child: ExcludeSemantics(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: ValueKey('consistency-day-${record.date.toIso8601String()}'),
+            onTap: !hasActivity
+                ? null
+                : () {
+                    _openTrainingDay(
+                      context,
+                      _recordForModality(record, modality),
+                    );
+                  },
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: record.hasActivity
-                  ? theme.accent.withValues(alpha: 0.24)
-                  : theme.border,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Center(
-                child: Text(
-                  dayLabel,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: foreground.withValues(
-                      alpha: record.isInRange ? 1 : 0.4,
-                    ),
-                  ),
+            child: Ink(
+              height: 44,
+              decoration: BoxDecoration(
+                color: background,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: hasActivity
+                      ? (hasStrength
+                                ? theme.strengthSeries
+                                : theme.cardioSeries)
+                            .withValues(alpha: 0.38)
+                      : theme.border,
                 ),
               ),
-              if (record.hasActivity)
-                Positioned(
-                  right: 6,
-                  bottom: 4,
-                  child: Text(
-                    strings.consistencySessions(record.logs.length),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: foreground.withValues(alpha: 0.7),
-                      fontSize: 9,
+              child: Stack(
+                children: [
+                  Center(
+                    child: Text(
+                      dayLabel,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: foreground.withValues(
+                          alpha: record.isInRange ? 1 : 0.4,
+                        ),
+                      ),
                     ),
                   ),
-                ),
-            ],
+                  if (hasStrength)
+                    Positioned(
+                      left: 5,
+                      bottom: 5,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: theme.strengthSeries,
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                    ),
+                  if (hasCardio)
+                    Positioned(
+                      right: 5,
+                      bottom: 5,
+                      child: Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: theme.cardioSeries,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

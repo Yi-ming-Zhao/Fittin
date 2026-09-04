@@ -11,6 +11,34 @@ import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart
 import '../support/in_memory_database_repository.dart';
 
 void main() {
+  testWidgets('empty PR chart stays compact at 320px', (tester) async {
+    _setViewport(tester, const Size(320, 568));
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          prDashboardDataProvider.overrideWith(
+            (ref) => AsyncData(PRDashboardData(allMilestones: const [])),
+          ),
+        ],
+        child: const MaterialApp(home: PRDashboardScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getSize(find.byKey(const ValueKey('pr-chart-viewport'))).height,
+      208,
+    );
+    final chart = tester.widget<InteractiveLineChart>(
+      find.byKey(const ValueKey('pr-interactive-chart-Squat')),
+    );
+    expect(chart.height, 180);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'PR dashboard toggles metric mode, switches chart lift, and truncates milestone preview',
     (tester) async {
@@ -108,7 +136,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final viewport in const [Size(390, 926), Size(390, 568)]) {
+  for (final viewport in const [
+    Size(390, 926),
+    Size(390, 568),
+    Size(320, 568),
+  ]) {
     testWidgets(
       'Big Three, chart, and milestones remain reachable at ${viewport.width.toInt()}x${viewport.height.toInt()}',
       (tester) async {

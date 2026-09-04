@@ -15,6 +15,8 @@ import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
 import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
@@ -484,6 +486,243 @@ class WebDatabaseRepository extends DatabaseRepository {
   }
 
   @override
+  Future<UserContentDocument> saveUserContent(
+    UserContentDocument document, {
+    int? expectedVersion,
+    String? syncStatus,
+    String? deviceId,
+  }) => _saveUserContentWeb(
+    document,
+    expectedVersion: expectedVersion,
+    syncStatus: syncStatus,
+    deviceId: deviceId,
+    preserveRemoteVersion: false,
+  );
+
+  @override
+  Future<List<UserContentDocument>> saveUserContentsAtomically(
+    List<UserContentDocument> documents, {
+    Map<String, int?> expectedVersions = const {},
+    String? deviceId,
+  }) async {
+    for (final document in documents) {
+      UserContentValidation.validateDocument(document);
+    }
+    return store.runInTransaction(
+      [WebStoreNames.userContent, WebStoreNames.syncQueue],
+      () async {
+        final saved = <UserContentDocument>[];
+        for (final document in documents) {
+          saved.add(
+            await _saveUserContentWeb(
+              document,
+              expectedVersion: expectedVersions[document.id],
+              syncStatus: null,
+              deviceId: deviceId,
+              preserveRemoteVersion: false,
+            ),
+          );
+        }
+        return saved;
+      },
+    );
+  }
+
+  @override
+  Future<UserContentDocument> saveRemoteUserContent(
+    UserContentDocument document,
+  ) => _saveUserContentWeb(
+    document,
+    expectedVersion: null,
+    syncStatus: document.syncStatus,
+    deviceId: document.lastModifiedByDeviceId,
+    preserveRemoteVersion: true,
+  );
+
+  Future<UserContentDocument> _saveUserContentWeb(
+    UserContentDocument document, {
+    required int? expectedVersion,
+    required String? syncStatus,
+    required String? deviceId,
+    required bool preserveRemoteVersion,
+  }) async {
+    UserContentValidation.validateDocument(document);
+    final key = _userContentKey(document.kind, document.id);
+    late Map<String, dynamic> doc;
+    await store.runInTransaction(
+      [WebStoreNames.userContent, WebStoreNames.syncQueue],
+      () async {
+        final existing = await store.getRecord(WebStoreNames.userContent, key);
+        if (existing != null &&
+            (existing['kindKey'] != document.kind.name ||
+                (document.ownerUserId != null &&
+                    existing['ownerUserId'] != null &&
+                    existing['ownerUserId'] != document.ownerUserId))) {
+          throw StateError('User content identity is already in use.');
+        }
+        if (expectedVersion != null &&
+            (existing?['version'] as int? ?? 0) != expectedVersion) {
+          throw StateError('User content changed before it could be saved.');
+        }
+        final now = DateTime.now();
+        final owner =
+            document.ownerUserId ?? existing?['ownerUserId'] as String?;
+        doc = <String, dynamic>{
+          'contentKey': key,
+          'contentId': document.id,
+          'kindKey': document.kind.name,
+          'ownerUserId': owner,
+          'rawJsonPayload': jsonEncode(document.payload),
+          'createdAt': preserveRemoteVersion
+              ? serializeStoredDateTime(document.createdAt)
+              : existing?['createdAt'] ??
+                    serializeStoredDateTime(document.createdAt),
+          'lastModifiedAt': serializeStoredDateTime(
+            preserveRemoteVersion ? document.updatedAt : now,
+          ),
+          'deletedAt': serializeStoredDateTime(document.deletedAt),
+          'lastSyncedAt':
+              serializeStoredDateTime(document.lastSyncedAt) ??
+              existing?['lastSyncedAt'],
+          'version': preserveRemoteVersion
+              ? document.version
+              : (existing?['version'] as int? ?? 0) + 1,
+          'syncStatusKey': syncStatus ?? _defaultSyncStatus(owner),
+          'lastModifiedByDeviceId':
+              deviceId ??
+              document.lastModifiedByDeviceId ??
+              existing?['lastModifiedByDeviceId'],
+        };
+        await store.putRecord(WebStoreNames.userContent, key, doc);
+        await _enqueueSync(
+          entityType: SyncEntityTypes.userContent,
+          entityId: document.id,
+          operationType: document.deletedAt == null
+              ? SyncOperationTypes.upsert
+              : SyncOperationTypes.delete,
+          ownerUserId: owner,
+          syncStatus: doc['syncStatusKey'] as String,
+        );
+      },
+    );
+    return _userContentFromDoc(doc);
+  }
+
+  @override
+  Future<UserContentDocument?> fetchUserContent(
+    String id, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final docs = await store.getAllRecords(WebStoreNames.userContent);
+    for (final doc in docs) {
+      if (doc['contentId'] == id &&
+          _ownerMatches(doc['ownerUserId'] as String?, ownerUserId) &&
+          (includeDeleted || parseStoredDateTime(doc['deletedAt']) == null)) {
+        return _userContentFromDoc(doc);
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<UserContentDocument?> fetchUserContentOfKind(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final doc = await store.getRecord(
+      WebStoreNames.userContent,
+      _userContentKey(kind, id),
+    );
+    if (doc == null ||
+        !_ownerMatches(doc['ownerUserId'] as String?, ownerUserId) ||
+        (!includeDeleted && parseStoredDateTime(doc['deletedAt']) != null)) {
+      return null;
+    }
+    return _userContentFromDoc(doc);
+  }
+
+  @override
+  Future<List<UserContentDocument>> fetchUserContents(
+    UserContentKind kind, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final docs = await store.getAllRecords(WebStoreNames.userContent);
+    final result = docs
+        .where(
+          (doc) =>
+              doc['kindKey'] == kind.name &&
+              _ownerMatches(doc['ownerUserId'] as String?, ownerUserId) &&
+              (includeDeleted || parseStoredDateTime(doc['deletedAt']) == null),
+        )
+        .map(_userContentFromDoc)
+        .toList();
+    result.sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    return result;
+  }
+
+  @override
+  Future<void> deleteUserContent(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    int? expectedVersion,
+  }) async {
+    final key = _userContentKey(kind, id);
+    await store.runInTransaction(
+      [WebStoreNames.userContent, WebStoreNames.syncQueue],
+      () async {
+        final existing = await store.getRecord(WebStoreNames.userContent, key);
+        if (existing == null ||
+            parseStoredDateTime(existing['deletedAt']) != null ||
+            !_ownerMatches(existing['ownerUserId'] as String?, ownerUserId)) {
+          throw StateError('User content is not available.');
+        }
+        if (expectedVersion != null && existing['version'] != expectedVersion) {
+          throw StateError('User content changed before it could be deleted.');
+        }
+        final now = DateTime.now();
+        final doc = Map<String, dynamic>.from(existing)
+          ..['deletedAt'] = serializeStoredDateTime(now)
+          ..['lastModifiedAt'] = serializeStoredDateTime(now)
+          ..['version'] = (existing['version'] as int? ?? 0) + 1
+          ..['syncStatusKey'] = ownerUserId == null
+              ? SyncStatusKeys.localOnly
+              : SyncStatusKeys.pendingDelete;
+        await store.putRecord(WebStoreNames.userContent, key, doc);
+        await _enqueueSync(
+          entityType: SyncEntityTypes.userContent,
+          entityId: id,
+          operationType: SyncOperationTypes.delete,
+          ownerUserId: existing['ownerUserId'] as String?,
+          syncStatus: doc['syncStatusKey'] as String,
+        );
+      },
+    );
+  }
+
+  UserContentDocument _userContentFromDoc(Map<String, dynamic> doc) =>
+      UserContentDocument(
+        id: doc['contentId'] as String,
+        kind: UserContentKind.values.byName(doc['kindKey'] as String),
+        payload: (jsonDecode(doc['rawJsonPayload'] as String) as Map)
+            .cast<String, dynamic>(),
+        ownerUserId: doc['ownerUserId'] as String?,
+        createdAt: parseStoredDateTime(doc['createdAt']) ?? DateTime.now(),
+        updatedAt: parseStoredDateTime(doc['lastModifiedAt']) ?? DateTime.now(),
+        deletedAt: parseStoredDateTime(doc['deletedAt']),
+        version: doc['version'] as int? ?? 1,
+        syncStatus: doc['syncStatusKey'] as String? ?? SyncStatusKeys.localOnly,
+        lastSyncedAt: parseStoredDateTime(doc['lastSyncedAt']),
+        lastModifiedByDeviceId: doc['lastModifiedByDeviceId'] as String?,
+      );
+
+  String _userContentKey(UserContentKind kind, String id) => '${kind.name}:$id';
+
+  @override
   Future<StoredTrainingInstance?> fetchInstanceForTemplate(
     String templateId, {
     String? ownerUserId,
@@ -649,6 +888,45 @@ class WebDatabaseRepository extends DatabaseRepository {
       'lastModifiedByDeviceId': data.lastModifiedByDeviceId,
     };
     await store.putRecord(WebStoreNames.instances, data.instanceId, doc);
+  }
+
+  @override
+  Future<StoredTrainingInstance> updateInstanceEngineState({
+    required String instanceId,
+    required String? ownerUserId,
+    required int expectedVersion,
+    required Map<String, dynamic> engineState,
+  }) async {
+    late Map<String, dynamic> updated;
+    await store.runInTransaction(
+      [WebStoreNames.instances, WebStoreNames.syncQueue],
+      () async {
+        final existing = await store.getRecord(
+          WebStoreNames.instances,
+          instanceId,
+        );
+        if (existing == null ||
+            parseStoredDateTime(existing['deletedAt']) != null ||
+            !_ownerMatches(existing['ownerUserId'] as String?, ownerUserId) ||
+            existing['version'] != expectedVersion) {
+          throw StateError('Training schedule changed. Reload and try again.');
+        }
+        updated = Map<String, dynamic>.from(existing)
+          ..['engineStateJson'] = engineState
+          ..['lastModifiedAt'] = serializeStoredDateTime(DateTime.now())
+          ..['version'] = expectedVersion + 1
+          ..['syncStatusKey'] = _defaultSyncStatus(ownerUserId);
+        await store.putRecord(WebStoreNames.instances, instanceId, updated);
+        await _enqueueSync(
+          entityType: SyncEntityTypes.instance,
+          entityId: instanceId,
+          ownerUserId: ownerUserId,
+          operationType: SyncOperationTypes.upsert,
+          syncStatus: updated['syncStatusKey'] as String,
+        );
+      },
+    );
+    return storedTrainingInstanceFromDoc(updated);
   }
 
   @override
@@ -1038,6 +1316,32 @@ class WebDatabaseRepository extends DatabaseRepository {
         ownerUserId: ownerUserId,
         operationType: SyncOperationTypes.upsert,
         syncStatus: SyncStatusKeys.pendingUpload,
+      );
+    }
+
+    final userContentDocs = await store.getAllRecords(
+      WebStoreNames.userContent,
+    );
+    for (final doc in userContentDocs) {
+      if (doc['ownerUserId'] != null) continue;
+      doc['ownerUserId'] = ownerUserId;
+      doc['syncStatusKey'] = parseStoredDateTime(doc['deletedAt']) == null
+          ? SyncStatusKeys.pendingUpload
+          : SyncStatusKeys.pendingDelete;
+      doc['lastModifiedAt'] = now;
+      await store.putRecord(
+        WebStoreNames.userContent,
+        doc['contentKey'] as String,
+        doc,
+      );
+      await _enqueueSync(
+        entityType: SyncEntityTypes.userContent,
+        entityId: doc['contentId'] as String,
+        ownerUserId: ownerUserId,
+        operationType: parseStoredDateTime(doc['deletedAt']) == null
+            ? SyncOperationTypes.upsert
+            : SyncOperationTypes.delete,
+        syncStatus: doc['syncStatusKey'] as String,
       );
     }
 

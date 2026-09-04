@@ -105,14 +105,14 @@ class FittinBootstrapHost extends StatefulWidget {
 
 class _FittinBootstrapHostState extends State<FittinBootstrapHost> {
   late Future<_FittinBootstrapDependencies> _initialization;
-  late FittinPaletteId _launchPalette;
+  late FittinTheme _launchTheme;
   late AppLocale _launchLocale;
 
   @override
   void initState() {
     super.initState();
-    _launchPalette = FittinPaletteRegistry.decode(
-      widget.initialPreferences?.getString(FittinThemeNotifier.preferencesKey),
+    _launchTheme = FittinThemeNotifier.resolveStoredTheme(
+      widget.initialPreferences,
     );
     final storedLocale = widget.initialPreferences?.getString(
       AppLocaleNotifier.storageKey,
@@ -131,12 +131,11 @@ class _FittinBootstrapHostState extends State<FittinBootstrapHost> {
       initialPreferences: widget.initialPreferences,
       onPreferencesReady: (preferences) {
         if (!mounted) return;
-        final palette = FittinPaletteRegistry.decode(
-          preferences.getString(FittinThemeNotifier.preferencesKey),
+        setState(
+          () => _launchTheme = FittinThemeNotifier.resolveStoredTheme(
+            preferences,
+          ),
         );
-        if (palette != _launchPalette) {
-          setState(() => _launchPalette = palette);
-        }
       },
       onLocaleReady: (locale) {
         if (mounted && locale != _launchLocale) {
@@ -156,7 +155,7 @@ class _FittinBootstrapHostState extends State<FittinBootstrapHost> {
           return _buildReadyApp(dependencies);
         }
 
-        final theme = FittinPaletteRegistry.themeOf(_launchPalette);
+        final theme = _launchTheme;
         final strings = AppStrings.fromLocale(_launchLocale);
         return MaterialApp(
           debugShowCheckedModeBanner: false,

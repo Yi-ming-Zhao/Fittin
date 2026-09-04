@@ -31,6 +31,30 @@ abstract final class AgentMutationDiff {
             'isCompleted': '完成',
             'targetReps': '目标次数',
             'restSeconds': '组间休息（秒）',
+            'nameEn': '英文名称',
+            'nameZhCn': '中文名称',
+            'movement': '动作模式',
+            'equipment': '器械',
+            'loadSemantics': '负重语义',
+            'primaryMuscles': '主要肌群',
+            'secondaryMuscles': '次要肌群',
+            'tags': '标签',
+            'roundingIncrementKg': '重量步进（kg）',
+            'sourceExerciseId': '来源动作',
+            'brightness': '明暗模式',
+            'basePaletteKey': '基础配色',
+            'colors': '语义颜色',
+            'background': '背景',
+            'surface': '表面',
+            'foreground': '正文',
+            'mutedForeground': '次要文字',
+            'accent': '强调色',
+            'accentInk': '强调色文字',
+            'strength': '力量训练',
+            'cardio': '有氧训练',
+            'success': '成功',
+            'warning': '警告',
+            'danger': '危险',
           }
         : const <String, String>{};
     String display(Object? value) =>
@@ -81,6 +105,10 @@ abstract final class AgentMutationDiff {
     }
 
     visit(jsonDecode(jsonEncode(before)), jsonDecode(jsonEncode(after)), '');
+    // JSON object field order is not semantic and can change after a JSONB,
+    // IndexedDB or Isar round trip. A stable path order keeps the trusted
+    // preview identical across providers without weakening completeness.
+    changes.sort((left, right) => left.path.compareTo(right.path));
     return changes;
   }
 }

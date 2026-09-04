@@ -209,6 +209,8 @@ Future<void> _openExerciseDetails(
     await tester.pump();
   }
   expect(card(), findsOneWidget);
+  await tester.scrollUntilVisible(card(), 220, scrollable: scrollable);
+  await tester.pumpAndSettle();
   await tester.tap(card());
   await tester.pumpAndSettle();
 }

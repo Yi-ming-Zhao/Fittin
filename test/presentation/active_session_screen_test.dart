@@ -59,6 +59,54 @@ void main() {
     expect(gateway.concludedSession, isNotNull);
   });
 
+  testWidgets('active session header gives the title a second row at 320px', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final container = await _sessionContainer(WorkoutRecordingMode.card);
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: ActiveSessionScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final compactHeader = find.byKey(const ValueKey('session-header-compact'));
+    final title = find.byKey(const ValueKey('session-header-title'));
+    final weightTools = find.byKey(const ValueKey('session-weight-tools'));
+    expect(compactHeader, findsOneWidget);
+    expect(find.byKey(const ValueKey('session-header-wide')), findsNothing);
+    expect(
+      tester.getTopLeft(title).dy,
+      greaterThan(tester.getBottomLeft(weightTools).dy),
+    );
+    expect(tester.getSize(title).width, closeTo(280, 0.01));
+    for (final tooltip in const [
+      'Decrease reps',
+      'Increase reps',
+      'Decrease weight',
+      'Increase weight',
+    ]) {
+      final control = find.byTooltip(tooltip);
+      expect(control, findsOneWidget);
+      expect(tester.getSize(control).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(control).height, greaterThanOrEqualTo(44));
+    }
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    expect(compactHeader, findsNothing);
+    expect(find.byKey(const ValueKey('session-header-wide')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('card logger navigates horizontally and resolves vertically', (
     WidgetTester tester,
   ) async {

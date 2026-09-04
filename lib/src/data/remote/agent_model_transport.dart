@@ -12,6 +12,8 @@ import 'package:fittin_v2/src/application/supabase_bootstrap.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
 
 typedef AgentAccessTokenLoader = Future<String?> Function();
+typedef AgentAccessTokenRefresher =
+    Future<String?> Function(String failedAccessToken);
 
 class AgentCancellationToken {
   AgentCancellationToken();
@@ -116,6 +118,7 @@ class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
   WebRelayAgentModelTransport({
     required this.backendBaseUrl,
     required this.accessTokenLoader,
+    this.accessTokenRefresher,
     super.client,
     super.timeout,
     super.firstResponseTimeout,
@@ -126,6 +129,7 @@ class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
 
   final String backendBaseUrl;
   final AgentAccessTokenLoader accessTokenLoader;
+  final AgentAccessTokenRefresher? accessTokenRefresher;
 
   @override
   Uri endpointFor(AgentProviderConfig config) {
@@ -156,6 +160,18 @@ class WebRelayAgentModelTransport extends _HttpAgentModelTransport {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
     };
+  }
+
+  @override
+  Future<bool> recoverFromUnauthorized(String? failedAccessToken) async {
+    final refresher = accessTokenRefresher;
+    if (refresher == null ||
+        failedAccessToken == null ||
+        failedAccessToken.isEmpty) {
+      return false;
+    }
+    final refreshed = await refresher(failedAccessToken);
+    return refreshed != null && refreshed.isNotEmpty;
   }
 
   @override
@@ -210,6 +226,9 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
 
   Future<Map<String, String>> headersFor(String apiKey);
 
+  Future<bool> recoverFromUnauthorized(String? failedAccessToken) async =>
+      false;
+
   Map<String, dynamic> bodyFor({
     required AgentProviderConfig config,
     required String apiKey,
@@ -225,6 +244,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
   }) async* {
     final token = cancellationToken ?? AgentCancellationToken();
     final watch = Stopwatch()..start();
+    var authRetryUsed = false;
     for (var attempt = 0; ; attempt++) {
       var observable = false;
       try {
@@ -240,6 +260,13 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         }
         return;
       } on AgentTransportException catch (error) {
+        if (error.code == 'relay_auth_refreshed' &&
+            !observable &&
+            !authRetryUsed &&
+            watch.elapsed < timeout) {
+          authRetryUsed = true;
+          continue;
+        }
         final status = error.statusCode;
         final retryable =
             !{
@@ -352,6 +379,18 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
           response.stream,
           maxErrorBytes,
         ).timeout(idleTimeout);
+        if (response.statusCode == 401 &&
+            await recoverFromUnauthorized(
+              _bearerValue(
+                outgoing.headers['authorization'] ??
+                    outgoing.headers['Authorization'],
+              ),
+            )) {
+          throw const AgentTransportException(
+            'Fittin session refreshed.',
+            code: 'relay_auth_refreshed',
+          );
+        }
         throw _errorFromResponse(
           statusCode: response.statusCode,
           bytes: bytes,
@@ -523,6 +562,13 @@ Future<List<int>> _readBounded(Stream<List<int>> body, int limit) async {
   return bytes;
 }
 
+String? _bearerValue(String? authorization) {
+  if (authorization == null) return null;
+  final parts = authorization.trim().split(RegExp(r'\s+'));
+  if (parts.length != 2 || parts.first.toLowerCase() != 'bearer') return null;
+  return parts.last;
+}
+
 AgentTransportException _errorFromResponse({
   required int statusCode,
   required List<int> bytes,
@@ -591,6 +637,7 @@ String _safeCode(String value) {
     'cancelled',
     'api_key_required',
     'relay_auth_required',
+    'relay_auth_refreshed',
     'relay_unavailable',
     'request_timeout',
     'first_byte_timeout',
@@ -632,6 +679,9 @@ final agentModelTransportProvider = Provider<AgentModelTransport>((ref) {
       backendBaseUrl: bootstrap.isConfigured ? bootstrap.url : '',
       accessTokenLoader: () =>
           ref.read(authRepositoryProvider).currentAccessToken(),
+      accessTokenRefresher: (failedAccessToken) => ref
+          .read(authRepositoryProvider)
+          .refreshAccessToken(failedAccessToken: failedAccessToken),
     );
   } else {
     transport = NativeAgentModelTransport();

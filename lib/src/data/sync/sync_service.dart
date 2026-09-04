@@ -9,12 +9,16 @@ import 'package:fittin_v2/src/data/models/body_metric_collection.dart';
 import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
+import 'package:fittin_v2/src/data/models/user_content_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';
+import 'package:fittin_v2/src/data/remote/supabase_serializers.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
 
 class SyncConflictException implements Exception {
   const SyncConflictException(this.count);
@@ -102,6 +106,11 @@ class SyncService {
           .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
           .count(),
       _isar.progressPhotoCollections
+          .filter()
+          .ownerUserIdEqualTo(ownerUserId)
+          .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
+          .count(),
+      _isar.userContentCollections
           .filter()
           .ownerUserIdEqualTo(ownerUserId)
           .syncStatusKeyEqualTo(SyncStatusKeys.conflict)
@@ -268,6 +277,33 @@ class SyncService {
           }
           break;
         }
+      case SyncEntityTypes.userContent:
+        {
+          final collection = await _isar.userContentCollections
+              .filter()
+              .contentIdEqualTo(item.entityId)
+              .ownerUserIdEqualTo(ownerUserId)
+              .findFirst();
+          if (collection != null) {
+            if (collection.syncStatusKey == SyncStatusKeys.conflict) return;
+            if (collection.deletedAt != null) {
+              await _remoteRepository.deleteById(
+                table: 'user_content',
+                id: item.entityId,
+                version: collection.version,
+                deviceId: collection.lastModifiedByDeviceId,
+              );
+            } else {
+              await _remoteRepository.upsertRow(
+                table: 'user_content',
+                row: userContentRowFromCollection(collection),
+              );
+            }
+            await _completeUserContentPush(item, collection);
+            return;
+          }
+          break;
+        }
     }
 
     await _deleteQueueItemIfEntityStillMissing(item);
@@ -282,18 +318,21 @@ class SyncService {
       'progress_photos',
       ownerUserId,
     );
+    final userContent = await _fetchIncremental('user_content', ownerUserId);
 
     await _mergePlans(plans, ownerUserId);
     await _mergeInstances(instances, ownerUserId);
     await _mergeWorkoutLogs(logs, ownerUserId);
     await _mergeBodyMetrics(metrics, ownerUserId);
     await _mergeProgressPhotos(progressPhotos, ownerUserId);
+    await _mergeUserContent(userContent, ownerUserId);
     await _saveCursors(ownerUserId, {
       'plans': plans,
       'plan_instances': instances,
       'workout_logs': logs,
       'body_metrics': metrics,
       'progress_photos': progressPhotos,
+      'user_content': userContent,
     });
   }
 
@@ -578,6 +617,71 @@ class SyncService {
     }
   }
 
+  Future<void> _mergeUserContent(
+    List<Map<String, dynamic>> rows,
+    String ownerUserId,
+  ) async {
+    for (final row in rows) {
+      final contentId = row['id'] as String;
+      final existing = await _isar.userContentCollections
+          .filter()
+          .contentIdEqualTo(contentId)
+          .ownerUserIdEqualTo(ownerUserId)
+          .findFirst();
+      if (existing != null &&
+          _remoteConflictsWithLocal(
+            syncStatus: existing.syncStatusKey,
+            localVersion: existing.version,
+            localDeviceId: existing.lastModifiedByDeviceId,
+            row: row,
+          )) {
+        await _markUserContentConflict(existing);
+        continue;
+      }
+      if (existing != null &&
+          _shouldKeepLocal(
+            existing.syncStatusKey,
+            existing.version,
+            row['version'],
+          )) {
+        continue;
+      }
+      final kindKey = row['kind'] as String;
+      if (existing != null && existing.kindKey != kindKey) {
+        await _markUserContentConflict(existing);
+        continue;
+      }
+      try {
+        UserContentValidation.validatePayload(
+          kind: UserContentKind.values.byName(kindKey),
+          id: contentId,
+          payload: (jsonDecode(row['payload_json'] as String? ?? '{}') as Map)
+              .cast<String, dynamic>(),
+        );
+      } on Object {
+        if (existing != null) await _markUserContentConflict(existing);
+        continue;
+      }
+      final collection = UserContentCollection()
+        ..contentKey = '$kindKey:$contentId'
+        ..contentId = contentId
+        ..kindKey = kindKey
+        ..ownerUserId = ownerUserId
+        ..rawJsonPayload = row['payload_json'] as String? ?? '{}'
+        ..createdAt = DateTime.parse(row['created_at'] as String).toLocal()
+        ..lastModifiedAt = DateTime.parse(row['updated_at'] as String).toLocal()
+        ..deletedAt = _parseDateTime(row['deleted_at'])
+        ..lastSyncedAt = DateTime.now()
+        ..version = row['version'] as int? ?? 1
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastModifiedByDeviceId = row['last_modified_by_device_id'] as String?;
+      if (existing != null) collection.id = existing.id;
+      await _isar.writeTxn(() async {
+        await _isar.userContentCollections.putByContentKey(collection);
+      });
+    }
+  }
+
   Future<void> _completeTemplatePush(
     SyncQueueCollection item,
     TemplateCollection uploaded,
@@ -691,6 +795,23 @@ class SyncService {
         },
       );
 
+  Future<void> _completeUserContentPush(
+    SyncQueueCollection item,
+    UserContentCollection uploaded,
+  ) => _completePushIfUnchanged<UserContentCollection, UserContentCollection>(
+    item: item,
+    uploaded: uploaded,
+    readCurrent: () =>
+        _isar.userContentCollections.getByContentKey(uploaded.contentKey),
+    matches: _sameUserContentUpload,
+    markSynced: (current, syncedAt) async {
+      current
+        ..syncStatusKey = SyncStatusKeys.synced
+        ..lastSyncedAt = syncedAt;
+      await _isar.userContentCollections.putByContentKey(current);
+    },
+  );
+
   Future<void> _completePushIfUnchanged<TUploaded, TCurrent>({
     required SyncQueueCollection item,
     required TUploaded uploaded,
@@ -738,6 +859,12 @@ class SyncService {
           await _isar.progressPhotoCollections
                   .filter()
                   .photoIdEqualTo(item.entityId)
+                  .findFirst() !=
+              null,
+        SyncEntityTypes.userContent =>
+          await _isar.userContentCollections
+                  .filter()
+                  .contentIdEqualTo(item.entityId)
                   .findFirst() !=
               null,
         _ => false,
@@ -854,6 +981,23 @@ class SyncService {
         current.metadataJson == uploaded.metadataJson;
   }
 
+  bool _sameUserContentUpload(
+    UserContentCollection current,
+    UserContentCollection uploaded,
+  ) {
+    return current.contentKey == uploaded.contentKey &&
+        current.contentId == uploaded.contentId &&
+        current.kindKey == uploaded.kindKey &&
+        current.ownerUserId == uploaded.ownerUserId &&
+        current.rawJsonPayload == uploaded.rawJsonPayload &&
+        current.version == uploaded.version &&
+        current.lastModifiedByDeviceId == uploaded.lastModifiedByDeviceId &&
+        current.syncStatusKey == uploaded.syncStatusKey &&
+        _sameInstant(current.createdAt, uploaded.createdAt) &&
+        _sameInstant(current.lastModifiedAt, uploaded.lastModifiedAt) &&
+        _sameInstant(current.deletedAt, uploaded.deletedAt);
+  }
+
   bool _sameStringList(List<String> a, List<String> b) {
     if (a.length != b.length) return false;
     for (var index = 0; index < a.length; index++) {
@@ -873,6 +1017,15 @@ class SyncService {
     collection.syncStatusKey = SyncStatusKeys.conflict;
     await _isar.writeTxn(() async {
       await _isar.progressPhotoCollections.put(collection);
+    });
+  }
+
+  Future<void> _markUserContentConflict(
+    UserContentCollection collection,
+  ) async {
+    collection.syncStatusKey = SyncStatusKeys.conflict;
+    await _isar.writeTxn(() async {
+      await _isar.userContentCollections.putByContentKey(collection);
     });
   }
 
@@ -911,6 +1064,13 @@ class SyncService {
             .photoIdEqualTo(item.entityId)
             .findFirst();
         if (collection != null) await _markProgressPhotoConflict(collection);
+        break;
+      case SyncEntityTypes.userContent:
+        final collection = await _isar.userContentCollections
+            .filter()
+            .contentIdEqualTo(item.entityId)
+            .findFirst();
+        if (collection != null) await _markUserContentConflict(collection);
         break;
     }
   }

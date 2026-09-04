@@ -24,6 +24,7 @@ class ExerciseDeepDiveScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
+        layout: DashboardPageLayout.detail,
         children: [
           Row(
             children: [

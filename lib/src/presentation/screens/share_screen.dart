@@ -41,7 +41,7 @@ class ShareScreen extends ConsumerWidget {
     final canPop = Navigator.of(context).canPop();
 
     return DashboardPageScaffold(
-      bottomPadding: 40,
+      layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.planLibrary,

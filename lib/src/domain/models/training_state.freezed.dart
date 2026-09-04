@@ -674,6 +674,8 @@ mixin _$ExerciseSessionState {
   String get stageId => throw _privateConstructorUsedError;
   String get displayLoadUnit => throw _privateConstructorUsedError;
   bool get showsPlateBreakdown => throw _privateConstructorUsedError;
+  bool get isSubstituted => throw _privateConstructorUsedError;
+  String? get originalExerciseId => throw _privateConstructorUsedError;
   int get currentSetIndex => throw _privateConstructorUsedError;
   List<SessionSetState> get sets => throw _privateConstructorUsedError;
 
@@ -699,6 +701,8 @@ abstract class $ExerciseSessionStateCopyWith<$Res> {
     String stageId,
     String displayLoadUnit,
     bool showsPlateBreakdown,
+    bool isSubstituted,
+    String? originalExerciseId,
     int currentSetIndex,
     List<SessionSetState> sets,
   });
@@ -728,6 +732,8 @@ class _$ExerciseSessionStateCopyWithImpl<
     Object? stageId = null,
     Object? displayLoadUnit = null,
     Object? showsPlateBreakdown = null,
+    Object? isSubstituted = null,
+    Object? originalExerciseId = freezed,
     Object? currentSetIndex = null,
     Object? sets = null,
   }) {
@@ -765,6 +771,14 @@ class _$ExerciseSessionStateCopyWithImpl<
                 ? _value.showsPlateBreakdown
                 : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
                       as bool,
+            isSubstituted: null == isSubstituted
+                ? _value.isSubstituted
+                : isSubstituted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            originalExerciseId: freezed == originalExerciseId
+                ? _value.originalExerciseId
+                : originalExerciseId // ignore: cast_nullable_to_non_nullable
+                      as String?,
             currentSetIndex: null == currentSetIndex
                 ? _value.currentSetIndex
                 : currentSetIndex // ignore: cast_nullable_to_non_nullable
@@ -797,6 +811,8 @@ abstract class _$$ExerciseSessionStateImplCopyWith<$Res>
     String stageId,
     String displayLoadUnit,
     bool showsPlateBreakdown,
+    bool isSubstituted,
+    String? originalExerciseId,
     int currentSetIndex,
     List<SessionSetState> sets,
   });
@@ -822,6 +838,8 @@ class __$$ExerciseSessionStateImplCopyWithImpl<$Res>
     Object? stageId = null,
     Object? displayLoadUnit = null,
     Object? showsPlateBreakdown = null,
+    Object? isSubstituted = null,
+    Object? originalExerciseId = freezed,
     Object? currentSetIndex = null,
     Object? sets = null,
   }) {
@@ -859,6 +877,14 @@ class __$$ExerciseSessionStateImplCopyWithImpl<$Res>
             ? _value.showsPlateBreakdown
             : showsPlateBreakdown // ignore: cast_nullable_to_non_nullable
                   as bool,
+        isSubstituted: null == isSubstituted
+            ? _value.isSubstituted
+            : isSubstituted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        originalExerciseId: freezed == originalExerciseId
+            ? _value.originalExerciseId
+            : originalExerciseId // ignore: cast_nullable_to_non_nullable
+                  as String?,
         currentSetIndex: null == currentSetIndex
             ? _value.currentSetIndex
             : currentSetIndex // ignore: cast_nullable_to_non_nullable
@@ -884,6 +910,8 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
     required this.stageId,
     this.displayLoadUnit = LoadUnits.kg,
     this.showsPlateBreakdown = false,
+    this.isSubstituted = false,
+    this.originalExerciseId,
     this.currentSetIndex = 0,
     required final List<SessionSetState> sets,
   }) : _sets = sets;
@@ -911,6 +939,11 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
   final bool showsPlateBreakdown;
   @override
   @JsonKey()
+  final bool isSubstituted;
+  @override
+  final String? originalExerciseId;
+  @override
+  @JsonKey()
   final int currentSetIndex;
   final List<SessionSetState> _sets;
   @override
@@ -922,7 +955,7 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
 
   @override
   String toString() {
-    return 'ExerciseSessionState(id: $id, exerciseId: $exerciseId, exerciseName: $exerciseName, tier: $tier, restSeconds: $restSeconds, stageId: $stageId, displayLoadUnit: $displayLoadUnit, showsPlateBreakdown: $showsPlateBreakdown, currentSetIndex: $currentSetIndex, sets: $sets)';
+    return 'ExerciseSessionState(id: $id, exerciseId: $exerciseId, exerciseName: $exerciseName, tier: $tier, restSeconds: $restSeconds, stageId: $stageId, displayLoadUnit: $displayLoadUnit, showsPlateBreakdown: $showsPlateBreakdown, isSubstituted: $isSubstituted, originalExerciseId: $originalExerciseId, currentSetIndex: $currentSetIndex, sets: $sets)';
   }
 
   @override
@@ -943,6 +976,10 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
                 other.displayLoadUnit == displayLoadUnit) &&
             (identical(other.showsPlateBreakdown, showsPlateBreakdown) ||
                 other.showsPlateBreakdown == showsPlateBreakdown) &&
+            (identical(other.isSubstituted, isSubstituted) ||
+                other.isSubstituted == isSubstituted) &&
+            (identical(other.originalExerciseId, originalExerciseId) ||
+                other.originalExerciseId == originalExerciseId) &&
             (identical(other.currentSetIndex, currentSetIndex) ||
                 other.currentSetIndex == currentSetIndex) &&
             const DeepCollectionEquality().equals(other._sets, _sets));
@@ -960,6 +997,8 @@ class _$ExerciseSessionStateImpl implements _ExerciseSessionState {
     stageId,
     displayLoadUnit,
     showsPlateBreakdown,
+    isSubstituted,
+    originalExerciseId,
     currentSetIndex,
     const DeepCollectionEquality().hash(_sets),
   );
@@ -990,6 +1029,8 @@ abstract class _ExerciseSessionState implements ExerciseSessionState {
     required final String stageId,
     final String displayLoadUnit,
     final bool showsPlateBreakdown,
+    final bool isSubstituted,
+    final String? originalExerciseId,
     final int currentSetIndex,
     required final List<SessionSetState> sets,
   }) = _$ExerciseSessionStateImpl;
@@ -1013,6 +1054,10 @@ abstract class _ExerciseSessionState implements ExerciseSessionState {
   String get displayLoadUnit;
   @override
   bool get showsPlateBreakdown;
+  @override
+  bool get isSubstituted;
+  @override
+  String? get originalExerciseId;
   @override
   int get currentSetIndex;
   @override

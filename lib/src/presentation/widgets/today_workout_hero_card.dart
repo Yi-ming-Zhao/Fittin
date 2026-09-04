@@ -10,6 +10,7 @@ import '../../domain/models/training_plan.dart';
 import '../localization/app_strings.dart';
 import '../localization/plan_text.dart';
 import '../screens/active_session_screen.dart';
+import '../screens/cardio_screen.dart';
 import '../screens/share_screen.dart';
 import '../app_shell_navigation.dart';
 import 'fittin_card.dart';
@@ -55,6 +56,7 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
           onTap: sessionState.isLoading || _openingSession
               ? null
               : _openSession,
+          onScheduleTap: () => _openScheduleChooser(template),
           onShareTap: () async {
             try {
               final template = await ref.read(activeTemplateProvider.future);
@@ -93,6 +95,9 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
         strings: strings,
         onBrowsePlans: () =>
             ref.read(appShellTabIndexProvider.notifier).state = 1,
+        onRecordCardio: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CardioHubScreen())),
       );
     }
     return _ErrorCard(
@@ -150,6 +155,105 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
       }
     }
   }
+
+  Future<void> _openScheduleChooser(PlanTemplate template) async {
+    final strings = AppStrings.of(context, ref);
+    final theme = ref.read(resolvedFittinThemeProvider);
+    try {
+      final workouts = await ref.read(
+        remainingMicrocycleWorkoutsProvider.future,
+      );
+      if (!mounted) return;
+      final locale = ref.read(appLocaleProvider);
+      final selected = await showModalBottomSheet<String>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        backgroundColor: theme.bg,
+        builder: (sheetContext) => ConstrainedBox(
+          key: const ValueKey('microcycle-schedule-sheet'),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.78,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.borderHi,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  strings.isChinese ? '调整今天的训练' : 'Choose today\'s workout',
+                  style: theme.displayStyle(24),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  strings.isChinese
+                      ? '只调整本小周期剩余顺序；被挪开的训练日会依次顺延。'
+                      : 'Only the remaining order in this microcycle changes; displaced days stay pending.',
+                  style: theme.uiStyle(13, theme.fgDim).copyWith(height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                Flexible(
+                  child: ListView.separated(
+                    key: const ValueKey('microcycle-schedule-list'),
+                    shrinkWrap: true,
+                    itemCount: workouts.length,
+                    separatorBuilder: (_, _) =>
+                        Divider(height: 1, color: theme.divider),
+                    itemBuilder: (context, index) => ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                      minTileHeight: 52,
+                      leading: CircleAvatar(
+                        backgroundColor: index == 0
+                            ? theme.accent
+                            : theme.surfaceHi,
+                        foregroundColor: index == 0
+                            ? theme.accentInk
+                            : theme.fg,
+                        child: Text('${index + 1}'),
+                      ),
+                      title: Text(
+                        localizedWorkoutName(workouts[index], locale),
+                      ),
+                      subtitle: Text(
+                        index == 0
+                            ? (strings.isChinese
+                                  ? '当前安排'
+                                  : 'Currently scheduled')
+                            : (strings.isChinese ? '提前到今天' : 'Move to today'),
+                      ),
+                      onTap: () =>
+                          Navigator.of(sheetContext).pop(workouts[index].id),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (selected == null || selected == workouts.first.id) return;
+      await ref
+          .read(microcycleScheduleControllerProvider)
+          .moveToToday(selected);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
 }
 
 TodayWorkoutSummary _localizedSummary(
@@ -184,6 +288,7 @@ class _FittinWorkoutCard extends StatelessWidget {
     required this.compact,
     required this.onTap,
     required this.onShareTap,
+    required this.onScheduleTap,
   });
 
   final FittinTheme theme;
@@ -195,6 +300,7 @@ class _FittinWorkoutCard extends StatelessWidget {
   final bool compact;
   final VoidCallback? onTap;
   final Future<void> Function() onShareTap;
+  final VoidCallback onScheduleTap;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +353,7 @@ class _FittinWorkoutCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                    const SizedBox(width: 36),
+                    const SizedBox(width: 82),
                   ],
                 ),
               ),
@@ -369,13 +475,33 @@ class _FittinWorkoutCard extends StatelessWidget {
         Positioned(
           top: compact ? 0 : 4,
           right: compact ? 0 : 4,
-          child: IconButton(
-            key: const ValueKey('share-active-plan'),
-            tooltip: strings.sharePlan,
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            visualDensity: VisualDensity.compact,
-            onPressed: onShareTap,
-            icon: Icon(Icons.ios_share_rounded, size: 18, color: theme.fgDim),
+          child: Row(
+            children: [
+              IconButton(
+                key: const ValueKey('reorder-microcycle'),
+                tooltip: strings.isChinese
+                    ? '调整今天训练'
+                    : 'Change today\'s workout',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: onScheduleTap,
+                icon: Icon(
+                  Icons.calendar_month_outlined,
+                  size: 18,
+                  color: theme.fgDim,
+                ),
+              ),
+              IconButton(
+                key: const ValueKey('share-active-plan'),
+                tooltip: strings.sharePlan,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                onPressed: onShareTap,
+                icon: Icon(
+                  Icons.ios_share_rounded,
+                  size: 18,
+                  color: theme.fgDim,
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -504,11 +630,13 @@ class _NoActivePlanCard extends StatelessWidget {
     required this.theme,
     required this.strings,
     required this.onBrowsePlans,
+    required this.onRecordCardio,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
   final VoidCallback onBrowsePlans;
+  final VoidCallback onRecordCardio;
 
   @override
   Widget build(BuildContext context) {
@@ -531,13 +659,28 @@ class _NoActivePlanCard extends StatelessWidget {
             style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.45),
           ),
           const SizedBox(height: 18),
-          FittinBtn(
-            theme,
-            strings.browsePlans,
-            key: const ValueKey('choose-training-plan'),
-            size: 'sm',
-            icon: Icons.arrow_forward_rounded,
-            onPressed: onBrowsePlans,
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              FittinBtn(
+                theme,
+                strings.browsePlans,
+                key: const ValueKey('choose-training-plan'),
+                size: 'sm',
+                icon: Icons.arrow_forward_rounded,
+                onPressed: onBrowsePlans,
+              ),
+              FittinBtn(
+                theme,
+                strings.recordCardioAction,
+                key: const ValueKey('record-cardio-without-plan'),
+                size: 'sm',
+                variant: 'ghost',
+                icon: Icons.directions_run_rounded,
+                onPressed: onRecordCardio,
+              ),
+            ],
           ),
         ],
       ),

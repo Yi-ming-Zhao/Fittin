@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
+import 'package:fittin_v2/src/domain/models/custom_theme_palette.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
+import 'package:fittin_v2/src/presentation/screens/theme_palette_library_screen.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,8 +16,35 @@ class AppearancePalettePicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final strings = AppStrings.of(context, ref);
     final theme = ref.watch(resolvedFittinThemeProvider);
-    final selectedPalette = ref.watch(fittinThemeProvider);
-    final palettes = FittinPaletteRegistry.ids;
+    final selectedKey = ref.watch(fittinThemeProvider);
+    final customPalettes =
+        ref.watch(customThemePalettesProvider).valueOrNull ?? const [];
+    final palettes = <_AppearancePaletteOption>[
+      for (final id in FittinPaletteRegistry.ids)
+        _AppearancePaletteOption(
+          key: id.storageKey,
+          theme: FittinPaletteRegistry.themeOf(id),
+          name: strings.paletteName(id),
+          description: strings.paletteDescription(id),
+          builtInId: id,
+        ),
+      for (final palette in customPalettes)
+        _AppearancePaletteOption(
+          key: palette.id,
+          theme: themeFromCustomPalette(palette),
+          name: palette.name,
+          description: strings.isChinese
+              ? '你的自定义语义配色'
+              : 'Your custom semantic palette',
+          customPalette: palette,
+        ),
+    ];
+    final selectedOption = palettes
+        .where((option) => option.key == selectedKey)
+        .firstOrNull;
+    final selectedName =
+        selectedOption?.name ??
+        strings.paletteName(FittinPaletteRegistry.defaultId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -26,9 +56,7 @@ class AppearancePalettePicker extends ConsumerWidget {
         const SizedBox(height: 14),
         Semantics(
           liveRegion: true,
-          label: strings.selectedPaletteLabel(
-            strings.paletteName(selectedPalette),
-          ),
+          label: strings.selectedPaletteLabel(selectedName),
           child: ExcludeSemantics(
             child: Container(
               key: const ValueKey('appearance-current-palette'),
@@ -45,9 +73,7 @@ class AppearancePalettePicker extends ConsumerWidget {
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
-                      strings.selectedPaletteLabel(
-                        strings.paletteName(selectedPalette),
-                      ),
+                      strings.selectedPaletteLabel(selectedName),
                       style: theme
                           .uiStyle(13, theme.fg, FontWeight.w700)
                           .copyWith(height: 1.2),
@@ -82,31 +108,68 @@ class AppearancePalettePicker extends ConsumerWidget {
             itemCount: palettes.length,
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
-              final paletteId = palettes[index];
-              final previewTheme = FittinPaletteRegistry.themeOf(paletteId);
-              final selected = paletteId == selectedPalette;
-              final name = strings.paletteName(paletteId);
+              final option = palettes[index];
+              final selected = option.key == selectedKey;
 
               return _PalettePreviewTile(
-                key: ValueKey('appearance-palette-${paletteId.storageKey}'),
-                theme: previewTheme,
-                name: name,
-                description: strings.paletteDescription(paletteId),
+                key: ValueKey('appearance-palette-${option.key}'),
+                theme: option.theme,
+                name: option.name,
+                description: option.description,
                 semanticsLabel: strings.palettePreviewSemantics(
-                  name,
+                  option.name,
                   selected: selected,
                 ),
                 selected: selected,
                 onTap: () => unawaited(
-                  ref.read(fittinThemeProvider.notifier).setPalette(paletteId),
+                  option.builtInId != null
+                      ? ref
+                            .read(fittinThemeProvider.notifier)
+                            .setPalette(option.builtInId!)
+                      : ref
+                            .read(fittinThemeProvider.notifier)
+                            .setCustomPalette(option.customPalette!),
                 ),
               );
             },
           ),
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ThemePaletteLibraryScreen(),
+              ),
+            ),
+            icon: const Icon(Icons.tune_rounded),
+            label: Text(
+              strings.isChinese ? '管理与创建配色' : 'Manage and create palettes',
+            ),
+          ),
+        ),
       ],
     );
   }
+}
+
+class _AppearancePaletteOption {
+  const _AppearancePaletteOption({
+    required this.key,
+    required this.theme,
+    required this.name,
+    required this.description,
+    this.builtInId,
+    this.customPalette,
+  });
+
+  final String key;
+  final FittinTheme theme;
+  final String name;
+  final String description;
+  final FittinPaletteId? builtInId;
+  final CustomThemePalette? customPalette;
 }
 
 class _PalettePreviewTile extends StatelessWidget {
@@ -247,6 +310,13 @@ class _PalettePreviewTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+extension<T> on Iterable<T> {
+  T? get firstOrNull {
+    final iterator = this.iterator;
+    return iterator.moveNext() ? iterator.current : null;
   }
 }
 

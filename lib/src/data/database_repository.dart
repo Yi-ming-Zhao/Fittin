@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
+import 'package:fittin_v2/src/data/models/user_content_collection.dart';
 import 'package:fittin_v2/src/data/seeds/built_in_seed_coordinator.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
@@ -22,6 +23,8 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
 import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:uuid/uuid.dart';
@@ -556,6 +559,235 @@ class DatabaseRepository {
     return fetchInstance(activeInstanceId);
   }
 
+  // ---------- Versioned user content ---------- //
+
+  Future<UserContentDocument> saveUserContent(
+    UserContentDocument document, {
+    int? expectedVersion,
+    String? syncStatus,
+    String? deviceId,
+  }) {
+    return _saveUserContent(
+      document,
+      expectedVersion: expectedVersion,
+      syncStatus: syncStatus,
+      deviceId: deviceId,
+      preserveRemoteVersion: false,
+    );
+  }
+
+  Future<List<UserContentDocument>> saveUserContentsAtomically(
+    List<UserContentDocument> documents, {
+    Map<String, int?> expectedVersions = const {},
+    String? deviceId,
+  }) async {
+    for (final document in documents) {
+      UserContentValidation.validateDocument(document);
+    }
+    return _write(
+      () => runZoned(() async {
+        final saved = <UserContentDocument>[];
+        for (final document in documents) {
+          saved.add(
+            await saveUserContent(
+              document,
+              expectedVersion: expectedVersions[document.id],
+              deviceId: deviceId,
+            ),
+          );
+        }
+        return saved;
+      }, zoneValues: {agentTransactionZoneKey: true}),
+    );
+  }
+
+  Future<UserContentDocument> saveRemoteUserContent(
+    UserContentDocument document,
+  ) {
+    return _saveUserContent(
+      document,
+      expectedVersion: null,
+      syncStatus: document.syncStatus,
+      deviceId: document.lastModifiedByDeviceId,
+      preserveRemoteVersion: true,
+    );
+  }
+
+  Future<UserContentDocument> _saveUserContent(
+    UserContentDocument document, {
+    required int? expectedVersion,
+    required String? syncStatus,
+    required String? deviceId,
+    required bool preserveRemoteVersion,
+  }) async {
+    UserContentValidation.validateDocument(document);
+    final key = _userContentKey(document.kind, document.id);
+    late UserContentCollection collection;
+    await _write(() async {
+      final existing = await _database.userContentCollections.getByContentKey(
+        key,
+      );
+      if (existing != null &&
+          (existing.kindKey != document.kind.name ||
+              (document.ownerUserId != null &&
+                  existing.ownerUserId != null &&
+                  existing.ownerUserId != document.ownerUserId))) {
+        throw StateError('User content identity is already in use.');
+      }
+      if (expectedVersion != null &&
+          (existing?.version ?? 0) != expectedVersion) {
+        throw StateError('User content changed before it could be saved.');
+      }
+
+      final resolvedOwner = document.ownerUserId ?? existing?.ownerUserId;
+      final now = DateTime.now();
+      collection = UserContentCollection()
+        ..contentKey = key
+        ..contentId = document.id
+        ..kindKey = document.kind.name
+        ..ownerUserId = resolvedOwner
+        ..rawJsonPayload = jsonEncode(document.payload)
+        ..createdAt = preserveRemoteVersion
+            ? document.createdAt
+            : existing?.createdAt ?? document.createdAt
+        ..lastModifiedAt = preserveRemoteVersion ? document.updatedAt : now
+        ..deletedAt = document.deletedAt
+        ..lastSyncedAt = document.lastSyncedAt ?? existing?.lastSyncedAt
+        ..version = preserveRemoteVersion
+            ? document.version
+            : (existing?.version ?? 0) + 1
+        ..syncStatusKey = syncStatus ?? _defaultSyncStatus(resolvedOwner)
+        ..lastModifiedByDeviceId =
+            deviceId ??
+            document.lastModifiedByDeviceId ??
+            existing?.lastModifiedByDeviceId;
+      if (existing != null) collection.id = existing.id;
+      await _database.userContentCollections.putByContentKey(collection);
+      if (collection.syncStatusKey != SyncStatusKeys.synced) {
+        await _putSyncQueueItem(
+          entityType: SyncEntityTypes.userContent,
+          entityId: document.id,
+          ownerUserId: collection.ownerUserId,
+          operationType: collection.deletedAt == null
+              ? SyncOperationTypes.upsert
+              : SyncOperationTypes.delete,
+        );
+      }
+    });
+    return _userContentFromCollection(collection);
+  }
+
+  Future<UserContentDocument?> fetchUserContent(
+    String id, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final matches = await _database.userContentCollections
+        .filter()
+        .contentIdEqualTo(id)
+        .findAll();
+    for (final collection in matches) {
+      if (_ownerMatches(collection.ownerUserId, ownerUserId) &&
+          (includeDeleted || collection.deletedAt == null)) {
+        return _userContentFromCollection(collection);
+      }
+    }
+    return null;
+  }
+
+  Future<UserContentDocument?> fetchUserContentOfKind(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final collection = await _database.userContentCollections.getByContentKey(
+      _userContentKey(kind, id),
+    );
+    if (collection == null ||
+        !_ownerMatches(collection.ownerUserId, ownerUserId) ||
+        (!includeDeleted && collection.deletedAt != null)) {
+      return null;
+    }
+    return _userContentFromCollection(collection);
+  }
+
+  Future<List<UserContentDocument>> fetchUserContents(
+    UserContentKind kind, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final matches = await _database.userContentCollections
+        .filter()
+        .kindKeyEqualTo(kind.name)
+        .findAll();
+    final result = matches
+        .where(
+          (collection) =>
+              _ownerMatches(collection.ownerUserId, ownerUserId) &&
+              (includeDeleted || collection.deletedAt == null),
+        )
+        .map(_userContentFromCollection)
+        .toList();
+    result.sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    return result;
+  }
+
+  Future<void> deleteUserContent(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    int? expectedVersion,
+  }) async {
+    final key = _userContentKey(kind, id);
+    await _write(() async {
+      final existing = await _database.userContentCollections.getByContentKey(
+        key,
+      );
+      if (existing == null ||
+          existing.deletedAt != null ||
+          !_ownerMatches(existing.ownerUserId, ownerUserId)) {
+        throw StateError('User content is not available.');
+      }
+      if (expectedVersion != null && existing.version != expectedVersion) {
+        throw StateError('User content changed before it could be deleted.');
+      }
+      existing
+        ..deletedAt = DateTime.now()
+        ..lastModifiedAt = DateTime.now()
+        ..version = existing.version + 1
+        ..syncStatusKey = ownerUserId == null
+            ? SyncStatusKeys.localOnly
+            : SyncStatusKeys.pendingDelete;
+      await _database.userContentCollections.putByContentKey(existing);
+      await _putSyncQueueItem(
+        entityType: SyncEntityTypes.userContent,
+        entityId: id,
+        ownerUserId: existing.ownerUserId,
+        operationType: SyncOperationTypes.delete,
+      );
+    });
+  }
+
+  UserContentDocument _userContentFromCollection(
+    UserContentCollection collection,
+  ) => UserContentDocument(
+    id: collection.contentId,
+    kind: UserContentKind.values.byName(collection.kindKey),
+    payload: (jsonDecode(collection.rawJsonPayload) as Map)
+        .cast<String, dynamic>(),
+    ownerUserId: collection.ownerUserId,
+    createdAt: collection.createdAt,
+    updatedAt: collection.lastModifiedAt,
+    deletedAt: collection.deletedAt,
+    version: collection.version,
+    syncStatus: collection.syncStatusKey,
+    lastSyncedAt: collection.lastSyncedAt,
+    lastModifiedByDeviceId: collection.lastModifiedByDeviceId,
+  );
+
+  String _userContentKey(UserContentKind kind, String id) => '${kind.name}:$id';
+
   Future<StoredTrainingInstance?> fetchInstanceForTemplate(
     String templateId, {
     String? ownerUserId,
@@ -677,6 +909,41 @@ class DatabaseRepository {
       syncStatus: data.syncStatus,
       preserveRemoteVersion: true,
     );
+  }
+
+  Future<StoredTrainingInstance> updateInstanceEngineState({
+    required String instanceId,
+    required String? ownerUserId,
+    required int expectedVersion,
+    required Map<String, dynamic> engineState,
+  }) async {
+    late InstanceCollection updated;
+    await _write(() async {
+      final existing = await _database.instanceCollections.getByInstanceId(
+        instanceId,
+      );
+      if (existing == null ||
+          existing.deletedAt != null ||
+          !_ownerMatches(existing.ownerUserId, ownerUserId) ||
+          existing.version != expectedVersion) {
+        throw StateError('Training schedule changed. Reload and try again.');
+      }
+      existing
+        ..engineStateJson = jsonEncode(engineState)
+        ..lastModifiedAt = DateTime.now()
+        ..version = existing.version + 1
+        ..syncStatusKey = _defaultSyncStatus(ownerUserId);
+      await _database.instanceCollections.putByInstanceId(existing);
+      updated = existing;
+    });
+    await _enqueueSync(
+      entityType: SyncEntityTypes.instance,
+      entityId: instanceId,
+      ownerUserId: ownerUserId,
+      operationType: SyncOperationTypes.upsert,
+      syncStatus: updated.syncStatusKey,
+    );
+    return (await fetchInstance(instanceId))!;
   }
 
   Future<void> _saveInstance(
@@ -1158,6 +1425,25 @@ class DatabaseRepository {
         }
       }
 
+      final userContents = await _database.userContentCollections
+          .where()
+          .findAll();
+      for (final content in userContents) {
+        if (content.ownerUserId != null) continue;
+        content
+          ..ownerUserId = ownerUserId
+          ..syncStatusKey = content.deletedAt == null
+              ? SyncStatusKeys.pendingUpload
+              : SyncStatusKeys.pendingDelete
+          ..lastModifiedAt = now;
+        await _database.userContentCollections.putByContentKey(content);
+        queuedUpserts.add((
+          SyncEntityTypes.userContent,
+          content.contentId,
+          ownerUserId,
+        ));
+      }
+
       final remappedActiveInstanceId =
           remappedInstanceIds[localActiveInstanceId];
       if (userActiveInstanceId == null && remappedActiveInstanceId != null) {
@@ -1254,6 +1540,22 @@ class DatabaseRepository {
     if (syncStatus == SyncStatusKeys.synced) {
       return;
     }
+    await _write(
+      () => _putSyncQueueItem(
+        entityType: entityType,
+        entityId: entityId,
+        operationType: operationType,
+        ownerUserId: ownerUserId,
+      ),
+    );
+  }
+
+  Future<void> _putSyncQueueItem({
+    required String entityType,
+    required String entityId,
+    required String operationType,
+    required String? ownerUserId,
+  }) async {
     final queueKey = '$entityType:$entityId';
     final existing = await _database.syncQueueCollections.getByQueueKey(
       queueKey,
@@ -1266,9 +1568,7 @@ class DatabaseRepository {
       ..operationType = operationType
       ..createdAt = existing?.createdAt ?? DateTime.now()
       ..updatedAt = DateTime.now();
-    await _write(() async {
-      await _database.syncQueueCollections.putByQueueKey(queueItem);
-    });
+    await _database.syncQueueCollections.putByQueueKey(queueItem);
   }
 
   WorkoutLog _withResolvedLogId(WorkoutLog logRecord) {

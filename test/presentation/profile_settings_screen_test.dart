@@ -1,16 +1,14 @@
-// Keep Flutter 3.35 compatibility until the repository minimum moves to 3.41.
-// ignore_for_file: deprecated_member_use
-
+import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
+import 'package:fittin_v2/src/application/ui_settings_provider.dart';
+import 'package:fittin_v2/src/presentation/screens/profile_hub_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/profile_settings_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/set_type_guide_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fittin_v2/src/application/app_locale_provider.dart';
-import 'package:fittin_v2/src/application/active_session_provider.dart';
-import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
-import 'package:fittin_v2/src/application/ui_settings_provider.dart';
-import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
-import 'package:fittin_v2/src/presentation/screens/profile_settings_screen.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../support/in_memory_database_repository.dart';
@@ -18,447 +16,220 @@ import '../support/in_memory_database_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('profile settings screen reflects locale changes to Chinese', (
-    WidgetTester tester,
-  ) async {
-    final repository = InMemoryDatabaseRepository();
-    final semantics = tester.ensureSemantics();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Language'), findsOneWidget);
-    expect(
-      find.text('Account, language, weight tools, and interface preferences.'),
-      findsOneWidget,
-    );
-    expect(find.text('English interface'), findsOneWidget);
-    expect(
-      tester.getSemantics(find.bySemanticsLabel('English. English interface')),
-      containsSemantics(
-        isButton: true,
-        hasSelectedState: true,
-        isSelected: true,
-        isInMutuallyExclusiveGroup: true,
-        hasTapAction: true,
-      ),
-    );
-
-    final cardMode = find.byKey(const ValueKey('recording-mode-card'));
-    await tester.scrollUntilVisible(
-      cardMode,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(find.text('Card logger'), findsOneWidget);
-    expect(find.text('卡片记录'), findsNothing);
-
-    await ProviderScope.containerOf(
-      tester.element(find.byType(ProfileSettingsScreen)),
-    ).read(appLocaleProvider.notifier).setLocale(AppLocale.zh);
-    await tester.pumpAndSettle();
-
-    expect(
-      ProviderScope.containerOf(
-        tester.element(find.byType(ProfileSettingsScreen)),
-      ).read(appLocaleProvider),
-      AppLocale.zh,
-    );
-    expect(find.text('卡片记录'), findsOneWidget);
-    expect(find.text('Card logger'), findsNothing);
-    await tester.fling(
-      find.byType(Scrollable).first,
-      const Offset(0, 1000),
-      1000,
-    );
-    await tester.pumpAndSettle();
-    expect(
-      tester.getSemantics(find.bySemanticsLabel('中文. 中文界面')),
-      containsSemantics(
-        isButton: true,
-        hasSelectedState: true,
-        isSelected: true,
-        isInMutuallyExclusiveGroup: true,
-        hasTapAction: true,
-      ),
-    );
-    semantics.dispose();
-  });
-
-  testWidgets('profile settings exposes the set type guide entry', (
-    WidgetTester tester,
-  ) async {
-    final repository = InMemoryDatabaseRepository();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final guideButton = find.byKey(const ValueKey('open-set-type-guide'));
-    await tester.scrollUntilVisible(
-      guideButton,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(guideButton, findsOneWidget);
-    expect(find.text('Training Set Guide'), findsOneWidget);
-  });
-
-  testWidgets('appearance section localizes its complete theme description', (
-    WidgetTester tester,
-  ) async {
+  Future<void> pumpProfile(
+    WidgetTester tester, {
+    Size size = const Size(390, 568),
+    AppLocale locale = AppLocale.en,
+    double textScale = 1,
+  }) async {
     SharedPreferences.setMockInitialValues({});
     final preferences = await SharedPreferences.getInstance();
     final repository = InMemoryDatabaseRepository();
-    final semantics = tester.ensureSemantics();
-    await tester.binding.setSurfaceSize(const Size(390, 568));
+    await repository.saveAppLocale(locale);
+    await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
-
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           databaseRepositoryProvider.overrideWithValue(repository),
           fittinThemePreferencesProvider.overrideWithValue(preferences),
         ],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
+        child: MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            child: child!,
+          ),
+          home: const ProfileSettingsScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
+  }
 
-    final appearanceHeading = find.text('APPEARANCE');
-    await tester.scrollUntilVisible(
-      appearanceHeading,
-      220,
-      scrollable: find.byType(Scrollable).first,
+  testWidgets('profile root is a compact six-category information hub', (
+    tester,
+  ) async {
+    await pumpProfile(tester);
+
+    expect(find.text('My Fittin'), findsOneWidget);
+    expect(find.byKey(const ValueKey('profile-category-account')), findsOne);
+    expect(find.byKey(const ValueKey('profile-category-training')), findsOne);
+    expect(find.byKey(const ValueKey('profile-category-appearance')), findsOne);
+    expect(find.byKey(const ValueKey('profile-category-agent')), findsOne);
+    expect(find.byKey(const ValueKey('profile-category-privacy')), findsOne);
+    expect(find.byKey(const ValueKey('profile-category-about')), findsOne);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('profile hub remains usable in Chinese with large text', (
+    tester,
+  ) async {
+    await pumpProfile(
+      tester,
+      size: const Size(320, 568),
+      locale: AppLocale.zh,
+      textScale: 1.6,
     );
+
+    expect(find.text('我的'), findsWidgets);
+    final about = find.byKey(const ValueKey('profile-category-about'));
+    await tester.scrollUntilVisible(about, 220);
+    expect(about, findsOneWidget);
+    for (final key in const [
+      'profile-category-account',
+      'profile-category-training',
+      'profile-category-appearance',
+      'profile-category-agent',
+      'profile-category-privacy',
+      'profile-category-about',
+    ]) {
+      expect(
+        tester.getSize(find.byKey(ValueKey(key))).height,
+        greaterThanOrEqualTo(44),
+      );
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('appearance details contain language, palettes and visuals', (
+    tester,
+  ) async {
+    await pumpProfile(tester, size: const Size(390, 844));
+    await tester.tap(find.byKey(const ValueKey('profile-category-appearance')));
     await tester.pumpAndSettle();
 
-    expect(find.text('APPEARANCE'), findsOneWidget);
-    expect(
-      find.text(
-        'One complete theme updates backgrounds, cards, text, lines, charts, and interaction feedback together.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.byType(AppearanceSettingsScreen), findsOneWidget);
+    expect(find.text('Appearance & language'), findsOneWidget);
+    expect(find.byKey(const ValueKey('locale-en')), findsOneWidget);
+    expect(find.byKey(const ValueKey('locale-zh')), findsOneWidget);
     expect(find.text('Current appearance: Obsidian Brass'), findsOneWidget);
-    expect(
-      find.text('Swipe horizontally to compare all five palettes.'),
-      findsOneWidget,
-    );
-    expect(
-      find.bySemanticsLabel('Obsidian Brass theme preview, selected'),
-      findsOneWidget,
-    );
 
     await ProviderScope.containerOf(
-      tester.element(find.byType(ProfileSettingsScreen)),
+      tester.element(find.byType(AppearanceSettingsScreen)),
     ).read(appLocaleProvider.notifier).setLocale(AppLocale.zh);
     await tester.pumpAndSettle();
-
-    expect(find.text('外观'), findsOneWidget);
-    expect(find.text('一套完整主题会同时更新背景、卡片、文字、线条、图表和操作反馈。'), findsOneWidget);
+    expect(find.text('外观与语言'), findsOneWidget);
     expect(find.text('当前外观：黑曜黄铜'), findsOneWidget);
-    expect(find.text('横向滑动比较全部 5 套配色。'), findsOneWidget);
-    expect(find.bySemanticsLabel('黑曜黄铜 主题预览，已选择'), findsOneWidget);
-    semantics.dispose();
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'all appearance previews are reachable and select live at 390px',
-    (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final preferences = await SharedPreferences.getInstance();
-      final repository = InMemoryDatabaseRepository();
-      final semantics = tester.ensureSemantics();
-      await tester.binding.setSurfaceSize(const Size(390, 568));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            databaseRepositoryProvider.overrideWithValue(repository),
-            fittinThemePreferencesProvider.overrideWithValue(preferences),
-          ],
-          child: const MaterialApp(home: ProfileSettingsScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final paletteList = find.byKey(const ValueKey('appearance-palette-list'));
-      await tester.scrollUntilVisible(
-        paletteList,
-        220,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.pumpAndSettle();
-      final horizontalScrollable = find.descendant(
-        of: paletteList,
-        matching: find.byType(Scrollable),
-      );
-
-      for (final paletteId in FittinPaletteRegistry.ids) {
-        final preview = find.byKey(
-          ValueKey('appearance-palette-${paletteId.storageKey}'),
-        );
-        await tester.scrollUntilVisible(
-          preview,
-          180,
-          scrollable: horizontalScrollable,
-          maxScrolls: 10,
-        );
-        await tester.pumpAndSettle();
-
-        final rect = tester.getRect(preview);
-        expect(rect.width, greaterThanOrEqualTo(48));
-        expect(rect.height, greaterThanOrEqualTo(48));
-        expect(rect.left, greaterThanOrEqualTo(0));
-        expect(rect.right, lessThanOrEqualTo(390));
-      }
-
-      final context = tester.element(find.byType(ProfileSettingsScreen));
-      final container = ProviderScope.containerOf(context);
-      final before = container.read(resolvedFittinThemeProvider);
-      final espresso = find.byKey(
-        ValueKey(
-          'appearance-palette-${FittinPaletteId.espressoEmber.storageKey}',
-        ),
-      );
-      await tester.tap(espresso);
-      await tester.pumpAndSettle();
-
-      expect(
-        container.read(fittinThemeProvider),
-        FittinPaletteId.espressoEmber,
-      );
-      expect(
-        container.read(resolvedFittinThemeProvider).accent,
-        isNot(before.accent),
-      );
-      expect(find.text('Current appearance: Espresso Ember'), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('Espresso Ember theme preview, selected'),
-        findsOneWidget,
-      );
-      expect(
-        tester.getSemantics(espresso),
-        containsSemantics(hasSelectedState: true, isSelected: true),
-      );
-      semantics.dispose();
-    },
-  );
-
-  testWidgets('profile settings opens the account screen', (
-    WidgetTester tester,
+  testWidgets('training details group logger and both editable libraries', (
+    tester,
   ) async {
-    final repository = InMemoryDatabaseRepository();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
-    );
+    await pumpProfile(tester, size: const Size(320, 568));
+    await tester.tap(find.byKey(const ValueKey('profile-category-training')));
     await tester.pumpAndSettle();
 
-    final accountButton = find.byKey(const ValueKey('open-account-screen'));
-    await tester.tap(accountButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    expect(find.byType(TrainingSettingsScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('recording-mode-card')), findsOneWidget);
+    final exercise = find.byKey(const ValueKey('open-exercise-library'));
+    await tester.scrollUntilVisible(exercise, 220);
+    expect(exercise, findsOneWidget);
+    expect(find.byKey(const ValueKey('open-cardio-library')), findsOneWidget);
 
-    expect(find.byType(ProfileSettingsScreen), findsNothing);
-    expect(find.text('Backend Not Configured'), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-header-back')), findsOneWidget);
-  });
-
-  testWidgets(
-    'profile settings root screen does not show a dashboard back button',
-    (WidgetTester tester) async {
-      final repository = InMemoryDatabaseRepository();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-          child: const MaterialApp(home: ProfileSettingsScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const ValueKey('dashboard-header-back')), findsNothing);
-    },
-  );
-
-  testWidgets(
-    'profile settings opens profile preferences and saves display name',
-    (WidgetTester tester) async {
-      final repository = InMemoryDatabaseRepository();
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-          child: const MaterialApp(home: ProfileSettingsScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      final profileButton = find.byKey(
-        const ValueKey('open-profile-preferences'),
-      );
-      await tester.scrollUntilVisible(
-        profileButton,
-        300,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.ensureVisible(profileButton.first);
-      await tester.pumpAndSettle();
-      await tester.tap(profileButton.first);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Profile Preferences'), findsOneWidget);
-
-      final displayNameField = find.byKey(
-        const ValueKey('profile-display-name-field'),
-      );
-      await tester.scrollUntilVisible(
-        displayNameField,
-        220,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.enterText(displayNameField, 'Alex');
-      await tester.tap(find.byKey(const ValueKey('save-profile-display-name')));
-      await tester.pumpAndSettle();
-
-      expect(await repository.fetchHomeDisplayName(), 'Alex');
-    },
-  );
-
-  testWidgets('profile settings changes the workout recording mode', (
-    WidgetTester tester,
-  ) async {
-    SharedPreferences.setMockInitialValues({});
-    final repository = InMemoryDatabaseRepository();
-    final semantics = tester.ensureSemantics();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final context = tester.element(find.byType(ProfileSettingsScreen));
+    final context = tester.element(find.byType(TrainingSettingsScreen));
     expect(
       ProviderScope.containerOf(context).read(workoutRecordingModeProvider),
       WorkoutRecordingMode.card,
     );
-
-    final traditional = find.byKey(
-      const ValueKey('recording-mode-traditional'),
-    );
-    await tester.scrollUntilVisible(
-      traditional,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(traditional);
+    await tester.tap(find.byKey(const ValueKey('recording-mode-traditional')));
     await tester.pumpAndSettle();
-    final cardSemantics = find.bySemanticsLabel(RegExp(r'^Card logger\.'));
-    final traditionalSemantics = find.bySemanticsLabel(
-      RegExp(r'^Traditional logger\.'),
-    );
-    expect(tester.getRect(cardSemantics).height, greaterThanOrEqualTo(44));
-    expect(
-      tester.getSemantics(cardSemantics),
-      containsSemantics(hasSelectedState: true, isSelected: true),
-    );
-    expect(
-      tester.getSemantics(traditionalSemantics),
-      containsSemantics(hasSelectedState: true, isSelected: false),
-    );
-    await tester.tap(traditional);
-    await tester.pumpAndSettle();
-
     expect(
       ProviderScope.containerOf(context).read(workoutRecordingModeProvider),
       WorkoutRecordingMode.traditional,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('account category opens account and profile choices', (
+    tester,
+  ) async {
+    await pumpProfile(tester);
+    await tester.tap(find.byKey(const ValueKey('profile-category-account')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AccountAndProfileScreen), findsOneWidget);
+    expect(find.byKey(const ValueKey('open-account-screen')), findsOneWidget);
     expect(
-      tester.getSemantics(traditionalSemantics),
-      containsSemantics(
-        isButton: true,
-        hasSelectedState: true,
-        isSelected: true,
-        isInMutuallyExclusiveGroup: true,
-        hasTapAction: true,
-      ),
+      find.byKey(const ValueKey('open-profile-preferences')),
+      findsOneWidget,
     );
-    semantics.dispose();
   });
 
-  testWidgets('profile settings exposes the about entry', (
-    WidgetTester tester,
+  testWidgets('profile preference actions stack at 320px with large text', (
+    tester,
   ) async {
-    final repository = InMemoryDatabaseRepository();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
+    await pumpProfile(
+      tester,
+      size: const Size(320, 568),
+      locale: AppLocale.zh,
+      textScale: 1.6,
     );
+    await tester.tap(find.byKey(const ValueKey('profile-category-account')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('open-profile-preferences')));
     await tester.pumpAndSettle();
 
-    final aboutButton = find.byKey(const ValueKey('open-about-screen'));
-    await tester.scrollUntilVisible(
-      aboutButton,
-      300,
-      scrollable: find.byType(Scrollable).first,
+    expect(find.byType(ProfilePreferencesScreen), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('profile-preference-actions-stacked')),
+      findsOneWidget,
     );
-    await tester.pumpAndSettle();
-
-    expect(aboutButton, findsOneWidget);
-    expect(find.text('ABOUT'), findsOneWidget);
-    expect(find.text('About Fittin'), findsOneWidget);
+    final save = tester.getRect(
+      find.byKey(const ValueKey('save-profile-display-name')),
+    );
+    final clear = tester.getRect(
+      find.byKey(const ValueKey('clear-profile-display-name')),
+    );
+    expect(clear.top, greaterThan(save.bottom));
+    expect(save.height, greaterThanOrEqualTo(44));
+    expect(clear.height, greaterThanOrEqualTo(44));
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('profile settings opens the about screen', (
-    WidgetTester tester,
+  testWidgets('deep set-type guide remains reachable at 320px large Chinese', (
+    tester,
   ) async {
-    final repository = InMemoryDatabaseRepository();
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [databaseRepositoryProvider.overrideWithValue(repository)],
-        child: const MaterialApp(home: ProfileSettingsScreen()),
-      ),
+    await pumpProfile(
+      tester,
+      size: const Size(320, 568),
+      locale: AppLocale.zh,
+      textScale: 1.6,
     );
+    await tester.tap(find.byKey(const ValueKey('profile-category-training')));
     await tester.pumpAndSettle();
 
-    final aboutButton = find.byKey(const ValueKey('open-about-screen'));
-    await tester.scrollUntilVisible(
-      aboutButton,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.ensureVisible(aboutButton);
+    final guideLink = find.byKey(const ValueKey('open-set-type-guide'));
+    final trainingScroll = find
+        .descendant(
+          of: find.byType(TrainingSettingsScreen),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Scrollable &&
+                widget.axisDirection == AxisDirection.down,
+          ),
+        )
+        .first;
+    await tester.scrollUntilVisible(guideLink, 180, scrollable: trainingScroll);
+    await tester.tap(guideLink);
     await tester.pumpAndSettle();
-    await tester.tap(aboutButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.byType(AboutScreen), findsOneWidget);
-    expect(find.byKey(const ValueKey('dashboard-header-back')), findsOneWidget);
+    expect(find.byType(SetTypeGuideScreen), findsOneWidget);
+    final pageScroll = find.byKey(const ValueKey('dashboard-page-scroll'));
+    expect(pageScroll, findsOneWidget);
+    expect(
+      tester
+          .state<ScrollableState>(
+            find
+                .descendant(of: pageScroll, matching: find.byType(Scrollable))
+                .first,
+          )
+          .position
+          .maxScrollExtent,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
   });
 }

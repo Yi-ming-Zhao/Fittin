@@ -3,6 +3,8 @@ import 'models/body_metric_collection.dart';
 import 'models/workout_log_collection.dart';
 import 'models/template_collection.dart';
 import 'models/instance_collection.dart';
+import 'models/user_content_collection.dart';
+import '../domain/models/user_content.dart';
 import 'package:isar/isar.dart';
 
 Future<int?> agentEntityVersion(
@@ -44,6 +46,19 @@ Future<int?> agentEntityVersion(
       return row == null
           ? 0
           : row.ownerUserId == owner
+          ? row.version
+          : null;
+    case 'custom_exercise':
+    case 'custom_theme_palette':
+      final kind = type == 'custom_exercise'
+          ? UserContentKind.customExercise
+          : UserContentKind.customThemePalette;
+      final row = await db.userContentCollections.getByContentKey(
+        '${kind.name}:$id',
+      );
+      return row == null
+          ? 0
+          : row.ownerUserId == owner && row.kindKey == kind.name
           ? row.version
           : null;
     default:

@@ -9,6 +9,7 @@ import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
+import 'package:fittin_v2/src/data/models/user_content_collection.dart';
 import 'package:fittin_v2/src/data/models/agent_action_collection.dart';
 import 'package:fittin_v2/src/data/models/agent_conversation_collection.dart';
 
@@ -48,6 +49,7 @@ Future<void> initializeTestIsarCore() async {
 Future<({Isar isar, Directory directory})> openTestIsar(
   String name, {
   bool includeAgentRuntime = true,
+  bool includeUserContent = true,
   Directory? existingDirectory,
 }) async {
   await initializeTestIsarCore();
@@ -66,6 +68,7 @@ Future<({Isar isar, Directory directory})> openTestIsar(
       AgentConversationCollectionSchema,
       AgentActionCollectionSchema,
       if (includeAgentRuntime) AgentRuntimeCollectionSchema,
+      if (includeUserContent) UserContentCollectionSchema,
     ],
     directory: directory.path,
     name: name,
