@@ -48,7 +48,7 @@
 ## 7. Verification and release
 
 - [x] 7.1 Regenerate source artifacts, format changed Dart/Go, run focused tests after each area, then run analyze and full Flutter/Go/OpenSpec validation once.
-- [ ] 7.2 Build Android, iOS `--no-codesign`, and Web; verify a signed in-place Android upgrade from v1.2.1 preserves data, appearance, Agent state, and login.
-- [ ] 7.3 Complete OpenSpec implementation verification, synchronize delta specs, and record release notes plus reproducible verification evidence.
-- [ ] 7.4 Merge through a green PR, synchronize 241, deploy the compatible backend and Web with rollback points, publish tag/GitHub assets, and advance first-party `latest.json` last.
-- [ ] 7.5 Verify public ready/auth refresh/Web/cardio smoke paths, signed APK/AAB identity and hashes, GitHub assets, and Android update detection for `v1.3.0+26`.
+- [x] 7.2 Build Android, iOS `--no-codesign`, and Web; verify a signed in-place Android upgrade from v1.2.1 preserves data, appearance, Agent state, and login.
+- [x] 7.3 Complete OpenSpec implementation verification, synchronize delta specs, and record release notes plus reproducible verification evidence.
+- [x] 7.4 Merge through a green PR, synchronize 241, deploy the compatible backend and Web with rollback points, publish tag/GitHub assets, and advance first-party `latest.json` last.
+- [x] 7.5 Verify public ready/auth refresh/Web/cardio smoke paths, signed APK/AAB identity and hashes, GitHub assets, and Android update detection for `v1.3.0+26`.
