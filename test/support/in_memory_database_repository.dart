@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:fittin_v2/src/data/database_repository.dart';
+import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/data/seeds/tsa_intermediate_seed.dart';
@@ -12,7 +13,9 @@ import 'package:fittin_v2/src/domain/one_rep_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
 
 class InMemoryDatabaseRepository extends DatabaseRepository {
   final Map<String, StoredTemplateRecord> _templates = {};
@@ -21,6 +24,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   AppLocale _appLocale = AppLocale.en;
   OneRepMaxFormula _analyticsFormula = OneRepMaxFormula.epley;
   final List<WorkoutLog> _workoutLogs = [];
+  final Map<String, UserContentDocument> _userContent = {};
   final Map<String, WorkoutSessionState> _sessionDrafts = {};
   String? _deviceId;
   double _glassOpacity = 0.3;
@@ -30,6 +34,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   DateTime? _homeMilestonesLastSeenAt;
 
   String _ownerScope(String? ownerUserId) => ownerUserId ?? '__local__';
+  String _userContentKey(UserContentKind kind, String id) => '${kind.name}:$id';
 
   @override
   Future<void> ensureDefaultProgramSeeded() async {
@@ -586,5 +591,171 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     final logs = [..._workoutLogs]
       ..sort((a, b) => b.completedAt.compareTo(a.completedAt));
     return logs;
+  }
+
+  @override
+  Future<UserContentDocument> saveUserContent(
+    UserContentDocument document, {
+    int? expectedVersion,
+    String? syncStatus,
+    String? deviceId,
+  }) async {
+    UserContentValidation.validateDocument(document);
+    final key = _userContentKey(document.kind, document.id);
+    final existing = _userContent[key];
+    if (expectedVersion != null &&
+        (existing?.version ?? 0) != expectedVersion) {
+      throw StateError('User content changed before it could be saved.');
+    }
+    if (existing != null &&
+        document.ownerUserId != null &&
+        existing.ownerUserId != null &&
+        document.ownerUserId != existing.ownerUserId) {
+      throw StateError('User content identity is already in use.');
+    }
+    final owner = document.ownerUserId ?? existing?.ownerUserId;
+    final saved = UserContentDocument(
+      id: document.id,
+      kind: document.kind,
+      payload: document.payload,
+      ownerUserId: owner,
+      createdAt: existing?.createdAt ?? document.createdAt,
+      updatedAt: DateTime.now(),
+      deletedAt: document.deletedAt,
+      version: (existing?.version ?? 0) + 1,
+      syncStatus:
+          syncStatus ??
+          (owner == null
+              ? SyncStatusKeys.localOnly
+              : SyncStatusKeys.pendingUpload),
+      lastSyncedAt: document.lastSyncedAt ?? existing?.lastSyncedAt,
+      lastModifiedByDeviceId:
+          deviceId ??
+          document.lastModifiedByDeviceId ??
+          existing?.lastModifiedByDeviceId,
+    );
+    _userContent[key] = saved;
+    return saved;
+  }
+
+  @override
+  Future<List<UserContentDocument>> saveUserContentsAtomically(
+    List<UserContentDocument> documents, {
+    Map<String, int?> expectedVersions = const {},
+    String? deviceId,
+  }) async {
+    final before = Map<String, UserContentDocument>.from(_userContent);
+    try {
+      final saved = <UserContentDocument>[];
+      for (final document in documents) {
+        saved.add(
+          await saveUserContent(
+            document,
+            expectedVersion: expectedVersions[document.id],
+            deviceId: deviceId,
+          ),
+        );
+      }
+      return saved;
+    } on Object {
+      _userContent
+        ..clear()
+        ..addAll(before);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<UserContentDocument> saveRemoteUserContent(
+    UserContentDocument document,
+  ) async {
+    UserContentValidation.validateDocument(document);
+    _userContent[_userContentKey(document.kind, document.id)] = document;
+    return document;
+  }
+
+  @override
+  Future<UserContentDocument?> fetchUserContent(
+    String id, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    for (final document in _userContent.values) {
+      if (document.id == id &&
+          document.ownerUserId == ownerUserId &&
+          (includeDeleted || !document.isDeleted)) {
+        return document;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<UserContentDocument?> fetchUserContentOfKind(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final document = _userContent[_userContentKey(kind, id)];
+    if (document == null ||
+        document.ownerUserId != ownerUserId ||
+        (!includeDeleted && document.isDeleted)) {
+      return null;
+    }
+    return document;
+  }
+
+  @override
+  Future<List<UserContentDocument>> fetchUserContents(
+    UserContentKind kind, {
+    String? ownerUserId,
+    bool includeDeleted = false,
+  }) async {
+    final documents =
+        _userContent.values
+            .where(
+              (document) =>
+                  document.kind == kind &&
+                  document.ownerUserId == ownerUserId &&
+                  (includeDeleted || !document.isDeleted),
+            )
+            .toList()
+          ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
+    return documents;
+  }
+
+  @override
+  Future<void> deleteUserContent(
+    String id, {
+    required UserContentKind kind,
+    String? ownerUserId,
+    int? expectedVersion,
+  }) async {
+    final key = _userContentKey(kind, id);
+    final existing = _userContent[key];
+    if (existing == null ||
+        existing.isDeleted ||
+        existing.ownerUserId != ownerUserId) {
+      throw StateError('User content is not available.');
+    }
+    if (expectedVersion != null && existing.version != expectedVersion) {
+      throw StateError('User content changed before it could be deleted.');
+    }
+    _userContent[key] = UserContentDocument(
+      id: existing.id,
+      kind: existing.kind,
+      payload: existing.payload,
+      ownerUserId: existing.ownerUserId,
+      createdAt: existing.createdAt,
+      updatedAt: DateTime.now(),
+      deletedAt: DateTime.now(),
+      version: existing.version + 1,
+      syncStatus: ownerUserId == null
+          ? SyncStatusKeys.localOnly
+          : SyncStatusKeys.pendingDelete,
+      lastSyncedAt: existing.lastSyncedAt,
+      lastModifiedByDeviceId: existing.lastModifiedByDeviceId,
+    );
   }
 }

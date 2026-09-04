@@ -198,6 +198,40 @@ void main() {
     upgraded.close();
     await _deleteDatabase(_versionChangeDatabaseName);
   });
+
+  test(
+    'v3 to v4 preserves every existing store and only adds user content',
+    () async {
+      final name =
+          'fittin_v3_user_content_${DateTime.now().microsecondsSinceEpoch}';
+      await _deleteDatabase(name);
+      final v3Stores = WebStoreNames.all
+          .where((store) => store != WebStoreNames.userContent)
+          .toList();
+      final legacy = await _openDatabase(name, 3, v3Stores);
+      for (final storeName in v3Stores) {
+        await _putRecord(legacy, storeName, 'preserved', {
+          'id': 'preserved',
+          'marker': storeName,
+        });
+      }
+      legacy.close();
+
+      final upgraded = await WebLocalStore.open(
+        databaseName: name,
+        databaseVersion: 4,
+      );
+      for (final storeName in v3Stores) {
+        expect(
+          await upgraded.getRecord(storeName, 'preserved'),
+          containsPair('marker', storeName),
+        );
+      }
+      expect(await upgraded.getAllRecords(WebStoreNames.userContent), isEmpty);
+      upgraded.close();
+      await _deleteDatabase(name);
+    },
+  );
 }
 
 Future<void> _deleteDatabase([String databaseName = _databaseName]) {
@@ -276,6 +310,37 @@ Future<void> _putLegacyRecord(
     if (!completer.isCompleted) {
       completer.completeError(
         transaction.error ?? StateError('Legacy seed transaction aborted.'),
+      );
+    }
+  }).toJS;
+  return completer.future;
+}
+
+Future<void> _putRecord(
+  web.IDBDatabase database,
+  String storeName,
+  String key,
+  Map<String, dynamic> value,
+) {
+  final transaction = database.transaction(storeName.toJS, 'readwrite');
+  final request = transaction
+      .objectStore(storeName)
+      .put(value.jsify(), key.toJS);
+  final completer = Completer<void>();
+  request.onerror = ((web.Event _) {
+    if (!completer.isCompleted) {
+      completer.completeError(
+        request.error ?? StateError('Legacy write failed.'),
+      );
+    }
+  }).toJS;
+  transaction.oncomplete = ((web.Event _) {
+    if (!completer.isCompleted) completer.complete();
+  }).toJS;
+  transaction.onerror = ((web.Event _) {
+    if (!completer.isCompleted) {
+      completer.completeError(
+        transaction.error ?? StateError('Legacy transaction failed.'),
       );
     }
   }).toJS;

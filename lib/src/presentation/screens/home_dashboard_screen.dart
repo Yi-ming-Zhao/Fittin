@@ -12,7 +12,7 @@ import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/exercise_deep_dive_screen.dart';
-import 'package:fittin_v2/src/presentation/screens/plan_library_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/pr_dashboard_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
@@ -360,10 +360,10 @@ class _AtAGlanceSection extends StatelessWidget {
           theme: theme,
           strings: strings,
           compact: compact,
-          onOpenPlans: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PlanLibraryScreen()),
-            );
+          onRecordCardio: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CardioHubScreen()));
           },
           onOpenPr: () {
             Navigator.of(context).push(
@@ -794,14 +794,14 @@ class _QuickActionsCard extends StatelessWidget {
   const _QuickActionsCard({
     required this.theme,
     required this.strings,
-    required this.onOpenPlans,
+    required this.onRecordCardio,
     required this.onOpenPr,
     required this.compact,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
-  final VoidCallback onOpenPlans;
+  final VoidCallback onRecordCardio;
   final VoidCallback onOpenPr;
   final bool compact;
 
@@ -809,10 +809,10 @@ class _QuickActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       (
-        label: strings.switchPlanAction,
+        label: strings.recordCardioAction,
         subtitle: null,
-        icon: Icons.swap_horiz_rounded,
-        onTap: onOpenPlans,
+        icon: Icons.directions_run_rounded,
+        onTap: onRecordCardio,
       ),
       (
         label: strings.seeAllPrs,

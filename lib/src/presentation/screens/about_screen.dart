@@ -79,8 +79,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
     final packageInfo = ref.watch(appPackageInfoProvider);
 
     return DashboardPageScaffold(
-      bottomPadding: 24,
-      safeAreaBottom: true,
+      layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.settings,

@@ -25,6 +25,10 @@ class FakeAuthRepository implements AuthRepository {
   Future<String?> currentAccessToken() async => _accessToken;
 
   @override
+  Future<String?> refreshAccessToken({String? failedAccessToken}) async =>
+      _accessToken;
+
+  @override
   Future<AuthUser?> currentUser() async => _currentUser;
 
   @override

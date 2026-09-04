@@ -41,6 +41,13 @@ class FakeTodayWorkoutGateway implements TodayWorkoutGateway {
     sessionLoadCount += 1;
     return _session;
   }
+
+  @override
+  Future<List<Workout>> loadRemainingMicrocycleWorkouts() async =>
+      _template.workouts;
+
+  @override
+  Future<void> reorderTodayWorkout(String workoutId) async {}
 }
 
 const fakeTodayWorkoutSummary = TodayWorkoutSummary(

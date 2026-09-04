@@ -12,6 +12,7 @@ abstract final class SyncEntityTypes {
   static const workoutLog = 'workout_log';
   static const bodyMetric = 'body_metric';
   static const progressPhoto = 'progress_photo';
+  static const userContent = 'user_content';
 }
 
 abstract final class SyncOperationTypes {

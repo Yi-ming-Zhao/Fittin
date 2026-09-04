@@ -50,6 +50,7 @@ class AppStrings {
       ? '请检查网络后重试；本地数据仍可用时，也可以先离线进入。'
       : 'Try again after checking your connection, or continue with local data when available.';
   String get retry => isChinese ? '重试' : 'Retry';
+  String get close => isChinese ? '关闭' : 'Close';
   String get continueLocally => isChinese ? '离线进入' : 'Continue locally';
 
   String get planLibrary => isChinese ? '计划库' : 'Plan Library';
@@ -243,6 +244,7 @@ class AppStrings {
       isChinese ? '$count 条 e1RM 记录' : '$count e1RM entries';
   String get latest => isChinese ? '最近更新' : 'LATEST';
   String get switchPlanAction => isChinese ? '切换计划' : 'Switch plan';
+  String get recordCardioAction => isChinese ? '记录有氧' : 'Record cardio';
   String get seeAllPrs => isChinese ? '查看全部 PR' : 'See all PRs';
   String liftEstimatedOneRepMax(String liftLabel) => '$liftLabel e1RM';
   String showLiftEstimatedOneRepMax(String liftLabel) =>
@@ -376,6 +378,25 @@ class AppStrings {
         : (isChinese
               ? '$dateLabel，${consistencySessions(sessionCount)}'
               : '$dateLabel, ${consistencySessions(sessionCount)}');
+  }
+
+  String activityDaySemantics(
+    DateTime date, {
+    required int strengthSessions,
+    required int cardioSessions,
+  }) {
+    final dateLabel = recordedDayTitle(date);
+    if (strengthSessions == 0 && cardioSessions == 0) {
+      return isChinese ? '$dateLabel，无训练记录' : '$dateLabel, no workout';
+    }
+    if (isChinese) {
+      return '$dateLabel，力量 $strengthSessions 次，有氧 $cardioSessions 次';
+    }
+    final strengthLabel =
+        '$strengthSessions strength session${strengthSessions == 1 ? '' : 's'}';
+    final cardioLabel =
+        '$cardioSessions cardio session${cardioSessions == 1 ? '' : 's'}';
+    return '$dateLabel, $strengthLabel, $cardioLabel';
   }
 
   String get muscleTrainingLoad =>
@@ -684,8 +705,8 @@ class AppStrings {
       ? '一套完整主题会同时更新背景、卡片、文字、线条、图表和操作反馈。'
       : 'One complete theme updates backgrounds, cards, text, lines, charts, and interaction feedback together.';
   String get appearanceCompareHint => isChinese
-      ? '横向滑动比较全部 5 套配色。'
-      : 'Swipe horizontally to compare all five palettes.';
+      ? '横向滑动比较全部 8 套配色。'
+      : 'Swipe horizontally to compare all eight palettes.';
   String get obsidianBrassPalette => isChinese ? '黑曜黄铜' : 'Obsidian Brass';
   String get obsidianBrassPaletteDescription => isChinese
       ? '深邃黑色、温润黄铜，以克制的紫色平衡。'
@@ -706,12 +727,27 @@ class AppStrings {
   String get espressoEmberPaletteDescription => isChinese
       ? '烘焙咖啡、余烬橙色，搭配低饱和薰衣草紫。'
       : 'Roasted espresso, ember orange, and muted lavender.';
+  String get graphiteOrchidPalette => isChinese ? '石墨兰影' : 'Graphite Orchid';
+  String get graphiteOrchidPaletteDescription => isChinese
+      ? '冷静石墨、低饱和兰紫与一笔暖橙。'
+      : 'Quiet graphite, muted orchid, and one warm orange note.';
+  String get inkSaffronPalette => isChinese ? '墨夜藏红' : 'Ink Saffron';
+  String get inkSaffronPaletteDescription => isChinese
+      ? '近黑墨色、藏红花金与克制紫调。'
+      : 'Near-black ink, saffron gold, and a restrained violet.';
+  String get oliveManuscriptPalette => isChinese ? '橄榄手稿' : 'Olive Manuscript';
+  String get oliveManuscriptPaletteDescription => isChinese
+      ? '深橄榄底色、旧纸金与陶土橙。'
+      : 'Deep olive, aged-paper gold, and earthen orange.';
   String paletteName(FittinPaletteId paletteId) => switch (paletteId) {
     FittinPaletteId.obsidianBrass => obsidianBrassPalette,
     FittinPaletteId.midnightCobalt => midnightCobaltPalette,
     FittinPaletteId.bordeauxVelvet => bordeauxVelvetPalette,
     FittinPaletteId.porcelainInk => porcelainInkPalette,
     FittinPaletteId.espressoEmber => espressoEmberPalette,
+    FittinPaletteId.graphiteOrchid => graphiteOrchidPalette,
+    FittinPaletteId.inkSaffron => inkSaffronPalette,
+    FittinPaletteId.oliveManuscript => oliveManuscriptPalette,
   };
   String paletteDescription(FittinPaletteId paletteId) => switch (paletteId) {
     FittinPaletteId.obsidianBrass => obsidianBrassPaletteDescription,
@@ -719,6 +755,9 @@ class AppStrings {
     FittinPaletteId.bordeauxVelvet => bordeauxVelvetPaletteDescription,
     FittinPaletteId.porcelainInk => porcelainInkPaletteDescription,
     FittinPaletteId.espressoEmber => espressoEmberPaletteDescription,
+    FittinPaletteId.graphiteOrchid => graphiteOrchidPaletteDescription,
+    FittinPaletteId.inkSaffron => inkSaffronPaletteDescription,
+    FittinPaletteId.oliveManuscript => oliveManuscriptPaletteDescription,
   };
   String palettePreviewSemantics(String paletteName, {required bool selected}) {
     if (isChinese) {
@@ -1213,6 +1252,14 @@ class AppStrings {
       ? '当前单位 $currentUnit，点击切换重量单位'
       : 'Current unit $currentUnit. Switch weight unit';
   String get switchExercise => isChinese ? '切换动作' : 'Switch exercise';
+  String get replaceExercise => isChinese ? '更换当前动作' : 'Replace exercise';
+  String get replaceExerciseTitle =>
+      isChinese ? '从动作库更换' : 'Choose a replacement';
+  String get replaceExerciseSearch =>
+      isChinese ? '搜索动作、肌群或器械' : 'Search exercise, muscle, or equipment';
+  String get replaceExerciseLocked => isChinese
+      ? '这个动作已有完成或跳过的组，不能再更换。'
+      : 'This exercise already has completed or skipped sets and cannot be replaced.';
   String setPosition(int current, int total) =>
       isChinese ? '第 $current / $total 组' : 'SET $current / $total';
   String setNumber(int number) => isChinese ? '第 $number 组' : 'SET $number';

@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/data/models/instance_collection.dart';
 import 'package:fittin_v2/src/data/models/sync_queue_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
+import 'package:fittin_v2/src/data/models/user_content_collection.dart';
 import 'package:fittin_v2/src/data/models/agent_action_collection.dart';
 import 'package:fittin_v2/src/data/models/agent_conversation_collection.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
@@ -26,6 +27,7 @@ Future<LocalPersistenceBundle> createLocalPersistence() async {
     AgentConversationCollectionSchema,
     AgentActionCollectionSchema,
     AgentRuntimeCollectionSchema,
+    UserContentCollectionSchema,
   ];
 
   final appDirectory = await getApplicationDocumentsDirectory();

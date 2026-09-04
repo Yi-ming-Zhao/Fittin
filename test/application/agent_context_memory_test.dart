@@ -5,6 +5,7 @@ import 'package:fittin_v2/src/application/agent_memory.dart';
 import 'package:fittin_v2/src/application/agent_tool_input.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
+import 'package:fittin_v2/src/domain/models/agent_runtime.dart';
 
 void main() {
   test(
@@ -85,6 +86,44 @@ void main() {
         ], contextTokens: 8192),
         throwsFormatException,
       );
+    },
+  );
+  test(
+    'approval result stays bounded while retaining the complete local diff',
+    () {
+      final changes = List.generate(
+        500,
+        (index) => AgentMutationChange(
+          path:
+              'plan / workouts ${index + 1} / exercises 1 / sets 1 / targetReps',
+          before: 'Not set',
+          after: '12',
+        ),
+      );
+      final decision = AgentApprovalDecision(
+        operationId: 'large-plan',
+        outcome: AgentApprovalOutcome.committed,
+        action: AgentActionRecord(
+          id: 'large-plan',
+          ownerUserId: 'test-owner',
+          toolName: 'propose_create_plan',
+          title: 'Create plan',
+          targetType: 'plan',
+          targetId: 'home-three-day',
+          beforeJson: 'null',
+          afterJson: '{}',
+          afterDigest: 'digest',
+          createdAt: DateTime(2026, 9, 6),
+        ),
+        changes: changes,
+      );
+      final modelResult = decision.toModelJson();
+
+      expect(changes, hasLength(500));
+      expect(modelResult['changeCount'], 500);
+      expect(modelResult['actualChanges'], hasLength(12));
+      expect(modelResult['changesTruncated'], true);
+      expect(utf8.encode(jsonEncode(modelResult)).length, lessThan(6000));
     },
   );
   test(

@@ -41,10 +41,14 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
         builder: (context, constraints) {
           final safeContentHeight =
               constraints.maxHeight - MediaQuery.paddingOf(context).top;
-          final compact = safeContentHeight < 720;
-          final topPadding = compact ? 28.0 : 44.0;
-          final majorGap = compact ? 18.0 : 28.0;
-          final sectionGap = compact ? 14.0 : 18.0;
+          final roominess = ((safeContentHeight - 568.0) / (926.0 - 568.0))
+              .clamp(0.0, 1.0)
+              .toDouble();
+          const topPadding = 24.0;
+          final majorGap = 18.0 + (10.0 * roominess);
+          final sectionGap = 14.0 + (4.0 * roominess);
+          final bottomPadding = 24.0 + (8.0 * roominess);
+          final chartHeight = 216.0 + (34.0 * roominess);
 
           return metricsAsync.when(
             data: (metrics) {
@@ -53,7 +57,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
               return DashboardPageScaffold(
                 maxContentWidth: 640,
                 topPadding: topPadding,
-                bottomPadding: compact ? 20 : 32,
+                bottomPadding: bottomPadding,
                 children: [
                   DashboardScreenHeader(
                     eyebrow: strings.composition,
@@ -67,7 +71,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                     metrics,
                     screenState,
                     strings,
-                    chartHeight: compact ? 216 : 250,
+                    chartHeight: chartHeight,
                   ),
                   SizedBox(height: sectionGap),
                   DashboardSectionLabel(label: strings.currentSnapshot),
@@ -377,11 +381,15 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
             children: [
               if (delta != null) FittinDelta(theme, delta, unit: ' $unit'),
               if (delta != null) const SizedBox(width: 8),
-              Text(
-                delta == null
-                    ? strings.shortMonthDay(latestMetric.timestamp)
-                    : strings.sinceLastCheckIn,
-                style: theme.uiStyle(11, theme.fgMuted),
+              Expanded(
+                child: Text(
+                  delta == null
+                      ? strings.shortMonthDay(latestMetric.timestamp)
+                      : strings.sinceLastCheckIn,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.uiStyle(11, theme.fgMuted),
+                ),
               ),
             ],
           ),
@@ -765,7 +773,7 @@ class _ProgressPhotoTile extends StatelessWidget {
             right: 6,
             top: 6,
             child: IconButton.filledTonal(
-              visualDensity: VisualDensity.compact,
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
               onPressed: onDelete,
               icon: const Icon(Icons.delete_outline_rounded, size: 17),

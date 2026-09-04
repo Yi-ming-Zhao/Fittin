@@ -16,6 +16,8 @@ type Config struct {
 	AllowedOrigins  map[string]bool
 	MaxUploadBytes  int64
 	RateLimitPerMin int
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 
 	AgentUpstreamTimeout      time.Duration
 	AgentMaxRequestBytes      int64
@@ -33,6 +35,8 @@ func LoadConfig() (Config, error) {
 		AllowedOrigins:  parseOrigins(envOrDefault("FITTIN_ALLOWED_ORIGINS", "https://fittin.hammerscholar.net")),
 		MaxUploadBytes:  int64(envIntOrDefault("FITTIN_MAX_UPLOAD_BYTES", 10<<20)),
 		RateLimitPerMin: envIntOrDefault("FITTIN_RATE_LIMIT_PER_MINUTE", 60),
+		AccessTokenTTL:  time.Duration(envIntOrDefault("FITTIN_ACCESS_TOKEN_TTL_MINUTES", 15)) * time.Minute,
+		RefreshTokenTTL: time.Duration(envIntOrDefault("FITTIN_REFRESH_TOKEN_TTL_DAYS", 180)) * 24 * time.Hour,
 
 		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 300)) * time.Second,
 		AgentMaxRequestBytes:      int64(envIntOrDefault("FITTIN_AGENT_MAX_REQUEST_BYTES", 512<<10)),

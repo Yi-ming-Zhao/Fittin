@@ -350,7 +350,12 @@ void main() {
     },
   );
 
-  for (final viewport in const [Size(390, 926), Size(390, 568)]) {
+  for (final viewport in const [
+    Size(390, 926),
+    Size(390, 720),
+    Size(390, 568),
+    Size(320, 568),
+  ]) {
     testWidgets(
       'body metrics keeps chart and history reachable at ${viewport.width.toInt()}x${viewport.height.toInt()}',
       (tester) async {
@@ -393,7 +398,16 @@ void main() {
         final chart = tester.widget<InteractiveLineChart>(
           find.byKey(const ValueKey('body-weight-chart')),
         );
-        expect(chart.height, viewport.height >= 720 ? 250 : 216);
+        final roominess = ((viewport.height - 568) / (926 - 568)).clamp(
+          0.0,
+          1.0,
+        );
+        expect(chart.height, closeTo(216 + (34 * roominess), 0.01));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Initial body layout must fit the viewport width.',
+        );
 
         await _scrollUntilBuiltAndVisible(
           tester,
@@ -412,6 +426,11 @@ void main() {
         expect(bodyFatRect.top, closeTo(waistRect.top, 0.1));
         expect(checkInsRect.top, greaterThan(bodyFatRect.bottom));
         expect(checkInsRect.width, greaterThan(bodyFatRect.width * 1.9));
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: 'Snapshot cards must fit the viewport width.',
+        );
         final verticalScroll = _verticalScrollable();
         final position = tester.state<ScrollableState>(verticalScroll).position;
         expect(position.maxScrollExtent, greaterThan(0));
@@ -466,7 +485,9 @@ void main() {
     final chart = tester.widget<InteractiveLineChart>(
       find.byKey(const ValueKey('body-weight-chart')),
     );
-    expect(chart.height, 216);
+    const safeContentHeight = 740.0 - 32.0;
+    final roominess = ((safeContentHeight - 568) / (926 - 568)).clamp(0.0, 1.0);
+    expect(chart.height, closeTo(216 + (34 * roominess), 0.01));
     expect(tester.takeException(), isNull);
   });
 

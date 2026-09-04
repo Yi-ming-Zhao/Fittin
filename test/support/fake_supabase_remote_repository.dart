@@ -51,6 +51,18 @@ class FakeSupabaseRemoteRepository extends SupabaseRemoteRepository {
   }
 
   @override
+  Future<void> upsertRow({
+    required String table,
+    required Map<String, dynamic> row,
+  }) async {
+    upserts.add({
+      'table': table,
+      'id': row['id'],
+      'ownerUserId': row['user_id'],
+    });
+  }
+
+  @override
   Future<String> uploadProgressPhoto({
     required String userId,
     required String photoId,

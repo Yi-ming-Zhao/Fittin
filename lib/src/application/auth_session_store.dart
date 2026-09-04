@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+
+const webRefreshCookieMarker = '__fittin_http_only_refresh_cookie__';
 
 class CachedAuthUser {
   const CachedAuthUser({
@@ -22,6 +25,12 @@ abstract class AuthSessionStore {
 
   Future<void> saveAccessToken(String token);
 
+  Future<String?> loadRefreshToken();
+
+  Future<void> saveRefreshToken(String token);
+
+  Future<String> loadOrCreateDeviceId();
+
   Future<CachedAuthUser?> loadCachedUser();
 
   Future<void> saveCachedUser(CachedAuthUser user);
@@ -31,11 +40,14 @@ abstract class AuthSessionStore {
 
 class InMemoryAuthSessionStore implements AuthSessionStore {
   String? _token;
+  String? _refreshToken;
   CachedAuthUser? _user;
+  String? _deviceId;
 
   @override
   Future<void> clear() async {
     _token = null;
+    _refreshToken = null;
     _user = null;
   }
 
@@ -43,11 +55,24 @@ class InMemoryAuthSessionStore implements AuthSessionStore {
   Future<String?> loadAccessToken() async => _token;
 
   @override
+  Future<String?> loadRefreshToken() async => _refreshToken;
+
+  @override
+  Future<String> loadOrCreateDeviceId() async {
+    return _deviceId ??= const Uuid().v4();
+  }
+
+  @override
   Future<CachedAuthUser?> loadCachedUser() async => _user;
 
   @override
   Future<void> saveAccessToken(String token) async {
     _token = token;
+  }
+
+  @override
+  Future<void> saveRefreshToken(String token) async {
+    _refreshToken = token;
   }
 
   @override
@@ -60,6 +85,8 @@ class SharedPreferencesAuthSessionStore implements AuthSessionStore {
   SharedPreferencesAuthSessionStore(this._preferences);
 
   static const _accessTokenKey = 'fittin.auth.accessToken';
+  static const _refreshTokenKey = 'fittin.auth.refreshToken';
+  static const _deviceIdKey = 'fittin.auth.deviceId';
   static const _userIdKey = 'fittin.auth.userId';
   static const _userEmailKey = 'fittin.auth.userEmail';
   static const _userDisplayNameKey = 'fittin.auth.userDisplayName';
@@ -70,6 +97,7 @@ class SharedPreferencesAuthSessionStore implements AuthSessionStore {
   @override
   Future<void> clear() async {
     await _preferences.remove(_accessTokenKey);
+    await _preferences.remove(_refreshTokenKey);
     await _preferences.remove(_userIdKey);
     await _preferences.remove(_userEmailKey);
     await _preferences.remove(_userDisplayNameKey);
@@ -79,6 +107,20 @@ class SharedPreferencesAuthSessionStore implements AuthSessionStore {
   @override
   Future<String?> loadAccessToken() async {
     return _preferences.getString(_accessTokenKey);
+  }
+
+  @override
+  Future<String?> loadRefreshToken() async {
+    return _preferences.getString(_refreshTokenKey);
+  }
+
+  @override
+  Future<String> loadOrCreateDeviceId() async {
+    final existing = _preferences.getString(_deviceIdKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final created = const Uuid().v4();
+    await _preferences.setString(_deviceIdKey, created);
+    return created;
   }
 
   @override
@@ -98,6 +140,14 @@ class SharedPreferencesAuthSessionStore implements AuthSessionStore {
   @override
   Future<void> saveAccessToken(String token) async {
     await _preferences.setString(_accessTokenKey, token);
+  }
+
+  @override
+  Future<void> saveRefreshToken(String token) async {
+    await _preferences.setString(
+      _refreshTokenKey,
+      kIsWeb ? webRefreshCookieMarker : token,
+    );
   }
 
   @override
@@ -124,6 +174,8 @@ class PlatformAuthSessionStore implements AuthSessionStore {
   }) : _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   static const _accessTokenKey = 'fittin.auth.accessToken';
+  static const _refreshTokenKey = 'fittin.auth.refreshToken';
+  static const _deviceIdKey = 'fittin.auth.deviceId';
   static const _userIdKey = 'fittin.auth.userId';
   static const _userEmailKey = 'fittin.auth.userEmail';
   static const _userDisplayNameKey = 'fittin.auth.userDisplayName';
@@ -134,8 +186,12 @@ class PlatformAuthSessionStore implements AuthSessionStore {
 
   @override
   Future<void> clear() async {
-    if (!kIsWeb) await _secureStorage.delete(key: _accessTokenKey);
+    if (!kIsWeb) {
+      await _secureStorage.delete(key: _accessTokenKey);
+      await _secureStorage.delete(key: _refreshTokenKey);
+    }
     await _preferences.remove(_accessTokenKey);
+    await _preferences.remove(_refreshTokenKey);
     await _preferences.remove(_userIdKey);
     await _preferences.remove(_userEmailKey);
     await _preferences.remove(_userDisplayNameKey);
@@ -153,6 +209,21 @@ class PlatformAuthSessionStore implements AuthSessionStore {
       await _preferences.remove(_accessTokenKey);
     }
     return legacyToken;
+  }
+
+  @override
+  Future<String?> loadRefreshToken() async {
+    if (kIsWeb) return _preferences.getString(_refreshTokenKey);
+    return _secureStorage.read(key: _refreshTokenKey);
+  }
+
+  @override
+  Future<String> loadOrCreateDeviceId() async {
+    final existing = _preferences.getString(_deviceIdKey);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final created = const Uuid().v4();
+    await _preferences.setString(_deviceIdKey, created);
+    return created;
   }
 
   @override
@@ -175,6 +246,18 @@ class PlatformAuthSessionStore implements AuthSessionStore {
     }
     await _secureStorage.write(key: _accessTokenKey, value: token);
     await _preferences.remove(_accessTokenKey);
+  }
+
+  @override
+  Future<void> saveRefreshToken(String token) async {
+    if (kIsWeb) {
+      // Web receives the real refresh credential only as an HttpOnly cookie.
+      // Persisting this non-secret marker lets startup attempt cookie refresh.
+      await _preferences.setString(_refreshTokenKey, webRefreshCookieMarker);
+      return;
+    }
+    await _secureStorage.write(key: _refreshTokenKey, value: token);
+    await _preferences.remove(_refreshTokenKey);
   }
 
   @override

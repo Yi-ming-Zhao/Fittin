@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import '../data/agent_entity_version.dart';
+import 'agent_mutation_diff.dart';
 import 'agent_owner_scope.dart';
 
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/application/body_metrics_provider.dart';
+import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/agent_atomic_mutation.dart';
@@ -18,10 +20,14 @@ import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
 import 'package:fittin_v2/src/data/seeds/seed_utils.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
+import 'package:fittin_v2/src/domain/models/custom_theme_palette.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
+import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final agentMutationCoordinatorProvider = Provider<AgentMutationCoordinator>((
@@ -56,6 +62,7 @@ class AgentMutationCoordinator {
         _assertScope(scope, proposal);
         return action;
       });
+      await _reconcileSelectedPalette(result!, scope);
     });
     await _refresh();
     return result!;
@@ -72,6 +79,9 @@ class AgentMutationCoordinator {
         _assertScope(scope);
         return action;
       });
+      if (result!.conflict == null) {
+        await _reconcileSelectedPalette(result!.action!, scope);
+      }
     });
     if (result!.conflict case final conflict?) throw conflict;
     await _refresh();
@@ -146,7 +156,7 @@ class AgentMutationCoordinator {
     }
 
     final args = _decodeMap(proposal.argumentsJson);
-    await _validateSecondaryPreconditions(proposal, args);
+    await _validateSecondaryPreconditions(proposal, args, before);
     final atomicWriter = AgentAtomicMutationWriter(actionStore);
     final action = await AgentBusinessTransaction(actionStore).run(() async {
       final applied = await _apply(proposal, args, before);
@@ -406,15 +416,100 @@ class AgentMutationCoordinator {
           after: null,
           currentTarget: null,
         );
+      case 'propose_create_custom_exercise':
+      case 'propose_revise_custom_exercise':
+        return _saveLibraryContent(
+          proposal,
+          args,
+          before,
+          kind: UserContentKind.customExercise,
+          payloadKey: 'exercise',
+        );
+      case 'propose_delete_custom_exercise':
+        return _deleteLibraryContent(
+          proposal,
+          before,
+          kind: UserContentKind.customExercise,
+        );
+      case 'propose_create_custom_palette':
+      case 'propose_revise_custom_palette':
+        return _saveLibraryContent(
+          proposal,
+          args,
+          before,
+          kind: UserContentKind.customThemePalette,
+          payloadKey: 'palette',
+        );
+      case 'propose_delete_custom_palette':
+        return _deleteLibraryContent(
+          proposal,
+          before,
+          kind: UserContentKind.customThemePalette,
+        );
       default:
         throw StateError('Unsupported mutation tool: ${proposal.toolName}');
     }
   }
 
+  Future<_AppliedMutation> _saveLibraryContent(
+    AgentMutationProposal proposal,
+    Map<String, dynamic> args,
+    Object? before, {
+    required UserContentKind kind,
+    required String payloadKey,
+  }) async {
+    final payload = _map(args[payloadKey]);
+    UserContentValidation.validatePayload(
+      kind: kind,
+      id: proposal.targetId,
+      payload: payload,
+    );
+    final saved = await _ref
+        .read(databaseRepositoryProvider)
+        .saveUserContent(
+          UserContentDocument(
+            id: proposal.targetId,
+            kind: kind,
+            payload: payload,
+            ownerUserId: _ref.read(currentUserIdProvider),
+          ),
+          expectedVersion: proposal.expectedVersion,
+        );
+    return _AppliedMutation(
+      targetId: proposal.targetId,
+      before: before,
+      after: saved.payload,
+      currentTarget: saved.payload,
+    );
+  }
+
+  Future<_AppliedMutation> _deleteLibraryContent(
+    AgentMutationProposal proposal,
+    Object? before, {
+    required UserContentKind kind,
+  }) async {
+    await _ref
+        .read(databaseRepositoryProvider)
+        .deleteUserContent(
+          proposal.targetId,
+          kind: kind,
+          ownerUserId: _ref.read(currentUserIdProvider),
+          expectedVersion: proposal.expectedVersion,
+        );
+    return _AppliedMutation(
+      targetId: proposal.targetId,
+      before: before,
+      after: null,
+      currentTarget: null,
+    );
+  }
+
   Future<void> _validateSecondaryPreconditions(
     AgentMutationProposal proposal,
     Map<String, dynamic> args,
+    Object? before,
   ) async {
+    _validateLibraryProposalContract(proposal, args, before);
     if (proposal.toolName != 'propose_revise_plan') return;
     final activeForDraft = await _ref
         .read(localInstanceRepositoryProvider)
@@ -449,6 +544,116 @@ class AgentMutationCoordinator {
             expectedDigest) {
       throw const AgentMutationConflict(
         'Training progress changed after this preview. Generate a fresh proposal.',
+      );
+    }
+  }
+
+  void _validateLibraryProposalContract(
+    AgentMutationProposal proposal,
+    Map<String, dynamic> args,
+    Object? before,
+  ) {
+    final contract = switch (proposal.toolName) {
+      'propose_create_custom_exercise' => (
+        targetType: 'custom_exercise',
+        kind: UserContentKind.customExercise,
+        payloadKey: 'exercise',
+        idKey: null,
+      ),
+      'propose_revise_custom_exercise' => (
+        targetType: 'custom_exercise',
+        kind: UserContentKind.customExercise,
+        payloadKey: 'exercise',
+        idKey: null,
+      ),
+      'propose_delete_custom_exercise' => (
+        targetType: 'custom_exercise',
+        kind: UserContentKind.customExercise,
+        payloadKey: null,
+        idKey: 'exerciseId',
+      ),
+      'propose_create_custom_palette' => (
+        targetType: 'custom_theme_palette',
+        kind: UserContentKind.customThemePalette,
+        payloadKey: 'palette',
+        idKey: null,
+      ),
+      'propose_revise_custom_palette' => (
+        targetType: 'custom_theme_palette',
+        kind: UserContentKind.customThemePalette,
+        payloadKey: 'palette',
+        idKey: null,
+      ),
+      'propose_delete_custom_palette' => (
+        targetType: 'custom_theme_palette',
+        kind: UserContentKind.customThemePalette,
+        payloadKey: null,
+        idKey: 'paletteId',
+      ),
+      _ => null,
+    };
+    if (contract == null) return;
+    final scope = _ref.read(agentOwnerScopeProvider);
+    final prefix = contract.kind == UserContentKind.customExercise
+        ? 'user-exercise:'
+        : 'user-palette:';
+    final isCreate = proposal.toolName.startsWith('propose_create_');
+    if (proposal.targetType != contract.targetType ||
+        !proposal.targetId.startsWith(prefix) ||
+        proposal.targetId.length == prefix.length ||
+        proposal.expectedVersion == null ||
+        proposal.ownerUserId != scope.ownerUserId ||
+        proposal.authEpoch != scope.epoch ||
+        (isCreate ? before != null : before == null)) {
+      throw const AgentMutationConflict(
+        'The library proposal identity is invalid. Generate it again.',
+      );
+    }
+    final payloadKey = contract.payloadKey;
+    Object? proposedAfter;
+    if (payloadKey != null) {
+      if (args.keys.toSet().difference({payloadKey}).isNotEmpty ||
+          !args.containsKey(payloadKey)) {
+        throw const AgentMutationConflict(
+          'The library proposal payload is invalid. Generate it again.',
+        );
+      }
+      final payload = _map(args[payloadKey]);
+      UserContentValidation.validatePayload(
+        kind: contract.kind,
+        id: proposal.targetId,
+        payload: payload,
+      );
+      proposedAfter = payload;
+    }
+    final idKey = contract.idKey;
+    if (idKey != null) {
+      if (args.keys.toSet().difference({idKey}).isNotEmpty ||
+          args[idKey] != proposal.targetId) {
+        throw const AgentMutationConflict(
+          'The library proposal target changed. Generate it again.',
+        );
+      }
+    }
+    final actualChanges = proposal.changes
+        .map((change) => change.toJson())
+        .toList(growable: false);
+    final completeEnglish = AgentMutationDiff.between(
+      before,
+      proposedAfter,
+    ).map((change) => change.toJson()).toList(growable: false);
+    final completeChinese = AgentMutationDiff.between(
+      before,
+      proposedAfter,
+      chinese: true,
+    ).map((change) => change.toJson()).toList(growable: false);
+    if (actualChanges.isEmpty ||
+        (agentPayloadDigest(actualChanges) !=
+                agentPayloadDigest(completeEnglish) &&
+            agentPayloadDigest(actualChanges) !=
+                agentPayloadDigest(completeChinese))) {
+      throw const AgentMutationConflict(
+        'The library preview is incomplete. Generate it again.',
       );
     }
   }
@@ -637,8 +842,120 @@ class AgentMutationCoordinator {
             .read(localProgressRepositoryProvider)
             .saveBodyMetric(BodyMetric.fromJson(_map(before)));
         return;
+      case 'propose_create_custom_exercise':
+        await _restoreLibraryContent(
+          action,
+          null,
+          kind: UserContentKind.customExercise,
+        );
+        return;
+      case 'propose_revise_custom_exercise':
+      case 'propose_delete_custom_exercise':
+        await _restoreLibraryContent(
+          action,
+          _map(before),
+          kind: UserContentKind.customExercise,
+        );
+        return;
+      case 'propose_create_custom_palette':
+        await _restoreLibraryContent(
+          action,
+          null,
+          kind: UserContentKind.customThemePalette,
+        );
+        return;
+      case 'propose_revise_custom_palette':
+      case 'propose_delete_custom_palette':
+        await _restoreLibraryContent(
+          action,
+          _map(before),
+          kind: UserContentKind.customThemePalette,
+        );
+        return;
       default:
         throw StateError('Unsupported undo operation: ${action.toolName}');
+    }
+  }
+
+  Future<void> _restoreLibraryContent(
+    AgentActionRecord action,
+    Map<String, dynamic>? payload, {
+    required UserContentKind kind,
+  }) async {
+    final repository = _ref.read(databaseRepositoryProvider);
+    final ownerUserId = _ref.read(currentUserIdProvider);
+    if (payload == null) {
+      await repository.deleteUserContent(
+        action.targetId,
+        kind: kind,
+        ownerUserId: ownerUserId,
+        expectedVersion: action.afterVersion,
+      );
+      return;
+    }
+    UserContentValidation.validatePayload(
+      kind: kind,
+      id: action.targetId,
+      payload: payload,
+    );
+    await repository.saveUserContent(
+      UserContentDocument(
+        id: action.targetId,
+        kind: kind,
+        payload: payload,
+        ownerUserId: ownerUserId,
+      ),
+      expectedVersion: action.afterVersion,
+    );
+  }
+
+  /// Synchronizes the selected custom palette only after the mutation and its
+  /// audit record have committed. Keeping preferences out of the database
+  /// transaction prevents a failed audit from leaving the UI ahead of the
+  /// rolled-back Isar/IndexedDB row.
+  Future<void> _reconcileSelectedPalette(
+    AgentActionRecord action,
+    AgentOwnerScope scope,
+  ) async {
+    final currentScope = _ref.read(agentOwnerScopeProvider);
+    if (!_isCustomPaletteTool(action.toolName) ||
+        action.ownerUserId != scope.ownerUserId ||
+        currentScope.ownerUserId != scope.ownerUserId ||
+        currentScope.epoch != scope.epoch ||
+        _ref.read(fittinThemeProvider) != action.targetId) {
+      return;
+    }
+
+    CustomThemePalette? palette;
+    try {
+      final document = await _ref
+          .read(databaseRepositoryProvider)
+          .fetchUserContentOfKind(
+            action.targetId,
+            kind: UserContentKind.customThemePalette,
+            ownerUserId: scope.ownerUserId,
+          );
+      if (document != null) {
+        palette = CustomThemePalette.fromJson(document.payload);
+      }
+    } on Object {
+      // The business mutation is already durable. A transient read failure
+      // must not turn a successful commit into a reported mutation failure.
+      return;
+    }
+
+    try {
+      if (palette == null) {
+        await _ref
+            .read(fittinThemeProvider.notifier)
+            .setPalette(FittinPaletteRegistry.defaultId);
+      } else {
+        await _ref.read(fittinThemeProvider.notifier).setCustomPalette(palette);
+      }
+    } on Object {
+      // Notifier state changes before SharedPreferences is awaited. Ignore a
+      // persistence failure here so an already-committed Agent action remains
+      // accurately reported as committed.
     }
   }
 
@@ -683,6 +1000,24 @@ class AgentMutationCoordinator {
           if (metric.metricId == targetId) return metric.toJson();
         }
         return null;
+      case 'custom_exercise':
+        return (await _ref
+                .read(databaseRepositoryProvider)
+                .fetchUserContentOfKind(
+                  targetId,
+                  kind: UserContentKind.customExercise,
+                  ownerUserId: _ref.read(currentUserIdProvider),
+                ))
+            ?.payload;
+      case 'custom_theme_palette':
+        return (await _ref
+                .read(databaseRepositoryProvider)
+                .fetchUserContentOfKind(
+                  targetId,
+                  kind: UserContentKind.customThemePalette,
+                  ownerUserId: _ref.read(currentUserIdProvider),
+                ))
+            ?.payload;
       default:
         throw StateError('Unsupported target type: $targetType');
     }
@@ -778,6 +1113,11 @@ class AgentMutationCoordinator {
       toolName == 'propose_create_body_metric' ||
       toolName == 'propose_update_body_metric' ||
       toolName == 'propose_delete_body_metric';
+
+  static bool _isCustomPaletteTool(String toolName) =>
+      toolName == 'propose_create_custom_palette' ||
+      toolName == 'propose_revise_custom_palette' ||
+      toolName == 'propose_delete_custom_palette';
 
   Future<void> _applyBodyMetricThroughRepository(
     _AppliedMutation applied,

@@ -11,6 +11,8 @@ import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
 
 import '../support/fake_today_workout_gateway.dart';
 import '../support/in_memory_database_repository.dart';
@@ -862,6 +864,71 @@ void main() {
     expect(success, true);
     expect(tracker?.recoveryCalls, 0);
   });
+
+  test(
+    'exercise replacement persists and completed sets protect the slot',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      final gateway = FakeTodayWorkoutGateway();
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          todayWorkoutGatewayProvider.overrideWithValue(gateway),
+        ],
+      );
+      addTearDown(container.dispose);
+      final notifier = container.read(activeSessionProvider.notifier);
+      await notifier.startOrResumeSession();
+
+      const replacement = ExerciseCatalogItem(
+        id: 'user-exercise:split-squat',
+        nameEn: 'Split squat',
+        nameZhCn: '分腿蹲',
+        movement: ExerciseMovement.kneeDominant,
+        equipment: ExerciseEquipment.dumbbell,
+        loadSemantics: ExerciseLoadSemantics.perDumbbell,
+        primaryMuscles: [ExerciseMuscle.quadriceps],
+        secondaryMuscles: [ExerciseMuscle.glutes],
+        tags: ['unilateral'],
+        roundingIncrementKg: 1,
+        isBuiltIn: false,
+      );
+      final originalId = container
+          .read(activeSessionProvider)
+          .activeWorkout!
+          .exercises
+          .first
+          .exerciseId;
+      notifier.replaceExercise(0, replacement);
+      await _flushMicrotasks();
+
+      var exercise = container
+          .read(activeSessionProvider)
+          .activeWorkout!
+          .exercises
+          .first;
+      expect(exercise.exerciseId, replacement.id);
+      expect(exercise.originalExerciseId, originalId);
+      expect(exercise.isSubstituted, true);
+      final draft = await repository.fetchActiveSessionDraft(
+        fakeWorkoutSessionState.instanceId,
+      );
+      expect(draft?.exercises.first.exerciseId, replacement.id);
+
+      notifier.completeSet(0);
+      expect(notifier.canReplaceExercise(0), false);
+      expect(
+        () => notifier.replaceExercise(0, replacement),
+        throwsA(isA<StateError>()),
+      );
+      exercise = container
+          .read(activeSessionProvider)
+          .activeWorkout!
+          .exercises
+          .first;
+      expect(exercise.exerciseId, replacement.id);
+    },
+  );
 }
 
 Future<StoredTrainingInstance> _seedGzclpInstance(

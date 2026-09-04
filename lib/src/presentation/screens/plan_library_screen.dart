@@ -465,7 +465,7 @@ class _PlanDetailScreen extends ConsumerWidget {
     final progression = _buildProgressionSummary(template);
 
     return DashboardPageScaffold(
-      bottomPadding: 24,
+      layout: DashboardPageLayout.detail,
       children: [
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,

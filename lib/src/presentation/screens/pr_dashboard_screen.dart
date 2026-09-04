@@ -232,6 +232,12 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
       strings.deadliftShort,
     ];
     final selectedSummary = summaries[_selectedLiftIndex];
+    final selectedHistory = _metricMode == PRMetricMode.actual
+        ? selectedSummary?.actualHistory
+        : selectedSummary?.estimatedHistory;
+    final chartViewportHeight = selectedHistory?.isNotEmpty ?? false
+        ? 308.0
+        : 208.0;
 
     return DashboardSurfaceCard(
       radius: 26,
@@ -255,7 +261,8 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
             ],
           ),
           SizedBox(
-            height: 308,
+            key: const ValueKey('pr-chart-viewport'),
+            height: chartViewportHeight,
             child: PageView.builder(
               key: const ValueKey('pr-lift-page-view'),
               controller: _liftPageController,
@@ -342,7 +349,14 @@ class _StrengthCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            FittinEyebrow(theme, label),
+            SizedBox(
+              width: double.infinity,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: FittinEyebrow(theme, label),
+              ),
+            ),
             const SizedBox(height: 5),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -461,7 +475,7 @@ class _LiftChart extends StatelessWidget {
           emptySemanticsFormatter: strings.chartEmptySemantics,
           summarySemanticsFormatter: strings.chartSummarySemantics,
           pointLabelFormatter: strings.chartPointLabel,
-          height: 280,
+          height: history.isEmpty ? 180 : 280,
         ),
       ],
     );
@@ -568,6 +582,7 @@ class _MilestoneHistoryScreenState
     return Scaffold(
       backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
+        layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.recentMilestones,

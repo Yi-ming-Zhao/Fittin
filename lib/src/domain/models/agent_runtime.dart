@@ -159,6 +159,40 @@ class AgentApprovalDecision {
     if (action != null) 'affectsCurrentProgress': _affectsProgress,
     'executed': outcome == AgentApprovalOutcome.committed,
   };
+
+  /// A bounded result for the next model turn.
+  ///
+  /// The complete semantic diff remains in the proposal and action history for
+  /// the confirmation UI and undo. Replaying every field of a newly-created
+  /// plan here can duplicate tens of thousands of tokens and prevent the model
+  /// from finishing after the user approves it.
+  Map<String, dynamic> toModelJson({int maxChanges = 12}) {
+    final visible = changes.take(maxChanges).map((change) {
+      String bounded(String value) =>
+          value.length <= 240 ? value : '${value.substring(0, 237)}...';
+      return {
+        'path': bounded(change.path),
+        'before': bounded(change.before),
+        'after': bounded(change.after),
+      };
+    }).toList();
+    return {
+      'status': outcome.name,
+      'operationId': operationId,
+      if (action != null) 'targetId': action!.targetId,
+      if (action != null) 'targetType': action!.targetType,
+      if (action != null) 'afterDigest': action!.afterDigest,
+      if (action?.afterVersion != null) 'version': action!.afterVersion,
+      if (changes.isNotEmpty) 'changeCount': changes.length,
+      if (visible.isNotEmpty) 'actualChanges': visible,
+      if (changes.length > visible.length) 'changesTruncated': true,
+      if (action != null && progressionEffect != null)
+        'progressionEffect': progressionEffect,
+      if (action != null) 'affectsCurrentProgress': _affectsProgress,
+      'executed': outcome == AgentApprovalOutcome.committed,
+    };
+  }
+
   bool get _affectsProgress {
     final after = jsonDecode(action!.afterJson);
     return after is Map &&

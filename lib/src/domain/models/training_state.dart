@@ -50,6 +50,8 @@ class ExerciseSessionState with _$ExerciseSessionState {
     required String stageId,
     @Default(LoadUnits.kg) String displayLoadUnit,
     @Default(false) bool showsPlateBreakdown,
+    @Default(false) bool isSubstituted,
+    String? originalExerciseId,
     @Default(0) int currentSetIndex,
     required List<SessionSetState> sets,
   }) = _ExerciseSessionState;

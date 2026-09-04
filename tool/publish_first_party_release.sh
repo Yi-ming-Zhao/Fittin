@@ -49,9 +49,27 @@ printf '%s\n' \
 ssh -t "$ecs_target" "mkdir -p '$release_root/$tag'"
 scp "$working_dir/$apk_name" "$working_dir/SHA256SUMS" "$working_dir/index.html" \
   "$ecs_target:$release_root/$tag/"
-scp "$working_dir/latest.json" "$ecs_target:$release_root/latest.json.tmp"
-ssh "$ecs_target" "mv '$release_root/latest.json.tmp' '$release_root/latest.json'"
 
-curl -fsS --max-time 20 "$public_origin/releases/latest.json" | grep -Fq "\"version\":\"$version\""
+remote_sha256="$(ssh "$ecs_target" "{ sha256sum '$release_root/$tag/$apk_name' 2>/dev/null || shasum -a 256 '$release_root/$tag/$apk_name'; } | awk '{print \$1}'")"
+if [[ "$remote_sha256" != "$sha256" ]]; then
+  echo "Remote APK checksum does not match the signed artifact." >&2
+  exit 1
+fi
+curl -fsS --max-time 20 "$public_origin/releases/$tag/" >/dev/null
 curl -fsSI --max-time 20 "$public_origin/releases/$tag/$apk_name"
+
+# Advance update discovery only after the immutable release assets are public
+# and byte-identical. Keep the prior manifest as a rollback point until the
+# public latest endpoint confirms the new version.
+scp "$working_dir/latest.json" "$ecs_target:$release_root/latest.json.tmp"
+ssh "$ecs_target" \
+  "if test -f '$release_root/latest.json'; then cp '$release_root/latest.json' '$release_root/latest.json.previous'; fi; mv '$release_root/latest.json.tmp' '$release_root/latest.json'"
+if ! curl -fsS --max-time 20 "$public_origin/releases/latest.json" \
+  | grep -Fq "\"version\":\"$version\""; then
+  ssh "$ecs_target" \
+    "if test -f '$release_root/latest.json.previous'; then mv '$release_root/latest.json.previous' '$release_root/latest.json'; fi"
+  echo "Latest manifest verification failed; restored the prior manifest." >&2
+  exit 1
+fi
+ssh "$ecs_target" "rm -f '$release_root/latest.json.previous'"
 echo "Published first-party Android release $tag."

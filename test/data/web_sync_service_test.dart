@@ -1,13 +1,19 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
+import 'package:fittin_v2/src/data/sync/sync_service.dart'
+    show SyncConflictException;
 import 'package:fittin_v2/src/data/web_database_repository.dart';
 import 'package:fittin_v2/src/data/web_local_store.dart';
 import 'package:fittin_v2/src/data/web_progress_repository.dart';
 import 'package:fittin_v2/src/data/web_sync_service.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 
 import '../support/fake_supabase_remote_repository.dart';
@@ -47,8 +53,22 @@ class _MemoryWebLocalStore extends WebLocalStore {
   Future<T> runInTransaction<T>(
     List<String> storeNames,
     Future<T> Function() operation,
-  ) {
-    return operation();
+  ) async {
+    final before = <String, Map<String, Map<String, dynamic>>>{
+      for (final storeName in storeNames)
+        storeName: {
+          for (final entry in (_records[storeName] ?? const {}).entries)
+            entry.key: Map<String, dynamic>.from(entry.value),
+        },
+    };
+    try {
+      return await operation();
+    } on Object {
+      for (final storeName in storeNames) {
+        _records[storeName] = before[storeName]!;
+      }
+      rethrow;
+    }
   }
 }
 
@@ -115,6 +135,128 @@ void main() {
       progressRepository: progressRepository,
       remoteRepository: remoteRepository,
       ownerUserId: 'user-123',
+    );
+  });
+
+  test('Web user-content batch rolls back on a CAS conflict', () async {
+    const existingId = 'user-exercise:web-existing';
+    const newId = 'user-exercise:web-new';
+    final existing = UserContentDocument(
+      id: existingId,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+      payload: _exercisePayload(existingId, 'Existing'),
+    );
+    final newDocument = UserContentDocument(
+      id: newId,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+      payload: _exercisePayload(newId, 'New'),
+    );
+    await databaseRepository.saveUserContent(existing);
+
+    await expectLater(
+      databaseRepository.saveUserContentsAtomically(
+        [newDocument, existing],
+        expectedVersions: const {newId: 0, existingId: 0},
+      ),
+      throwsStateError,
+    );
+
+    expect(
+      await databaseRepository.fetchUserContent(newId, ownerUserId: 'user-123'),
+      isNull,
+    );
+    expect(
+      (await databaseRepository.fetchUserContent(
+        existingId,
+        ownerUserId: 'user-123',
+      ))?.version,
+      1,
+    );
+  });
+
+  test('Web sync pushes and hydrates validated user content', () async {
+    const localId = 'user-exercise:web-local';
+    await databaseRepository.saveUserContent(
+      UserContentDocument(
+        id: localId,
+        kind: UserContentKind.customExercise,
+        ownerUserId: 'user-123',
+        payload: _exercisePayload(localId, 'Web local'),
+      ),
+      deviceId: 'web-device',
+    );
+
+    await syncService.synchronize();
+
+    expect(
+      remoteRepository.webUpserts,
+      contains(
+        allOf(
+          containsPair('table', 'user_content'),
+          containsPair('id', localId),
+        ),
+      ),
+    );
+    final uploaded = await databaseRepository.fetchUserContentOfKind(
+      localId,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+    );
+    expect(uploaded?.syncStatus, SyncStatusKeys.synced);
+
+    const remoteId = 'user-exercise:web-remote';
+    remoteRepository.rowsByTable['user_content'] = [
+      _remoteUserContentRow(
+        id: remoteId,
+        payload: _exercisePayload(remoteId, 'Web remote'),
+      ),
+    ];
+    await syncService.synchronize();
+
+    final hydrated = await databaseRepository.fetchUserContentOfKind(
+      remoteId,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+    );
+    expect(hydrated?.payload['nameEn'], 'Web remote');
+    expect(hydrated?.syncStatus, SyncStatusKeys.synced);
+  });
+
+  test('Web sync retains pending user content after divergence', () async {
+    const id = 'user-exercise:web-conflict';
+    await databaseRepository.saveUserContent(
+      UserContentDocument(
+        id: id,
+        kind: UserContentKind.customExercise,
+        ownerUserId: 'user-123',
+        payload: _exercisePayload(id, 'Web local edit'),
+      ),
+      deviceId: 'web-device',
+    );
+    remoteRepository.rowsByTable['user_content'] = [
+      _remoteUserContentRow(
+        id: id,
+        payload: _exercisePayload(id, 'Web remote edit'),
+      ),
+    ];
+
+    await expectLater(
+      syncService.synchronize(),
+      throwsA(isA<SyncConflictException>()),
+    );
+
+    final retained = await databaseRepository.fetchUserContentOfKind(
+      id,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+    );
+    expect(retained?.payload['nameEn'], 'Web local edit');
+    expect(retained?.syncStatus, SyncStatusKeys.conflict);
+    expect(
+      remoteRepository.webUpserts.where((row) => row['id'] == id),
+      isEmpty,
     );
   });
 
@@ -294,6 +436,37 @@ Map<String, dynamic> _remoteInstanceRow({
     'engine_state_json': '{}',
     'created_at': '2026-07-13T01:00:00.000Z',
     'updated_at': '2026-07-13T02:00:00.000Z',
+    'deleted_at': null,
+    'version': 1,
+    'last_modified_by_device_id': 'remote-device',
+  };
+}
+
+Map<String, dynamic> _exercisePayload(String id, String name) {
+  return CustomExerciseDefinition(
+    id: id,
+    nameEn: name,
+    nameZhCn: name,
+    movement: ExerciseMovement.squat,
+    equipment: ExerciseEquipment.barbell,
+    loadSemantics: ExerciseLoadSemantics.totalExternal,
+    primaryMuscles: const [ExerciseMuscle.quadriceps],
+    secondaryMuscles: const [ExerciseMuscle.glutes],
+    tags: const ['test'],
+  ).toJson();
+}
+
+Map<String, dynamic> _remoteUserContentRow({
+  required String id,
+  required Map<String, dynamic> payload,
+}) {
+  return {
+    'id': id,
+    'user_id': 'user-123',
+    'kind': UserContentKind.customExercise.name,
+    'payload_json': jsonEncode(payload),
+    'created_at': '2026-09-04T01:00:00.000Z',
+    'updated_at': '2026-09-04T02:00:00.000Z',
     'deleted_at': null,
     'version': 1,
     'last_modified_by_device_id': 'remote-device',

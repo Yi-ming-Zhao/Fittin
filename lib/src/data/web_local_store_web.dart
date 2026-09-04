@@ -41,6 +41,7 @@ class WebStoreNames {
   static const agentCheckpoints = 'agent_checkpoints';
   static const agentMemory = 'agent_memory';
   static const agentDiagnostics = 'agent_diagnostics';
+  static const userContent = 'user_content';
 
   static const all = [
     appState,
@@ -56,6 +57,7 @@ class WebStoreNames {
     agentCheckpoints,
     agentMemory,
     agentDiagnostics,
+    userContent,
   ];
 }
 
@@ -77,7 +79,7 @@ class WebLocalStore {
     : _defaultToken = defaultToken;
 
   static const _databaseName = 'fittin_v2_web_store';
-  static const _databaseVersion = 3;
+  static const _databaseVersion = 4;
   static Future<WebLocalStore>? _instance;
   static Object? _instanceToken;
 

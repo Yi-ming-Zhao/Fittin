@@ -5,6 +5,7 @@ import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/microcycle_schedule.dart';
 import 'package:fittin_v2/src/domain/program_engine.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,6 +15,10 @@ abstract class TodayWorkoutGateway {
   Future<TodayWorkoutSummary> loadTodayWorkoutSummary();
 
   Future<WorkoutSessionState> loadTodayWorkoutSession();
+
+  Future<List<Workout>> loadRemainingMicrocycleWorkouts();
+
+  Future<void> reorderTodayWorkout(String workoutId);
 
   Future<void> concludeWorkoutSession(WorkoutSessionState session);
 
@@ -87,6 +92,40 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   }
 
   @override
+  Future<List<Workout>> loadRemainingMicrocycleWorkouts() async {
+    final context = await _loadContext();
+    return context.schedule.remainingWorkoutIds
+        .map(context.template.findWorkoutById)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> reorderTodayWorkout(String workoutId) async {
+    final context = await _loadContext();
+    if (context.schedule.currentWorkoutId == workoutId) return;
+    final draft = await _repository.fetchActiveSessionDraft(
+      context.instance.instanceId,
+      ownerUserId: ownerUserId,
+    );
+    if (draft != null) {
+      throw StateError(
+        'Finish or discard the active workout before changing today\'s training day.',
+      );
+    }
+    final updatedEngineState = reorderMicrocycleEngineState(
+      template: context.template,
+      instance: context.instance,
+      nextWorkoutId: workoutId,
+    );
+    await _repository.updateInstanceEngineState(
+      instanceId: context.instance.instanceId,
+      ownerUserId: ownerUserId,
+      expectedVersion: context.instance.version,
+      engineState: updatedEngineState,
+    );
+  }
+
+  @override
   Future<void> concludeWorkoutSession(WorkoutSessionState session) async {
     final logId = _workoutConclusionLogId(session);
     final existingLog = await _repository.fetchWorkoutLogById(
@@ -144,7 +183,11 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
 
     final postInstance = context.instance.copyWith(
       currentWorkoutIndex: result.nextWorkoutIndex,
-      engineState: result.updatedEngineState,
+      engineState: normalizeMicrocycleAfterAdvance(
+        template: context.template,
+        nextWorkoutIndex: result.nextWorkoutIndex,
+        engineState: result.updatedEngineState,
+      ),
       states: result.updatedStates,
     );
     final completedAt = existingLog?.completedAt ?? DateTime.now();
@@ -188,7 +231,11 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       );
     }
 
-    final workout = template.workoutByIndex(instance.currentWorkoutIndex);
+    final schedule = resolveMicrocycleSchedule(
+      template: template,
+      instance: instance,
+    );
+    final workout = template.findWorkoutById(schedule.currentWorkoutId);
     final stateByExerciseId = {
       for (final state in instance.states) state.exerciseId: state,
     };
@@ -198,6 +245,7 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       instance: instance,
       workout: workout,
       stateByExerciseId: stateByExerciseId,
+      schedule: schedule,
     );
   }
 
@@ -235,9 +283,14 @@ ExerciseSessionState _withCanonicalExerciseId({
   required Exercise templateExercise,
   required ExerciseLibrary library,
 }) {
+  if (sessionExercise.exerciseId.startsWith('user-exercise:')) {
+    return sessionExercise;
+  }
   final resolved = library.resolve(
-    exerciseId: templateExercise.exerciseId,
-    name: templateExercise.name,
+    exerciseId: sessionExercise.exerciseId,
+    name: sessionExercise.exerciseName.isEmpty
+        ? templateExercise.name
+        : sessionExercise.exerciseName,
   );
   return sessionExercise.copyWith(exerciseId: resolved.id);
 }
@@ -311,10 +364,12 @@ class _ProgramContext {
     required this.instance,
     required this.workout,
     required this.stateByExerciseId,
+    required this.schedule,
   });
 
   final PlanTemplate template;
   final StoredTrainingInstance instance;
   final Workout workout;
   final Map<String, TrainingState> stateByExerciseId;
+  final MicrocycleSchedule schedule;
 }

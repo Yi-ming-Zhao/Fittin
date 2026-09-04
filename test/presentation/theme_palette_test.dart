@@ -7,9 +7,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Fittin palette registry', () {
-    test('contains exactly five complete palettes with stable identifiers', () {
+    test('contains eight complete palettes with stable identifiers', () {
       expect(FittinPaletteRegistry.ids, FittinPaletteId.values);
-      expect(FittinPaletteRegistry.entries, hasLength(5));
+      expect(FittinPaletteRegistry.entries, hasLength(8));
 
       for (final entry in FittinPaletteRegistry.entries.entries) {
         final theme = entry.value;
@@ -27,6 +27,9 @@ void main() {
         'bordeauxVelvet',
         'porcelainInk',
         'espressoEmber',
+        'graphiteOrchid',
+        'inkSaffron',
+        'oliveManuscript',
       ]);
       for (final id in FittinPaletteId.values) {
         expect(FittinPaletteRegistry.decode(id.storageKey), id);

@@ -73,6 +73,8 @@ _$ExerciseSessionStateImpl _$$ExerciseSessionStateImplFromJson(
   stageId: json['stageId'] as String,
   displayLoadUnit: json['displayLoadUnit'] as String? ?? LoadUnits.kg,
   showsPlateBreakdown: json['showsPlateBreakdown'] as bool? ?? false,
+  isSubstituted: json['isSubstituted'] as bool? ?? false,
+  originalExerciseId: json['originalExerciseId'] as String?,
   currentSetIndex: (json['currentSetIndex'] as num?)?.toInt() ?? 0,
   sets: (json['sets'] as List<dynamic>)
       .map((e) => SessionSetState.fromJson(e as Map<String, dynamic>))
@@ -90,6 +92,8 @@ Map<String, dynamic> _$$ExerciseSessionStateImplToJson(
   'stageId': instance.stageId,
   'displayLoadUnit': instance.displayLoadUnit,
   'showsPlateBreakdown': instance.showsPlateBreakdown,
+  'isSubstituted': instance.isSubstituted,
+  'originalExerciseId': instance.originalExerciseId,
   'currentSetIndex': instance.currentSetIndex,
   'sets': instance.sets,
 };

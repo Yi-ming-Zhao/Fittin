@@ -56,8 +56,7 @@ class _WorkoutRecordDetailScreenState
     return Scaffold(
       backgroundColor: fittinTheme.bg,
       body: DashboardPageScaffold(
-        bottomPadding: 24,
-        safeAreaBottom: true,
+        layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.insights,
@@ -230,7 +229,7 @@ class _WorkoutRecordDetailScreenState
         context,
       ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-      visualDensity: VisualDensity.compact,
+      minimumSize: const Size(44, 44),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: scheme.outlineVariant),

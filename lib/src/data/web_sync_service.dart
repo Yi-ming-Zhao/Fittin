@@ -11,6 +11,8 @@ import 'package:fittin_v2/src/data/web_progress_repository.dart';
 import 'package:fittin_v2/src/data/web_storage_models.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
+import 'package:fittin_v2/src/domain/user_content_validation.dart';
 
 class WebSyncService extends SyncService {
   // ignore: use_super_parameters
@@ -60,6 +62,7 @@ class WebSyncService extends SyncService {
       _store.getAllRecords(WebStoreNames.workoutLogs),
       _store.getAllRecords(WebStoreNames.bodyMetrics),
       _store.getAllRecords(WebStoreNames.progressPhotos),
+      _store.getAllRecords(WebStoreNames.userContent),
     ]);
     return stores
         .expand((records) => records)
@@ -242,6 +245,39 @@ class WebSyncService extends SyncService {
           return;
         }
         break;
+      case SyncEntityTypes.userContent:
+        final docs = await _store.getAllRecords(WebStoreNames.userContent);
+        final doc = docs
+            .where(
+              (candidate) =>
+                  candidate['contentId'] == item['entityId'] &&
+                  candidate['ownerUserId'] == ownerUserId,
+            )
+            .firstOrNull;
+        if (doc != null) {
+          if (doc['syncStatusKey'] == SyncStatusKeys.conflict) return;
+          if (parseStoredDateTime(doc['deletedAt']) != null) {
+            await _remoteRepository.deleteById(
+              table: 'user_content',
+              id: item['entityId'] as String,
+              version: doc['version'] as int?,
+              deviceId: doc['lastModifiedByDeviceId'] as String?,
+            );
+          } else {
+            await _remoteRepository.upsertRow(
+              table: 'user_content',
+              row: userContentRowFromDoc(doc),
+            );
+          }
+          await _completeDocPush(
+            item: item,
+            storeName: WebStoreNames.userContent,
+            keyField: 'contentKey',
+            uploaded: doc,
+          );
+          return;
+        }
+        break;
     }
 
     await _deleteQueueItemIfEntityStillMissing(item);
@@ -256,18 +292,21 @@ class WebSyncService extends SyncService {
       'progress_photos',
       ownerUserId,
     );
+    final userContent = await _fetchIncremental('user_content', ownerUserId);
 
     await _mergePlans(plans, ownerUserId);
     await _mergeInstances(instances, ownerUserId);
     await _mergeWorkoutLogs(logs, ownerUserId);
     await _mergeBodyMetrics(metrics, ownerUserId);
     await _mergeProgressPhotos(progressPhotos, ownerUserId);
+    await _mergeUserContent(userContent, ownerUserId);
     await _saveCursors(ownerUserId, {
       'plans': plans,
       'plan_instances': instances,
       'workout_logs': logs,
       'body_metrics': metrics,
       'progress_photos': progressPhotos,
+      'user_content': userContent,
     });
   }
 
@@ -571,6 +610,79 @@ class WebSyncService extends SyncService {
     }
   }
 
+  Future<void> _mergeUserContent(
+    List<Map<String, dynamic>> rows,
+    String ownerUserId,
+  ) async {
+    for (final row in rows) {
+      final contentId = row['id'] as String;
+      final kindKey = row['kind'] as String;
+      final docs = await _store.getAllRecords(WebStoreNames.userContent);
+      final existing = docs
+          .where(
+            (candidate) =>
+                candidate['contentId'] == contentId &&
+                candidate['ownerUserId'] == ownerUserId,
+          )
+          .firstOrNull;
+      final remoteVersion = row['version'] as int? ?? 1;
+      if (_shouldMarkConflict(existing, row)) {
+        await _markDocConflict(
+          WebStoreNames.userContent,
+          'contentKey',
+          existing!,
+        );
+        continue;
+      }
+      if (_shouldKeepLocal(existing, remoteVersion)) continue;
+      if (existing != null && existing['kindKey'] != kindKey) {
+        await _markDocConflict(
+          WebStoreNames.userContent,
+          'contentKey',
+          existing,
+        );
+        continue;
+      }
+      try {
+        UserContentValidation.validatePayload(
+          kind: UserContentKind.values.byName(kindKey),
+          id: contentId,
+          payload: (jsonDecode(row['payload_json'] as String? ?? '{}') as Map)
+              .cast<String, dynamic>(),
+        );
+      } on Object {
+        if (existing != null) {
+          await _markDocConflict(
+            WebStoreNames.userContent,
+            'contentKey',
+            existing,
+          );
+        }
+        continue;
+      }
+      final contentKey = '$kindKey:$contentId';
+      final doc = <String, dynamic>{
+        'contentKey': contentKey,
+        'contentId': contentId,
+        'kindKey': kindKey,
+        'ownerUserId': ownerUserId,
+        'rawJsonPayload': row['payload_json'] as String? ?? '{}',
+        'createdAt': serializeStoredDateTime(
+          DateTime.parse(row['created_at'] as String).toLocal(),
+        ),
+        'lastModifiedAt': serializeStoredDateTime(
+          DateTime.parse(row['updated_at'] as String).toLocal(),
+        ),
+        'deletedAt': serializeStoredDateTime(_parseDateTime(row['deleted_at'])),
+        'lastSyncedAt': serializeStoredDateTime(DateTime.now()),
+        'version': remoteVersion,
+        'syncStatusKey': SyncStatusKeys.synced,
+        'lastModifiedByDeviceId': row['last_modified_by_device_id'] as String?,
+      };
+      await _store.putRecord(WebStoreNames.userContent, contentKey, doc);
+    }
+  }
+
   Future<void> _completeDocPush({
     required Map<String, dynamic> item,
     required String storeName,
@@ -601,6 +713,23 @@ class WebSyncService extends SyncService {
   Future<void> _deleteQueueItemIfEntityStillMissing(
     Map<String, dynamic> item,
   ) async {
+    if (item['entityType'] == SyncEntityTypes.userContent) {
+      final queueKey = item['queueKey'] as String;
+      await _store.runInTransaction(
+        [WebStoreNames.userContent, WebStoreNames.syncQueue],
+        () async {
+          final currentQueue = await _store.getRecord(
+            WebStoreNames.syncQueue,
+            queueKey,
+          );
+          if (!_sameStoredDocument(currentQueue, item)) return;
+          final docs = await _store.getAllRecords(WebStoreNames.userContent);
+          if (docs.any((doc) => doc['contentId'] == item['entityId'])) return;
+          await _store.deleteRecord(WebStoreNames.syncQueue, queueKey);
+        },
+      );
+      return;
+    }
     final storeName = switch (item['entityType']) {
       SyncEntityTypes.template => WebStoreNames.templates,
       SyncEntityTypes.instance => WebStoreNames.instances,
@@ -679,6 +808,15 @@ class WebSyncService extends SyncService {
         );
         if (doc != null) {
           await _markDocConflict(WebStoreNames.progressPhotos, 'photoId', doc);
+        }
+        break;
+      case SyncEntityTypes.userContent:
+        final docs = await _store.getAllRecords(WebStoreNames.userContent);
+        final doc = docs
+            .where((candidate) => candidate['contentId'] == entityId)
+            .firstOrNull;
+        if (doc != null) {
+          await _markDocConflict(WebStoreNames.userContent, 'contentKey', doc);
         }
         break;
     }

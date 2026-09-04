@@ -7,6 +7,8 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
+import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
@@ -17,6 +19,7 @@ import 'package:fittin_v2/src/presentation/theme/domain_color_palettes.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
+import 'package:fittin_v2/src/presentation/widgets/exercise_catalog_sheet.dart';
 
 class ActiveSessionScreen extends ConsumerStatefulWidget {
   const ActiveSessionScreen({super.key});
@@ -51,6 +54,8 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final template = ref.watch(activeTemplateProvider).valueOrNull;
     final locale = ref.watch(appLocaleProvider);
     final exerciseLibrary = ref.watch(exerciseLibraryProvider).valueOrNull;
+    final exerciseCatalog =
+        ref.watch(exerciseCatalogProvider).valueOrNull ?? const [];
     final strings = AppStrings.of(context, ref);
     final notifier = ref.read(activeSessionProvider.notifier);
     final theme = Theme.of(context);
@@ -79,6 +84,11 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     }
 
     String localizedExercise(ExerciseSessionState exercise) {
+      for (final item in exerciseCatalog) {
+        if (item.id == exercise.exerciseId) {
+          return item.displayName(locale.code);
+        }
+      }
       final canonical = exerciseLibrary?.findKnown(
         exerciseId: exercise.exerciseId,
         name: exercise.exerciseName,
@@ -170,6 +180,14 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           activeExerciseIndex: workout.currentExerciseIndex,
           localizedExercise: localizedExercise,
           onSelectExercise: notifier.selectExercise,
+          onReplaceExercise: () => _openExerciseReplacement(
+            strings: strings,
+            theme: fittinTheme,
+            localeCode: locale.code,
+            catalog: exerciseCatalog,
+            workout: workout,
+            notifier: notifier,
+          ),
         ),
         if (sessionState.draftErrorMessage != null) ...[
           const SizedBox(height: 8),
@@ -439,6 +457,47 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     );
   }
 
+  Future<void> _openExerciseReplacement({
+    required AppStrings strings,
+    required FittinTheme theme,
+    required String localeCode,
+    required List<ExerciseCatalogItem> catalog,
+    required WorkoutSessionState workout,
+    required ActiveSessionNotifier notifier,
+  }) async {
+    final index = workout.currentExerciseIndex;
+    if (!notifier.canReplaceExercise(index)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(strings.replaceExerciseLocked)));
+      return;
+    }
+    if (catalog.isEmpty) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: theme.bg,
+      builder: (sheetContext) => ExerciseCatalogSheet(
+        theme: theme,
+        strings: strings,
+        localeCode: localeCode,
+        items: catalog,
+        selectedId: workout.exercises[index].exerciseId,
+        onSelected: (replacement) {
+          try {
+            notifier.replaceExercise(index, replacement);
+            Navigator.of(sheetContext).pop();
+          } on StateError catch (error) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(error.message.toString())));
+          }
+        },
+      ),
+    );
+  }
+
   Future<void> _editWeight(
     AppStrings strings, {
     required FittinTheme theme,
@@ -648,6 +707,7 @@ class _SessionHeader extends StatelessWidget {
     required this.activeExerciseIndex,
     required this.localizedExercise,
     required this.onSelectExercise,
+    required this.onReplaceExercise,
   });
 
   final FittinTheme theme;
@@ -665,35 +725,34 @@ class _SessionHeader extends StatelessWidget {
   final int activeExerciseIndex;
   final String Function(ExerciseSessionState) localizedExercise;
   final ValueChanged<int> onSelectExercise;
+  final VoidCallback onReplaceExercise;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    Widget titleBlock({required bool compact}) => Column(
+      key: const ValueKey('session-header-title'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        DashboardBackButton(theme: theme),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FittinEyebrow(theme, workoutTitle),
-              const SizedBox(height: 3),
-              Text(
-                exerciseName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.displayStyle(24, theme.fg).copyWith(height: 1),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                strings.sessionHeaderSetProgress(tier, setIndex + 1, totalSets),
-                style: theme.uiStyle(11, theme.fgMuted, FontWeight.w600),
-              ),
-            ],
-          ),
+        FittinEyebrow(theme, workoutTitle),
+        const SizedBox(height: 3),
+        Text(
+          exerciseName,
+          maxLines: compact ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.displayStyle(24, theme.fg).copyWith(height: 1),
         ),
+        const SizedBox(height: 4),
+        Text(
+          strings.sessionHeaderSetProgress(tier, setIndex + 1, totalSets),
+          style: theme.uiStyle(11, theme.fgMuted, FontWeight.w600),
+        ),
+      ],
+    );
+
+    Widget controls() => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
         if (canSwitchUnit)
           _HeaderTextButton(
             theme: theme,
@@ -704,7 +763,7 @@ class _SessionHeader extends StatelessWidget {
             ),
             onTap: onToggleUnit,
           ),
-        const SizedBox(width: 6),
+        if (canSwitchUnit) const SizedBox(width: 6),
         _HeaderIconButton(
           theme: theme,
           key: const ValueKey('session-weight-tools'),
@@ -720,8 +779,42 @@ class _SessionHeader extends StatelessWidget {
           activeIndex: activeExerciseIndex,
           localizedExercise: localizedExercise,
           onSelect: onSelectExercise,
+          onReplaceCurrent: onReplaceExercise,
         ),
       ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 320) {
+          return Column(
+            key: const ValueKey('session-header-compact'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  DashboardBackButton(theme: theme),
+                  const Spacer(),
+                  controls(),
+                ],
+              ),
+              const SizedBox(height: 8),
+              titleBlock(compact: true),
+            ],
+          );
+        }
+
+        return Row(
+          key: const ValueKey('session-header-wide'),
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            DashboardBackButton(theme: theme),
+            const SizedBox(width: 8),
+            Expanded(child: titleBlock(compact: false)),
+            controls(),
+          ],
+        );
+      },
     );
   }
 }
@@ -1392,7 +1485,10 @@ class _CardSetStackState extends State<_CardSetStack> {
                           child: Row(
                             children: [
                               IconButton(
-                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints(
+                                  minWidth: 44,
+                                  minHeight: 44,
+                                ),
                                 onPressed: widget.onDecreaseWeight,
                                 tooltip: widget.strings.decreaseWeight,
                                 icon: const Icon(Icons.remove_rounded),
@@ -1417,7 +1513,10 @@ class _CardSetStackState extends State<_CardSetStack> {
                                 ),
                               ),
                               IconButton(
-                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints(
+                                  minWidth: 44,
+                                  minHeight: 44,
+                                ),
                                 onPressed: widget.onIncreaseWeight,
                                 tooltip: widget.strings.increaseWeight,
                                 icon: const Icon(Icons.add_rounded),
@@ -1869,7 +1968,7 @@ class _CardMetric extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: onDecrease,
             tooltip: decreaseTooltip,
             icon: const Icon(Icons.remove_rounded),
@@ -1898,7 +1997,7 @@ class _CardMetric extends StatelessWidget {
             ),
           ),
           IconButton(
-            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             onPressed: onIncrease,
             tooltip: increaseTooltip,
             icon: const Icon(Icons.add_rounded),
@@ -2566,6 +2665,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
     required this.activeIndex,
     required this.localizedExercise,
     required this.onSelect,
+    required this.onReplaceCurrent,
   });
 
   final AppStrings strings;
@@ -2574,6 +2674,7 @@ class _ExerciseSwitchMenu extends StatelessWidget {
   final int activeIndex;
   final String Function(ExerciseSessionState) localizedExercise;
   final ValueChanged<int> onSelect;
+  final VoidCallback onReplaceCurrent;
 
   @override
   Widget build(BuildContext context) {
@@ -2590,9 +2691,31 @@ class _ExerciseSwitchMenu extends StatelessWidget {
       child: PopupMenuButton<int>(
         key: const ValueKey('switch-exercise'),
         tooltip: strings.switchExercise,
-        onSelected: onSelect,
+        onSelected: (value) {
+          if (value == -1) {
+            onReplaceCurrent();
+          } else {
+            onSelect(value);
+          }
+        },
         offset: const Offset(0, 54),
         itemBuilder: (context) => [
+          PopupMenuItem<int>(
+            value: -1,
+            child: Row(
+              children: [
+                Icon(Icons.find_replace_rounded, color: theme.accent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    strings.replaceExercise,
+                    style: theme.uiStyle(14, theme.fg, FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const PopupMenuDivider(),
           for (var i = 0; i < exercises.length; i++)
             PopupMenuItem<int>(
               value: i,

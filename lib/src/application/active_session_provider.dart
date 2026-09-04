@@ -10,6 +10,8 @@ import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 
 final databaseRepositoryProvider = Provider<DatabaseRepository>((ref) {
@@ -41,6 +43,31 @@ final activeTemplateProvider = FutureProvider<PlanTemplate>((ref) async {
   final gateway = ref.watch(todayWorkoutGatewayProvider);
   return gateway.loadActiveTemplate();
 });
+
+final remainingMicrocycleWorkoutsProvider = FutureProvider<List<Workout>>((
+  ref,
+) async {
+  ref.watch(syncRefreshProvider);
+  return ref
+      .watch(todayWorkoutGatewayProvider)
+      .loadRemainingMicrocycleWorkouts();
+});
+
+final microcycleScheduleControllerProvider = Provider((ref) {
+  return MicrocycleScheduleController(ref);
+});
+
+class MicrocycleScheduleController {
+  const MicrocycleScheduleController(this._ref);
+
+  final Ref _ref;
+
+  Future<void> moveToToday(String workoutId) async {
+    await _ref.read(todayWorkoutGatewayProvider).reorderTodayWorkout(workoutId);
+    _ref.invalidate(todayWorkoutSummaryProvider);
+    _ref.invalidate(remainingMicrocycleWorkoutsProvider);
+  }
+}
 
 bool isMissingActivePlanError(Object error) {
   return error.toString().contains('No active training plan instance');
@@ -326,6 +353,57 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     }
     _updateCurrentExercise(
       (exercise) => exercise.copyWith(displayLoadUnit: unit),
+    );
+  }
+
+  bool canReplaceExercise(int index) {
+    final workout = state.activeWorkout;
+    if (!_acceptsMutations ||
+        workout == null ||
+        index < 0 ||
+        index >= workout.exercises.length) {
+      return false;
+    }
+    return workout.exercises[index].sets.every(
+      (set) => !set.isCompleted && !set.isSkipped,
+    );
+  }
+
+  void replaceExercise(int index, ExerciseCatalogItem replacement) {
+    final workout = state.activeWorkout;
+    if (!canReplaceExercise(index) || workout == null) {
+      throw StateError(
+        'An exercise with completed or skipped sets cannot be replaced.',
+      );
+    }
+    final current = workout.exercises[index];
+    final usesBodyweight =
+        replacement.loadSemantics == ExerciseLoadSemantics.bodyweight;
+    final updatedSets = [
+      for (final set in current.sets)
+        usesBodyweight ? set.copyWith(targetWeight: 0, weight: 0) : set,
+    ];
+    final displayLoadUnit = switch (replacement.loadSemantics) {
+      ExerciseLoadSemantics.bodyweight => LoadUnits.bodyweight,
+      ExerciseLoadSemantics.cableStack ||
+      ExerciseLoadSemantics.machineStack => LoadUnits.cableStack,
+      _ => LoadUnits.kg,
+    };
+    final updated = current.copyWith(
+      exerciseId: replacement.id,
+      exerciseName: replacement.nameEn,
+      displayLoadUnit: displayLoadUnit,
+      showsPlateBreakdown:
+          replacement.equipment == ExerciseEquipment.barbell &&
+          replacement.loadSemantics == ExerciseLoadSemantics.totalExternal,
+      isSubstituted: true,
+      originalExerciseId: current.originalExerciseId ?? current.exerciseId,
+      sets: updatedSets,
+    );
+    final exercises = [...workout.exercises]..[index] = updated;
+    _setActiveWorkout(
+      workout.copyWith(exercises: exercises, currentExerciseIndex: index),
+      preserveLoading: false,
     );
   }
 

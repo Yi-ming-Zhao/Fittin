@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,11 +12,14 @@ import 'package:fittin_v2/src/data/remote/supabase_remote_repository.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
 import 'package:fittin_v2/src/data/sync/sync_service.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
+import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
 import 'package:fittin_v2/src/domain/models/progress_photo.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 
 import '../support/fake_supabase_remote_repository.dart';
 import '../support/isar_test_helper.dart';
@@ -110,6 +114,83 @@ void main() {
       await directory.delete(recursive: true);
     }
   });
+
+  test('pushes and hydrates validated owner-scoped user content', () async {
+    final local = UserContentDocument(
+      id: 'user-exercise:local-row',
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+      payload: _exercisePayload('user-exercise:local-row', 'Local row'),
+    );
+    await databaseRepository.saveUserContent(local, deviceId: 'device-local');
+
+    await syncService.synchronize();
+
+    expect(
+      remoteRepository.upserts,
+      contains(containsPair('table', 'user_content')),
+    );
+    final uploaded = await databaseRepository.fetchUserContentOfKind(
+      local.id,
+      kind: local.kind,
+      ownerUserId: 'user-123',
+    );
+    expect(uploaded?.syncStatus, SyncStatusKeys.synced);
+
+    final remoteId = 'user-exercise:remote-row';
+    remoteRepository.rowsByTable['user_content'] = [
+      _remoteUserContentRow(
+        id: remoteId,
+        payload: _exercisePayload(remoteId, 'Remote row'),
+      ),
+    ];
+    await syncService.synchronize();
+
+    final hydrated = await databaseRepository.fetchUserContentOfKind(
+      remoteId,
+      kind: UserContentKind.customExercise,
+      ownerUserId: 'user-123',
+    );
+    expect(hydrated?.payload['nameEn'], 'Remote row');
+    expect(hydrated?.syncStatus, SyncStatusKeys.synced);
+  });
+
+  test(
+    'does not overwrite pending user content after remote divergence',
+    () async {
+      const id = 'user-exercise:conflicted-row';
+      await databaseRepository.saveUserContent(
+        UserContentDocument(
+          id: id,
+          kind: UserContentKind.customExercise,
+          ownerUserId: 'user-123',
+          payload: _exercisePayload(id, 'Local edit'),
+        ),
+        deviceId: 'device-local',
+      );
+      remoteRepository.rowsByTable['user_content'] = [
+        _remoteUserContentRow(
+          id: id,
+          payload: _exercisePayload(id, 'Remote edit'),
+          deviceId: 'device-remote',
+        ),
+      ];
+
+      await expectLater(
+        syncService.synchronize(),
+        throwsA(isA<SyncConflictException>()),
+      );
+
+      final retained = await databaseRepository.fetchUserContentOfKind(
+        id,
+        kind: UserContentKind.customExercise,
+        ownerUserId: 'user-123',
+      );
+      expect(retained?.payload['nameEn'], 'Local edit');
+      expect(retained?.syncStatus, SyncStatusKeys.conflict);
+      expect(remoteRepository.upserts.where((row) => row['id'] == id), isEmpty);
+    },
+  );
 
   test(
     'synchronize merges first-login local data and reconciles remote rows',
@@ -659,5 +740,37 @@ Map<String, dynamic> _remoteInstanceRow({
     'deleted_at': null,
     'version': 1,
     'last_modified_by_device_id': 'remote-device',
+  };
+}
+
+Map<String, dynamic> _exercisePayload(String id, String name) {
+  return CustomExerciseDefinition(
+    id: id,
+    nameEn: name,
+    nameZhCn: name,
+    movement: ExerciseMovement.squat,
+    equipment: ExerciseEquipment.barbell,
+    loadSemantics: ExerciseLoadSemantics.totalExternal,
+    primaryMuscles: const [ExerciseMuscle.quadriceps],
+    secondaryMuscles: const [ExerciseMuscle.glutes],
+    tags: const ['test'],
+  ).toJson();
+}
+
+Map<String, dynamic> _remoteUserContentRow({
+  required String id,
+  required Map<String, dynamic> payload,
+  String deviceId = 'device-remote',
+}) {
+  return {
+    'id': id,
+    'user_id': 'user-123',
+    'kind': UserContentKind.customExercise.name,
+    'payload_json': jsonEncode(payload),
+    'created_at': '2026-09-04T01:00:00.000Z',
+    'updated_at': '2026-09-04T02:00:00.000Z',
+    'deleted_at': null,
+    'version': 1,
+    'last_modified_by_device_id': deviceId,
   };
 }

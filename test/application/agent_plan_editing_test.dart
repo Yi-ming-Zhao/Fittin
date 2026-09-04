@@ -110,6 +110,9 @@ void main() {
       });
       expect(result.isError, false, reason: result.encoded);
       final proposal = result.proposal!;
+      expect(result.payload['changeCount'], proposal.changes.length);
+      expect(result.payload['changedPaths'], hasLength(2));
+      expect(result.payload.containsKey('changes'), false);
       expect(
         proposal.changes.any(
           (c) =>

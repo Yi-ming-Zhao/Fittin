@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/services/today_workout_gateway.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
@@ -15,6 +17,79 @@ import '../support/in_memory_database_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late ExerciseLibrary exerciseLibrary;
+
+  setUpAll(() async {
+    exerciseLibrary = await ExerciseLibraryLoader().load();
+  });
+
+  testWidgets('microcycle chooser scrolls within a short 320px viewport', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final baseWorkout = fakePlanTemplate.workoutByIndex(0);
+    final workouts = [
+      for (var index = 0; index < 12; index++)
+        baseWorkout.copyWith(
+          id: 'day-${index + 1}',
+          name: 'Day ${index + 1}',
+          dayLabel: 'Day ${index + 1}',
+        ),
+    ];
+    final container = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(
+          InMemoryDatabaseRepository(),
+        ),
+        todayWorkoutGatewayProvider.overrideWithValue(
+          FakeTodayWorkoutGateway(),
+        ),
+        exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
+        remainingMicrocycleWorkoutsProvider.overrideWith(
+          (ref) async => workouts,
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TodayWorkoutHeroCard(compact: true),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final key in const ['reorder-microcycle', 'share-active-plan']) {
+      final action = find.byKey(ValueKey(key));
+      expect(tester.getSize(action).width, greaterThanOrEqualTo(44));
+      expect(tester.getSize(action).height, greaterThanOrEqualTo(44));
+    }
+    await tester.tap(find.byKey(const ValueKey('reorder-microcycle')));
+    await tester.pumpAndSettle();
+
+    final sheet = find.byKey(const ValueKey('microcycle-schedule-sheet'));
+    final list = find.byKey(const ValueKey('microcycle-schedule-list'));
+    expect(sheet, findsOneWidget);
+    expect(tester.getSize(sheet).height, lessThanOrEqualTo(568 * 0.78));
+    final scrollable = find.descendant(
+      of: list,
+      matching: find.byType(Scrollable),
+    );
+    expect(
+      tester.state<ScrollableState>(scrollable).position.maxScrollExtent,
+      greaterThan(0),
+    );
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('dashboard hero refreshes after switching the active plan', (
     WidgetTester tester,
@@ -50,6 +125,7 @@ void main() {
           InMemoryDatabaseRepository(),
         ),
         todayWorkoutGatewayProvider.overrideWithValue(gateway),
+        exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
       ],
     );
     addTearDown(container.dispose);
@@ -60,8 +136,7 @@ void main() {
         child: const MaterialApp(home: Scaffold(body: TodayWorkoutHeroCard())),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(find.text('Squat'), findsWidgets);
     expect(find.text('Squat Focus'), findsOneWidget);
@@ -84,8 +159,7 @@ void main() {
     container.refresh(activeTemplateProvider);
     container.refresh(todayWorkoutSummaryProvider);
 
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
 
     expect(find.text('Squat'), findsWidgets);
     expect(find.text('Competition Squat'), findsNothing);
@@ -106,6 +180,7 @@ void main() {
             template: fakePlanTemplate,
           ),
         ),
+        exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
       ],
     );
     addTearDown(container.dispose);
@@ -141,6 +216,7 @@ void main() {
           InMemoryDatabaseRepository(),
         ),
         todayWorkoutGatewayProvider.overrideWithValue(gateway),
+        exerciseLibraryProvider.overrideWith((ref) async => exerciseLibrary),
       ],
     );
     addTearDown(container.dispose);
@@ -229,4 +305,11 @@ class _SwitchableTodayWorkoutGateway implements TodayWorkoutGateway {
   Future<WorkoutSessionState> loadTodayWorkoutSession() async {
     return fakeWorkoutSessionState;
   }
+
+  @override
+  Future<List<Workout>> loadRemainingMicrocycleWorkouts() async =>
+      template.workouts;
+
+  @override
+  Future<void> reorderTodayWorkout(String workoutId) async {}
 }

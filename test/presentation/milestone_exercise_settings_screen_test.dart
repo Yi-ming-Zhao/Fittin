@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/milestone_preferences_provider.dart';
 import 'package:fittin_v2/src/presentation/screens/milestone_exercise_settings_screen.dart';
 
@@ -16,6 +17,7 @@ void main() {
   ) async {
     SharedPreferences.setMockInitialValues({});
     final notifier = MilestoneExercisePreferencesNotifier(loadPersisted: false);
+    final library = await tester.runAsync(() => ExerciseLibraryLoader().load());
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -23,23 +25,27 @@ void main() {
             InMemoryDatabaseRepository(),
           ),
           milestoneExercisePreferencesProvider.overrideWith((ref) => notifier),
+          exerciseLibraryProvider.overrideWith((ref) async => library!),
         ],
         child: const MaterialApp(home: MilestoneExerciseSettingsScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    // The asset is loaded before the widget tree so this interaction test does
+    // not depend on unrelated asset-bundle scheduling.
+    await tester.pump();
+    final overheadTile = find.byKey(
+      const ValueKey('milestone-exercise-overhead_press'),
+    );
 
     expect(notifier.state.exerciseIds, defaultMilestoneExerciseIds);
     expect(find.text('3 selected'), findsOneWidget);
+    expect(overheadTile, findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey('milestone-exercise-search')),
       'overhead press',
     );
     await tester.pump();
-    final overheadTile = find.byKey(
-      const ValueKey('milestone-exercise-overhead_press'),
-    );
     expect(overheadTile, findsOneWidget);
     await tester.tap(overheadTile);
     await tester.pump();

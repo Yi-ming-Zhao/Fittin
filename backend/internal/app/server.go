@@ -3,6 +3,10 @@ package app
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -25,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -53,6 +58,15 @@ type rateWindow struct {
 
 const maxRateLimitEntries = 10_000
 
+type refreshCredentialMatch uint8
+
+const (
+	refreshCredentialInvalid refreshCredentialMatch = iota
+	refreshCredentialCurrent
+	refreshCredentialPreviousRace
+	refreshCredentialPreviousReuse
+)
+
 type tableSpec struct {
 	Name             string
 	Columns          []string
@@ -61,6 +75,18 @@ type tableSpec struct {
 }
 
 var syncTableSpecs = map[string]tableSpec{
+	"user_content": {
+		Name: "user_content",
+		Columns: []string{
+			"id", "user_id", "kind", "payload_json", "created_at", "updated_at",
+			"deleted_at", "version", "last_modified_by_device_id",
+		},
+		UpsertColumns: []string{
+			"user_id", "kind", "payload_json", "created_at", "updated_at",
+			"deleted_at", "version", "last_modified_by_device_id",
+		},
+		AllowedTimestamp: map[string]bool{"updated_at": true, "created_at": true},
+	},
 	"plans": {
 		Name: "plans",
 		Columns: []string{
@@ -160,10 +186,11 @@ func NewServer() (*Server, error) {
 	mux.HandleFunc("/", server.handleRoot)
 	mux.HandleFunc("/healthz", server.handleHealthz)
 	mux.HandleFunc("/readyz", server.handleReadyz)
-	mux.HandleFunc("/v1/auth/sign-up", server.handleSignUp)
-	mux.HandleFunc("/v1/auth/sign-in", server.handleSignIn)
-	mux.HandleFunc("/v1/auth/session", server.withAuth(server.handleSession))
-	mux.HandleFunc("/v1/auth/sign-out", server.withAuth(server.handleSignOut))
+	mux.HandleFunc("/v1/auth/sign-up", server.withNoStore(server.handleSignUp))
+	mux.HandleFunc("/v1/auth/sign-in", server.withNoStore(server.handleSignIn))
+	mux.HandleFunc("/v1/auth/refresh", server.withNoStore(server.handleRefresh))
+	mux.HandleFunc("/v1/auth/session", server.withNoStore(server.withAuth(server.handleSession)))
+	mux.HandleFunc("/v1/auth/sign-out", server.withNoStore(server.withAuth(server.handleSignOut)))
 	mux.HandleFunc("/v1/sync/upsert/", server.withAuth(server.handleSyncUpsert))
 	mux.HandleFunc("/v1/sync/", server.withAuth(server.handleSync))
 	mux.HandleFunc("/v1/files/progress-photos", server.withAuth(server.handleProgressPhotoUpload))
@@ -193,7 +220,8 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 			w.Header().Set("Vary", "Origin")
 			if s.cfg.AllowedOrigins[origin] {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
-				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Fittin-Auth-Version, X-Fittin-Auth-Platform, X-Fittin-Device-Id")
 				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 			}
 		}
@@ -205,6 +233,18 @@ func (s *Server) withCORS(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func (s *Server) withNoStore(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		setNoStoreHeaders(w)
+		next(w, r)
+	}
+}
+
+func setNoStoreHeaders(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Pragma", "no-cache")
 }
 
 func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -249,6 +289,9 @@ func (s *Server) handleReadyz(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) withRateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v1/auth/") {
+			setNoStoreHeaders(w)
+		}
 		if r.Method == http.MethodOptions || !isRateLimitedRequest(r) {
 			next.ServeHTTP(w, r)
 			return
@@ -321,9 +364,29 @@ type authRequest struct {
 }
 
 type authResponse struct {
-	AccessToken string         `json:"accessToken"`
-	User        map[string]any `json:"user"`
+	AccessToken           string         `json:"accessToken"`
+	AccessTokenExpiresAt  string         `json:"accessTokenExpiresAt,omitempty"`
+	RefreshToken          string         `json:"refreshToken,omitempty"`
+	RefreshTokenExpiresAt string         `json:"refreshTokenExpiresAt,omitempty"`
+	HasRefreshToken       bool           `json:"hasRefreshToken,omitempty"`
+	User                  map[string]any `json:"user"`
 }
+
+type issuedAuthSession struct {
+	AccessToken           string
+	AccessTokenExpiresAt  time.Time
+	RefreshToken          string
+	RefreshTokenExpiresAt time.Time
+	HasRefreshToken       bool
+}
+
+const (
+	authProtocolVersionHeader = "X-Fittin-Auth-Version"
+	authPlatformHeader        = "X-Fittin-Auth-Platform"
+	refreshCookieName         = "fittin_refresh"
+	maxRefreshBodyBytes       = 8 << 10
+	refreshRaceGrace          = 15 * time.Second
+)
 
 func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -383,7 +446,14 @@ func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := s.issueSessionTokenWithExecutor(r.Context(), tx, userID, req.Email, r.Header.Get("X-Fittin-Device-Id"))
+	credentials, err := s.issueAuthSessionWithExecutor(
+		r.Context(),
+		tx,
+		userID,
+		req.Email,
+		r.Header.Get("X-Fittin-Device-Id"),
+		supportsRefreshSessions(r),
+	)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
@@ -393,14 +463,11 @@ func (s *Server) handleSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, authResponse{
-		AccessToken: token,
-		User: map[string]any{
-			"id":          userID,
-			"email":       req.Email,
-			"displayName": req.Email,
-			"isAnonymous": false,
-		},
+	s.writeAuthResponse(w, r, http.StatusCreated, credentials, map[string]any{
+		"id":          userID,
+		"email":       req.Email,
+		"displayName": req.Email,
+		"isAnonymous": false,
 	})
 }
 
@@ -436,16 +503,20 @@ func (s *Server) handleSignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := s.issueSessionToken(r.Context(), user.ID, user.Email, r.Header.Get("X-Fittin-Device-Id"))
+	credentials, err := s.issueAuthSessionWithExecutor(
+		r.Context(),
+		s.db,
+		user.ID,
+		user.Email,
+		r.Header.Get("X-Fittin-Device-Id"),
+		supportsRefreshSessions(r),
+	)
 	if err != nil {
 		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, authResponse{
-		AccessToken: token,
-		User:        authUserPayload(user),
-	})
+	s.writeAuthResponse(w, r, http.StatusOK, credentials, authUserPayload(user))
 }
 
 func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
@@ -463,10 +534,57 @@ func (s *Server) handleSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusServiceUnavailable, "database_unavailable", "account service is temporarily unavailable")
 		return
 	}
-	writeJSON(w, http.StatusOK, authResponse{
-		AccessToken: bearerToken(r.Header.Get("Authorization")),
-		User:        authUserPayload(user),
-	})
+	credentials := issuedAuthSession{AccessToken: bearerToken(r.Header.Get("Authorization"))}
+	if supportsRefreshSessions(r) {
+		sessionID, _ := r.Context().Value(contextKeySessionID{}).(string)
+		credentials, err = s.bootstrapRefreshSession(
+			r.Context(),
+			sessionID,
+			user.ID,
+			user.Email,
+		)
+		if err != nil {
+			if errors.Is(err, errAuthSessionInactive) || errors.Is(err, pgx.ErrNoRows) {
+				writeError(w, http.StatusUnauthorized, "session_invalid", "session has expired or was revoked")
+				return
+			}
+			writeError(w, http.StatusServiceUnavailable, "database_unavailable", "session upgrade is temporarily unavailable")
+			return
+		}
+	}
+	s.writeAuthResponse(w, r, http.StatusOK, credentials, authUserPayload(user))
+}
+
+func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+		return
+	}
+	if !supportsRefreshSessions(r) {
+		writeError(w, http.StatusBadRequest, "refresh_protocol_required", "refresh protocol version 2 is required")
+		return
+	}
+
+	refreshToken, err := refreshTokenFromRequest(w, r)
+	if err != nil {
+		var maxBytesError *http.MaxBytesError
+		if errors.As(err, &maxBytesError) {
+			writeError(w, http.StatusRequestEntityTooLarge, "refresh_request_too_large", "refresh request is too large")
+			return
+		}
+		if errors.Is(err, errRefreshCredentialMissing) {
+			writeError(w, http.StatusUnauthorized, "refresh_invalid", "refresh session is invalid")
+			return
+		}
+		writeError(w, http.StatusBadRequest, "invalid_refresh_request", "invalid refresh request")
+		return
+	}
+	credentials, user, status, code, err := s.rotateRefreshSession(r.Context(), refreshToken)
+	if err != nil {
+		writeError(w, status, code, refreshErrorMessage(code))
+		return
+	}
+	s.writeAuthResponse(w, r, http.StatusOK, credentials, authUserPayload(user))
 }
 
 func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
@@ -479,6 +597,9 @@ func (s *Server) handleSignOut(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusServiceUnavailable, "database_unavailable", "sign-out is temporarily unavailable")
 			return
 		}
+	}
+	if isWebAuthClient(r) {
+		clearRefreshCookie(w, r)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
@@ -867,7 +988,7 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenString := bearerToken(r.Header.Get("Authorization"))
 		if tokenString == "" {
-			writeError(w, http.StatusUnauthorized, "missing bearer token")
+			writeError(w, http.StatusUnauthorized, "missing_bearer_token", "missing bearer token")
 			return
 		}
 		claims := jwt.MapClaims{}
@@ -876,7 +997,11 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 			return []byte(s.cfg.JWTSecret), nil
 		})
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "invalid bearer token")
+			if errors.Is(err, jwt.ErrTokenExpired) {
+				writeError(w, http.StatusUnauthorized, "access_token_expired", "access token has expired")
+			} else {
+				writeError(w, http.StatusUnauthorized, "access_token_invalid", "invalid access token")
+			}
 			return
 		}
 
@@ -884,7 +1009,7 @@ func (s *Server) withAuth(next http.HandlerFunc) http.HandlerFunc {
 		email, _ := claims["email"].(string)
 		sessionID, _ := claims["jti"].(string)
 		if userID == "" {
-			writeError(w, http.StatusUnauthorized, "invalid bearer token")
+			writeError(w, http.StatusUnauthorized, "access_token_invalid", "invalid access token")
 			return
 		}
 		if sessionID != "" && s.db != nil {
@@ -1279,6 +1404,514 @@ func decodeJSONRows(encoded []byte) ([]map[string]any, error) {
 	return rows, nil
 }
 
+func supportsRefreshSessions(r *http.Request) bool {
+	return strings.TrimSpace(r.Header.Get(authProtocolVersionHeader)) == "2"
+}
+
+var (
+	errRefreshCredentialMissing = errors.New("refresh credential is required")
+	errAuthSessionInactive      = errors.New("auth session is no longer active")
+)
+
+func isWebAuthClient(r *http.Request) bool {
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get(authPlatformHeader)), "web")
+}
+
+func (s *Server) accessTokenTTL() time.Duration {
+	if s.cfg.AccessTokenTTL > 0 {
+		return s.cfg.AccessTokenTTL
+	}
+	return 15 * time.Minute
+}
+
+func (s *Server) refreshTokenTTL() time.Duration {
+	if s.cfg.RefreshTokenTTL > 0 {
+		return s.cfg.RefreshTokenTTL
+	}
+	return 180 * 24 * time.Hour
+}
+
+func (s *Server) issueAuthSessionWithExecutor(
+	ctx context.Context,
+	executor commandExecutor,
+	userID string,
+	email string,
+	deviceID string,
+	refreshCapable bool,
+) (issuedAuthSession, error) {
+	if !refreshCapable {
+		token, err := s.issueSessionTokenWithExecutor(ctx, executor, userID, email, deviceID)
+		return issuedAuthSession{AccessToken: token}, err
+	}
+
+	now := time.Now().UTC()
+	sessionID := uuid.NewString()
+	refreshToken, refreshHash, err := s.refreshTokenForRotation(sessionID, 0)
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	accessExpiry := now.Add(s.accessTokenTTL())
+	accessToken, err := s.issueTokenWithSessionTTL(userID, email, sessionID, now, s.accessTokenTTL())
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	refreshExpiry := now.Add(s.refreshTokenTTL())
+	_, err = executor.Exec(
+		ctx,
+		`insert into auth_sessions (
+			id, user_id, issued_at, expires_at, device_id,
+			refresh_token_hash, refresh_token_rotated_at, last_refreshed_at
+		 ) values ($1, $2, $3, $4, nullif($5, ''), $6, $3, $3)`,
+		sessionID,
+		userID,
+		now,
+		refreshExpiry,
+		strings.TrimSpace(deviceID),
+		refreshHash,
+	)
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	return issuedAuthSession{
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  accessExpiry,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: refreshExpiry,
+		HasRefreshToken:       true,
+	}, nil
+}
+
+func (s *Server) bootstrapRefreshSession(
+	ctx context.Context,
+	sessionID string,
+	userID string,
+	email string,
+) (issuedAuthSession, error) {
+	if sessionID == "" {
+		return issuedAuthSession{}, errors.New("session id is required")
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var storedUserID string
+	var sessionExpiry time.Time
+	var revokedAt pgtype.Timestamptz
+	var refreshHash []byte
+	var rotationCounter int64
+	err = tx.QueryRow(
+		ctx,
+		`select user_id, expires_at, revoked_at, refresh_token_hash, rotation_counter
+		   from auth_sessions
+		  where id = $1
+		  for update`,
+		sessionID,
+	).Scan(&storedUserID, &sessionExpiry, &revokedAt, &refreshHash, &rotationCounter)
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	if storedUserID != userID || revokedAt.Valid || !sessionExpiry.After(time.Now().UTC()) {
+		return issuedAuthSession{}, errAuthSessionInactive
+	}
+
+	now := time.Now().UTC()
+	refreshToken, newHash, err := s.refreshTokenForRotation(sessionID, rotationCounter)
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	sessionExpiry = now.Add(s.refreshTokenTTL())
+	if len(refreshHash) == 0 {
+		_, err = tx.Exec(
+			ctx,
+			`update auth_sessions
+			    set refresh_token_hash = $2,
+			        refresh_token_rotated_at = $3,
+			        last_refreshed_at = $3,
+			        expires_at = $4
+			  where id = $1`,
+			sessionID,
+			newHash,
+			now,
+			sessionExpiry,
+		)
+		if err != nil {
+			return issuedAuthSession{}, err
+		}
+	} else if equalRefreshHash(refreshHash, newHash) {
+		// Bootstrap is idempotent. Repeated or concurrent upgrades return the
+		// same current credential instead of rotating it again and racing the
+		// delivery of an older response.
+		_, err = tx.Exec(
+			ctx,
+			`update auth_sessions
+			    set last_refreshed_at = $2,
+			        expires_at = $3
+			  where id = $1`,
+			sessionID,
+			now,
+			sessionExpiry,
+		)
+		if err != nil {
+			return issuedAuthSession{}, err
+		}
+	} else {
+		// Sessions created by an earlier random-token implementation cannot be
+		// reconstructed. Convert them once to the counter-derived format while
+		// holding the row lock; every concurrent waiter then returns this value.
+		rotationCounter++
+		refreshToken, newHash, err = s.refreshTokenForRotation(sessionID, rotationCounter)
+		if err != nil {
+			return issuedAuthSession{}, err
+		}
+		_, err = tx.Exec(
+			ctx,
+			`update auth_sessions
+			    set previous_refresh_token_hash = refresh_token_hash,
+			        refresh_token_hash = $2,
+			        refresh_token_rotated_at = $3,
+			        last_refreshed_at = $3,
+			        expires_at = $4,
+			        rotation_counter = $5
+			  where id = $1`,
+			sessionID,
+			newHash,
+			now,
+			sessionExpiry,
+			rotationCounter,
+		)
+		if err != nil {
+			return issuedAuthSession{}, err
+		}
+	}
+
+	accessToken, err := s.issueTokenWithSessionTTL(userID, email, sessionID, now, s.accessTokenTTL())
+	if err != nil {
+		return issuedAuthSession{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return issuedAuthSession{}, err
+	}
+	return issuedAuthSession{
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  now.Add(s.accessTokenTTL()),
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: sessionExpiry,
+		HasRefreshToken:       true,
+	}, nil
+}
+
+func refreshTokenFromRequest(w http.ResponseWriter, r *http.Request) (string, error) {
+	if isWebAuthClient(r) {
+		cookie, err := r.Cookie(refreshCookieName)
+		if err != nil || strings.TrimSpace(cookie.Value) == "" {
+			return "", errRefreshCredentialMissing
+		}
+		return strings.TrimSpace(cookie.Value), nil
+	}
+	var req struct {
+		RefreshToken string `json:"refreshToken"`
+	}
+	if err := decodeJSONBody(w, r, &req, maxRefreshBodyBytes); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(req.RefreshToken) == "" {
+		return "", errRefreshCredentialMissing
+	}
+	return strings.TrimSpace(req.RefreshToken), nil
+}
+
+func (s *Server) rotateRefreshSession(
+	ctx context.Context,
+	refreshToken string,
+) (issuedAuthSession, authUserRecord, int, string, error) {
+	sessionID, presentedHash, err := parseRefreshToken(refreshToken)
+	if err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "refresh_invalid", err
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", err
+	}
+	defer tx.Rollback(ctx)
+
+	var userID string
+	var sessionExpiry time.Time
+	var revokedAt pgtype.Timestamptz
+	var currentHash []byte
+	var previousHash []byte
+	var rotatedAt pgtype.Timestamptz
+	var lastRefreshedAt pgtype.Timestamptz
+	var rotationCounter int64
+	err = tx.QueryRow(
+		ctx,
+		`select user_id, expires_at, revoked_at, refresh_token_hash,
+		        previous_refresh_token_hash, refresh_token_rotated_at,
+		        last_refreshed_at, rotation_counter
+		   from auth_sessions
+		  where id = $1
+		  for update`,
+		sessionID,
+	).Scan(
+		&userID,
+		&sessionExpiry,
+		&revokedAt,
+		&currentHash,
+		&previousHash,
+		&rotatedAt,
+		&lastRefreshedAt,
+		&rotationCounter,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "refresh_invalid", err
+	}
+	if err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", err
+	}
+	if revokedAt.Valid {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "session_revoked", errors.New("session revoked")
+	}
+	now := time.Now().UTC()
+	if !sessionExpiry.After(now) {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "refresh_expired", errors.New("refresh expired")
+	}
+	credentialMatch := classifyRefreshCredential(presentedHash, currentHash, previousHash, rotatedAt, now)
+	switch credentialMatch {
+	case refreshCredentialPreviousRace:
+		// The row lock proves another request completed the rotation first. The
+		// counter-derived token lets concurrent requests converge on that same
+		// credential without storing plaintext refresh tokens.
+	case refreshCredentialPreviousReuse:
+		_, updateErr := tx.Exec(
+			ctx,
+			`update auth_sessions
+				    set revoked_at = $2, refresh_reuse_detected_at = $2
+				  where id = $1`,
+			sessionID,
+			now,
+		)
+		if updateErr != nil {
+			return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", updateErr
+		}
+		if commitErr := tx.Commit(ctx); commitErr != nil {
+			return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", commitErr
+		}
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "refresh_reused", errors.New("refresh token reused")
+	case refreshCredentialInvalid:
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "refresh_invalid", errors.New("refresh token invalid")
+	case refreshCredentialCurrent:
+		// Rotate below unless this is a duplicate request in the short
+		// convergence window opened by bootstrap or another refresh.
+	}
+
+	var responseRefreshToken string
+	refreshExpiry := sessionExpiry
+	if shouldRotateRefreshCredential(credentialMatch, lastRefreshedAt, now) {
+		rotationCounter++
+		responseRefreshToken, currentHash, err = s.refreshTokenForRotation(sessionID, rotationCounter)
+		if err != nil {
+			return issuedAuthSession{}, authUserRecord{}, http.StatusInternalServerError, "refresh_issue_failed", err
+		}
+		refreshExpiry = now.Add(s.refreshTokenTTL())
+		_, err = tx.Exec(
+			ctx,
+			`update auth_sessions
+			    set previous_refresh_token_hash = refresh_token_hash,
+			        refresh_token_hash = $2,
+			        refresh_token_rotated_at = $3,
+			        last_refreshed_at = $3,
+			        expires_at = $4,
+			        rotation_counter = $5
+			  where id = $1`,
+			sessionID,
+			currentHash,
+			now,
+			refreshExpiry,
+			rotationCounter,
+		)
+		if err != nil {
+			return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", err
+		}
+	} else {
+		var expectedHash []byte
+		responseRefreshToken, expectedHash, err = s.refreshTokenForRotation(sessionID, rotationCounter)
+		if err != nil {
+			return issuedAuthSession{}, authUserRecord{}, http.StatusInternalServerError, "refresh_issue_failed", err
+		}
+		if !equalRefreshHash(expectedHash, currentHash) {
+			// Compatibility fallback for a session whose current token predates
+			// counter-derived rotation. The client can retry after the winner's
+			// credential has been persisted.
+			return issuedAuthSession{}, authUserRecord{}, http.StatusConflict, "refresh_race", errors.New("refresh already rotated")
+		}
+	}
+
+	var user authUserRecord
+	err = tx.QueryRow(
+		ctx,
+		`select id, email, coalesce(nullif(display_name, ''), email), password_hash
+		   from users
+		  where id = $1`,
+		userID,
+	).Scan(&user.ID, &user.Email, &user.DisplayName, &user.PasswordHash)
+	if err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusUnauthorized, "session_invalid", err
+	}
+	accessToken, err := s.issueTokenWithSessionTTL(user.ID, user.Email, sessionID, now, s.accessTokenTTL())
+	if err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusInternalServerError, "refresh_issue_failed", err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return issuedAuthSession{}, authUserRecord{}, http.StatusServiceUnavailable, "database_unavailable", err
+	}
+	return issuedAuthSession{
+		AccessToken:           accessToken,
+		AccessTokenExpiresAt:  now.Add(s.accessTokenTTL()),
+		RefreshToken:          responseRefreshToken,
+		RefreshTokenExpiresAt: refreshExpiry,
+		HasRefreshToken:       true,
+	}, user, http.StatusOK, "", nil
+}
+
+func (s *Server) refreshTokenForRotation(sessionID string, rotationCounter int64) (string, []byte, error) {
+	if _, err := uuid.Parse(sessionID); err != nil || rotationCounter < 0 || strings.TrimSpace(s.cfg.JWTSecret) == "" {
+		return "", nil, errors.New("invalid refresh token inputs")
+	}
+	mac := hmac.New(sha256.New, []byte(s.cfg.JWTSecret))
+	_, _ = mac.Write([]byte("fittin-refresh-v1\x00"))
+	_, _ = mac.Write([]byte(sessionID))
+	_, _ = mac.Write([]byte("\x00"))
+	_, _ = mac.Write([]byte(strconv.FormatInt(rotationCounter, 10)))
+	secret := mac.Sum(nil)
+	token := sessionID + "." + base64.RawURLEncoding.EncodeToString(secret)
+	hash := sha256.Sum256([]byte(token))
+	return token, hash[:], nil
+}
+
+func parseRefreshToken(token string) (string, []byte, error) {
+	sessionID, secret, ok := strings.Cut(strings.TrimSpace(token), ".")
+	if !ok || sessionID == "" || secret == "" {
+		return "", nil, errors.New("invalid refresh token")
+	}
+	if _, err := uuid.Parse(sessionID); err != nil {
+		return "", nil, errors.New("invalid refresh token")
+	}
+	decoded, err := base64.RawURLEncoding.DecodeString(secret)
+	if err != nil || len(decoded) != 32 {
+		return "", nil, errors.New("invalid refresh token")
+	}
+	hash := sha256.Sum256([]byte(token))
+	return sessionID, hash[:], nil
+}
+
+func equalRefreshHash(left, right []byte) bool {
+	return len(left) == sha256.Size && len(right) == sha256.Size && subtle.ConstantTimeCompare(left, right) == 1
+}
+
+func classifyRefreshCredential(
+	presented []byte,
+	current []byte,
+	previous []byte,
+	rotatedAt pgtype.Timestamptz,
+	now time.Time,
+) refreshCredentialMatch {
+	if equalRefreshHash(presented, current) {
+		return refreshCredentialCurrent
+	}
+	if !equalRefreshHash(presented, previous) {
+		return refreshCredentialInvalid
+	}
+	if rotatedAt.Valid && now.Sub(rotatedAt.Time) <= refreshRaceGrace {
+		return refreshCredentialPreviousRace
+	}
+	return refreshCredentialPreviousReuse
+}
+
+func shouldRotateRefreshCredential(
+	credentialMatch refreshCredentialMatch,
+	lastRefreshedAt pgtype.Timestamptz,
+	now time.Time,
+) bool {
+	if credentialMatch != refreshCredentialCurrent {
+		return false
+	}
+	return !lastRefreshedAt.Valid || now.Sub(lastRefreshedAt.Time) > refreshRaceGrace
+}
+
+func refreshErrorMessage(code string) string {
+	switch code {
+	case "refresh_race":
+		return "refresh was already rotated; retry with the latest credential"
+	case "database_unavailable":
+		return "session service is temporarily unavailable"
+	case "refresh_expired":
+		return "refresh session has expired"
+	case "session_revoked", "refresh_reused":
+		return "refresh session has been revoked"
+	default:
+		return "refresh session is invalid"
+	}
+}
+
+func (s *Server) writeAuthResponse(
+	w http.ResponseWriter,
+	r *http.Request,
+	status int,
+	credentials issuedAuthSession,
+	user map[string]any,
+) {
+	response := authResponse{
+		AccessToken:     credentials.AccessToken,
+		HasRefreshToken: credentials.HasRefreshToken,
+		User:            user,
+	}
+	if !credentials.AccessTokenExpiresAt.IsZero() {
+		response.AccessTokenExpiresAt = credentials.AccessTokenExpiresAt.UTC().Format(time.RFC3339)
+	}
+	if !credentials.RefreshTokenExpiresAt.IsZero() {
+		response.RefreshTokenExpiresAt = credentials.RefreshTokenExpiresAt.UTC().Format(time.RFC3339)
+	}
+	if credentials.RefreshToken != "" {
+		if isWebAuthClient(r) {
+			setRefreshCookie(w, r, credentials.RefreshToken, credentials.RefreshTokenExpiresAt)
+		} else {
+			response.RefreshToken = credentials.RefreshToken
+		}
+	}
+	writeJSON(w, status, response)
+}
+
+func setRefreshCookie(w http.ResponseWriter, r *http.Request, token string, expiresAt time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    token,
+		Path:     "/",
+		Expires:  expiresAt,
+		MaxAge:   int(time.Until(expiresAt).Seconds()),
+		HttpOnly: true,
+		Secure:   requestUsesHTTPS(r),
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func clearRefreshCookie(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     refreshCookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(1, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   requestUsesHTTPS(r),
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func requestUsesHTTPS(r *http.Request) bool {
+	return r.TLS != nil || strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")), "https")
+}
+
 func (s *Server) issueToken(userID, email string) (string, error) {
 	return s.issueTokenWithSession(userID, email, uuid.NewString(), time.Now())
 }
@@ -1314,11 +1947,24 @@ func (s *Server) issueSessionTokenWithExecutor(ctx context.Context, executor com
 }
 
 func (s *Server) issueTokenWithSession(userID, email, sessionID string, now time.Time) (string, error) {
+	return s.issueTokenWithSessionTTL(userID, email, sessionID, now, 24*time.Hour)
+}
+
+func (s *Server) issueTokenWithSessionTTL(
+	userID string,
+	email string,
+	sessionID string,
+	now time.Time,
+	ttl time.Duration,
+) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   userID,
 		"email": email,
 		"jti":   sessionID,
-		"exp":   now.Add(24 * time.Hour).Unix(),
+		"typ":   "access",
+		"iss":   "fittin",
+		"aud":   "fittin-api",
+		"exp":   now.Add(ttl).Unix(),
 		"iat":   now.Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

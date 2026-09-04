@@ -26,8 +26,7 @@ class SetTypeGuideScreen extends ConsumerWidget {
     final guideAsync = ref.watch(_setTypeGuideProvider);
 
     return DashboardPageScaffold(
-      bottomPadding: 24,
-      safeAreaBottom: true,
+      layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
           eyebrow: strings.profile,

@@ -104,9 +104,9 @@ void main() {
     expect(find.text('第2周 · 第3天'), findsWidgets);
     expect(find.text('周期'), findsOneWidget);
     expect(find.text('三大项力量记录'), findsOneWidget);
-    expect(find.text('切换计划'), findsOneWidget);
+    expect(find.text('记录有氧'), findsOneWidget);
     expect(find.text('查看全部 PR'), findsOneWidget);
-    expect(find.text('Switch plan'), findsNothing);
+    expect(find.text('Record cardio'), findsNothing);
     expect(find.text('See all PRs'), findsNothing);
     expect(find.text('BIG THREE HISTORY'), findsNothing);
     expect(tester.takeException(), isNull);

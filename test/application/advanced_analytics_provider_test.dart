@@ -3,6 +3,7 @@ import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 
 void main() {
@@ -12,6 +13,50 @@ void main() {
 
   setUpAll(() async {
     exerciseLibrary = await ExerciseLibraryLoader().load();
+  });
+
+  test('consistency combines strength and cardio without losing modality', () {
+    final data = buildAdvancedAnalytics(
+      logs: [_log(DateTime(2026, 3, 4, 10))],
+      cardioRecords: [
+        CardioRecord(
+          id: 'run',
+          activityTypeId: 'cardio:running',
+          activityName: 'Running',
+          startedAt: DateTime(2026, 3, 4, 18),
+          metrics: const {
+            CardioMetricKey.durationSeconds: 1800,
+            CardioMetricKey.distanceMeters: 5000,
+          },
+        ),
+        CardioRecord(
+          id: 'ride',
+          activityTypeId: 'cardio:cycling',
+          activityName: 'Cycling',
+          startedAt: DateTime(2026, 3, 6, 18),
+          metrics: const {CardioMetricKey.durationSeconds: 2400},
+        ),
+      ],
+      exerciseLibrary: exerciseLibrary,
+      activeInstance: null,
+      now: DateTime(2026, 3, 8),
+    );
+
+    final mixed = data.recordFor(DateTime(2026, 3, 4))!;
+    expect(mixed.hasStrength, isTrue);
+    expect(mixed.hasCardio, isTrue);
+    expect(mixed.logs, hasLength(1));
+    expect(mixed.cardioRecords, hasLength(1));
+    final cardioOnly = data.recordFor(DateTime(2026, 3, 6))!;
+    expect(cardioOnly.hasStrength, isFalse);
+    expect(cardioOnly.hasCardio, isTrue);
+    expect(data.recordedDates, [DateTime(2026, 3, 4), DateTime(2026, 3, 6)]);
+    final summary = data.summaryFor(ConsistencyRange.week);
+    expect(summary.strengthSessions, 1);
+    expect(summary.strengthVolumeKg, 500);
+    expect(summary.cardioSessions, 2);
+    expect(summary.cardioDurationSeconds, 4200);
+    expect(summary.cardioDistanceMeters, 5000);
   });
 
   test('buildAdvancedAnalytics groups logs and uses real muscle weights', () {

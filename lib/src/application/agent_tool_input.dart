@@ -59,18 +59,25 @@ abstract final class AgentToolInput {
     }
     if (value is num) {
       if (!value.isFinite ||
+          (schema['exclusiveMinimum'] is num &&
+              value <= (schema['exclusiveMinimum'] as num)) ||
           (schema['minimum'] is num && value < (schema['minimum'] as num)) ||
           (schema['maximum'] is num && value > (schema['maximum'] as num))) {
         throw FormatException('$path is outside the allowed range.');
       }
     } else if (value is String) {
-      if (value.length > (schema['maxLength'] as int? ?? 16000)) {
-        throw FormatException('$path is too long.');
+      if (value.length < (schema['minLength'] as int? ?? 0) ||
+          value.length > (schema['maxLength'] as int? ?? 16000)) {
+        throw FormatException('$path has an invalid length.');
       }
     } else if (value is List) {
       if (value.length < (schema['minItems'] as int? ?? 0) ||
           value.length > (schema['maxItems'] as int? ?? 1000)) {
         throw FormatException('$path has an invalid number of items.');
+      }
+      if (schema['uniqueItems'] == true &&
+          value.map(canonicalJson).toSet().length != value.length) {
+        throw FormatException('$path contains duplicate items.');
       }
       for (var i = 0; i < value.length; i++) {
         _visit(
@@ -104,5 +111,16 @@ abstract final class AgentToolInput {
         );
       }
     }
+  }
+
+  static String canonicalJson(Object? value) {
+    if (value is Map) {
+      final keys = value.keys.map((key) => '$key').toList()..sort();
+      return '{${keys.map((key) => '${jsonEncode(key)}:${canonicalJson(value[key])}').join(',')}}';
+    }
+    if (value is List) {
+      return '[${value.map(canonicalJson).join(',')}]';
+    }
+    return jsonEncode(value);
   }
 }

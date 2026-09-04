@@ -36,7 +36,7 @@ class _MilestoneExerciseSettingsScreenState
     return Scaffold(
       backgroundColor: theme.bg,
       body: DashboardPageScaffold(
-        topPadding: 28,
+        layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
             eyebrow: strings.settings,

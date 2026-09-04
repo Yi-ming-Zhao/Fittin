@@ -54,6 +54,10 @@ void main() {
       'get_workout_history',
       'analyze_training',
       'get_body_metrics',
+      'list_exercises',
+      'get_exercise',
+      'list_theme_palettes',
+      'get_theme_palette',
     });
     expect(AgentToolRegistry.exposedMutationToolsForTesting, {
       'propose_create_plan',
@@ -65,6 +69,12 @@ void main() {
       'propose_create_body_metric',
       'propose_update_body_metric',
       'propose_delete_body_metric',
+      'propose_create_custom_exercise',
+      'propose_revise_custom_exercise',
+      'propose_delete_custom_exercise',
+      'propose_create_custom_palette',
+      'propose_revise_custom_palette',
+      'propose_delete_custom_palette',
     });
     final names = {
       ...AgentToolRegistry.exposedReadToolsForTesting,

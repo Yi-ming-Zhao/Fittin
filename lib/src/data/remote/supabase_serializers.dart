@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/models/body_metric_collection.dart';
 import 'package:fittin_v2/src/data/models/template_collection.dart';
+import 'package:fittin_v2/src/data/models/user_content_collection.dart';
 import 'package:fittin_v2/src/data/models/workout_log_collection.dart';
 import 'package:fittin_v2/src/data/sync/sync_models.dart';
 
@@ -16,6 +17,22 @@ Map<String, dynamic> planRowFromCollection(TemplateCollection collection) {
     'is_built_in': collection.isBuiltIn,
     'is_archived': false,
     'raw_json': collection.rawJsonPayload,
+    'created_at': collection.createdAt.toUtc().toIso8601String(),
+    'updated_at': collection.lastModifiedAt.toUtc().toIso8601String(),
+    'deleted_at': collection.deletedAt?.toUtc().toIso8601String(),
+    'version': collection.version,
+    'last_modified_by_device_id': collection.lastModifiedByDeviceId,
+  };
+}
+
+Map<String, dynamic> userContentRowFromCollection(
+  UserContentCollection collection,
+) {
+  return {
+    'id': collection.contentId,
+    'user_id': collection.ownerUserId,
+    'kind': collection.kindKey,
+    'payload_json': collection.rawJsonPayload,
     'created_at': collection.createdAt.toUtc().toIso8601String(),
     'updated_at': collection.lastModifiedAt.toUtc().toIso8601String(),
     'deleted_at': collection.deletedAt?.toUtc().toIso8601String(),

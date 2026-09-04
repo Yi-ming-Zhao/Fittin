@@ -12,6 +12,7 @@ class WebStoreNames {
   static const agentCheckpoints = 'agent_checkpoints';
   static const agentMemory = 'agent_memory';
   static const agentDiagnostics = 'agent_diagnostics';
+  static const userContent = 'user_content';
 
   static const all = [
     appState,
@@ -27,6 +28,7 @@ class WebStoreNames {
     agentCheckpoints,
     agentMemory,
     agentDiagnostics,
+    userContent,
   ];
 }
 
@@ -68,7 +70,7 @@ class WebStoreMutation {
 class WebLocalStore {
   static Future<WebLocalStore> open({
     String? databaseName,
-    int databaseVersion = 3,
+    int databaseVersion = 4,
     Duration timeout = const Duration(seconds: 8),
   }) async {
     throw UnsupportedError('WebLocalStore is only available on the web.');

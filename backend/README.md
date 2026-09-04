@@ -13,6 +13,8 @@ Self-hosted Go backend intended to replace the previous Supabase runtime.
 - `FITTIN_BACKEND_ADDR` default `:8081`
 - `FITTIN_DATABASE_URL` required
 - `FITTIN_JWT_SECRET` required
+- `FITTIN_ACCESS_TOKEN_TTL_MINUTES` default `15`
+- `FITTIN_REFRESH_TOKEN_TTL_DAYS` default `180` (rolling on refresh)
 - `FITTIN_FILE_STORAGE_ROOT` default `./var/storage`
 - `FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS` default `120`
 - `FITTIN_AGENT_MAX_REQUEST_BYTES` default `524288`
@@ -26,6 +28,7 @@ Self-hosted Go backend intended to replace the previous Supabase runtime.
 - `GET /readyz`
 - `POST /v1/auth/sign-up`
 - `POST /v1/auth/sign-in`
+- `POST /v1/auth/refresh`
 - `GET /v1/auth/session`
 - `POST /v1/auth/sign-out`
 - `GET /v1/sync/{table}`

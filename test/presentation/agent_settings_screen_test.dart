@@ -108,19 +108,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    final entry = find.byKey(const ValueKey('open-agent-settings'));
-    await tester.scrollUntilVisible(
-      entry,
-      180,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(entry, findsOneWidget);
+    final agentCategory = find.byKey(const ValueKey('profile-category-agent'));
+    await tester.ensureVisible(agentCategory);
     expect(find.textContaining('Ready'), findsOneWidget);
     expect(find.textContaining('must-not-appear'), findsNothing);
-
-    await tester.tap(entry);
+    await tester.tap(agentCategory);
     await tester.pumpAndSettle();
+
     expect(find.byType(AgentSettingsScreen), findsOneWidget);
     expect(find.textContaining('must-not-appear'), findsNothing);
   });
