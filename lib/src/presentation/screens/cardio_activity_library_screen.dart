@@ -501,6 +501,8 @@ String cardioMetricLabel(CardioMetricKey key, bool zh) {
     CardioMetricKey.steps => '步数 / 级数',
     CardioMetricKey.strokesPerMinute => '桨频',
     CardioMetricKey.poolLengthMeters => '泳池长度',
+    CardioMetricKey.resistanceLevel => '阻力档位',
+    CardioMetricKey.averagePowerWatts => '平均功率',
   };
 }
 

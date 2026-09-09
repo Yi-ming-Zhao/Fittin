@@ -7,6 +7,7 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/program_engine.dart';
+import 'package:fittin_v2/src/domain/microcycle_schedule.dart';
 
 final localWorkoutLogRepositoryProvider = Provider<LocalWorkoutLogRepository>((
   ref,
@@ -43,10 +44,25 @@ class LocalWorkoutLogRepository {
     return _repository.fetchWorkoutLogById(logId, ownerUserId: _ownerUserId);
   }
 
-  Future<WorkoutLogUpdateResult> updateWorkoutLog(WorkoutLog log) async {
+  Future<WorkoutLogUpdateResult> updateWorkoutLog(
+    WorkoutLog log, {
+    WorkoutLog? expectedLog,
+  }) => _repository.trainingTransaction(
+    () => _updateWorkoutLog(log, expectedLog: expectedLog),
+  );
+
+  Future<WorkoutLogUpdateResult> _updateWorkoutLog(
+    WorkoutLog log, {
+    WorkoutLog? expectedLog,
+  }) async {
     final existing = await fetchWorkoutLogById(log.logId);
     if (existing == null) {
       throw StateError('Workout log not found: ${log.logId}');
+    }
+    if (expectedLog != null &&
+        agentPayloadDigest(existing.toJson()) !=
+            agentPayloadDigest(expectedLog.toJson())) {
+      throw StateError('Training record changed. Reload and try again.');
     }
 
     final normalizedLog = log.copyWith(
@@ -60,18 +76,96 @@ class LocalWorkoutLogRepository {
       ownerUserId: _ownerUserId,
     );
 
-    final progressionRewritten = await _rewriteProgressionIfAllowed(
-      normalizedLog,
-    );
+    final identitiesUnchanged =
+        normalizedLog.exercises.length == existing.exercises.length &&
+        normalizedLog.exercises.every(
+          (exercise) => existing.exercises.any(
+            (old) =>
+                old.exerciseId == exercise.exerciseId &&
+                old.exerciseDefinitionId == exercise.exerciseDefinitionId,
+          ),
+        );
+    final progressionRewritten =
+        identitiesUnchanged &&
+        await _rewriteProgressionIfAllowed(normalizedLog);
     return WorkoutLogUpdateResult(
-      log: normalizedLog,
+      log: (await fetchWorkoutLogById(log.logId))!,
       progressionRewritten: progressionRewritten,
     );
   }
 
-  Future<void> deleteWorkoutLog(String logId) {
-    return _repository.deleteWorkoutLog(logId, ownerUserId: _ownerUserId);
-  }
+  Future<void> deleteWorkoutLog(
+    String logId, {
+    WorkoutLog? expectedLog,
+    bool releaseToPlan = false,
+  }) => _repository.trainingTransaction(() async {
+    final currentLog = await fetchWorkoutLogById(logId);
+    if (currentLog == null ||
+        (expectedLog != null &&
+            agentPayloadDigest(currentLog.toJson()) !=
+                agentPayloadDigest(expectedLog.toJson()))) {
+      throw StateError('Training record changed. Reload and try again.');
+    }
+    if (releaseToPlan) {
+      final instance = await _repository.fetchActiveInstanceForUser(
+        _ownerUserId,
+      );
+      if (instance == null || instance.instanceId != currentLog.instanceId) {
+        throw StateError(
+          'This record does not belong to the active plan. Switch to its plan before releasing it.',
+        );
+      }
+      if (await _repository.fetchActiveSessionDraft(
+            instance.instanceId,
+            ownerUserId: _ownerUserId,
+          ) !=
+          null) {
+        throw StateError(
+          'Finish or discard the active training draft before releasing a day.',
+        );
+      }
+      final template = await _repository.fetchTemplate(instance.templateId);
+      if (template == null ||
+          !template.workouts.any((day) => day.id == currentLog.workoutId)) {
+        throw StateError(
+          'The original training day no longer exists in this plan.',
+        );
+      }
+      final restored = await restoreProgressionBeforeLogIfAllowed(currentLog);
+      if (restored) {
+        final restoredInstance = (await _repository.fetchInstance(
+          instance.instanceId,
+        ))!;
+        await _repository.updateInstanceEngineState(
+          instanceId: instance.instanceId,
+          ownerUserId: _ownerUserId,
+          expectedVersion: restoredInstance.version,
+          engineState: {
+            ...restoredInstance.engineState,
+            'releasedTrainingGeneration':
+                ((instance.engineState['releasedTrainingGeneration'] as num?)
+                        ?.toInt() ??
+                    0) +
+                1,
+          },
+        );
+      } else {
+        await _repository.updateInstanceEngineState(
+          instanceId: instance.instanceId,
+          ownerUserId: _ownerUserId,
+          expectedVersion: instance.version,
+          engineState: {
+            ...instance.engineState,
+            releasedWorkoutQueueEngineKey: [
+              ...releasedWorkoutQueue(instance),
+              currentLog.workoutId,
+            ],
+          },
+        );
+      }
+    }
+    await _repository.deleteWorkoutLog(logId, ownerUserId: _ownerUserId);
+  });
 
   /// Restores the exact pre-workout state only when this is still the newest
   /// log and the active instance matches the recorded post-workout snapshot.
@@ -140,8 +234,20 @@ class LocalWorkoutLogRepository {
   };
 
   Future<bool> _rewriteProgressionIfAllowed(WorkoutLog updatedLog) async {
+    if (await _repository.fetchActiveSessionDraft(
+          updatedLog.instanceId,
+          ownerUserId: _ownerUserId,
+        ) !=
+        null) {
+      return false;
+    }
     final preSnapshot = updatedLog.preConclusionSnapshot;
     final postSnapshot = updatedLog.postConclusionSnapshot;
+    if ((preSnapshot?.engineState[releasedWorkoutQueueEngineKey] as List? ??
+            const [])
+        .isNotEmpty) {
+      return false;
+    }
     if (preSnapshot == null || postSnapshot == null) {
       return false;
     }
@@ -187,6 +293,16 @@ class LocalWorkoutLogRepository {
         engineState: result.updatedEngineState,
         states: result.updatedStates,
       ),
+    );
+    await _repository.updateWorkoutLog(
+      updatedLog.copyWith(
+        postConclusionSnapshot: postSnapshot.copyWith(
+          currentWorkoutIndex: result.nextWorkoutIndex,
+          engineState: result.updatedEngineState,
+          states: result.updatedStates,
+        ),
+      ),
+      ownerUserId: _ownerUserId,
     );
     return true;
   }
@@ -254,6 +370,8 @@ class LocalWorkoutLogRepository {
             completedReps: log.sets[index].completedReps,
             targetWeight: log.sets[index].targetWeight,
             weight: log.sets[index].weight,
+            targetRpe: log.sets[index].targetRpe,
+            completedRpe: log.sets[index].completedRpe,
             isAmrap: log.sets[index].isAmrap,
             isCompleted: log.sets[index].isCompleted,
             isSkipped: log.sets[index].isSkipped,

@@ -25,3 +25,10 @@ The system MUST store canonical SI values, preserve the user's display unit, val
 #### Scenario: User saves cardio offline
 - **WHEN** a signed-in user records cardio without network access
 - **THEN** the local record is immediately visible and queued for later owner-scoped synchronization.
+
+### Requirement: Expanded cardio catalog
+The system SHALL include common gym and outdoor conditioning modes with appropriate duration, distance, speed, incline, cadence or resistance fields, excluding irrelevant required measurements.
+
+#### Scenario: Record an elliptical session
+- **WHEN** a user selects elliptical training
+- **THEN** applicable measurements are offered and running pace is not mandatory.

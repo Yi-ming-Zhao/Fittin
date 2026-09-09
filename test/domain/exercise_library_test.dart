@@ -24,9 +24,9 @@ void main() {
       final provided = await container.read(exerciseLibraryProvider.future);
 
       expect(provided.schemaVersion, 1);
-      expect(provided.catalogVersion, '1.1.0');
+      expect(provided.catalogVersion, '1.2.0');
       expect(provided.sourceRevision, isNotEmpty);
-      expect(provided.definitions, hasLength(52));
+      expect(provided.definitions.length, greaterThanOrEqualTo(220));
     },
   );
 
@@ -214,13 +214,13 @@ void main() {
         exerciseId: 'different-occurrence-id',
         name: 'jefferson curl',
       );
-      final chinese = library.resolve(name: ' 泽奇深蹲！ ');
+      final chinese = library.resolve(name: ' 我的专属动作！ ');
 
       expect(first.isCustom, isTrue);
       expect(first.id, 'custom:jeffersoncurl');
       expect(second.id, first.id);
       expect(first.displayName('zh'), 'Jefferson-Curl');
-      expect(chinese.id, 'custom:泽奇深蹲');
+      expect(chinese.id, 'custom:我的专属动作');
       expect(
         library
             .resolve(exerciseId: 'custom:jeffersoncurl', name: 'Jefferson Curl')

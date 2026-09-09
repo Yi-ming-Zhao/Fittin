@@ -1101,6 +1101,8 @@ String _metricLabel(CardioMetricKey key, AppStrings strings) {
       CardioMetricKey.steps => '步数 / 级数',
       CardioMetricKey.strokesPerMinute => '桨频',
       CardioMetricKey.poolLengthMeters => '泳池长度',
+      CardioMetricKey.resistanceLevel => '阻力档位',
+      CardioMetricKey.averagePowerWatts => '平均功率',
     };
   }
   return switch (key) {
@@ -1117,6 +1119,8 @@ String _metricLabel(CardioMetricKey key, AppStrings strings) {
     CardioMetricKey.steps => 'Steps / floors',
     CardioMetricKey.strokesPerMinute => 'Stroke rate',
     CardioMetricKey.poolLengthMeters => 'Pool length',
+    CardioMetricKey.resistanceLevel => 'Resistance level',
+    CardioMetricKey.averagePowerWatts => 'Average power',
   };
 }
 
@@ -1132,6 +1136,8 @@ String _metricUnit(CardioMetricKey key, AppStrings strings) => switch (key) {
   CardioMetricKey.strokesPerMinute => '/min',
   CardioMetricKey.elevationGainMeters ||
   CardioMetricKey.poolLengthMeters => 'm',
+  CardioMetricKey.resistanceLevel => '',
+  CardioMetricKey.averagePowerWatts => 'W',
   CardioMetricKey.caloriesKcal => 'kcal',
   CardioMetricKey.steps => strings.isChinese ? '步' : 'steps',
 };

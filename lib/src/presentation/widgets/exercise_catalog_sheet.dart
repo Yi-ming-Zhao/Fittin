@@ -63,6 +63,8 @@ class _ExerciseCatalogSheetState extends State<ExerciseCatalogSheet> {
             item.movement.name,
             item.equipment.name,
             ...item.tags,
+            ...item.aliases,
+            item.execution.summary(widget.strings.isChinese),
           ].join(' ').toLowerCase();
           return haystack.contains(query);
         })
@@ -372,6 +374,9 @@ String _muscleLabel(ExerciseMuscle value, AppStrings strings) {
     ExerciseMuscle.hamstrings: '腘绳肌',
     ExerciseMuscle.calves: '小腿',
     ExerciseMuscle.adductors: '内收肌',
+    ExerciseMuscle.rotatorCuff: '肩袖肌群',
+    ExerciseMuscle.hipFlexors: '髋屈肌群',
+    ExerciseMuscle.tibialisAnterior: '胫骨前肌',
   };
   return strings.isChinese ? zh[value]! : value.name;
 }

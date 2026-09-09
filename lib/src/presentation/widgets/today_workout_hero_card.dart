@@ -11,6 +11,7 @@ import '../localization/app_strings.dart';
 import '../localization/plan_text.dart';
 import '../screens/active_session_screen.dart';
 import '../screens/cardio_screen.dart';
+import '../screens/free_training_screen.dart';
 import '../screens/share_screen.dart';
 import '../app_shell_navigation.dart';
 import 'fittin_card.dart';
@@ -98,6 +99,9 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
         onRecordCardio: () => Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const CardioHubScreen())),
+        onFreeTraining: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const FreeTrainingScreen())),
       );
     }
     return _ErrorCard(
@@ -160,6 +164,11 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
     final strings = AppStrings.of(context, ref);
     final theme = ref.read(resolvedFittinThemeProvider);
     try {
+      final expectedToken =
+          (await ref
+                  .read(todayWorkoutGatewayProvider)
+                  .loadTodayWorkoutSession())
+              .scheduleToken;
       final workouts = await ref.read(
         remainingMicrocycleWorkoutsProvider.future,
       );
@@ -204,6 +213,21 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
                   style: theme.uiStyle(13, theme.fgDim).copyWith(height: 1.4),
                 ),
                 const SizedBox(height: 14),
+                ListTile(
+                  key: const ValueKey('skip-training-day'),
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.skip_next_rounded),
+                  title: Text(
+                    strings.isChinese ? '跳过今天的训练日' : 'Skip this training day',
+                  ),
+                  subtitle: Text(
+                    strings.isChinese
+                        ? '不计入已完成训练，下次按后续安排继续'
+                        : 'No completed record; continue with the following day',
+                  ),
+                  onTap: () => Navigator.of(sheetContext).pop('__skip__'),
+                ),
+                const Divider(),
                 Flexible(
                   child: ListView.separated(
                     key: const ValueKey('microcycle-schedule-list'),
@@ -244,9 +268,41 @@ class _TodayWorkoutHeroCardState extends ConsumerState<TodayWorkoutHeroCard> {
         ),
       );
       if (selected == null || selected == workouts.first.id) return;
+      if (selected == '__skip__') {
+        if (!mounted) return;
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(
+              strings.isChinese ? '跳过这个训练日？' : 'Skip this training day?',
+            ),
+            content: Text(
+              strings.isChinese
+                  ? '不会生成训练记录，也不会改变动作重量。当前小周期会继续到下一个训练日。'
+                  : 'No workout record or weight progression will be created. Your schedule will move to the next day.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(strings.cancel),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(strings.isChinese ? '确认跳过' : 'Skip day'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed == true) {
+          await ref
+              .read(microcycleScheduleControllerProvider)
+              .skipToday(expectedToken: expectedToken);
+        }
+        return;
+      }
       await ref
           .read(microcycleScheduleControllerProvider)
-          .moveToToday(selected);
+          .moveToToday(selected, expectedToken: expectedToken);
     } on Object catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -631,12 +687,14 @@ class _NoActivePlanCard extends StatelessWidget {
     required this.strings,
     required this.onBrowsePlans,
     required this.onRecordCardio,
+    required this.onFreeTraining,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
   final VoidCallback onBrowsePlans;
   final VoidCallback onRecordCardio;
+  final VoidCallback onFreeTraining;
 
   @override
   Widget build(BuildContext context) {
@@ -679,6 +737,15 @@ class _NoActivePlanCard extends StatelessWidget {
                 variant: 'ghost',
                 icon: Icons.directions_run_rounded,
                 onPressed: onRecordCardio,
+              ),
+              FittinBtn(
+                theme,
+                strings.isChinese ? '自由训练' : 'Free training',
+                key: const ValueKey('free-training-without-plan'),
+                size: 'sm',
+                variant: 'ghost',
+                icon: Icons.fitness_center_rounded,
+                onPressed: onFreeTraining,
               ),
             ],
           ),

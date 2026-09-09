@@ -465,6 +465,10 @@ class AppStrings {
       ExerciseMuscle.hamstrings => isChinese ? '腿后侧' : 'Hamstrings',
       ExerciseMuscle.calves => isChinese ? '小腿' : 'Calves',
       ExerciseMuscle.adductors => isChinese ? '内收肌' : 'Adductors',
+      ExerciseMuscle.rotatorCuff => isChinese ? '肩袖肌群' : 'Rotator cuff',
+      ExerciseMuscle.hipFlexors => isChinese ? '髋屈肌群' : 'Hip flexors',
+      ExerciseMuscle.tibialisAnterior =>
+        isChinese ? '胫骨前肌' : 'Tibialis anterior',
     };
   }
 

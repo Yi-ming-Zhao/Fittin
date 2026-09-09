@@ -10,11 +10,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:isar/isar.dart';
 
 import '../support/isar_test_helper.dart';
+import '../support/training_release_contract.dart';
 
 class _FailAfterInstanceSaveRepository extends DatabaseRepository {
   _FailAfterInstanceSaveRepository(super.isar);
 
   bool failAfterNextInstanceSave = false;
+  bool failNextDelete = false;
+
+  @override
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    await super.deleteWorkoutLog(logId, ownerUserId: ownerUserId);
+    if (failNextDelete) {
+      failNextDelete = false;
+      throw StateError('injected after deletion');
+    }
+  }
 
   @override
   Future<void> saveInstance(
@@ -50,6 +61,17 @@ void main() {
       await directory.delete(recursive: true);
     }
   });
+
+  test(
+    'release and delete roll back together and repeated release is refused',
+    () async {
+      await verifyTrainingReleaseTransaction(
+        database: repository,
+        failNextDelete: () => repository.failNextDelete = true,
+        queueCount: () => isar.syncQueueCollections.count(),
+      );
+    },
+  );
 
   test(
     'conclusion rolls back every store and concurrent retry is idempotent',

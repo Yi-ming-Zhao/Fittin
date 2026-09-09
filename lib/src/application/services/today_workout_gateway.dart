@@ -18,7 +18,10 @@ abstract class TodayWorkoutGateway {
 
   Future<List<Workout>> loadRemainingMicrocycleWorkouts();
 
-  Future<void> reorderTodayWorkout(String workoutId);
+  Future<void> reorderTodayWorkout(String workoutId, {String? expectedToken});
+
+  Future<void> skipTodayWorkout({String? expectedToken}) =>
+      throw UnimplementedError();
 
   Future<void> concludeWorkoutSession(WorkoutSessionState session);
 
@@ -94,15 +97,32 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
   @override
   Future<List<Workout>> loadRemainingMicrocycleWorkouts() async {
     final context = await _loadContext();
+    final released = releasedWorkoutQueue(context.instance);
+    if (released.isNotEmpty) {
+      return released.toSet().map(context.template.findWorkoutById).toList();
+    }
     return context.schedule.remainingWorkoutIds
         .map(context.template.findWorkoutById)
         .toList(growable: false);
   }
 
   @override
-  Future<void> reorderTodayWorkout(String workoutId) async {
+  Future<void> reorderTodayWorkout(
+    String workoutId, {
+    String? expectedToken,
+  }) async {
     final context = await _loadContext();
-    if (context.schedule.currentWorkoutId == workoutId) return;
+    if (expectedToken != null &&
+        expectedToken != buildWorkoutScheduleToken(context.instance)) {
+      throw StateError('Training schedule changed. Reload and try again.');
+    }
+    final released = releasedWorkoutQueue(context.instance);
+    if (released.isNotEmpty) {
+      if (!released.contains(workoutId)) {
+        throw StateError('Training day is no longer pending.');
+      }
+    }
+    if (context.workout.id == workoutId) return;
     final draft = await _repository.fetchActiveSessionDraft(
       context.instance.instanceId,
       ownerUserId: ownerUserId,
@@ -112,17 +132,69 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
         'Finish or discard the active workout before changing today\'s training day.',
       );
     }
-    final updatedEngineState = reorderMicrocycleEngineState(
+    final reorderedReleased = [...released];
+    if (reorderedReleased.remove(workoutId)) {
+      reorderedReleased.insert(0, workoutId);
+    }
+    final updatedEngineState = released.isNotEmpty
+        ? {
+            ...context.instance.engineState,
+            releasedWorkoutQueueEngineKey: reorderedReleased,
+          }
+        : reorderMicrocycleEngineState(
+            template: context.template,
+            instance: context.instance,
+            nextWorkoutId: workoutId,
+          );
+    await _repository.trainingTransaction(() async {
+      if (await _repository.fetchActiveSessionDraft(
+            context.instance.instanceId,
+            ownerUserId: ownerUserId,
+          ) !=
+          null) {
+        throw StateError(
+          'Finish or discard the active workout before changing the schedule.',
+        );
+      }
+      await _repository.updateInstanceEngineState(
+        instanceId: context.instance.instanceId,
+        ownerUserId: ownerUserId,
+        expectedVersion: context.instance.version,
+        engineState: updatedEngineState,
+      );
+    });
+  }
+
+  @override
+  Future<void> skipTodayWorkout({String? expectedToken}) async {
+    final context = await _loadContext();
+    if (expectedToken != null &&
+        expectedToken != buildWorkoutScheduleToken(context.instance)) {
+      throw StateError('Training schedule changed. Reload and try again.');
+    }
+    final next = skipScheduledWorkout(
       template: context.template,
       instance: context.instance,
-      nextWorkoutId: workoutId,
     );
-    await _repository.updateInstanceEngineState(
-      instanceId: context.instance.instanceId,
-      ownerUserId: ownerUserId,
-      expectedVersion: context.instance.version,
-      engineState: updatedEngineState,
-    );
+    await _repository.trainingTransaction(() async {
+      if (await _repository.fetchActiveSessionDraft(
+            context.instance.instanceId,
+            ownerUserId: ownerUserId,
+          ) !=
+          null) {
+        throw StateError(
+          'Finish or discard the active workout before skipping a day.',
+        );
+      }
+      await _repository.updateInstanceEngineState(
+        instanceId: context.instance.instanceId,
+        ownerUserId: ownerUserId,
+        expectedVersion: context.instance.version,
+        engineState: next.engineState,
+        currentWorkoutIndex: next.currentWorkoutIndex,
+        states: next.states,
+      );
+    });
   }
 
   @override
@@ -181,14 +253,24 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       stateByExerciseId: context.stateByExerciseId,
     );
 
+    final releasedQueue = releasedWorkoutQueue(context.instance);
     final postInstance = context.instance.copyWith(
-      currentWorkoutIndex: result.nextWorkoutIndex,
-      engineState: normalizeMicrocycleAfterAdvance(
-        template: context.template,
-        nextWorkoutIndex: result.nextWorkoutIndex,
-        engineState: result.updatedEngineState,
-      ),
-      states: result.updatedStates,
+      currentWorkoutIndex: releasedQueue.isNotEmpty
+          ? context.instance.currentWorkoutIndex
+          : result.nextWorkoutIndex,
+      engineState: releasedQueue.isNotEmpty
+          ? {
+              ...context.instance.engineState,
+              releasedWorkoutQueueEngineKey: releasedQueue.skip(1).toList(),
+            }
+          : normalizeMicrocycleAfterAdvance(
+              template: context.template,
+              nextWorkoutIndex: result.nextWorkoutIndex,
+              engineState: result.updatedEngineState,
+            ),
+      states: releasedQueue.isNotEmpty
+          ? context.instance.states
+          : result.updatedStates,
     );
     final completedAt = existingLog?.completedAt ?? DateTime.now();
 
@@ -235,7 +317,10 @@ class DatabaseTodayWorkoutGateway implements TodayWorkoutGateway {
       template: template,
       instance: instance,
     );
-    final workout = template.findWorkoutById(schedule.currentWorkoutId);
+    final released = releasedWorkoutQueue(instance);
+    final workout = template.findWorkoutById(
+      released.isNotEmpty ? released.first : schedule.currentWorkoutId,
+    );
     final stateByExerciseId = {
       for (final state in instance.states) state.exerciseId: state,
     };

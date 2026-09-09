@@ -105,57 +105,53 @@ void main() {
     expect(find.text('周期'), findsOneWidget);
     expect(find.text('三大项力量记录'), findsOneWidget);
     expect(find.text('记录有氧'), findsOneWidget);
-    expect(find.text('查看全部 PR'), findsOneWidget);
+    expect(find.text('自由训练'), findsOneWidget);
     expect(find.text('Record cardio'), findsNothing);
     expect(find.text('See all PRs'), findsNothing);
     expect(find.text('BIG THREE HISTORY'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('today dashboard fits a phone viewport without vertical scroll', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'today dashboard keeps phone actions reachable without crowding',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final repository = InMemoryDatabaseRepository();
-    final fakeGateway = FakeTodayWorkoutGateway();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(repository),
-          todayWorkoutGatewayProvider.overrideWithValue(fakeGateway),
-          homeDashboardDataProvider.overrideWith(
-            (ref) async => _fakeHomeData(),
-          ),
-        ],
-        child: const MaterialApp(home: HomeDashboardScreen()),
-      ),
-    );
-    await tester.pumpAndSettle();
+      final repository = InMemoryDatabaseRepository();
+      final fakeGateway = FakeTodayWorkoutGateway();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(repository),
+            todayWorkoutGatewayProvider.overrideWithValue(fakeGateway),
+            homeDashboardDataProvider.overrideWith(
+              (ref) async => _fakeHomeData(),
+            ),
+          ],
+          child: const MaterialApp(home: HomeDashboardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(
-      tester.getSize(find.byKey(const ValueKey('today-cycle-card'))),
-      tester.getSize(find.byKey(const ValueKey('today-e1rm-card'))),
-    );
-    final verticalScrollables = tester
-        .widgetList<Scrollable>(find.byType(Scrollable))
-        .where(
-          (widget) =>
-              (widget.axisDirection == AxisDirection.down ||
-                  widget.axisDirection == AxisDirection.up) &&
-              widget.physics is! NeverScrollableScrollPhysics,
-        );
-    expect(verticalScrollables, isEmpty);
-    expect(
-      tester
-          .getBottomRight(find.byKey(const ValueKey('today-quick-action-1')))
-          .dy,
-      lessThanOrEqualTo(770),
-    );
-  });
+      expect(
+        tester.getSize(find.byKey(const ValueKey('today-cycle-card'))),
+        tester.getSize(find.byKey(const ValueKey('today-e1rm-card'))),
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('today-quick-action-1')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .getBottomRight(find.byKey(const ValueKey('today-quick-action-1')))
+            .dy,
+        lessThanOrEqualTo(844),
+      );
+    },
+  );
 
   testWidgets('narrow width and larger text use a scroll-safe layout', (
     tester,

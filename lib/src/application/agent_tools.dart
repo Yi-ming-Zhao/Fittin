@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../domain/exercise_execution.dart';
 import '../data/agent_entity_version.dart';
 import '../data/agent_local_repository.dart';
 import 'agent_owner_scope.dart';
@@ -865,6 +866,7 @@ class AgentToolRegistry {
         .toList(),
     'tags': item.tags,
     'roundingIncrementKg': item.roundingIncrementKg,
+    'execution': item.execution.toJson(),
     'isBuiltIn': item.isBuiltIn,
     if (item.aliases.isNotEmpty) 'aliases': item.aliases.take(12).toList(),
     if (document != null) 'version': document.version,
@@ -1312,7 +1314,10 @@ class AgentToolRegistry {
           .read(userContentServiceProvider)
           .newId(UserContentKind.customExercise);
       final copy = _exerciseFromInput(
-        args['definition'],
+        {
+          'execution': resolved.item.execution.toJson(),
+          ..._map(args['definition']),
+        },
         id: id,
         sourceExerciseId: sourceId,
       );
@@ -1327,7 +1332,7 @@ class AgentToolRegistry {
       resolved.document!.payload,
     );
     final revised = _exerciseFromInput(
-      args['definition'],
+      {'execution': existing.execution.toJson(), ..._map(args['definition'])},
       id: existing.id,
       sourceExerciseId: existing.sourceExerciseId,
     );
@@ -1557,6 +1562,9 @@ class AgentToolRegistry {
       roundingIncrementKg:
           (input['roundingIncrementKg'] as num?)?.toDouble() ?? 2.5,
       sourceExerciseId: sourceExerciseId,
+      execution: ExerciseExecution.fromJson(
+        (input['execution'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
     );
   }
 
@@ -1876,6 +1884,23 @@ class AgentToolRegistry {
         'exclusiveMinimum': 0,
         'maximum': 25,
       },
+      'execution': _object({
+        'laterality': _enum(
+          ExerciseLaterality.values.map((value) => value.name),
+        ),
+        'grip': _enum(ExerciseGrip.values.map((value) => value.name)),
+        'position': _enum(ExercisePosition.values.map((value) => value.name)),
+        'measurement': _enum(
+          ExerciseMeasurement.values.map((value) => value.name),
+        ),
+        'equipmentVariant': _enum(ExerciseExecution.equipmentVariants),
+        'techniques': {
+          'type': 'array',
+          'maxItems': 6,
+          'uniqueItems': true,
+          'items': _enum(ExerciseExecution.supportedTechniques),
+        },
+      }, required: const []),
     },
     required: const [
       'nameEn',

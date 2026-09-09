@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/domain/workout_session_editing.dart';
+import 'package:fittin_v2/src/presentation/screens/active_session_screen.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/exercise_library_provider.dart';
@@ -10,9 +14,7 @@ import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
-import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
-import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
 
 class WorkoutRecordDetailScreen extends ConsumerStatefulWidget {
   const WorkoutRecordDetailScreen({
@@ -176,25 +178,47 @@ class _WorkoutRecordDetailScreenState
   }
 
   Future<void> _editLog(BuildContext context, WorkoutLog log) async {
-    final updated = await showModalBottomSheet<WorkoutLog>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: ref.read(resolvedFittinThemeProvider).bg,
-      builder: (context) => _WorkoutLogEditorSheet(
-        log: log,
-        strings: AppStrings.of(context, ref),
-        fittinTheme: ref.read(resolvedFittinThemeProvider),
+    WorkoutLogUpdateResult? savedResult;
+    final owner = ref.read(currentUserIdProvider);
+    var completedAt = log.completedAt;
+    final repository = ref.read(localWorkoutLogRepositoryProvider);
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ProviderScope(
+          overrides: [
+            activeSessionProvider.overrideWith(
+              (sessionRef) => ActiveSessionNotifier(
+                sessionRef,
+                initialWorkout: sessionForHistory(log),
+                propagateWeight: false,
+                onSaveIsolatedSession: (session) async {
+                  if (!mounted || ref.read(currentUserIdProvider) != owner) {
+                    throw StateError('Account changed. Reopen this record.');
+                  }
+                  savedResult = await repository.updateWorkoutLog(
+                    applySessionToHistory(
+                      log,
+                      session,
+                      completedAt: completedAt,
+                    ),
+                    expectedLog: log,
+                  );
+                },
+              ),
+            ),
+          ],
+          child: ActiveSessionScreen(
+            editingHistory: true,
+            completedAt: log.completedAt,
+            onCompletedAtChanged: (value) => completedAt = value,
+          ),
+        ),
       ),
     );
-    if (updated == null || !mounted) {
+    if (savedResult == null || !mounted) {
       return;
     }
-
-    final repository = ref.read(localWorkoutLogRepositoryProvider);
-    final result = await repository.updateWorkoutLog(updated);
-    if (!mounted) {
-      return;
-    }
+    final result = savedResult!;
     ref.invalidate(advancedAnalyticsDataProvider);
     ref.invalidate(progressAnalyticsOverviewProvider);
 
@@ -240,40 +264,65 @@ class _WorkoutRecordDetailScreenState
 
   Future<void> _confirmDeleteLog(BuildContext context, WorkoutLog log) async {
     final strings = AppStrings.of(context, ref);
-    final confirmed = await showDialog<bool>(
+    final choice = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(strings.deleteWorkoutRecordTitle),
-        content: Text(strings.deleteWorkoutRecordMessage),
+        content: Text(
+          strings.isChinese
+              ? '仅删除：移除记录，计划进度不变。\n\n删除并释放：让这个训练日可以重练。较早的训练日会加入补练队列，不会抹掉后续进度。'
+              : 'Delete only removes the record and keeps plan progress.\n\nDelete and release makes this day available again. Older days enter a recovery queue without erasing later progress.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(strings.cancel),
           ),
           TextButton(
             key: const ValueKey('confirm-delete-workout'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop('delete'),
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: Text(strings.delete),
+            child: Text(strings.isChinese ? '仅删除记录' : 'Delete only'),
           ),
+          if (!log.instanceId.startsWith('free:'))
+            TextButton(
+              key: const ValueKey('delete-and-release-workout'),
+              onPressed: () => Navigator.of(dialogContext).pop('release'),
+              child: Text(strings.isChinese ? '删除并释放' : 'Delete and release'),
+            ),
         ],
       ),
     );
-    if (confirmed != true || !mounted) {
+    if (choice == null || !mounted) {
       return;
     }
 
-    await ref
-        .read(localWorkoutLogRepositoryProvider)
-        .deleteWorkoutLog(log.logId);
+    try {
+      await ref
+          .read(localWorkoutLogRepositoryProvider)
+          .deleteWorkoutLog(
+            log.logId,
+            expectedLog: log,
+            releaseToPlan: choice == 'release',
+          );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          this.context,
+        ).showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+      return;
+    }
     if (!mounted) {
       return;
     }
 
     ref.invalidate(advancedAnalyticsDataProvider);
     ref.invalidate(progressAnalyticsOverviewProvider);
+    ref.invalidate(todayWorkoutSummaryProvider);
+    ref.invalidate(remainingMicrocycleWorkoutsProvider);
     setState(() {
       _logs.removeWhere((item) => item.logId == log.logId);
     });
@@ -281,431 +330,6 @@ class _WorkoutRecordDetailScreenState
       this.context,
     ).showSnackBar(SnackBar(content: Text(strings.workoutRecordDeleted)));
   }
-}
-
-class _WorkoutLogEditorSheet extends StatefulWidget {
-  const _WorkoutLogEditorSheet({
-    required this.log,
-    required this.strings,
-    required this.fittinTheme,
-  });
-
-  final WorkoutLog log;
-  final AppStrings strings;
-  final FittinTheme fittinTheme;
-
-  @override
-  State<_WorkoutLogEditorSheet> createState() => _WorkoutLogEditorSheetState();
-}
-
-class _WorkoutLogEditorSheetState extends State<_WorkoutLogEditorSheet> {
-  late final TextEditingController _dateController;
-  late final TextEditingController _timeController;
-  late final List<_EditableExerciseState> _exercises;
-
-  @override
-  void initState() {
-    super.initState();
-    final completedAt = widget.log.completedAt;
-    _dateController = TextEditingController(
-      text:
-          '${completedAt.year.toString().padLeft(4, '0')}-${completedAt.month.toString().padLeft(2, '0')}-${completedAt.day.toString().padLeft(2, '0')}',
-    );
-    _timeController = TextEditingController(
-      text:
-          '${completedAt.hour.toString().padLeft(2, '0')}:${completedAt.minute.toString().padLeft(2, '0')}',
-    );
-    _exercises = [
-      for (final exercise in widget.log.exercises)
-        _EditableExerciseState(
-          exerciseId: exercise.exerciseId,
-          exerciseDefinitionId: exercise.exerciseDefinitionId,
-          exerciseName: exercise.exerciseName,
-          stageId: exercise.stageId,
-          displayLoadUnit: exercise.displayLoadUnit,
-          sets: [
-            for (final set in exercise.sets)
-              _EditableSetState(
-                role: set.role,
-                targetReps: set.targetReps,
-                targetWeight: set.targetWeight,
-                targetRpe: set.targetRpe,
-                isAmrap: set.isAmrap,
-                completed: set.isCompleted,
-                skipped: set.isSkipped,
-                repsController: TextEditingController(
-                  text: '${set.completedReps}',
-                ),
-                weightController: TextEditingController(
-                  text: set.weight.toStringAsFixed(
-                    set.weight.truncateToDouble() == set.weight ? 0 : 1,
-                  ),
-                ),
-                rpeController: TextEditingController(
-                  text: set.completedRpe == null
-                      ? ''
-                      : _formatOptionalRpe(set.completedRpe),
-                ),
-              ),
-          ],
-        ),
-    ];
-  }
-
-  @override
-  void dispose() {
-    _dateController.dispose();
-    _timeController.dispose();
-    for (final exercise in _exercises) {
-      for (final set in exercise.sets) {
-        set.repsController.dispose();
-        set.weightController.dispose();
-        set.rpeController.dispose();
-      }
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final fittinTheme = widget.fittinTheme;
-    final strings = widget.strings;
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          fittinTheme.pad,
-          fittinTheme.pad,
-          fittinTheme.pad,
-          fittinTheme.pad + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DashboardBackButton(
-                theme: fittinTheme,
-                label: strings.recordedWorkoutDetails,
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                widget.log.workoutName,
-                style: fittinTheme.displayStyle(24, fittinTheme.fg),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _dateController,
-                      decoration: InputDecoration(
-                        labelText: strings.recordedDate,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _timeController,
-                      decoration: InputDecoration(
-                        labelText: strings.recordedTime,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              for (final exercise in _exercises) ...[
-                Text(
-                  exercise.exerciseName,
-                  style: fittinTheme
-                      .uiStyle(16, fittinTheme.fg)
-                      .copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 6),
-                FittinSegmented(
-                  theme: fittinTheme,
-                  options: const ['kg', 'lb'],
-                  value: exercise.displayLoadUnit == LoadUnits.lbs
-                      ? 'lb'
-                      : 'kg',
-                  onChange: (selection) {
-                    setState(() {
-                      exercise.displayLoadUnit = selection == 'lb'
-                          ? LoadUnits.lbs
-                          : LoadUnits.kg;
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                for (var index = 0; index < exercise.sets.length; index++)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: exercise.sets[index].repsController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: strings.recordRepsLabel(index + 1),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: TextField(
-                                controller:
-                                    exercise.sets[index].weightController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: InputDecoration(
-                                  labelText: strings.recordWeightLabel(
-                                    index + 1,
-                                    exercise.displayLoadUnit == LoadUnits.lbs
-                                        ? 'lb'
-                                        : 'kg',
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: exercise.sets[index].rpeController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                decoration: InputDecoration(
-                                  labelText: strings.recordRpeLabel(index + 1),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: CheckboxListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                dense: true,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                title: Text(
-                                  exercise.sets[index].completed
-                                      ? strings.setStatusCompleted
-                                      : exercise.sets[index].skipped
-                                      ? strings.setStatusSkipped
-                                      : strings.setStatusPending,
-                                ),
-                                value: exercise.sets[index].completed,
-                                onChanged: (value) {
-                                  setState(() {
-                                    exercise.sets[index].completed =
-                                        value ?? false;
-                                    if (value == true) {
-                                      exercise.sets[index].skipped = false;
-                                    }
-                                  });
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (exercise.sets[index].targetRpe != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                strings.recordTargetRpe(
-                                  _formatOptionalRpe(
-                                    exercise.sets[index].targetRpe,
-                                  ),
-                                ),
-                                style: fittinTheme.uiStyle(
-                                  12,
-                                  fittinTheme.fgDim,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-              ],
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: FittinBtn(
-                      fittinTheme,
-                      strings.cancel,
-                      variant: 'secondary',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FittinBtn(
-                      fittinTheme,
-                      strings.saveChanges,
-                      onPressed: () => _save(context, strings),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _save(BuildContext context, AppStrings strings) {
-    final completedAt = _parseDateTime(
-      _dateController.text.trim(),
-      _timeController.text.trim(),
-    );
-    if (completedAt == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.invalidDateTime)));
-      return;
-    }
-
-    for (final exercise in _exercises) {
-      for (final set in exercise.sets) {
-        final reps = int.tryParse(set.repsController.text.trim());
-        final weight = double.tryParse(set.weightController.text.trim());
-        final rawRpe = set.rpeController.text.trim();
-        final rpe = rawRpe.isEmpty ? null : double.tryParse(rawRpe);
-        final invalid =
-            reps == null ||
-            reps < 0 ||
-            weight == null ||
-            !weight.isFinite ||
-            weight < 0 ||
-            (rawRpe.isNotEmpty &&
-                (rpe == null || !rpe.isFinite || rpe < 0 || rpe > 10));
-        if (invalid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(strings.invalidWorkoutSetValues)),
-          );
-          return;
-        }
-      }
-    }
-
-    final exercises = [
-      for (final exercise in _exercises)
-        ExerciseLog(
-          exerciseId: exercise.exerciseId,
-          exerciseDefinitionId: exercise.exerciseDefinitionId,
-          exerciseName: exercise.exerciseName,
-          stageId: exercise.stageId,
-          displayLoadUnit: exercise.displayLoadUnit,
-          sets: [
-            for (final set in exercise.sets)
-              SetLog(
-                role: set.role,
-                targetReps: set.targetReps,
-                completedReps: int.parse(set.repsController.text.trim()),
-                targetWeight: set.targetWeight,
-                weight: convertWeight(
-                  double.parse(set.weightController.text.trim()),
-                  exercise.displayLoadUnit,
-                  LoadUnits.kg,
-                ),
-                targetRpe: set.targetRpe,
-                completedRpe: double.tryParse(set.rpeController.text.trim()),
-                isAmrap: set.isAmrap,
-                isCompleted: set.completed,
-                isSkipped: set.skipped && !set.completed,
-              ),
-          ],
-        ),
-    ];
-
-    Navigator.of(
-      context,
-    ).pop(widget.log.copyWith(completedAt: completedAt, exercises: exercises));
-  }
-}
-
-class _EditableExerciseState {
-  _EditableExerciseState({
-    required this.exerciseId,
-    required this.exerciseDefinitionId,
-    required this.exerciseName,
-    required this.stageId,
-    required this.displayLoadUnit,
-    required this.sets,
-  });
-
-  final String exerciseId;
-  final String exerciseDefinitionId;
-  final String exerciseName;
-  final String stageId;
-  String displayLoadUnit;
-  final List<_EditableSetState> sets;
-}
-
-class _EditableSetState {
-  _EditableSetState({
-    required this.role,
-    required this.targetReps,
-    required this.targetWeight,
-    required this.targetRpe,
-    required this.isAmrap,
-    required this.completed,
-    required this.skipped,
-    required this.repsController,
-    required this.weightController,
-    required this.rpeController,
-  });
-
-  final String role;
-  final int targetReps;
-  final double targetWeight;
-  final double? targetRpe;
-  final bool isAmrap;
-  bool completed;
-  bool skipped;
-  final TextEditingController repsController;
-  final TextEditingController weightController;
-  final TextEditingController rpeController;
-}
-
-DateTime? _parseDateTime(String rawDate, String rawTime) {
-  final dateParts = rawDate.split('-');
-  final timeParts = rawTime.split(':');
-  if (dateParts.length != 3 || timeParts.length != 2) {
-    return null;
-  }
-  final year = int.tryParse(dateParts[0]);
-  final month = int.tryParse(dateParts[1]);
-  final day = int.tryParse(dateParts[2]);
-  final hour = int.tryParse(timeParts[0]);
-  final minute = int.tryParse(timeParts[1]);
-  if (year == null ||
-      month == null ||
-      day == null ||
-      hour == null ||
-      minute == null) {
-    return null;
-  }
-  return DateTime(year, month, day, hour, minute);
 }
 
 String _localizedExerciseLogName(

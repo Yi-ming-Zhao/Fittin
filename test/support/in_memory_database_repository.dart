@@ -18,6 +18,48 @@ import 'package:fittin_v2/src/domain/weight_tools.dart';
 import 'package:fittin_v2/src/domain/user_content_validation.dart';
 
 class InMemoryDatabaseRepository extends DatabaseRepository {
+  @override
+  Future<T> trainingTransaction<T>(Future<T> Function() operation) async {
+    final instances = Map<String, StoredTrainingInstance>.from(_instances);
+    final logs = List<WorkoutLog>.from(_workoutLogs);
+    try {
+      return await operation();
+    } catch (_) {
+      _instances
+        ..clear()
+        ..addAll(instances);
+      _workoutLogs
+        ..clear()
+        ..addAll(logs);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<StoredTrainingInstance> updateInstanceEngineState({
+    required String instanceId,
+    required String? ownerUserId,
+    required int expectedVersion,
+    required Map<String, dynamic> engineState,
+    int? currentWorkoutIndex,
+    List<TrainingState>? states,
+  }) async {
+    final existing = _instances[instanceId];
+    if (existing == null ||
+        existing.ownerUserId != ownerUserId ||
+        existing.version != expectedVersion) {
+      throw StateError('Training schedule changed. Reload and try again.');
+    }
+    final updated = existing.copyWith(
+      engineState: engineState,
+      currentWorkoutIndex: currentWorkoutIndex ?? existing.currentWorkoutIndex,
+      states: states ?? existing.states,
+      version: existing.version + 1,
+    );
+    _instances[instanceId] = updated;
+    return updated;
+  }
+
   final Map<String, StoredTemplateRecord> _templates = {};
   final Map<String, StoredTrainingInstance> _instances = {};
   final Map<String, String?> _activeInstanceIdsByOwner = {};

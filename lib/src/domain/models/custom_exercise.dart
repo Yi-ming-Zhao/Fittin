@@ -1,4 +1,5 @@
 import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/domain/exercise_execution.dart';
 
 class CustomExerciseDefinition {
   CustomExerciseDefinition({
@@ -13,6 +14,7 @@ class CustomExerciseDefinition {
     required List<String> tags,
     this.roundingIncrementKg = 2.5,
     this.sourceExerciseId,
+    this.execution = const ExerciseExecution(),
   }) : nameEn = nameEn.trim(),
        nameZhCn = nameZhCn.trim(),
        primaryMuscles = List.unmodifiable(primaryMuscles),
@@ -32,8 +34,10 @@ class CustomExerciseDefinition {
   final List<String> tags;
   final double roundingIncrementKg;
   final String? sourceExerciseId;
+  final ExerciseExecution execution;
 
   void validate() {
+    ExerciseExecution.fromJson(execution.toJson());
     if (id.trim() != id ||
         !id.startsWith('user-exercise:') ||
         id.length == 'user-exercise:'.length ||
@@ -89,6 +93,7 @@ class CustomExerciseDefinition {
     'tags': tags,
     'roundingIncrementKg': roundingIncrementKg,
     'sourceExerciseId': sourceExerciseId,
+    'execution': execution.toJson(),
   };
 
   factory CustomExerciseDefinition.fromJson(Map<String, dynamic> json) =>
@@ -113,6 +118,9 @@ class CustomExerciseDefinition {
         roundingIncrementKg:
             (json['roundingIncrementKg'] as num?)?.toDouble() ?? 2.5,
         sourceExerciseId: json['sourceExerciseId'] as String?,
+        execution: ExerciseExecution.fromJson(
+          (json['execution'] as Map?)?.cast<String, dynamic>() ?? const {},
+        ),
       );
 }
 
@@ -159,6 +167,7 @@ class ExerciseCatalogItem {
     required this.roundingIncrementKg,
     required this.isBuiltIn,
     this.aliases = const [],
+    this.execution = const ExerciseExecution(),
   });
 
   factory ExerciseCatalogItem.fromBuiltIn(ExerciseDefinition definition) =>
@@ -180,6 +189,7 @@ class ExerciseCatalogItem {
         roundingIncrementKg: definition.roundingIncrementKg,
         isBuiltIn: true,
         aliases: definition.aliases,
+        execution: definition.execution,
       );
 
   factory ExerciseCatalogItem.fromCustom(CustomExerciseDefinition definition) =>
@@ -203,6 +213,7 @@ class ExerciseCatalogItem {
         }.toList()..sort(),
         roundingIncrementKg: definition.roundingIncrementKg,
         isBuiltIn: false,
+        execution: definition.execution,
       );
 
   final String id;
@@ -217,6 +228,7 @@ class ExerciseCatalogItem {
   final double roundingIncrementKg;
   final bool isBuiltIn;
   final List<String> aliases;
+  final ExerciseExecution execution;
 
   String displayName(String localeCode) =>
       localeCode.toLowerCase().startsWith('zh') ? nameZhCn : nameEn;

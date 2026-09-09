@@ -4,7 +4,7 @@
 TBD - created by archiving change add-tsa-intermediate-built-in-plan. Update Purpose after archive.
 ## Requirements
 ### Requirement: Built-in TSA Intermediate Approach 2.0 Template
-The system MUST ship with a built-in TSA Intermediate Approach 2.0 template derived from the checked-in workbook `/Users/yzxbb/Desktop/Fittin_v2/assets/raw_table_plans/TSA Intermediate Approach 2.0 | LiftVault.com.xlsx`, seeded as app-owned JSON data alongside the existing built-in templates.
+The system MUST ship with a built-in TSA Intermediate Approach 2.0 template derived from the checked-in workbook `assets/raw_table_plans/TSA Intermediate Approach 2.0 - LiftVault.com.xlsx`, seeded as app-owned JSON data alongside the existing built-in templates.
 
 #### Scenario: Empty database is initialized
 - **WHEN** the app boots with no stored templates or with only some built-in templates present
@@ -36,4 +36,3 @@ The built-in TSA Intermediate template MUST preserve the normalized workout line
 - **AND** Day 2 includes `Deadlift`, `Bench Press`, `Pendlay Row`, `Weighted Back Extension`, and `Pull-ups`
 - **AND** Day 3 includes `Competition Squat`, `SELECT`, `Leg Press or Hack Squat`, `Chest-supported Row`, and `Athlete Movement of Choice`
 - **AND** Day 4 includes `Bench Press`, `Feet-up Bench Press`, `Paused Deadlift`, `Barbell Row`, and `Neutral/Underhand Lat Pulldown`.
-

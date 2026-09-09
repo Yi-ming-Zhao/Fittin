@@ -13,7 +13,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  native-platforms:
+    uses: ./.github/workflows/platform-builds.yml
+
   build-and-release:
+    needs: native-platforms
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ github.ref_name }}
@@ -291,13 +295,20 @@ jobs:
           cd build
           zip -qr "${{ steps.meta.outputs.release_dir }}/${{ steps.meta.outputs.web_name }}" web
 
+      - name: Collect verified native bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: native-*
+          merge-multiple: true
+          path: ${{ steps.meta.outputs.release_dir }}
+
       - name: Generate checksums and release notes
         run: |
           set -euo pipefail
           notes_source="$GITHUB_WORKSPACE/docs/release-notes-${RELEASE_TAG}.md"
           cd "${{ steps.meta.outputs.release_dir }}"
           shopt -s nullglob
-          assets=( *.apk *.aab *.zip )
+          assets=( *.apk *.aab *.zip *.tar.gz )
           if [[ "${#assets[@]}" -gt 0 ]]; then
             sha256sum "${assets[@]}" > "${{ steps.meta.outputs.sha_name }}"
           else

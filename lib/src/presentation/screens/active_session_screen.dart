@@ -9,6 +9,8 @@ import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/application/user_content_provider.dart';
 import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/presentation/widgets/dumbbell_weight_preview.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/weight_tools.dart';
@@ -22,7 +24,18 @@ import 'package:fittin_v2/src/presentation/widgets/weight_tools_sheet.dart';
 import 'package:fittin_v2/src/presentation/widgets/exercise_catalog_sheet.dart';
 
 class ActiveSessionScreen extends ConsumerStatefulWidget {
-  const ActiveSessionScreen({super.key});
+  const ActiveSessionScreen({
+    super.key,
+    this.editingHistory = false,
+    this.freeTraining = false,
+    this.completedAt,
+    this.onCompletedAtChanged,
+  });
+
+  final bool editingHistory;
+  final bool freeTraining;
+  final DateTime? completedAt;
+  final ValueChanged<DateTime>? onCompletedAtChanged;
 
   @override
   ConsumerState<ActiveSessionScreen> createState() =>
@@ -32,10 +45,12 @@ class ActiveSessionScreen extends ConsumerStatefulWidget {
 class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _completionController;
+  DateTime? _completedAt;
 
   @override
   void initState() {
     super.initState();
+    _completedAt = widget.completedAt;
     _completionController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 420),
@@ -110,6 +125,15 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
 
     final currentExercise = workout.exercises[workout.currentExerciseIndex];
     final currentExerciseName = localizedExercise(currentExercise);
+    final catalogItem = exerciseCatalog
+        .where((item) => item.id == currentExercise.exerciseId)
+        .firstOrNull;
+    final builtIn = exerciseLibrary?.findKnown(
+      exerciseId: currentExercise.exerciseId,
+      name: currentExercise.exerciseName,
+    );
+    final equipment = catalogItem?.equipment ?? builtIn?.equipment;
+    final loadSemantics = catalogItem?.loadSemantics ?? builtIn?.loadSemantics;
     final resolvedSetIndex = _resolveCurrentSetIndex(currentExercise);
     final currentSet = currentExercise.sets[resolvedSetIndex];
     final displayUnit = _supportsUnitToggle(currentExercise.displayLoadUnit)
@@ -125,6 +149,15 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
       LoadUnits.kg,
       displayUnit,
     );
+    final equipmentPreview = equipment == ExerciseEquipment.dumbbell
+        ? DumbbellWeightPreview(
+            theme: fittinTheme,
+            weight: displayWeight,
+            unit: displayUnit,
+            perHand: loadSemantics == ExerciseLoadSemantics.perDumbbell,
+            isChinese: strings.isChinese,
+          )
+        : null;
     final step = displayUnit == LoadUnits.lbs ? 5.0 : 2.5;
     final kgBarWeight = ref.watch(kgBarWeightProvider);
     final lbBarWeight = ref.watch(lbBarWeightProvider);
@@ -150,6 +183,40 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
       topPadding: 12,
       bottomPadding: 12,
       children: [
+        if (widget.editingHistory && _completedAt != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              key: const ValueKey('history-edit-date'),
+              icon: const Icon(Icons.event_outlined, size: 18),
+              label: Text(
+                '${_completedAt!.year}-${_completedAt!.month.toString().padLeft(2, '0')}-${_completedAt!.day.toString().padLeft(2, '0')} ${TimeOfDay.fromDateTime(_completedAt!).format(context)}',
+              ),
+              onPressed: () async {
+                final date = await showDatePicker(
+                  context: context,
+                  initialDate: _completedAt!,
+                  firstDate: DateTime(1970),
+                  lastDate: DateTime.now().add(const Duration(days: 1)),
+                );
+                if (date == null || !context.mounted) return;
+                final time = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.fromDateTime(_completedAt!),
+                );
+                if (time == null || !mounted) return;
+                final next = DateTime(
+                  date.year,
+                  date.month,
+                  date.day,
+                  time.hour,
+                  time.minute,
+                );
+                setState(() => _completedAt = next);
+                widget.onCompletedAtChanged?.call(next);
+              },
+            ),
+          ),
         _SessionHeader(
           theme: fittinTheme,
           strings: strings,
@@ -236,6 +303,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   displayUnit: displayUnit,
                   step: step,
                   plateBreakdown: plateBreakdown,
+                  equipmentPreview: equipmentPreview,
                   completionController: _completionController,
                   onDecreaseReps: currentSet.completedReps > 0
                       ? () => notifier.updateReps(
@@ -297,6 +365,7 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
                   displayUnit: displayUnit,
                   step: step,
                   plateBreakdown: plateBreakdown,
+                  equipmentPreview: equipmentPreview,
                   completionController: _completionController,
                   onDecreaseReps: currentSet.completedReps > 0
                       ? () => notifier.updateReps(
@@ -356,6 +425,8 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           child: PremiumPrimaryButton(
             label: sessionState.isLoading
                 ? strings.saving
+                : widget.editingHistory
+                ? strings.save
                 : strings.concludeWorkout,
             icon: Icons.check_circle_outline_rounded,
             loading: sessionState.isLoading,
@@ -376,6 +447,23 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     required FittinTheme theme,
     required ActiveSessionNotifier notifier,
   }) async {
+    if (widget.editingHistory) {
+      final success = await notifier.concludeSession();
+      if (!mounted) return;
+      if (success) {
+        Navigator.of(context).pop(true);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ref.read(activeSessionProvider).errorMessage ??
+                  strings.unableToConcludeWorkout,
+            ),
+          ),
+        );
+      }
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -390,7 +478,11 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           style: theme.displayStyle(22, theme.fg),
         ),
         content: Text(
-          strings.confirmConcludeWorkoutMessage,
+          widget.freeTraining
+              ? (strings.isChinese
+                    ? '保存这次自由训练，当前训练计划和下一训练日保持不变。'
+                    : 'Save this free session. Your plan and next training day stay unchanged.')
+              : strings.confirmConcludeWorkoutMessage,
           style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.45),
         ),
         actions: [
@@ -416,9 +508,17 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final success = await notifier.concludeSession();
     if (!mounted) return;
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.workoutSaved)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.freeTraining
+                ? (strings.isChinese
+                      ? '自由训练已保存，计划进度未改变。'
+                      : 'Free training saved. Plan progress unchanged.')
+                : strings.workoutSaved,
+          ),
+        ),
+      );
       Navigator.of(context).pop();
       return;
     }
@@ -974,6 +1074,7 @@ class _TraditionalSetLogger extends StatelessWidget {
     required this.displayUnit,
     required this.step,
     required this.plateBreakdown,
+    this.equipmentPreview,
     required this.completionController,
     required this.onDecreaseReps,
     required this.onIncreaseReps,
@@ -995,6 +1096,7 @@ class _TraditionalSetLogger extends StatelessWidget {
   final String displayUnit;
   final double step;
   final PlateBreakdownResult? plateBreakdown;
+  final Widget? equipmentPreview;
   final AnimationController completionController;
   final VoidCallback? onDecreaseReps;
   final VoidCallback onIncreaseReps;
@@ -1105,7 +1207,10 @@ class _TraditionalSetLogger extends StatelessWidget {
               ),
             ),
           ),
-          if (plateBreakdown != null) ...[
+          if (equipmentPreview != null) ...[
+            const Spacer(),
+            SizedBox(height: 70, child: equipmentPreview),
+          ] else if (plateBreakdown != null) ...[
             const Spacer(),
             _BarbellGraphic(
               breakdown: plateBreakdown!,
@@ -1165,6 +1270,7 @@ class _CardSetStack extends StatefulWidget {
     required this.displayUnit,
     required this.step,
     required this.plateBreakdown,
+    this.equipmentPreview,
     required this.completionController,
     required this.onDecreaseReps,
     required this.onIncreaseReps,
@@ -1189,6 +1295,7 @@ class _CardSetStack extends StatefulWidget {
   final String displayUnit;
   final double step;
   final PlateBreakdownResult? plateBreakdown;
+  final Widget? equipmentPreview;
   final AnimationController completionController;
   final VoidCallback? onDecreaseReps;
   final VoidCallback onIncreaseReps;
@@ -1576,6 +1683,7 @@ class _CardSetStackState extends State<_CardSetStack> {
                             theme: widget.theme,
                             strings: widget.strings,
                             breakdown: widget.plateBreakdown,
+                            equipmentPreview: widget.equipmentPreview,
                             compact: compact,
                           ),
                         ),
@@ -1785,12 +1893,14 @@ class _CardFlexibleStage extends StatelessWidget {
     required this.strings,
     required this.breakdown,
     required this.compact,
+    this.equipmentPreview,
   });
 
   final FittinTheme theme;
   final AppStrings strings;
   final PlateBreakdownResult? breakdown;
   final bool compact;
+  final Widget? equipmentPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -1821,20 +1931,24 @@ class _CardFlexibleStage extends StatelessWidget {
               border: Border.all(color: theme.border.withValues(alpha: 0.7)),
             ),
             alignment: Alignment.center,
-            child: breakdown == null
-                ? _CardGestureCompass(
-                    theme: theme,
-                    strings: strings,
-                    compact: constraints.maxHeight < 84,
-                  )
-                : Padding(
-                    padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 12),
-                    child: _BarbellGraphic(
-                      breakdown: breakdown!,
-                      strings: strings,
-                      height: availableHeight,
-                    ),
-                  ),
+            child:
+                equipmentPreview ??
+                (breakdown == null
+                    ? _CardGestureCompass(
+                        theme: theme,
+                        strings: strings,
+                        compact: constraints.maxHeight < 84,
+                      )
+                    : Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 8 : 12,
+                        ),
+                        child: _BarbellGraphic(
+                          breakdown: breakdown!,
+                          strings: strings,
+                          height: availableHeight,
+                        ),
+                      )),
           ),
         );
       },

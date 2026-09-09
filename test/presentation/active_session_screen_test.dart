@@ -13,6 +13,53 @@ import '../support/in_memory_database_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets(
+    'history recording saves through isolated callback and preserves live draft',
+    (tester) async {
+      final database = InMemoryDatabaseRepository();
+      final live = fakeWorkoutSessionState;
+      await database.saveActiveSessionDraft(live);
+      WorkoutSessionState? saved;
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(database),
+          todayWorkoutGatewayProvider.overrideWithValue(
+            FakeTodayWorkoutGateway(),
+          ),
+          activeSessionProvider.overrideWith(
+            (ref) => ActiveSessionNotifier(
+              ref,
+              initialWorkout: live,
+              propagateWeight: false,
+              onSaveIsolatedSession: (session) async {
+                saved = session;
+              },
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: ActiveSessionScreen(
+              editingHistory: true,
+              completedAt: DateTime(2026, 1, 1),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('history-edit-date')), findsOneWidget);
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(saved, isNotNull);
+      expect(await database.fetchActiveSessionDraft(live.instanceId), live);
+      expect(find.text('Confirm workout conclusion?'), findsNothing);
+    },
+  );
+
   testWidgets('active session screen renders compact workout console', (
     WidgetTester tester,
   ) async {

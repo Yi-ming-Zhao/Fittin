@@ -23,18 +23,20 @@ void main() {
 
     expect(find.text('Front'), findsOneWidget);
     expect(find.text('Back'), findsOneWidget);
+    expect(find.text('Side'), findsOneWidget);
+    expect(find.byKey(const ValueKey('anatomy-side-diagram')), findsOneWidget);
     expect(find.byKey(const ValueKey('anatomy-front-diagram')), findsOneWidget);
     expect(find.byKey(const ValueKey('anatomy-back-diagram')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('anatomy-intensity-legend')),
       findsOneWidget,
     );
-    expect(find.semantics.byLabel('Chest'), findsOne);
+    expect(find.semantics.byLabel('Chest'), findsAtLeastNWidgets(1));
     expect(find.semantics.byLabel('Upper back'), findsOne);
 
     final frontPaint = find.descendant(
       of: find.byKey(const ValueKey('anatomy-front-diagram')),
-      matching: find.byType(CustomPaint),
+      matching: find.byKey(const ValueKey('anatomy-front-canvas')),
     );
     await tester.tapAt(_designPoint(tester.getRect(frontPaint), 48, 70));
     await tester.pumpAndSettle();
@@ -48,7 +50,7 @@ void main() {
 
     final backPaint = find.descendant(
       of: find.byKey(const ValueKey('anatomy-back-diagram')),
-      matching: find.byType(CustomPaint),
+      matching: find.byKey(const ValueKey('anatomy-back-canvas')),
     );
     await tester.tapAt(_designPoint(tester.getRect(backPaint), 60, 70));
     await tester.pumpAndSettle();
@@ -58,6 +60,17 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Upper back'), findsOneWidget);
+    await tester.tap(find.text('Side'));
+    await tester.pumpAndSettle();
+    expect(find.text('All three views'), findsOneWidget);
+    expect(find.byKey(const ValueKey('anatomy-front-diagram')), findsNothing);
+    final sidePaint = find.byKey(const ValueKey('anatomy-side-canvas'));
+    await tester.tapAt(_designPoint(tester.getRect(sidePaint), 71, 65));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('anatomy-detail-chest')), findsOneWidget);
+    await tester.tap(find.text('All three views'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('anatomy-front-diagram')), findsOneWidget);
     semantics.dispose();
   });
 
@@ -126,10 +139,10 @@ Future<void> _pumpMap(
 }
 
 Offset _designPoint(Rect canvasRect, double designX, double designY) {
-  final scale = math.min(canvasRect.width / 120, canvasRect.height / 250);
+  final scale = math.min(canvasRect.width / 120, canvasRect.height / 320);
   final offset = Offset(
     (canvasRect.width - 120 * scale) / 2,
-    (canvasRect.height - 250 * scale) / 2,
+    (canvasRect.height - 320 * scale) / 2,
   );
   return canvasRect.topLeft + offset + Offset(designX * scale, designY * scale);
 }

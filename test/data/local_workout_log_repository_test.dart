@@ -68,6 +68,12 @@ void main() {
       expect(updatedLog?.exercises.first.sets.first.completedReps, 3);
       final updatedInstance = await repository.fetchInstance('instance-1');
       expect(updatedInstance?.states.first.baseWeight, 100);
+      expect(updatedLog!.postConclusionSnapshot!.states.first.baseWeight, 100);
+      final secondEdit = await repo.updateWorkoutLog(
+        updatedLog,
+        expectedLog: updatedLog,
+      );
+      expect(secondEdit.progressionRewritten, isTrue);
     },
   );
 
