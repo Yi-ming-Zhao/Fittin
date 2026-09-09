@@ -15,7 +15,7 @@ Split, while retaining every character from the previous subset.
 - Source repository: https://github.com/notofonts/noto-cjk
 - SHA-256: `a0ecca1c67a4da5a89857703b84a44eba9fce7d7b5941bf4285e8c0a8346cf60`
 - Size: `10540376` bytes
-- Runtime subset SHA-256: `7e404620b4d622a834cd7414338643b4883b7cd5dea47fc5b03fad1c9be90af1`
+- Runtime subset SHA-256: `992be14b0fc793a0ed55c6ff67b5c59b2d0480583a9684c6b4420a98fc5c4336`
 - Runtime subset size: `340348` bytes
 - License: SIL Open Font License 1.1; see `OFL-NotoSansSC.txt`.
 

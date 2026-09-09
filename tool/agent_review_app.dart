@@ -26,6 +26,12 @@ import 'package:fittin_v2/src/presentation/widgets/anatomy_load_map.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
 import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
+import 'package:fittin_v2/src/presentation/screens/theme_palette_library_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_activity_library_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/agent_settings_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -100,6 +106,15 @@ class _ReviewApp extends ConsumerWidget {
         'library' => const ExerciseLibraryManagementScreen(),
         'advanced' => const AdvancedAnalyticsScreen(),
         'cardio' => const CardioHubScreen(),
+        'cardio-library' => const CardioActivityLibraryScreen(),
+        'cardio-editor' => const CardioActivityEditorScreen(),
+        'exercise-editor' => const CustomExerciseEditorScreen(),
+        'palettes' => const ThemePaletteLibraryScreen(),
+        'palette-editor' => const CustomPaletteEditorScreen(),
+        'agent-settings' => const AgentSettingsScreen(),
+        'about' => const AboutScreen(),
+        'plan-editor' => const PlanEditorScreen(),
+        'preferences' => const ProfilePreferencesScreen(),
         'anatomy' => Scaffold(
           body: SafeArea(
             child: SingleChildScrollView(

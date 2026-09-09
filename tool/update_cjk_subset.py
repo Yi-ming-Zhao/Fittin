@@ -15,7 +15,7 @@ for directory, pattern in [('lib', '*.dart'), ('assets/plans', '*.json'),
         if path.name.endswith(('.g.dart', '.freezed.dart')):
             continue
         codepoints.update(map(ord, path.read_text(encoding='utf-8')))
-font = TTFont(source)
+font = TTFont(source, recalcTimestamp=False)
 available = set(font.getBestCmap())
 options = subset.Options()
 options.layout_features = ['*']
