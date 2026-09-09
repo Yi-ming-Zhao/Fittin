@@ -24,5 +24,5 @@
 - PR #13 CI run `34327891248` passed Flutter tests/analyze, Go, Linux, Windows, macOS and unsigned iOS builds at `6173a5648eb731f748543f3b56de1e5973f757a4`.
 - Local Chrome transaction/migration suite: 19 passed. Local training-freedom tests: 10 passed. History-recording UI, eight-palette dumbbell, side-view anatomy, catalog execution and Agent library tests passed.
 - OpenSpec strict validation: 76 passed, 0 failed.
-- Production artifacts, public deployment and Android in-place upgrade remain separate release gates; this review is not evidence that v1.4.0 has been published.
+- Production artifacts, public deployment and Android in-place upgrade passed their separate gates; see [release verification](release-verification-v1.4.0.md), including the observed local-proxy cold-start limitation and unsigned platform boundaries.
 - iOS public installation requires distribution signing; unsigned `.app` bundles must be labeled clearly. Desktop bundles are not Apple-notarized or commercially Windows-signed.

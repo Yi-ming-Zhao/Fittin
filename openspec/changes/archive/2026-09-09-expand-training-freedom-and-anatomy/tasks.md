@@ -19,6 +19,6 @@
 
 ## 4. Verification and release
 
-- [ ] 4.1 Run targeted regressions, static analysis and platform build gates; fix failures.
-- [ ] 4.2 Validate OpenSpec, review the diff, update release version and publish CI artifacts.
-- [ ] 4.3 Deploy and verify public Web, Android update/signature/hash, and available iOS build/distribution; document any signing limitation.
+- [x] 4.1 Run targeted regressions, static analysis and platform build gates; fix failures.
+- [x] 4.2 Validate OpenSpec, review the diff, update release version and publish CI artifacts.
+- [x] 4.3 Deploy and verify public Web, Android update/signature/hash, and available iOS build/distribution; document any signing limitation.
