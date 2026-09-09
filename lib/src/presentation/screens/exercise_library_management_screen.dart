@@ -824,7 +824,7 @@ String exerciseMuscleLabel(ExerciseMuscle value, bool zh) {
     ExerciseMuscle.core => '核心',
     ExerciseMuscle.glutes => '臀肌',
     ExerciseMuscle.quadriceps => '股四头肌',
-    ExerciseMuscle.hamstrings => '股二头肌',
+    ExerciseMuscle.hamstrings => '腘绳肌',
     ExerciseMuscle.calves => '小腿',
     ExerciseMuscle.adductors => '内收肌',
     ExerciseMuscle.rotatorCuff => '肩袖肌群',

@@ -76,11 +76,20 @@ class LocalWorkoutLogRepository {
       ownerUserId: _ownerUserId,
     );
 
-    final progressionRewritten = await _rewriteProgressionIfAllowed(
-      normalizedLog,
-    );
+    final identitiesUnchanged =
+        normalizedLog.exercises.length == existing.exercises.length &&
+        normalizedLog.exercises.every(
+          (exercise) => existing.exercises.any(
+            (old) =>
+                old.exerciseId == exercise.exerciseId &&
+                old.exerciseDefinitionId == exercise.exerciseDefinitionId,
+          ),
+        );
+    final progressionRewritten =
+        identitiesUnchanged &&
+        await _rewriteProgressionIfAllowed(normalizedLog);
     return WorkoutLogUpdateResult(
-      log: normalizedLog,
+      log: (await fetchWorkoutLogById(log.logId))!,
       progressionRewritten: progressionRewritten,
     );
   }
@@ -285,6 +294,16 @@ class LocalWorkoutLogRepository {
         states: result.updatedStates,
       ),
     );
+    await _repository.updateWorkoutLog(
+      updatedLog.copyWith(
+        postConclusionSnapshot: postSnapshot.copyWith(
+          currentWorkoutIndex: result.nextWorkoutIndex,
+          engineState: result.updatedEngineState,
+          states: result.updatedStates,
+        ),
+      ),
+      ownerUserId: _ownerUserId,
+    );
     return true;
   }
 
@@ -351,6 +370,8 @@ class LocalWorkoutLogRepository {
             completedReps: log.sets[index].completedReps,
             targetWeight: log.sets[index].targetWeight,
             weight: log.sets[index].weight,
+            targetRpe: log.sets[index].targetRpe,
+            completedRpe: log.sets[index].completedRpe,
             isAmrap: log.sets[index].isAmrap,
             isCompleted: log.sets[index].isCompleted,
             isSkipped: log.sets[index].isSkipped,

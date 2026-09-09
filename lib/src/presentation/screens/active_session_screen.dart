@@ -27,11 +27,13 @@ class ActiveSessionScreen extends ConsumerStatefulWidget {
   const ActiveSessionScreen({
     super.key,
     this.editingHistory = false,
+    this.freeTraining = false,
     this.completedAt,
     this.onCompletedAtChanged,
   });
 
   final bool editingHistory;
+  final bool freeTraining;
   final DateTime? completedAt;
   final ValueChanged<DateTime>? onCompletedAtChanged;
 
@@ -476,7 +478,11 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
           style: theme.displayStyle(22, theme.fg),
         ),
         content: Text(
-          strings.confirmConcludeWorkoutMessage,
+          widget.freeTraining
+              ? (strings.isChinese
+                    ? '保存这次自由训练，当前训练计划和下一训练日保持不变。'
+                    : 'Save this free session. Your plan and next training day stay unchanged.')
+              : strings.confirmConcludeWorkoutMessage,
           style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.45),
         ),
         actions: [
@@ -502,9 +508,17 @@ class _ActiveSessionScreenState extends ConsumerState<ActiveSessionScreen>
     final success = await notifier.concludeSession();
     if (!mounted) return;
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(strings.workoutSaved)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.freeTraining
+                ? (strings.isChinese
+                      ? '自由训练已保存，计划进度未改变。'
+                      : 'Free training saved. Plan progress unchanged.')
+                : strings.workoutSaved,
+          ),
+        ),
+      );
       Navigator.of(context).pop();
       return;
     }

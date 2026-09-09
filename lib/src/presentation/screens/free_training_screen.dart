@@ -301,7 +301,7 @@ class _FreeTrainingScreenState extends ConsumerState<FreeTrainingScreen> {
                 ),
               ),
             ],
-            child: const ActiveSessionScreen(),
+            child: const ActiveSessionScreen(freeTraining: true),
           ),
         ),
       );

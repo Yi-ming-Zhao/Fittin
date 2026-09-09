@@ -14,7 +14,7 @@ jobs:
         include:
           - { os: macos-15, target: macos }
           - { os: macos-15, target: ios }
-          - { os: windows-latest, target: windows }
+          - { os: windows-2022, target: windows }
           - { os: ubuntu-22.04, target: linux }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
@@ -38,10 +38,10 @@ jobs:
           BACKEND: ${{ vars.RELEASE_BACKEND_URL }}
         run: |
           set -euo pipefail
-          extra=()
-          if [[ "$TARGET" == ios ]]; then extra+=(--no-codesign); fi
+          args=(build "$TARGET" --release)
+          if [[ "$TARGET" == ios ]]; then args+=(--no-codesign); fi
           if [[ "$TARGET" == macos ]]; then export CODE_SIGN_IDENTITY=-; fi
-          flutter build "$TARGET" --release "${extra[@]}" --dart-define=BACKEND_URL="${BACKEND:-https://fittin.hammerscholar.net/api}"
+          flutter "${args[@]}" --dart-define=BACKEND_URL="${BACKEND:-https://fittin.hammerscholar.net/api}"
       - name: Package native bundle
         env:
           TARGET: ${{ matrix.target }}

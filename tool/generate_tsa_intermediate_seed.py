@@ -8,7 +8,7 @@ from xml.etree import ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKBOOK_PATH = ROOT / "assets/raw_table_plans/TSA Intermediate Approach 2.0 | LiftVault.com.xlsx"
+WORKBOOK_PATH = ROOT / "assets/raw_table_plans/TSA Intermediate Approach 2.0 - LiftVault.com.xlsx"
 OUTPUT_PATH = ROOT / "assets/plans/tsa_intermediate_approach_2_0.json"
 
 NS = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
