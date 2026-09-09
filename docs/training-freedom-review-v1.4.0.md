@@ -17,6 +17,7 @@
 - Eight semantic palettes drive the three anatomy views and dumbbell illustration. Anatomy explicitly depicts completed-set exposure rather than diagnosis or recovery.
 - Real Flutter Web synthetic-data flow verified free training selection, weight change, three-set recording, conclusion and analytics inclusion.
 - Responsive widgets cover short/long phones, 320px, Chinese/English, 1.6x text, keyboard and desktop; screen inventory includes the new free-training route.
+- Inspected 28 synthetic Web scenarios, including all eight anatomy palettes and nested editors. Fixed full-width filter chips found during visual review; regression checks compact wrapping and 44px touch targets. QA text now uses the production typography configuration.
 
 ## Build evidence and release gate
 

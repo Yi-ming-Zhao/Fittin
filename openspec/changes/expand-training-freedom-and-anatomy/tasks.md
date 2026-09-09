@@ -14,8 +14,8 @@
 ## 3. Mobile visual experience
 
 - [x] 3.1 Implement detailed original front/back/side anatomy regions and interaction tests.
-- [ ] 3.2 Refine mobile hierarchy, spacing and deeply nested screens across semantic themes.
-- [ ] 3.3 Render and inspect small-phone, long-phone, keyboard, bilingual and desktop layouts.
+- [x] 3.2 Refine mobile hierarchy, spacing and deeply nested screens across semantic themes.
+- [x] 3.3 Render and inspect small-phone, long-phone, keyboard, bilingual and desktop layouts.
 
 ## 4. Verification and release
 

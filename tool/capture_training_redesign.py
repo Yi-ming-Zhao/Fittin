@@ -1,6 +1,7 @@
 """Render isolated synthetic Flutter QA routes; never access real user data."""
 import json
 import os
+import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -38,6 +39,8 @@ with sync_playwright() as p:
           for theme in ['midnightCobalt', 'bordeauxVelvet', 'espressoEmber',
                         'graphiteOrchid', 'inkSaffron', 'oliveManuscript']],
     ]:
+        if len(sys.argv) > 1 and name not in sys.argv[1:]:
+            continue
         page = browser.new_page(viewport={'width': width, 'height': height}, device_scale_factor=2)
         errors = []
         page.on('pageerror', lambda error: errors.append(str(error)))

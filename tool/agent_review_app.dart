@@ -25,7 +25,7 @@ import 'package:fittin_v2/src/presentation/screens/cardio_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/anatomy_load_map.dart';
 import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
 import 'package:fittin_v2/src/domain/exercise_library.dart';
-import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
+import 'package:fittin_v2/src/presentation/theme/app_styles.dart';
 import 'package:fittin_v2/src/presentation/screens/theme_palette_library_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/cardio_activity_library_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/agent_settings_screen.dart';
@@ -99,7 +99,7 @@ class _ReviewApp extends ConsumerWidget {
         useMaterial3: true,
         colorScheme: theme.colorScheme,
         scaffoldBackgroundColor: theme.bg,
-        textTheme: AppTypography.withCjkFallbacks(ThemeData().textTheme),
+        textTheme: AppStyles.getTextTheme(theme.colorScheme),
       ),
       home: switch (Uri.base.queryParameters['screen']) {
         'free' => const FreeTrainingScreen(),

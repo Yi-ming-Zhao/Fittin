@@ -156,11 +156,11 @@ class FittinChip extends StatelessWidget {
           onTap: onTap,
           customBorder: shape,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 44),
-            alignment: Alignment.center,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Text(
               label,
+              textAlign: TextAlign.center,
               style: theme
                   .uiStyle(12, active ? theme.accentInk : theme.fgDim)
                   .copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1),
