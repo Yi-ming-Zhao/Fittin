@@ -18,6 +18,14 @@ import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:fittin_v2/src/presentation/app_shell_navigation.dart';
 import 'package:fittin_v2/src/presentation/screens/app_shell_screen.dart';
 import 'package:fittin_v2/src/presentation/theme/fittin_theme.dart';
+import 'package:fittin_v2/src/presentation/screens/free_training_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/exercise_library_management_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_screen.dart';
+import 'package:fittin_v2/src/presentation/widgets/anatomy_load_map.dart';
+import 'package:fittin_v2/src/application/advanced_analytics_provider.dart';
+import 'package:fittin_v2/src/domain/exercise_library.dart';
+import 'package:fittin_v2/src/presentation/theme/app_typography.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +60,9 @@ Future<void> main() async {
         resolvedFittinThemeProvider.overrideWithValue(
           FittinPaletteRegistry.themeOf(palette),
         ),
-        appShellTabIndexProvider.overrideWith((ref) => 2),
+        appShellTabIndexProvider.overrideWith(
+          (ref) => int.tryParse(Uri.base.queryParameters['tab'] ?? '') ?? 2,
+        ),
         agentProviderSettingsStoreProvider.overrideWithValue(
           _ReviewSettingsStore(),
         ),
@@ -83,8 +93,36 @@ class _ReviewApp extends ConsumerWidget {
         useMaterial3: true,
         colorScheme: theme.colorScheme,
         scaffoldBackgroundColor: theme.bg,
+        textTheme: AppTypography.withCjkFallbacks(ThemeData().textTheme),
       ),
-      home: const AppShellScreen(),
+      home: switch (Uri.base.queryParameters['screen']) {
+        'free' => const FreeTrainingScreen(),
+        'library' => const ExerciseLibraryManagementScreen(),
+        'advanced' => const AdvancedAnalyticsScreen(),
+        'cardio' => const CardioHubScreen(),
+        'anatomy' => Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: AnatomyLoadMap(
+                overview: MuscleLoadOverview(
+                  totalCompletedSets: 48,
+                  loads: [
+                    for (var i = 0; i < ExerciseMuscle.values.length; i++)
+                      MuscleLoadData(
+                        muscle: ExerciseMuscle.values[i],
+                        weightedCompletedSets: 1 + (i % 5).toDouble(),
+                        contributingCompletedSets: 3 + i % 7,
+                        normalizedIntensity: (1 + i % 5) / 5,
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        _ => const AppShellScreen(),
+      },
     );
   }
 }

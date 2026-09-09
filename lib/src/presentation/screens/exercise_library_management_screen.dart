@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:fittin_v2/src/domain/exercise_execution.dart';
 
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
@@ -136,6 +137,8 @@ class _ExerciseLibraryManagementScreenState
                     item.movement.name,
                     item.equipment.name,
                     ...item.tags,
+                    ...item.aliases,
+                    item.execution.summary(strings.isChinese),
                   ].join(' ').toLowerCase().contains(query);
                 })
                 .toList(growable: false);
@@ -267,6 +270,7 @@ class _CustomExerciseEditorScreenState
   late ExerciseMovement _movement;
   late ExerciseEquipment _equipment;
   late ExerciseLoadSemantics _loadSemantics;
+  late ExerciseExecution _execution;
   late Set<ExerciseMuscle> _primary;
   late Set<ExerciseMuscle> _secondary;
   bool _saving = false;
@@ -276,6 +280,8 @@ class _CustomExerciseEditorScreenState
     super.initState();
     final source = widget.existing;
     final copy = widget.copyFrom;
+    _execution =
+        source?.execution ?? copy?.execution ?? const ExerciseExecution();
     _nameZh = TextEditingController(text: source?.nameZhCn ?? copy?.nameZhCn);
     _nameEn = TextEditingController(text: source?.nameEn ?? copy?.nameEn);
     _tags = TextEditingController(text: source?.tags.join(', ') ?? '');
@@ -417,6 +423,106 @@ class _CustomExerciseEditorScreenState
                 onChanged: (value) => setState(() => _secondary = value),
               ),
               const SizedBox(height: 12),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text(strings.isChinese ? '动作执行细节' : 'Execution details'),
+                subtitle: Text(_execution.summary(strings.isChinese)),
+                children: [
+                  _EnumDropdown<ExerciseLaterality>(
+                    label: strings.isChinese ? '单双侧' : 'Laterality',
+                    value: _execution.laterality,
+                    values: ExerciseLaterality.values,
+                    itemLabel: (value) =>
+                        ExerciseExecution.label(value.name, strings.isChinese),
+                    onChanged: (value) =>
+                        _updateExecution('laterality', value.name),
+                  ),
+                  const SizedBox(height: 12),
+                  _EnumDropdown<ExerciseGrip>(
+                    label: strings.isChinese ? '握法' : 'Grip',
+                    value: _execution.grip,
+                    values: ExerciseGrip.values,
+                    itemLabel: (value) =>
+                        ExerciseExecution.label(value.name, strings.isChinese),
+                    onChanged: (value) => _updateExecution('grip', value.name),
+                  ),
+                  const SizedBox(height: 12),
+                  _EnumDropdown<ExercisePosition>(
+                    label: strings.isChinese ? '姿势' : 'Position',
+                    value: _execution.position,
+                    values: ExercisePosition.values,
+                    itemLabel: (value) =>
+                        ExerciseExecution.label(value.name, strings.isChinese),
+                    onChanged: (value) =>
+                        _updateExecution('position', value.name),
+                  ),
+                  const SizedBox(height: 12),
+                  _EnumDropdown<ExerciseMeasurement>(
+                    label: strings.isChinese
+                        ? '动作计量方式'
+                        : 'Exercise measurement',
+                    value: _execution.measurement,
+                    values: ExerciseMeasurement.values,
+                    itemLabel: (value) =>
+                        ExerciseExecution.label(value.name, strings.isChinese),
+                    onChanged: (value) =>
+                        _updateExecution('measurement', value.name),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: _execution.equipmentVariant,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: strings.isChinese
+                          ? '器械变式'
+                          : 'Equipment variation',
+                    ),
+                    items: [
+                      for (final value in ExerciseExecution.equipmentVariants)
+                        DropdownMenuItem(
+                          value: value,
+                          child: Text(
+                            value.isEmpty
+                                ? (strings.isChinese
+                                      ? '常规器械'
+                                      : 'Standard equipment')
+                                : ExerciseExecution.label(
+                                    value,
+                                    strings.isChinese,
+                                  ),
+                          ),
+                        ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        _updateExecution('equipmentVariant', value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      for (final value in ExerciseExecution.supportedTechniques)
+                        FilterChip(
+                          label: Text(
+                            ExerciseExecution.label(value, strings.isChinese),
+                          ),
+                          selected: _execution.techniques.contains(value),
+                          onSelected: (selected) {
+                            final values = {..._execution.techniques};
+                            selected ? values.add(value) : values.remove(value);
+                            if (values.length <= 6) {
+                              _updateExecution('techniques', values.toList());
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
               TextFormField(
                 controller: _tags,
                 maxLength: 500,
@@ -449,6 +555,15 @@ class _CustomExerciseEditorScreenState
   String? _required(String? value) {
     if (value != null && value.trim().isNotEmpty) return null;
     return AppStrings.of(context, ref).isChinese ? '请填写' : 'Required';
+  }
+
+  void _updateExecution(String field, Object value) {
+    setState(
+      () => _execution = ExerciseExecution.fromJson({
+        ..._execution.toJson(),
+        field: value,
+      }),
+    );
   }
 
   Future<void> _save() async {
@@ -484,6 +599,7 @@ class _CustomExerciseEditorScreenState
         roundingIncrementKg: double.parse(_increment.text),
         sourceExerciseId:
             widget.existing?.sourceExerciseId ?? widget.copyFrom?.id,
+        execution: _execution,
       );
       await service.saveCustomExercise(
         exercise,
@@ -552,6 +668,13 @@ class _ExerciseRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.uiStyle(11, theme.fgMuted),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.execution.summary(strings.isChinese),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.uiStyle(11, theme.fgDim),
               ),
             ],
           ),
@@ -704,6 +827,9 @@ String exerciseMuscleLabel(ExerciseMuscle value, bool zh) {
     ExerciseMuscle.hamstrings => '股二头肌',
     ExerciseMuscle.calves => '小腿',
     ExerciseMuscle.adductors => '内收肌',
+    ExerciseMuscle.rotatorCuff => '肩袖肌群',
+    ExerciseMuscle.hipFlexors => '髋屈肌群',
+    ExerciseMuscle.tibialisAnterior => '胫骨前肌',
   };
 }
 
@@ -725,6 +851,18 @@ String exerciseMovementLabel(ExerciseMovement value, bool zh) {
     ExerciseMovement.locomotion => '移动',
     ExerciseMovement.core => '核心',
     ExerciseMovement.selection => '待选',
+    ExerciseMovement.kneeFlexion => '屈膝',
+    ExerciseMovement.hipAbduction => '髋外展',
+    ExerciseMovement.hipAdduction => '髋内收',
+    ExerciseMovement.hipFlexion => '屈髋',
+    ExerciseMovement.anklePlantarFlexion => '踝跖屈',
+    ExerciseMovement.ankleDorsiflexion => '踝背屈',
+    ExerciseMovement.wristFlexion => '屈腕',
+    ExerciseMovement.wristExtension => '伸腕',
+    ExerciseMovement.shoulderFlexion => '肩屈曲',
+    ExerciseMovement.horizontalAdduction => '肩水平内收',
+    ExerciseMovement.scapularElevation => '肩胛上提',
+    ExerciseMovement.olympicLift => '奥林匹克举重',
   };
 }
 

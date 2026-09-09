@@ -1,0 +1,64 @@
+name: Native platform builds
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-15, target: macos }
+          - { os: macos-15, target: ios }
+          - { os: windows-latest, target: windows }
+          - { os: ubuntu-22.04, target: linux }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.7"
+          channel: stable
+          cache: true
+      - name: Install Linux libraries
+        if: matrix.target == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libblkid-dev liblzma-dev
+      - run: flutter pub get
+      - name: Build native release
+        env:
+          TARGET: ${{ matrix.target }}
+          BACKEND: ${{ vars.RELEASE_BACKEND_URL }}
+        run: |
+          set -euo pipefail
+          extra=()
+          if [[ "$TARGET" == ios ]]; then extra+=(--no-codesign); fi
+          if [[ "$TARGET" == macos ]]; then export CODE_SIGN_IDENTITY=-; fi
+          flutter build "$TARGET" --release "${extra[@]}" --dart-define=BACKEND_URL="${BACKEND:-https://fittin.hammerscholar.net/api}"
+      - name: Package native bundle
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          version="$(sed -n 's/^version: //p' pubspec.yaml)"
+          version="${version%%+*}"
+          mkdir -p dist
+          case "$TARGET" in
+            macos) ditto -c -k --keepParent build/macos/Build/Products/Release/fittin_v2.app "dist/fittin-v${version}-macos.zip" ;;
+            ios) ditto -c -k --keepParent build/ios/iphoneos/Runner.app "dist/fittin-v${version}-ios-unsigned.zip" ;;
+            linux) tar -C build/linux/x64/release/bundle -czf "dist/fittin-v${version}-linux-x64.tar.gz" . ;;
+            windows) powershell.exe -NoProfile -Command "Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/fittin-v${version}-windows-x64.zip" ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14

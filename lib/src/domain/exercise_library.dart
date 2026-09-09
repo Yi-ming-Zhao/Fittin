@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'exercise_execution.dart';
 
 enum ExerciseDefinitionKind { exercise, selectionSlot }
 
@@ -17,6 +18,18 @@ enum ExerciseMovement {
   shoulderExternalRotation,
   locomotion,
   core,
+  kneeFlexion,
+  hipAbduction,
+  hipAdduction,
+  hipFlexion,
+  anklePlantarFlexion,
+  ankleDorsiflexion,
+  wristFlexion,
+  wristExtension,
+  shoulderFlexion,
+  horizontalAdduction,
+  scapularElevation,
+  olympicLift,
   selection,
 }
 
@@ -59,6 +72,9 @@ enum ExerciseMuscle {
   hamstrings,
   calves,
   adductors,
+  rotatorCuff,
+  hipFlexors,
+  tibialisAnterior,
 }
 
 enum StrengthFamily { squat, bench, deadlift, none }
@@ -204,6 +220,7 @@ class ExerciseDefinition {
     required List<String> sourceIds,
     required this.sourceRevision,
     required this.license,
+    this.execution = const ExerciseExecution(),
   }) : aliases = List.unmodifiable(aliases),
        legacyIds = List.unmodifiable(legacyIds),
        sourceIds = List.unmodifiable(sourceIds);
@@ -253,6 +270,9 @@ class ExerciseDefinition {
       sourceIds: _stringList(json, 'sourceIds'),
       sourceRevision: _requiredString(json, 'sourceRevision'),
       license: _requiredString(json, 'license'),
+      execution: ExerciseExecution.fromJson(
+        (json['execution'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
     );
   }
 
@@ -273,6 +293,8 @@ class ExerciseDefinition {
   final List<String> sourceIds;
   final String sourceRevision;
   final String license;
+
+  final ExerciseExecution execution;
 
   bool get isSelectionSlot => kind == ExerciseDefinitionKind.selectionSlot;
 

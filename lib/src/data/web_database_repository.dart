@@ -896,6 +896,8 @@ class WebDatabaseRepository extends DatabaseRepository {
     required String? ownerUserId,
     required int expectedVersion,
     required Map<String, dynamic> engineState,
+    int? currentWorkoutIndex,
+    List<TrainingState>? states,
   }) async {
     late Map<String, dynamic> updated;
     await store.runInTransaction(
@@ -913,6 +915,11 @@ class WebDatabaseRepository extends DatabaseRepository {
         }
         updated = Map<String, dynamic>.from(existing)
           ..['engineStateJson'] = engineState
+          ..['currentWorkoutIndex'] =
+              currentWorkoutIndex ?? existing['currentWorkoutIndex']
+          ..['currentStatesJson'] =
+              states?.map((state) => state.toJson()).toList() ??
+              existing['currentStatesJson']
           ..['lastModifiedAt'] = serializeStoredDateTime(DateTime.now())
           ..['version'] = expectedVersion + 1
           ..['syncStatusKey'] = _defaultSyncStatus(ownerUserId);
@@ -927,6 +934,24 @@ class WebDatabaseRepository extends DatabaseRepository {
       },
     );
     return storedTrainingInstanceFromDoc(updated);
+  }
+
+  @override
+  Future<T> trainingTransaction<T>(Future<T> Function() operation) async {
+    late T result;
+    await store.runInTransaction(
+      [
+        WebStoreNames.instances,
+        WebStoreNames.workoutLogs,
+        WebStoreNames.appState,
+        WebStoreNames.syncQueue,
+        WebStoreNames.templates,
+      ],
+      () async {
+        result = await operation();
+      },
+    );
+    return result;
   }
 
   @override

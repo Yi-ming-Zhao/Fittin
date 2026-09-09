@@ -8,11 +8,22 @@ import 'package:fittin_v2/src/data/web_local_store.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 import 'package:fittin_v2/src/domain/models/workout_log.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../support/training_release_contract.dart';
 
 class _FailAfterWebInstanceSaveRepository extends WebDatabaseRepository {
   _FailAfterWebInstanceSaveRepository(super.store);
 
   bool failAfterNextInstanceSave = false;
+  bool failNextDelete = false;
+
+  @override
+  Future<void> deleteWorkoutLog(String logId, {String? ownerUserId}) async {
+    await super.deleteWorkoutLog(logId, ownerUserId: ownerUserId);
+    if (failNextDelete) {
+      failNextDelete = false;
+      throw StateError('injected after deletion');
+    }
+  }
 
   @override
   Future<void> saveInstance(
@@ -30,6 +41,20 @@ class _FailAfterWebInstanceSaveRepository extends WebDatabaseRepository {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('IndexedDB release and delete are atomic across all stores', () async {
+    final store = await WebLocalStore.open(
+      databaseName: 'fittin_release_${DateTime.now().microsecondsSinceEpoch}',
+    );
+    addTearDown(store.close);
+    final database = _FailAfterWebInstanceSaveRepository(store);
+    await verifyTrainingReleaseTransaction(
+      database: database,
+      failNextDelete: () => database.failNextDelete = true,
+      queueCount: () async =>
+          (await store.getAllRecords(WebStoreNames.syncQueue)).length,
+    );
+  });
 
   test(
     'Web conclusion rolls back every store and concurrent retry is idempotent',

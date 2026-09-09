@@ -916,6 +916,8 @@ class DatabaseRepository {
     required String? ownerUserId,
     required int expectedVersion,
     required Map<String, dynamic> engineState,
+    int? currentWorkoutIndex,
+    List<TrainingState>? states,
   }) async {
     late InstanceCollection updated;
     await _write(() async {
@@ -930,6 +932,11 @@ class DatabaseRepository {
       }
       existing
         ..engineStateJson = jsonEncode(engineState)
+        ..currentWorkoutIndex =
+            currentWorkoutIndex ?? existing.currentWorkoutIndex
+        ..currentStatesJson =
+            states?.map((state) => jsonEncode(state.toJson())).toList() ??
+            existing.currentStatesJson
         ..lastModifiedAt = DateTime.now()
         ..version = existing.version + 1
         ..syncStatusKey = _defaultSyncStatus(ownerUserId);
@@ -945,6 +952,11 @@ class DatabaseRepository {
     );
     return (await fetchInstance(instanceId))!;
   }
+
+  /// Runs related schedule/history changes and their sync entries together.
+  Future<T> trainingTransaction<T>(Future<T> Function() operation) => _write(
+    () => runZoned(operation, zoneValues: {agentTransactionZoneKey: true}),
+  );
 
   Future<void> _saveInstance(
     StoredTrainingInstance data, {

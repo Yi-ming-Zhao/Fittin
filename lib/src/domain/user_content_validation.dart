@@ -50,6 +50,7 @@ abstract final class UserContentValidation {
           'tags',
           'roundingIncrementKg',
           'sourceExerciseId',
+          'execution',
         });
         final exercise = CustomExerciseDefinition.fromJson(payload);
         if (exercise.id != id) {

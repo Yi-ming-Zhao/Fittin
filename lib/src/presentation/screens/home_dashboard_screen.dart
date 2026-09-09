@@ -13,6 +13,7 @@ import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/advanced_analytics_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/exercise_deep_dive_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/cardio_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/free_training_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/pr_dashboard_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/today_workout_hero_card.dart';
@@ -57,7 +58,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 final roomyProgress = ((constraints.maxHeight - 880) / 46)
                     .clamp(0.0, 1.0);
                 final sectionGap = useCondensedCards
-                    ? 6.0
+                    ? 14.0
                     : 16.0 + (24.0 * roomyProgress);
                 final content = Column(
                   children: [
@@ -94,7 +95,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 );
                 final padding = EdgeInsets.fromLTRB(
                   theme.pad,
-                  useCondensedCards ? 16 : 16 + (8 * roomyProgress),
+                  20,
                   theme.pad,
                   20,
                 );
@@ -323,39 +324,65 @@ class _AtAGlanceSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasStrengthHistory = data.sparklineLifts.any(
+      (lift) => lift.lastCompletedAt != null,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _CycleProgressCard(
-                data: data,
-                strings: strings,
-                theme: theme,
-                compact: compact,
-              ),
+        if (!hasStrengthHistory)
+          DashboardSurfaceCard(
+            key: const ValueKey('today-training-empty-state'),
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  strings.isChinese ? '从第一场训练开始' : 'Your progress starts here',
+                  style: theme.uiStyle(20, theme.fg, FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  strings.isChinese
+                      ? '记录后，这里会展示力量变化、训练进度和新的个人纪录。今天也可以自由训练，或单独记录有氧。'
+                      : 'Record a workout to see your strength trends, plan progress and personal records. You can also train freely or log cardio.',
+                  style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.65),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _HighlightLiftCard(
-                data: data,
-                strings: strings,
-                theme: theme,
-                compact: compact,
+          )
+        else ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _CycleProgressCard(
+                  data: data,
+                  strings: strings,
+                  theme: theme,
+                  compact: compact,
+                ),
               ),
-            ),
-          ],
-        ),
-        SizedBox(height: compact ? 6 : 16),
-        _ActivityCard(
-          data: data,
-          strings: strings,
-          theme: theme,
-          compact: compact,
-        ),
-        SizedBox(height: compact ? 6 : 16),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _HighlightLiftCard(
+                  data: data,
+                  strings: strings,
+                  theme: theme,
+                  compact: compact,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: compact ? 12 : 16),
+          _ActivityCard(
+            data: data,
+            strings: strings,
+            theme: theme,
+            compact: compact,
+          ),
+        ],
+        SizedBox(height: compact ? 12 : 16),
         _QuickActionsCard(
           theme: theme,
           strings: strings,
@@ -809,16 +836,18 @@ class _QuickActionsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = [
       (
+        label: strings.isChinese ? '自由训练' : 'Free training',
+        subtitle: null,
+        icon: Icons.fitness_center_rounded,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => const FreeTrainingScreen()),
+        ),
+      ),
+      (
         label: strings.recordCardioAction,
         subtitle: null,
         icon: Icons.directions_run_rounded,
         onTap: onRecordCardio,
-      ),
-      (
-        label: strings.seeAllPrs,
-        subtitle: null,
-        icon: Icons.arrow_forward_rounded,
-        onTap: onOpenPr,
       ),
     ];
 

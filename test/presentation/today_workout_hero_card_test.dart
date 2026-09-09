@@ -279,6 +279,8 @@ class _DelayedTodayWorkoutGateway extends _SwitchableTodayWorkoutGateway {
 }
 
 class _SwitchableTodayWorkoutGateway implements TodayWorkoutGateway {
+  @override
+  Future<void> skipTodayWorkout({String? expectedToken}) async {}
   _SwitchableTodayWorkoutGateway({
     required this.summary,
     required this.template,
@@ -311,5 +313,8 @@ class _SwitchableTodayWorkoutGateway implements TodayWorkoutGateway {
       template.workouts;
 
   @override
-  Future<void> reorderTodayWorkout(String workoutId) async {}
+  Future<void> reorderTodayWorkout(
+    String workoutId, {
+    String? expectedToken,
+  }) async {}
 }

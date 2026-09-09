@@ -41,6 +41,8 @@ const _keyboardScenarios = <RouteLayoutScenario>{
 /// or reaches its private route through the owning public screen. Shared
 /// viewport mechanics are executed separately in dashboard_layout_test.dart.
 const routeLayoutEvidenceBySource = <String, String>{
+  'lib/src/presentation/screens/free_training_screen.dart':
+      'test/presentation/free_training_screen_test.dart',
   'lib/src/presentation/screens/about_screen.dart':
       'test/presentation/about_screen_test.dart',
   'lib/src/presentation/screens/account_screen.dart':
@@ -124,6 +126,10 @@ const routeLayoutScenarioEvidence = <RouteLayoutScenario, String>{
 /// coverage makes the inventory test fail instead of silently leaving a deep
 /// route unaudited.
 const routeLayoutCoverage = <String, RouteLayoutCoverage>{
+  'FreeTrainingScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/free_training_screen.dart',
+    _baselineScenarios,
+  ),
   'AboutScreen': RouteLayoutCoverage(
     'lib/src/presentation/screens/about_screen.dart',
     _baselineScenarios,

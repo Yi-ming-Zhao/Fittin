@@ -3,6 +3,67 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 
 const microcycleOrderEngineKey = 'microcycleOrder';
 const microcycleGenerationEngineKey = 'microcycleGeneration';
+const releasedWorkoutQueueEngineKey = 'releasedWorkoutQueue';
+
+List<String> releasedWorkoutQueue(StoredTrainingInstance instance) =>
+    (instance.engineState[releasedWorkoutQueueEngineKey] as List? ?? const [])
+        .whereType<String>()
+        .toList();
+
+StoredTrainingInstance skipScheduledWorkout({
+  required PlanTemplate template,
+  required StoredTrainingInstance instance,
+}) {
+  final queue = releasedWorkoutQueue(instance);
+  if (queue.isNotEmpty) {
+    return instance.copyWith(
+      engineState: {
+        ...instance.engineState,
+        releasedWorkoutQueueEngineKey: queue.skip(1).toList(),
+      },
+    );
+  }
+  final nextIndex =
+      (instance.currentWorkoutIndex + 1) % template.workouts.length;
+  var engineState = {...instance.engineState};
+  if (nextIndex == 0 && template.engineFamily == 'periodized_tm') {
+    final nextWeek =
+        ((engineState['currentWeekIndex'] as num?)?.toInt() ?? 0) + 1;
+    final weeks =
+        ((engineState['cycleLengthWeeks'] as num?)?.toInt() ??
+                template.workouts.first.exercises.first.stages.length)
+            .clamp(1, 10000);
+    engineState.addAll({
+      'currentWeekIndex': nextWeek,
+      'currentBlockIndex': nextWeek ~/ weeks,
+    });
+  }
+  return instance.copyWith(
+    currentWorkoutIndex: nextIndex,
+    states: template.engineFamily == 'periodized_tm'
+        ? instance.states.map((state) {
+            final skippedId = resolveMicrocycleSchedule(
+              template: template,
+              instance: instance,
+            ).currentWorkoutId;
+            if (state.workoutId != skippedId) return state;
+            final exercise = template.findExerciseById(state.exerciseId);
+            final index = exercise.stages.indexWhere(
+              (stage) => stage.id == state.currentStageId,
+            );
+            if (index < 0 || index + 1 >= exercise.stages.length) return state;
+            return state.copyWith(
+              currentStageId: exercise.stages[index + 1].id,
+            );
+          }).toList()
+        : instance.states,
+    engineState: normalizeMicrocycleAfterAdvance(
+      template: template,
+      nextWorkoutIndex: nextIndex,
+      engineState: engineState,
+    ),
+  );
+}
 
 class MicrocycleSchedule {
   const MicrocycleSchedule({

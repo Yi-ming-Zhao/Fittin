@@ -44,7 +44,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
           final roominess = ((safeContentHeight - 568.0) / (926.0 - 568.0))
               .clamp(0.0, 1.0)
               .toDouble();
-          const topPadding = 24.0;
+          const topPadding = 20.0;
           final majorGap = 18.0 + (10.0 * roominess);
           final sectionGap = 14.0 + (4.0 * roominess);
           final bottomPadding = 24.0 + (8.0 * roominess);
@@ -73,10 +73,12 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                     strings,
                     chartHeight: chartHeight,
                   ),
-                  SizedBox(height: sectionGap),
-                  DashboardSectionLabel(label: strings.currentSnapshot),
-                  SizedBox(height: sectionGap),
-                  _buildMetricGrid(context, fittinTheme, metrics, strings),
+                  if (metrics.isNotEmpty) ...[
+                    SizedBox(height: sectionGap),
+                    DashboardSectionLabel(label: strings.currentSnapshot),
+                    SizedBox(height: sectionGap),
+                    _buildMetricGrid(context, fittinTheme, metrics, strings),
+                  ],
                   SizedBox(height: majorGap),
                   DashboardSectionLabel(label: strings.progressPhotos),
                   SizedBox(height: sectionGap),

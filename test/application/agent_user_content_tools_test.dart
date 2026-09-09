@@ -43,6 +43,37 @@ void main() {
       'exerciseId': exerciseId,
     });
     expect(readExercise.payload['exercise'], containsPair('id', exerciseId));
+    expect((readExercise.payload['exercise'] as Map)['execution'], isA<Map>());
+    final special = await tools.execute('propose_create_custom_exercise', {
+      'definition': {
+        ..._exerciseInput('Single arm tempo press'),
+        'execution': {
+          'laterality': 'unilateral',
+          'grip': 'neutral',
+          'position': 'seated',
+          'measurement': 'repetitions',
+          'techniques': ['tempo'],
+          'equipmentVariant': '',
+        },
+      },
+    });
+    expect(special.isError, isFalse, reason: special.encoded);
+    expect(
+      jsonDecode(
+        special.proposal!.argumentsJson,
+      )['exercise']['execution']['laterality'],
+      'unilateral',
+    );
+    final invalidExecution = await tools.execute(
+      'propose_create_custom_exercise',
+      {
+        'definition': {
+          ..._exerciseInput('Unsafe execution'),
+          'execution': {'ownerUserId': 'injected'},
+        },
+      },
+    );
+    expect(invalidExecution.isError, isTrue);
 
     final deleteBuiltIn = await tools.execute(
       'propose_delete_custom_exercise',

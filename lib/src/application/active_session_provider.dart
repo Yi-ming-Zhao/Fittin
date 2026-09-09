@@ -62,8 +62,18 @@ class MicrocycleScheduleController {
 
   final Ref _ref;
 
-  Future<void> moveToToday(String workoutId) async {
-    await _ref.read(todayWorkoutGatewayProvider).reorderTodayWorkout(workoutId);
+  Future<void> skipToday({String? expectedToken}) async {
+    await _ref
+        .read(todayWorkoutGatewayProvider)
+        .skipTodayWorkout(expectedToken: expectedToken);
+    _ref.invalidate(todayWorkoutSummaryProvider);
+    _ref.invalidate(remainingMicrocycleWorkoutsProvider);
+  }
+
+  Future<void> moveToToday(String workoutId, {String? expectedToken}) async {
+    await _ref
+        .read(todayWorkoutGatewayProvider)
+        .reorderTodayWorkout(workoutId, expectedToken: expectedToken);
     _ref.invalidate(todayWorkoutSummaryProvider);
     _ref.invalidate(remainingMicrocycleWorkoutsProvider);
   }
@@ -112,11 +122,24 @@ class SessionState {
 }
 
 class ActiveSessionNotifier extends StateNotifier<SessionState> {
-  ActiveSessionNotifier(this._ref) : super(SessionState()) {
-    _restoreInFlight = _restorePersistedSession(background: true);
+  ActiveSessionNotifier(
+    this._ref, {
+    WorkoutSessionState? initialWorkout,
+    this.onSaveIsolatedSession,
+    this.propagateWeight = true,
+    this.persistIsolatedDraft = false,
+  }) : super(SessionState(activeWorkout: initialWorkout)) {
+    _initialOwner = _ref.read(currentUserIdProvider);
+    if (initialWorkout == null) {
+      _restoreInFlight = _restorePersistedSession(background: true);
+    }
   }
 
   final Ref _ref;
+  late final String? _initialOwner;
+  final Future<void> Function(WorkoutSessionState)? onSaveIsolatedSession;
+  final bool propagateWeight;
+  final bool persistIsolatedDraft;
   Future<void>? _restoreInFlight;
   Future<void>? _startInFlight;
   Future<bool>? _conclusionInFlight;
@@ -312,7 +335,9 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     final updatedSets = [
       for (var index = 0; index < currentExercise.sets.length; index++)
         if (index == setIndex ||
-            (index > setIndex && !_isResolved(currentExercise.sets[index])))
+            (propagateWeight &&
+                index > setIndex &&
+                !_isResolved(currentExercise.sets[index])))
           currentExercise.sets[index].copyWith(weight: resolvedWeight)
         else
           currentExercise.sets[index],
@@ -494,6 +519,7 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   }
 
   Future<bool> _concludeSession() async {
+    if (_ref.read(currentUserIdProvider) != _initialOwner) return false;
     final workout = state.activeWorkout;
     if (workout == null) {
       return false;
@@ -504,6 +530,17 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     var progressionCommitted = false;
 
     try {
+      if (onSaveIsolatedSession != null) {
+        await _draftWriteTail;
+        if (_lastDraftWriteError != null) {
+          throw StateError(
+            'Training draft is not saved yet. Retry before finishing.',
+          );
+        }
+        await onSaveIsolatedSession!(workout);
+        if (mounted) state = SessionState();
+        return true;
+      }
       await _draftWriteTail;
       if (_lastDraftWriteError != null) {
         throw StateError(
@@ -616,7 +653,9 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
   }
 
   void _queueDraftSave(WorkoutSessionState workout) {
-    if (!_draftWritesOpen) {
+    if (_ref.read(currentUserIdProvider) != _initialOwner) return;
+    if (!_draftWritesOpen ||
+        (onSaveIsolatedSession != null && !persistIsolatedDraft)) {
       return;
     }
     final ownerUserId = _ref.read(currentUserIdProvider);
@@ -657,7 +696,10 @@ class ActiveSessionNotifier extends StateNotifier<SessionState> {
     }
   }
 
-  bool get _acceptsMutations => !state.isLoading && _conclusionInFlight == null;
+  bool get _acceptsMutations =>
+      _ref.read(currentUserIdProvider) == _initialOwner &&
+      !state.isLoading &&
+      _conclusionInFlight == null;
 
   ExerciseSessionState _withResolvedCurrentSet(ExerciseSessionState exercise) {
     if (exercise.sets.isEmpty) {

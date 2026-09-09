@@ -13,6 +13,14 @@ This document records the evidence and product-safety policy behind Fittin's can
 
 Every imported or manually curated entry must retain `sourceIds`, `sourceRevision`, `license`, and the Fittin catalog version.
 
+## Catalog 1.2.0 expansion
+
+The expanded catalog contains 221 stable entries, including the existing selection placeholders. `tool/expand_exercise_catalog.dart` is the deterministic curated source. It covers common powerlifting, bodybuilding, Olympic lifting, bodyweight, cable, machine, dumbbell, kettlebell and conditioning variations. The [ACE exercise library](https://www.acefitness.org/resources/everyone/exercise-library/) is a factual taxonomy reference; no ACE descriptions, pictures or videos are redistributed, and it is not claimed to certify every Fittin variation.
+
+Execution fields describe laterality, grip, body position, measurement, bounded special techniques and equipment variants. Rotator cuff and hip-flexor labels are distinct from deltoid/core labels. Muscle allocations are coarse editorial exposure weights (primary:secondary = 2:1 for new entries, normalized), not measured EMG percentages, medical recovery or injury predictions. Technique and individual anatomy can change muscle emphasis. Newly explicit canonical names take precedence over earlier broad aliases; saved IDs and recorded weights remain unchanged.
+
+The library is extensible, not a claim to exhaust every possible gym movement. New entries use calibration-only load priors rather than inventing cross-exercise strength ratios.
+
 ## RM and e1RM boundaries
 
 Evidence used:

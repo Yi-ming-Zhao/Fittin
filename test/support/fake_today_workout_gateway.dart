@@ -3,6 +3,8 @@ import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_state.dart';
 
 class FakeTodayWorkoutGateway implements TodayWorkoutGateway {
+  @override
+  Future<void> skipTodayWorkout({String? expectedToken}) async {}
   FakeTodayWorkoutGateway({
     TodayWorkoutSummary? summary,
     WorkoutSessionState? session,
@@ -47,7 +49,10 @@ class FakeTodayWorkoutGateway implements TodayWorkoutGateway {
       _template.workouts;
 
   @override
-  Future<void> reorderTodayWorkout(String workoutId) async {}
+  Future<void> reorderTodayWorkout(
+    String workoutId, {
+    String? expectedToken,
+  }) async {}
 }
 
 const fakeTodayWorkoutSummary = TodayWorkoutSummary(
