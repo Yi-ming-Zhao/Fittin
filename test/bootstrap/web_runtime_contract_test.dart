@@ -4,6 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('public Web runtime contract', () {
+    test('foreground cardio can request same-origin location permission', () {
+      final headers = File(
+        'deploy/nginx/fittin-security-headers.conf',
+      ).readAsStringSync();
+      expect(headers, contains('geolocation=(self)'));
+      expect(headers, isNot(contains('geolocation=()')));
+      expect(headers, contains('microphone=()'));
+    });
+
     test('nginx serves CanvasKit WebAssembly with an executable MIME type', () {
       final config = File(
         'deploy/nginx/fittin.hammerscholar.net.conf',

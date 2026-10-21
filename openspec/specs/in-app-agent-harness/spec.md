@@ -24,20 +24,24 @@ The application SHALL offer a disclosed, minimal real request that verifies auth
 - **THEN** the configuration is reported as chat-capable but unavailable for Fittin Agent tools
 
 ### Requirement: Bounded streaming Agent runs
-The Agent SHALL stream visible output, support cancellation and retry, preserve interrupted user input, and stop after eight model turns or twelve tool calls. Submit, retry and resume commands MUST share one controller-side occupancy guard so rapid repeated controls cannot launch concurrent provider runs for the same conversation.
+The Agent SHALL stream output, support cancellation and resumable interruptions, and complete tasks without fixed total turn, tool, output or elapsed-time quotas. Submit, retry and resume MUST share one controller occupancy guard. Provider truncation SHALL trigger safe continuation, while repeated identical failures without progress SHALL pause resumably. Incomplete tool parameters MUST NOT execute; all writes retain per-operation confirmation and idempotence.
 
 #### Scenario: User cancels a slow response
 - **WHEN** the user taps stop while a response is streaming
-- **THEN** the network request is cancelled, partial text remains visible, and no local mutation occurs
+- **THEN** the network request is cancelled, partial text remains visible, and no unapproved mutation occurs
 
 #### Scenario: A write proposal is generated
 - **WHEN** the model calls a proposal-only write tool
-- **THEN** the run pauses with one pending approval card and performs no further model or write calls until the user decides
+- **THEN** the run pauses with one pending approval card until the user decides
 
 #### Scenario: User rapidly retries or resumes
 - **WHEN** several retry or resume commands arrive before the first command yields a visible busy state
 - **THEN** the controller starts one continuation and one provider stream
 - **AND** all duplicate commands observe that same in-flight operation without creating another run identifier.
+
+#### Scenario: Long productive task
+- **WHEN** a task exceeds eight model turns or twelve tools, or receives a length finish reason
+- **THEN** progress persists and the run continues without an output-limit failure or repeated committed mutation
 
 ### Requirement: Device-local conversation history
 The application SHALL persist user-visible messages and compact tool/action summaries locally, SHALL allow starting and deleting conversations, and SHALL not sync raw model traffic or conversation history.
@@ -52,3 +56,10 @@ The Agent tab and settings SHALL use semantic colors from all five Fittin palett
 #### Scenario: Phone chat layout
 - **WHEN** the Agent runs at 390 by 844 pixels with the keyboard visible
 - **THEN** the composer, current response, stop action, and bottom navigation remain reachable without horizontal overflow
+
+### Requirement: Stable streaming reading position
+The Agent SHALL lazily render stable message identities and coalesce following updates. User scrolling away from the latest output SHALL immediately suspend automatic following. Status, keyboard and Markdown reflow MUST preserve the reading anchor.
+
+#### Scenario: Read earlier output during generation
+- **WHEN** the user scrolls upward while tokens continue arriving
+- **THEN** the viewport stays anchored and a return-to-latest action appears
