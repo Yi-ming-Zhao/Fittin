@@ -17,6 +17,7 @@ class DashboardPageScaffold extends StatelessWidget {
     this.bottomPadding,
     this.topPadding,
     this.floatingActionButton,
+    this.bottomNavigationBar,
     this.extendBody = false,
     this.scrollable = true,
     this.safeAreaBottom,
@@ -28,6 +29,7 @@ class DashboardPageScaffold extends StatelessWidget {
   final double? bottomPadding;
   final double? topPadding;
   final Widget? floatingActionButton;
+  final Widget? bottomNavigationBar;
   final bool extendBody;
   final bool scrollable;
   final bool? safeAreaBottom;
@@ -46,6 +48,7 @@ class DashboardPageScaffold extends StatelessWidget {
         return Scaffold(
           backgroundColor: Colors.transparent,
           floatingActionButton: floatingActionButton,
+          bottomNavigationBar: bottomNavigationBar,
           extendBody: extendBody,
           body: Container(
             decoration: BoxDecoration(
@@ -60,7 +63,7 @@ class DashboardPageScaffold extends StatelessWidget {
               ),
             ),
             child: SafeArea(
-              bottom: resolvedSafeAreaBottom,
+              bottom: resolvedSafeAreaBottom && bottomNavigationBar == null,
               child: Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: maxContentWidth),
@@ -97,14 +100,14 @@ class DashboardPageScaffold extends StatelessWidget {
 class DashboardScreenHeader extends StatelessWidget {
   const DashboardScreenHeader({
     super.key,
-    required this.eyebrow,
+    this.eyebrow,
     required this.title,
     this.subtitle,
     this.trailing,
     this.showBackButton = false,
   });
 
-  final String eyebrow;
+  final String? eyebrow;
   final String title;
   final String? subtitle;
   final Widget? trailing;
@@ -119,8 +122,10 @@ class DashboardScreenHeader extends StatelessWidget {
           key: const ValueKey('dashboard-header-title-block'),
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FittinEyebrow(theme, eyebrow),
-            const SizedBox(height: 10),
+            if (eyebrow != null && eyebrow!.isNotEmpty) ...[
+              FittinEyebrow(theme, eyebrow!),
+              const SizedBox(height: 10),
+            ],
             Text(
               title,
               maxLines: 2,

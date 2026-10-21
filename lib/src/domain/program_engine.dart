@@ -22,7 +22,13 @@ class ProgramEngineDispatcher {
 String buildWorkoutScheduleToken(StoredTrainingInstance instance) {
   final engineEntries =
       instance.engineState.entries
-          .where((entry) => entry.key != planStartLoadReviewEngineStateKey)
+          .where(
+            (entry) => !{
+              planStartLoadReviewEngineStateKey,
+              'lifecycle',
+              'restartedAs',
+            }.contains(entry.key),
+          )
           .toList()
         ..sort((left, right) => left.key.compareTo(right.key));
   final stateEntries = [...instance.states]
@@ -296,7 +302,7 @@ SessionSetState _buildSessionSet({
   required double roundingIncrement,
 }) {
   final targetWeight = roundToIncrement(
-    baseWeight * _resolveSetIntensity(definition),
+    baseWeight * resolveSetIntensity(definition),
     roundingIncrement,
   );
   return SessionSetState(
@@ -373,7 +379,8 @@ ExerciseLog _exerciseLogFromSession({
   );
 }
 
-double _resolveSetIntensity(SetDefinition definition) {
+/// Shared by execution and read-only prescription previews, including RPE sets.
+double resolveSetIntensity(SetDefinition definition) {
   final targetRpe = definition.targetRpe;
   final usesRpePrescription =
       targetRpe != null &&

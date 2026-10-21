@@ -57,7 +57,15 @@ class LocalInstanceRepository {
     String templateId, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
     PlanStartLoadReview? planStartLoadReview,
-  }) {
+  }) async {
+    final existing = await fetchInstanceForTemplate(templateId);
+    if (existing != null && existing.engineState['lifecycle'] == 'stopped') {
+      return transition(
+        existing,
+        action: InstanceLifecycleAction.resume,
+        expectedActiveInstanceId: await fetchActiveInstanceId(),
+      );
+    }
     return _repository.activateTemplate(
       templateId,
       trainingMaxProfile: trainingMaxProfile,
@@ -65,6 +73,23 @@ class LocalInstanceRepository {
       ownerUserId: _ownerUserId,
     );
   }
+
+  Future<StoredTrainingInstance> transition(
+    StoredTrainingInstance expected, {
+    required InstanceLifecycleAction action,
+    required String? expectedActiveInstanceId,
+    TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
+    bool discardDraft = false,
+  }) => _repository.transitionInstance(
+    expected: expected,
+    ownerUserId: _ownerUserId,
+    expectedActiveInstanceId: expectedActiveInstanceId,
+    action: action,
+    trainingMaxProfile: trainingMaxProfile,
+    planStartLoadReview: planStartLoadReview,
+    discardDraft: discardDraft,
+  );
 
   Future<void> saveInstance(StoredTrainingInstance instance) {
     return _repository.saveInstance(instance);
@@ -85,6 +110,14 @@ class LocalInstanceRepository {
     final instance = await _repository.fetchInstance(instanceId);
     if (instance == null || instance.ownerUserId != _ownerUserId) {
       throw StateError('The training instance is no longer available.');
+    }
+    if (instance.engineState['lifecycle'] == 'stopped') {
+      await transition(
+        instance,
+        action: InstanceLifecycleAction.resume,
+        expectedActiveInstanceId: await fetchActiveInstanceId(),
+      );
+      return;
     }
     await _repository.saveActiveInstanceIdForUser(instanceId, _ownerUserId);
   }

@@ -3,6 +3,7 @@ export 'agent_local_repository_native.dart'
 
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'agent_conversation_transcript.dart';
 
 final agentLocalRepositoryProvider = Provider<AgentLocalRepository>((ref) {
   return InMemoryAgentLocalRepository();
@@ -95,6 +96,7 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
       ...payload,
       'id': id,
     };
+    if (agentIsTranscriptPage(kind)) return;
     final rows = await listDocuments(
       kind,
       ownerUserId: ownerUserId,
@@ -111,6 +113,16 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
     String id, {
     String? ownerUserId,
   }) async {
+    if (kind == 'checkpoint' || kind == 'conversationTranscript') {
+      final prefix = agentDocumentKey(
+        kind == 'checkpoint'
+            ? agentCheckpointPageKind(id)
+            : agentConversationPageKind(id),
+        '',
+        ownerUserId,
+      );
+      _documents.removeWhere((key, _) => key.startsWith(prefix));
+    }
     _documents.remove(agentDocumentKey(kind, id, ownerUserId));
   }
 
@@ -139,7 +151,12 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
     String? ownerUserId,
   }) async {
     final entry = _conversations[conversationId];
-    return entry?.owner == ownerUserId ? entry?.value : null;
+    if (entry == null || entry.owner != ownerUserId) return null;
+    return AgentConversationTranscript.read(
+      this,
+      entry.value,
+      ownerUserId: ownerUserId,
+    );
   }
 
   @override
@@ -147,6 +164,13 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
     AgentConversation conversation, {
     String? ownerUserId,
   }) async {
+    if (conversation.messages.isNotEmpty) {
+      await deleteDocument(
+        'conversationTranscript',
+        conversation.id,
+        ownerUserId: ownerUserId,
+      );
+    }
     _conversations[conversation.id] = (owner: ownerUserId, value: conversation);
     final old = await fetchConversations(
       ownerUserId: ownerUserId,
@@ -154,7 +178,7 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
       limit: 1000000,
     );
     for (final row in old) {
-      _conversations.remove(row.id);
+      await deleteConversation(row.id, ownerUserId: ownerUserId);
     }
   }
 
@@ -165,6 +189,11 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
   }) async {
     if (_conversations[conversationId]?.owner == ownerUserId) {
       _conversations.remove(conversationId);
+      await deleteDocument(
+        'conversationTranscript',
+        conversationId,
+        ownerUserId: ownerUserId,
+      );
     }
   }
 
@@ -207,6 +236,15 @@ class InMemoryAgentLocalRepository implements AgentLocalRepository {
 
 String agentDocumentKey(String kind, String id, String? owner) =>
     '${owner == null ? 'guest' : 'user:${Uri.encodeComponent(owner)}'}:$kind:$id';
+
+String agentCheckpointPageKind(String runId) =>
+    'checkpointPages:${Uri.encodeComponent(runId)}';
+
+String agentConversationPageKind(String id) =>
+    'conversationPages:${Uri.encodeComponent(id)}';
+bool agentIsTranscriptPage(String kind) =>
+    kind.startsWith('checkpointPages:') ||
+    kind.startsWith('conversationPages:');
 
 int agentDocumentRetention(String kind) => switch (kind) {
   'memory' => 50,

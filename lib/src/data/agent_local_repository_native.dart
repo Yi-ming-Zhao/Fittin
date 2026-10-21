@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'models/agent_runtime_collection.dart';
+import 'agent_conversation_transcript.dart';
 
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/models/agent_action_collection.dart';
@@ -67,6 +68,7 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
         ..updatedAt = DateTime.now()
         ..payload = jsonEncode({...payload, 'id': id});
       await isar.agentRuntimeCollections.put(row);
+      if (agentIsTranscriptPage(kind)) return;
       final expired = await isar.agentRuntimeCollections
           .filter()
           .ownerUserIdEqualTo(ownerUserId)
@@ -74,6 +76,19 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
           .sortByUpdatedAtDesc()
           .offset(agentDocumentRetention(kind))
           .findAll();
+      if (kind == 'checkpoint' || kind == 'conversationTranscript') {
+        for (final old in expired) {
+          await isar.agentRuntimeCollections
+              .filter()
+              .ownerUserIdEqualTo(ownerUserId)
+              .kindEqualTo(
+                kind == 'checkpoint'
+                    ? agentCheckpointPageKind(old.documentId)
+                    : agentConversationPageKind(old.documentId),
+              )
+              .deleteAll();
+        }
+      }
       await isar.agentRuntimeCollections.deleteAll(
         expired.map((r) => r.id).toList(),
       );
@@ -93,6 +108,17 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
     String? ownerUserId,
   }) async {
     Future<void> remove() async {
+      if (kind == 'checkpoint' || kind == 'conversationTranscript') {
+        await isar.agentRuntimeCollections
+            .filter()
+            .ownerUserIdEqualTo(ownerUserId)
+            .kindEqualTo(
+              kind == 'checkpoint'
+                  ? agentCheckpointPageKind(id)
+                  : agentConversationPageKind(id),
+            )
+            .deleteAll();
+      }
       await isar.agentRuntimeCollections.deleteByDocumentKey(
         agentDocumentKey(kind, id, ownerUserId),
       );
@@ -140,8 +166,12 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
       conversationId,
     );
     if (row == null || row.ownerUserId != ownerUserId) return null;
-    return AgentConversation.fromJson(
-      jsonDecode(row.rawJsonPayload) as Map<String, dynamic>,
+    return AgentConversationTranscript.read(
+      this,
+      AgentConversation.fromJson(
+        jsonDecode(row.rawJsonPayload) as Map<String, dynamic>,
+      ),
+      ownerUserId: ownerUserId,
     );
   }
 
@@ -161,6 +191,13 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
       ..updatedAt = conversation.updatedAt
       ..rawJsonPayload = jsonEncode(conversation.toJson());
     Future<void> write() async {
+      if (conversation.messages.isNotEmpty) {
+        await deleteDocument(
+          'conversationTranscript',
+          conversation.id,
+          ownerUserId: ownerUserId,
+        );
+      }
       await isar.agentConversationCollections.put(row);
       final old = await isar.agentConversationCollections
           .filter()
@@ -171,12 +208,21 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
       await isar.agentConversationCollections.deleteAll(
         old.map((r) => r.id).toList(),
       );
+      for (final item in old) {
+        await deleteDocument(
+          'conversationTranscript',
+          item.conversationId,
+          ownerUserId: ownerUserId,
+        );
+      }
     }
 
     if (Zone.current[agentTransactionZoneKey] == true) {
       await write();
     } else {
-      await isar.writeTxn(write);
+      await isar.writeTxn(
+        () => runZoned(write, zoneValues: {agentTransactionZoneKey: true}),
+      );
     }
   }
 
@@ -189,7 +235,22 @@ class IsarAgentLocalRepository implements AgentLocalRepository {
       conversationId,
     );
     if (row == null || row.ownerUserId != ownerUserId) return;
-    await isar.writeTxn(() => isar.agentConversationCollections.delete(row.id));
+    Future<void> remove() async {
+      await isar.agentConversationCollections.delete(row.id);
+      await deleteDocument(
+        'conversationTranscript',
+        conversationId,
+        ownerUserId: ownerUserId,
+      );
+    }
+
+    if (Zone.current[agentTransactionZoneKey] == true) {
+      await remove();
+    } else {
+      await isar.writeTxn(
+        () => runZoned(remove, zoneValues: {agentTransactionZoneKey: true}),
+      );
+    }
   }
 
   @override

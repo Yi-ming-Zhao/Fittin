@@ -2,6 +2,7 @@ import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/web_local_store.dart';
 import 'package:fittin_v2/src/data/web_storage_models.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
+import 'agent_conversation_transcript.dart';
 
 class WebAgentLocalRepository implements AgentLocalRepository {
   const WebAgentLocalRepository(this.store);
@@ -9,8 +10,11 @@ class WebAgentLocalRepository implements AgentLocalRepository {
   final WebLocalStore store;
 
   String _storeFor(String kind) => switch (kind) {
+    _ when agentIsTranscriptPage(kind) => WebStoreNames.agentCheckpoints,
     'run' || 'turn' => WebStoreNames.agentRuns,
-    'checkpoint' => WebStoreNames.agentCheckpoints,
+    'checkpoint' ||
+    'streamTail' ||
+    'conversationTranscript' => WebStoreNames.agentCheckpoints,
     'diagnostic' => WebStoreNames.agentDiagnostics,
     _ => WebStoreNames.agentMemory,
   };
@@ -64,6 +68,7 @@ class WebAgentLocalRepository implements AgentLocalRepository {
         'updatedAt': DateTime.now().toUtc().toIso8601String(),
         'payload': {...payload, 'id': id},
       });
+      if (agentIsTranscriptPage(kind)) return;
       final rows = await listDocuments(
         kind,
         ownerUserId: ownerUserId,
@@ -81,10 +86,37 @@ class WebAgentLocalRepository implements AgentLocalRepository {
 
   @override
   Future<void> deleteDocument(String kind, String id, {String? ownerUserId}) =>
-      store.deleteRecord(
-        _storeFor(kind),
-        agentDocumentKey(kind, id, ownerUserId),
-      );
+      store.runInTransaction([_storeFor(kind)], () async {
+        if (kind == 'checkpoint' || kind == 'conversationTranscript') {
+          final checkpoint = await readDocument(
+            kind,
+            id,
+            ownerUserId: ownerUserId,
+          );
+          final pages =
+              checkpoint?[kind == 'checkpoint'
+                      ? 'transcriptPageCount'
+                      : 'pageCount']
+                  as int? ??
+              0;
+          for (var page = 0; page < pages; page++) {
+            await store.deleteRecord(
+              _storeFor(kind),
+              agentDocumentKey(
+                kind == 'checkpoint'
+                    ? agentCheckpointPageKind(id)
+                    : agentConversationPageKind(id),
+                '$page',
+                ownerUserId,
+              ),
+            );
+          }
+        }
+        await store.deleteRecord(
+          _storeFor(kind),
+          agentDocumentKey(kind, id, ownerUserId),
+        );
+      });
 
   @override
   Future<List<AgentConversation>> fetchConversations({
@@ -112,7 +144,11 @@ class WebAgentLocalRepository implements AgentLocalRepository {
       conversationId,
     );
     if (doc == null || doc['ownerUserId'] != ownerUserId) return null;
-    return agentConversationFromDoc(doc);
+    return AgentConversationTranscript.read(
+      this,
+      agentConversationFromDoc(doc),
+      ownerUserId: ownerUserId,
+    );
   }
 
   @override
@@ -120,21 +156,36 @@ class WebAgentLocalRepository implements AgentLocalRepository {
     AgentConversation conversation, {
     String? ownerUserId,
   }) async {
-    return store.runInTransaction([WebStoreNames.agentConversations], () async {
-      await store.putRecord(
-        WebStoreNames.agentConversations,
-        conversation.id,
-        agentConversationDoc(conversation, ownerUserId: ownerUserId),
-      );
-      final expired = await fetchConversations(
-        ownerUserId: ownerUserId,
-        offset: 100,
-        limit: 1000000,
-      );
-      for (final old in expired) {
-        await store.deleteRecord(WebStoreNames.agentConversations, old.id);
-      }
-    });
+    return store.runInTransaction(
+      [WebStoreNames.agentConversations, WebStoreNames.agentCheckpoints],
+      () async {
+        if (conversation.messages.isNotEmpty) {
+          await deleteDocument(
+            'conversationTranscript',
+            conversation.id,
+            ownerUserId: ownerUserId,
+          );
+        }
+        await store.putRecord(
+          WebStoreNames.agentConversations,
+          conversation.id,
+          agentConversationDoc(conversation, ownerUserId: ownerUserId),
+        );
+        final expired = await fetchConversations(
+          ownerUserId: ownerUserId,
+          offset: 100,
+          limit: 1000000,
+        );
+        for (final old in expired) {
+          await store.deleteRecord(WebStoreNames.agentConversations, old.id);
+          await deleteDocument(
+            'conversationTranscript',
+            old.id,
+            ownerUserId: ownerUserId,
+          );
+        }
+      },
+    );
   }
 
   @override
@@ -142,12 +193,25 @@ class WebAgentLocalRepository implements AgentLocalRepository {
     String conversationId, {
     String? ownerUserId,
   }) async {
-    final existing = await fetchConversation(
-      conversationId,
-      ownerUserId: ownerUserId,
+    await store.runInTransaction(
+      [WebStoreNames.agentConversations, WebStoreNames.agentCheckpoints],
+      () async {
+        final existing = await store.getRecord(
+          WebStoreNames.agentConversations,
+          conversationId,
+        );
+        if (existing == null || existing['ownerUserId'] != ownerUserId) return;
+        await store.deleteRecord(
+          WebStoreNames.agentConversations,
+          conversationId,
+        );
+        await deleteDocument(
+          'conversationTranscript',
+          conversationId,
+          ownerUserId: ownerUserId,
+        );
+      },
     );
-    if (existing == null) return;
-    await store.deleteRecord(WebStoreNames.agentConversations, conversationId);
   }
 
   @override

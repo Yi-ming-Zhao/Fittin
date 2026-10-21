@@ -2,6 +2,11 @@ import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
+import 'package:fittin_v2/src/application/cardio_recording_provider.dart';
+import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
+import 'cardio_recording_screen.dart';
+import 'cardio_route_review_screen.dart';
+import '../../application/auth_provider.dart';
 import 'package:fittin_v2/src/application/cardio_import_service.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/application/user_content_provider.dart';
@@ -23,17 +28,16 @@ class CardioHubScreen extends ConsumerWidget {
     final theme = ref.watch(resolvedFittinThemeProvider);
     final activities = ref.watch(cardioActivityLibraryProvider);
     final records = ref.watch(cardioRecordsProvider);
+    final knownRecordIds = ref.watch(knownCardioRecordIdsProvider);
+    final localSessions =
+        ref.watch(localCardioSessionsProvider).valueOrNull ?? [];
 
     return DashboardPageScaffold(
       topPadding: 20,
       safeAreaBottom: true,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '有氧训练' : 'CARDIO',
           title: strings.isChinese ? '记录有氧' : 'Record cardio',
-          subtitle: strings.isChinese
-              ? '不同项目只记录真正有用的指标，也可以导入常见跑步文件。'
-              : 'Capture the metrics that matter for each activity or import a common running file.',
           showBackButton: true,
           trailing: IconButton.filledTonal(
             tooltip: strings.isChinese ? '导入数据' : 'Import data',
@@ -44,6 +48,47 @@ class CardioHubScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
+        for (final stored in localSessions.where(
+          (entry) =>
+              entry.session.phase != CardioRecordingPhase.finished ||
+              (knownRecordIds.hasValue &&
+                  !knownRecordIds.value!.contains(entry.session.id)),
+        ))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: DashboardSurfaceCard(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.play_circle_outline_rounded),
+                title: Text(stored.session.activityName),
+                subtitle: Text(
+                  strings.isChinese
+                      ? (stored.session.phase == CardioRecordingPhase.finished
+                            ? '待保存运动 · 查看回顾'
+                            : '本机运动 · 点击继续')
+                      : (stored.session.phase == CardioRecordingPhase.finished
+                            ? 'Unsaved activity · review'
+                            : 'Local activity · tap to continue'),
+                ),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () {
+                  final activity = activities.valueOrNull
+                      ?.where(
+                        (item) => item.id == stored.session.activityTypeId,
+                      )
+                      .firstOrNull;
+                  if (activity != null) {
+                    _openRecording(
+                      context,
+                      ref,
+                      activity,
+                      restoreId: stored.session.id,
+                    );
+                  }
+                },
+              ),
+            ),
+          ),
         DashboardSectionLabel(
           label: strings.isChinese ? '选择项目' : 'CHOOSE ACTIVITY',
         ),
@@ -68,12 +113,7 @@ class CardioHubScreen extends ConsumerWidget {
                     theme: theme,
                     label: activity.displayName(locale.code),
                     icon: cardioActivityIcon(activity.icon),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            CardioRecordEditorScreen(activity: activity),
-                      ),
-                    ),
+                    onTap: () => _openRecording(context, ref, activity),
                   );
                 },
               );
@@ -117,11 +157,19 @@ class CardioHubScreen extends ConsumerWidget {
                             )
                             .firstOrNull,
                         localeCode: locale.code,
-                        onTap: () => _editRecord(
-                          context,
-                          ref,
-                          activities.valueOrNull,
-                          items[index],
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => CardioRouteReviewScreen(
+                              record: items[index],
+                              ownerUserId: ref.read(currentUserIdProvider),
+                              onEdit: () => _editRecord(
+                                context,
+                                ref,
+                                activities.valueOrNull,
+                                items[index],
+                              ),
+                            ),
+                          ),
                         ),
                         onDelete: () =>
                             _deleteRecord(context, ref, strings, items[index]),
@@ -135,6 +183,39 @@ class CardioHubScreen extends ConsumerWidget {
           error: (error, _) => _InlineError(message: error.toString()),
         ),
       ],
+    );
+  }
+
+  Future<void> _openRecording(
+    BuildContext context,
+    WidgetRef ref,
+    CardioActivityDefinition activity, {
+    String? restoreId,
+  }) async {
+    if (!ref.read(cardioLocationSourceProvider).supportsTracking &&
+        restoreId == null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CardioRecordEditorScreen(activity: activity),
+        ),
+      );
+      return;
+    }
+    final controller = ref.read(cardioRecordingProvider.notifier);
+    final current = ref.read(cardioRecordingProvider).session;
+    if (current?.phase == CardioRecordingPhase.finished &&
+        current?.id != restoreId) {
+      if (!await controller.flush() || !context.mounted) return;
+      // The finished session remains in the local store until explicitly saved
+      // or deleted, so starting another activity cannot lose its route.
+      controller.releaseFinished();
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) =>
+            CardioRecordingScreen(activity: activity, restoreId: restoreId),
+      ),
     );
   }
 
@@ -168,7 +249,9 @@ class CardioHubScreen extends ConsumerWidget {
       MaterialPageRoute(
         builder: (_) => CardioRecordEditorScreen(
           activity: activity,
-          existing: record,
+          existing: document == null
+              ? record
+              : CardioRecord.fromJson(document.payload),
           expectedVersion: document?.version,
         ),
       ),
@@ -242,6 +325,7 @@ class _CardioRecordEditorScreenState
   final _formKey = GlobalKey<FormState>();
   final _controllers = <CardioMetricKey, TextEditingController>{};
   final _noteController = TextEditingController();
+  final _elapsedController = TextEditingController();
   DateTime _startedAt = DateTime.now();
   bool _saving = false;
 
@@ -255,6 +339,10 @@ class _CardioRecordEditorScreenState
       );
     }
     _noteController.text = widget.existing?.note ?? '';
+    final elapsed = widget.existing?.elapsedSeconds;
+    _elapsedController.text = elapsed == null
+        ? ''
+        : _displayMetric(CardioMetricKey.durationSeconds, elapsed.toDouble());
     _startedAt = widget.existing?.startedAt ?? DateTime.now();
   }
 
@@ -264,6 +352,7 @@ class _CardioRecordEditorScreenState
       controller.dispose();
     }
     _noteController.dispose();
+    _elapsedController.dispose();
     super.dispose();
   }
 
@@ -282,13 +371,9 @@ class _CardioRecordEditorScreenState
       safeAreaBottom: true,
       children: [
         DashboardScreenHeader(
-          eyebrow: widget.existing == null
-              ? (strings.isChinese ? '新记录' : 'NEW RECORD')
-              : (strings.isChinese ? '编辑记录' : 'EDIT RECORD'),
-          title: widget.activity.displayName(locale.code),
-          subtitle: strings.isChinese
-              ? '必填项会根据项目自动调整；所有数值按本地保存。'
-              : 'Required fields adapt to the activity and save locally first.',
+          title: widget.existing == null
+              ? widget.activity.displayName(locale.code)
+              : '${strings.isChinese ? '编辑' : 'Edit'} ${widget.activity.displayName(locale.code)}',
           showBackButton: true,
         ),
         const SizedBox(height: 20),
@@ -328,6 +413,46 @@ class _CardioRecordEditorScreenState
                       _validateField(metrics[index], value, strings),
                 ),
                 if (index != metrics.length - 1) const SizedBox(height: 10),
+              ],
+              if (widget.existing?.elapsedSeconds != null) ...[
+                const SizedBox(height: 10),
+                TextFormField(
+                  key: const ValueKey('cardio-field-elapsedSeconds'),
+                  controller: _elapsedController,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: strings.isChinese
+                        ? '总时长（含暂停）'
+                        : 'Elapsed time (including pauses)',
+                    suffixText: 'min',
+                  ),
+                  validator: (text) {
+                    final elapsed = _parseMetric(
+                      CardioMetricKey.durationSeconds,
+                      text ?? '',
+                    );
+                    final moving = _parseMetric(
+                      CardioMetricKey.durationSeconds,
+                      _controllers[CardioMetricKey.durationSeconds]?.text ?? '',
+                    );
+                    if (elapsed == null ||
+                        !elapsed.isFinite ||
+                        elapsed <= 0 ||
+                        elapsed > 604800) {
+                      return strings.isChinese
+                          ? '请输入有效总时长'
+                          : 'Enter a valid elapsed time';
+                    }
+                    if (moving != null && elapsed < moving) {
+                      return strings.isChinese
+                          ? '总时长不能小于运动时长'
+                          : 'Elapsed time cannot be shorter than moving time';
+                    }
+                    return null;
+                  },
+                ),
               ],
               const SizedBox(height: 10),
               TextFormField(
@@ -426,6 +551,12 @@ class _CardioRecordEditorScreenState
             : _noteController.text.trim(),
         source: widget.existing?.source ?? 'manual',
         sourceFingerprint: widget.existing?.sourceFingerprint,
+        elapsedSeconds: widget.existing?.elapsedSeconds == null
+            ? null
+            : _parseMetric(
+                CardioMetricKey.durationSeconds,
+                _elapsedController.text,
+              ),
       );
       await service.saveCardioRecord(
         record,
@@ -454,7 +585,6 @@ class CardioImportScreen extends ConsumerWidget {
       safeAreaBottom: true,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '数据导入' : 'DATA IMPORT',
           title: strings.isChinese ? '导入跑步与有氧' : 'Import cardio data',
           subtitle: strings.isChinese
               ? '支持 GPX、TCX、FIT 和 CSV。文件只在本机解析，确认前不会写入。'

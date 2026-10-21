@@ -65,6 +65,12 @@ const routeLayoutEvidenceBySource = <String, String>{
       'test/presentation/user_content_library_screens_test.dart',
   'lib/src/presentation/screens/cardio_screen.dart':
       'test/presentation/cardio_screen_test.dart',
+  'lib/src/presentation/screens/cardio_recording_screen.dart':
+      'test/presentation/cardio_recording_screen_test.dart',
+  'lib/src/presentation/screens/cardio_route_review_screen.dart':
+      'test/presentation/cardio_recording_screen_test.dart',
+  'lib/src/presentation/screens/plan_day_detail_screen.dart':
+      'test/presentation/plan_day_detail_screen_test.dart',
   'lib/src/presentation/screens/exercise_deep_dive_screen.dart':
       'test/presentation/exercise_deep_dive_screen_test.dart',
   'lib/src/presentation/screens/exercise_library_management_screen.dart':
@@ -126,6 +132,26 @@ const routeLayoutScenarioEvidence = <RouteLayoutScenario, String>{
 /// coverage makes the inventory test fail instead of silently leaving a deep
 /// route unaudited.
 const routeLayoutCoverage = <String, RouteLayoutCoverage>{
+  'CloudCardioRoutesScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/cardio_route_review_screen.dart',
+    _baselineScenarios,
+  ),
+  'LocalCardioRoutesScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/cardio_route_review_screen.dart',
+    _baselineScenarios,
+  ),
+  'CardioRecordingScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/cardio_recording_screen.dart',
+    _baselineScenarios,
+  ),
+  'CardioRouteReviewScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/cardio_route_review_screen.dart',
+    _baselineScenarios,
+  ),
+  'PlanDayDetailScreen': RouteLayoutCoverage(
+    'lib/src/presentation/screens/plan_day_detail_screen.dart',
+    _baselineScenarios,
+  ),
   'FreeTrainingScreen': RouteLayoutCoverage(
     'lib/src/presentation/screens/free_training_screen.dart',
     _baselineScenarios,

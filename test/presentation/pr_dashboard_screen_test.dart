@@ -111,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('PR 仪表盘'), findsOneWidget);
-    expect(find.text('表现'), findsOneWidget);
+    expect(find.text('表现'), findsNothing);
     expect(find.text('预估 1RM'), findsWidgets);
     expect(find.text('深蹲'), findsWidgets);
     expect(find.text('Competition Squat'), findsNothing);

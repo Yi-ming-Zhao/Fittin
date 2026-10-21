@@ -38,7 +38,7 @@ func LoadConfig() (Config, error) {
 		AccessTokenTTL:  time.Duration(envIntOrDefault("FITTIN_ACCESS_TOKEN_TTL_MINUTES", 15)) * time.Minute,
 		RefreshTokenTTL: time.Duration(envIntOrDefault("FITTIN_REFRESH_TOKEN_TTL_DAYS", 180)) * 24 * time.Hour,
 
-		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 300)) * time.Second,
+		AgentUpstreamTimeout:      time.Duration(envIntOrDefault("FITTIN_AGENT_UPSTREAM_TIMEOUT_SECONDS", 45)) * time.Second,
 		AgentMaxRequestBytes:      int64(envIntOrDefault("FITTIN_AGENT_MAX_REQUEST_BYTES", 512<<10)),
 		AgentMaxResponseBytes:     int64(envIntOrDefault("FITTIN_AGENT_MAX_RESPONSE_BYTES", 8<<20)),
 		AgentMaxConcurrentPerUser: envIntOrDefault("FITTIN_AGENT_MAX_CONCURRENT_PER_USER", 2),

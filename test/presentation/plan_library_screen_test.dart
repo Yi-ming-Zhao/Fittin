@@ -80,7 +80,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('Plan Library'), findsOneWidget);
+    expect(find.text('Training plans'), findsOneWidget);
+    expect(find.text('Plan Library'), findsNothing);
     expect(find.text('GZCLP 4-Day 12-Week'), findsOneWidget);
     expect(find.text('Jacked & Tan 2.0 (Balanced)'), findsOneWidget);
     expect(find.text('Built-in'), findsWidgets);
@@ -139,7 +140,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
-    expect(find.text('计划库'), findsWidgets);
+    expect(find.text('计划库'), findsNothing);
     expect(find.text('训练计划'), findsOneWidget);
     expect(find.text('GZCLP 四天十二周'), findsOneWidget);
     expect(find.text('深蹲主项日'), findsOneWidget);

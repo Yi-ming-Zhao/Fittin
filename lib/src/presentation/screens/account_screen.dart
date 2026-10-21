@@ -42,7 +42,6 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
       bottomPadding: 40,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.profile,
           title: strings.account,
           subtitle: strings.accountSubtitle,
           showBackButton: canPop,

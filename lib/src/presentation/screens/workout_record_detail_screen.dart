@@ -61,7 +61,6 @@ class _WorkoutRecordDetailScreenState
         layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
-            eyebrow: strings.insights,
             title: strings.recordedWorkoutDetails,
             subtitle: strings.recordedDayTitle(widget.date),
             showBackButton: true,

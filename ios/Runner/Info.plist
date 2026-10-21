@@ -28,6 +28,12 @@
 	<string>Fittin uses the camera when you choose to capture a private progress photo.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Fittin accesses your photo library only when you choose a progress photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Fittin uses precise location only during an activity you start, to record its route, distance and pace.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Fittin continues recording your current activity when the screen is locked. Location tracking stops when you finish.</string>
+	<key>UIBackgroundModes</key>
+	<array><string>location</string></array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

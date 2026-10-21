@@ -219,7 +219,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Review my fatigue.'), findsOneWidget);
-      expect(find.byKey(const ValueKey('agent-tool-status')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('agent-current-state')),
+        findsNothing,
+        reason:
+            'A pending approval must not also claim a read tool is still running.',
+      );
       expect(find.byKey(const ValueKey('agent-insight-card')), findsNothing);
       expect(
         find.byKey(const ValueKey('agent-mutation-proposal')),

@@ -90,6 +90,7 @@ abstract final class UserContentValidation {
           'note',
           'source',
           'sourceFingerprint',
+          'elapsedSeconds',
         });
         final record = CardioRecord.fromJson(payload);
         if (record.id != id ||

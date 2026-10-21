@@ -69,7 +69,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Plan Library'), findsOneWidget);
+    expect(find.text('Training plans'), findsOneWidget);
     expect(find.text('GZCLP 4-Day 12-Week'), findsOneWidget);
   });
 

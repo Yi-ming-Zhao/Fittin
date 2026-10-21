@@ -44,7 +44,6 @@ class _ExerciseLibraryManagementScreenState
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '训练设置' : 'TRAINING',
           title: strings.isChinese ? '动作库' : 'Exercise library',
           subtitle: strings.isChinese
               ? '内置动作只读；你可以复制后调整，或创建自己的动作和标签。'
@@ -322,7 +321,6 @@ class _CustomExerciseEditorScreenState
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '动作库' : 'EXERCISE LIBRARY',
           title: widget.existing == null
               ? (strings.isChinese ? '新建自定义动作' : 'New custom exercise')
               : (strings.isChinese ? '编辑自定义动作' : 'Edit custom exercise'),

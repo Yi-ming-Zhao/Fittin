@@ -1,8 +1,15 @@
 // Isolated, synthetic-data Web QA entrypoint. Never shipped by lib/main.dart.
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
+import 'package:fittin_v2/src/application/cardio_recording_provider.dart';
+import 'package:fittin_v2/src/data/cardio_location_source.dart';
+import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_recording_screen.dart';
 import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
@@ -54,6 +61,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         databaseRepositoryProvider.overrideWithValue(database),
+        cardioLocationSourceProvider.overrideWithValue(_SyntheticLocation()),
         progressRepositoryProvider.overrideWithValue(
           WebProgressRepository(store),
         ),
@@ -73,15 +81,53 @@ Future<void> main() async {
           _ReviewSettingsStore(),
         ),
         agentModelTransportProvider.overrideWithValue(
-          WebRelayAgentModelTransport(
-            backendBaseUrl: Uri.base.origin,
-            accessTokenLoader: () async => 'synthetic-qa-session',
-          ),
+          Uri.base.queryParameters['model-mode'] == 'stream'
+              ? _SyntheticStreamTransport(locale == AppLocale.zh)
+              : WebRelayAgentModelTransport(
+                  backendBaseUrl: Uri.base.origin,
+                  accessTokenLoader: () async => 'synthetic-qa-session',
+                ),
         ),
       ],
       child: const _ReviewApp(),
     ),
   );
+}
+
+/// Rendering fixture only: no provider request or real training inference.
+class _SyntheticStreamTransport implements AgentModelTransport {
+  _SyntheticStreamTransport(this.zh);
+  final bool zh;
+  @override
+  Stream<AgentModelEvent> stream({
+    required AgentProviderConfig config,
+    required String apiKey,
+    required AgentChatCompletionRequest request,
+    AgentCancellationToken? cancellationToken,
+  }) async* {
+    yield const AgentResponseMetadata(streaming: true);
+    final content = StringBuffer(
+      zh ? '# 合成数据排版检查\n\n' : '# Synthetic layout review\n\n',
+    );
+    for (var i = 1; i <= 40; i++) {
+      content.writeln(
+        zh
+            ? '## 第 $i 周\n\n这是界面测试文本，不是真实训练建议。**训练量**与恢复应分开查看；阅读旧内容时，不应被新输出拉回底部。\n\n| 项目 | 测试值 |\n| --- | --- |\n| 组数 | 12 |\n| 次数 | 8–12 |\n\n- 保持当前位置\n- 支持回到最新\n'
+            : '## Week $i\n\nThis is synthetic layout text, not real training advice. **Volume** and recovery are separate. Reading older content should not jump to the latest output.\n\n| Metric | Fixture |\n| --- | --- |\n| Sets | 12 |\n| Reps | 8–12 |\n\n- Preserve the reading position\n- Offer a return to latest action\n',
+      );
+    }
+    final text = content.toString();
+    for (var start = 0; start < text.length; start += 32) {
+      cancellationToken?.throwIfCancelled();
+      final end = (start + 32).clamp(0, text.length);
+      yield AgentTextDelta(text.substring(start, end));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    yield const AgentModelCompleted(finishReason: 'stop');
+  }
+
+  @override
+  void dispose() {}
 }
 
 class _ReviewApp extends ConsumerWidget {
@@ -106,6 +152,9 @@ class _ReviewApp extends ConsumerWidget {
         'library' => const ExerciseLibraryManagementScreen(),
         'advanced' => const AdvancedAnalyticsScreen(),
         'cardio' => const CardioHubScreen(),
+        'cardio-live' => CardioRecordingScreen(
+          activity: BuiltInCardioActivities.byId('cardio:running'),
+        ),
         'cardio-library' => const CardioActivityLibraryScreen(),
         'cardio-editor' => const CardioActivityEditorScreen(),
         'exercise-editor' => const CustomExerciseEditorScreen(),
@@ -140,6 +189,27 @@ class _ReviewApp extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Deliberately synthetic UI-only trace; never a field-test or accuracy result.
+class _SyntheticLocation implements CardioLocationSource {
+  @override
+  bool get supportsTracking => true;
+  @override
+  Future<void> requestPermission() async {}
+  @override
+  Stream<RoutePoint> positions({
+    required bool chinese,
+    bool preparing = false,
+  }) => Stream.periodic(
+    const Duration(seconds: 1),
+    (i) => RoutePoint(
+      latitude: 30 + i * .00003,
+      longitude: 120 + i * .00001,
+      timestamp: DateTime.now(),
+      accuracyMeters: 5,
+    ),
+  );
 }
 
 class _ReviewSettingsStore implements AgentProviderSettingsStore {

@@ -25,7 +25,6 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
           return DashboardPageScaffold(
             children: [
               DashboardScreenHeader(
-                eyebrow: strings.insights,
                 title: strings.advancedAnalytics,
                 subtitle: strings.advancedAnalyticsSubtitle,
               ),
@@ -38,7 +37,6 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
         return DashboardPageScaffold(
           children: [
             DashboardScreenHeader(
-              eyebrow: strings.insights,
               title: strings.advancedAnalytics,
               subtitle: strings.advancedAnalyticsSubtitle,
             ),
@@ -416,7 +414,6 @@ class _ExerciseDetailSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DashboardScreenHeader(
-                  eyebrow: strings.exerciseDetails,
                   title: summary.exerciseName,
                   subtitle: strings.activeFormulaLabel(formula),
                 ),

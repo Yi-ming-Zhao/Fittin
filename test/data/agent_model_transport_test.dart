@@ -128,7 +128,8 @@ void main() {
         ),
         firstResponseTimeout: const Duration(milliseconds: 10),
         idleTimeout: const Duration(milliseconds: 50),
-        timeout: const Duration(seconds: 1),
+        // No total deadline or cumulative SSE quota on productive streams.
+        maxResponseBytes: 256,
       );
       final events = await transport
           .stream(
@@ -469,6 +470,25 @@ void main() {
       );
     },
   );
+
+  test('SSE frame limit survives arbitrary network chunk boundaries', () async {
+    final frame = 'data: {"choices":[{"delta":{"content":"ok"}}]}\r\n\r\n';
+    final body = '${frame * 10}data: [DONE]\r\n\r\n';
+    final transport = NativeAgentModelTransport(
+      client: _StreamingClient(
+        (_) async => http.StreamedResponse(
+          Stream.fromIterable(utf8.encode(body).map((b) => [b])),
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+      maxResponseBytes: 80,
+    );
+    final events = await transport
+        .stream(config: config, apiKey: 'secret-key', request: request)
+        .toList();
+    expect(events.whereType<AgentTextDelta>(), hasLength(10));
+  });
 
   test('Web relay requires a Fittin session before sending', () async {
     var requests = 0;

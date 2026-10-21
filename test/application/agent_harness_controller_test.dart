@@ -10,6 +10,7 @@ import 'package:fittin_v2/src/application/agent_tools.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
 import 'package:fittin_v2/src/data/remote/agent_model_transport.dart';
 import 'package:fittin_v2/src/domain/models/agent_models.dart';
+import 'package:fittin_v2/src/domain/models/agent_runtime.dart';
 import 'package:fittin_v2/src/application/agent_owner_scope.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,109 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test(
+    'deleting a conversation removes checkpoint pages and incremental tails',
+    () async {
+      final repository = InMemoryAgentLocalRepository();
+      final transport = _TurnTransport([
+        [
+          const AgentTextDelta('Local answer'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]);
+      final container = _container(transport: transport, local: repository);
+      addTearDown(container.dispose);
+      final controller = container.read(
+        agentHarnessControllerProvider.notifier,
+      );
+      await controller.submit('Analyze this week');
+      final state = container.read(agentHarnessControllerProvider).runState;
+      final runId = state.runId!;
+      await repository.saveDocument('streamTail', runId, {
+        'conversationId': state.conversation!.id,
+        'message': state.conversation!.messages.last.toJson(),
+      });
+      expect(
+        await repository.listDocuments(agentCheckpointPageKind(runId)),
+        isNotEmpty,
+      );
+      await controller.deleteConversation(state.conversation!.id);
+      expect(await repository.readDocument('streamTail', runId), isNull);
+      expect(await repository.readDocument('checkpoint', runId), isNull);
+      expect(
+        await repository.listDocuments(agentCheckpointPageKind(runId)),
+        isEmpty,
+      );
+      expect(
+        await repository.fetchConversation(state.conversation!.id),
+        isNull,
+      );
+    },
+  );
+  test(
+    'restart merges the incremental stream tail without calling the model',
+    () async {
+      final repository = InMemoryAgentLocalRepository();
+      final now = DateTime.utc(2026);
+      final partial = AgentMessage(
+        id: 'partial',
+        role: AgentMessageRole.assistant,
+        content: '',
+        isPartial: true,
+        createdAt: now,
+      );
+      final conversation = AgentConversation(
+        id: 'stream-conversation',
+        title: 'Stream',
+        createdAt: now,
+        updatedAt: now,
+        messages: [
+          AgentMessage(
+            id: 'q',
+            role: AgentMessageRole.user,
+            content: 'Analyze',
+            createdAt: now,
+          ),
+          partial,
+        ],
+      );
+      final checkpoint = AgentCheckpoint(
+        run: AgentRunRecord(
+          id: 'stream-run',
+          conversationId: conversation.id,
+          ownerUserId: null,
+          authEpoch: 'old',
+          createdAt: now,
+          updatedAt: now,
+          phase: AgentRunPhase.streaming,
+        ),
+        conversation: conversation,
+      );
+      await repository.saveDocument(
+        'checkpoint',
+        'stream-run',
+        checkpoint.toJson(),
+      );
+      await repository.saveDocument('streamTail', 'stream-run', {
+        'conversationId': conversation.id,
+        'message': partial
+            .copyWith(content: 'Already generated before interruption')
+            .toJson(),
+      });
+      final transport = _TurnTransport([]);
+      final container = _container(transport: transport, local: repository);
+      addTearDown(container.dispose);
+      container.read(agentHarnessControllerProvider);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      final run = container.read(agentHarnessControllerProvider).runState;
+      expect(run.phase, AgentRunPhase.interrupted);
+      expect(
+        run.conversation!.messages.last.content,
+        'Already generated before interruption',
+      );
+      expect(transport.requests, isEmpty);
+    },
+  );
   test(
     'rejection resumes the original run with the exact tool decision',
     () async {
@@ -536,11 +640,15 @@ void main() {
         container.read(agentHarnessControllerProvider).runState.phase,
         AgentRunPhase.completed,
       );
-      final saved =
+      final header =
           (await container
                   .read(agentLocalRepositoryProvider)
                   .fetchConversations())
               .single;
+      expect(header.messages, isEmpty);
+      final saved = (await container
+          .read(agentLocalRepositoryProvider)
+          .fetchConversation(header.id))!;
       final firstAssistant = saved.messages.firstWhere(
         (message) => message.role == AgentMessageRole.assistant,
       );
@@ -658,7 +766,10 @@ void main() {
     final stored = await container
         .read(agentLocalRepositoryProvider)
         .fetchConversations();
-    final persistedTool = stored.single.messages.firstWhere(
+    final detail = (await container
+        .read(agentLocalRepositoryProvider)
+        .fetchConversation(stored.single.id))!;
+    final persistedTool = detail.messages.firstWhere(
       (message) => message.role == AgentMessageRole.tool,
     );
     expect(persistedTool.content, isNot(contains('completedWorkouts')));
@@ -754,21 +865,25 @@ void main() {
     ]);
   });
 
-  test('never starts more than eight model turns', () async {
-    final transport = _TurnTransport(
-      List.generate(
-        AgentRunLimits.maxModelTurns,
+  test('productive tasks continue beyond eight model turns', () async {
+    final transport = _TurnTransport([
+      ...List.generate(
+        10,
         (index) => [
           AgentToolCallDelta(
             index: 0,
             id: 'call-$index',
             name: 'read_summary',
-            argumentsDelta: '{}',
+            argumentsDelta: '{"page":$index}',
           ),
           const AgentModelCompleted(finishReason: 'tool_calls'),
         ],
       ),
-    );
+      [
+        const AgentTextDelta('Finished all ten pages.'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
     final tools = _FakeTools(AgentToolResult(payload: const {'ok': true}));
     final container = _container(transport: transport, tools: tools);
     addTearDown(container.dispose);
@@ -778,39 +893,112 @@ void main() {
         .submit('Keep reading');
 
     final run = container.read(agentHarnessControllerProvider).runState;
-    expect(run.phase, AgentRunPhase.failed);
-    expect(run.modelTurns, AgentRunLimits.maxModelTurns);
-    expect(transport.requests, hasLength(AgentRunLimits.maxModelTurns));
+    expect(run.phase, AgentRunPhase.completed);
+    expect(run.modelTurns, 11);
+    expect(transport.requests, hasLength(11));
+    expect(
+      transport.requests.every((r) => r.maxCompletionTokens == null),
+      isTrue,
+    );
+  });
+
+  test('executes more than twelve tools and completes the task', () async {
+    final events = <AgentModelEvent>[
+      for (var index = 0; index < 15; index += 1)
+        AgentToolCallDelta(
+          index: index,
+          id: 'call-$index',
+          name: 'read_summary',
+          argumentsDelta: '{}',
+        ),
+      const AgentModelCompleted(finishReason: 'tool_calls'),
+    ];
+    final tools = _FakeTools(AgentToolResult(payload: const {'ok': true}));
+    final container = _container(
+      transport: _TurnTransport([
+        events,
+        [
+          const AgentTextDelta('Done'),
+          const AgentModelCompleted(finishReason: 'stop'),
+        ],
+      ]),
+      tools: tools,
+    );
+    addTearDown(container.dispose);
+
+    await container
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Call too many tools');
+
+    final run = container.read(agentHarnessControllerProvider).runState;
+    expect(run.phase, AgentRunPhase.completed);
+    expect(run.toolCalls, 15);
+    expect(tools.calls, hasLength(15));
+  });
+
+  test('length boundaries preserve text and automatically continue', () async {
+    final transport = _TurnTransport([
+      for (var i = 0; i < 10; i++)
+        [
+          AgentTextDelta('Section $i'),
+          const AgentModelCompleted(finishReason: 'length'),
+        ],
+      [
+        const AgentTextDelta('Complete'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final container = _container(transport: transport);
+    addTearDown(container.dispose);
+    await container
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Write a long answer');
+    final run = container.read(agentHarnessControllerProvider).runState;
+    expect(run.phase, AgentRunPhase.completed);
+    expect(run.errorMessage, isNull);
+    expect(
+      run.conversation!.messages
+          .where((m) => m.role == AgentMessageRole.assistant)
+          .map((m) => m.content),
+      [...List.generate(10, (i) => 'Section $i'), 'Complete'],
+    );
+    expect(
+      transport.requests[1].messages.any(
+        (m) => m.content?.contains('Continue the unfinished task') ?? false,
+      ),
+      isTrue,
+    );
   });
 
   test(
-    'executes at most twelve tool calls and reports a bounded count',
+    'identical stalled tool cycles pause resumably without spending forever',
     () async {
-      final events = <AgentModelEvent>[
-        for (var index = 0; index <= AgentRunLimits.maxToolCalls; index += 1)
-          AgentToolCallDelta(
-            index: index,
-            id: 'call-$index',
-            name: 'read_summary',
-            argumentsDelta: '{}',
-          ),
-        const AgentModelCompleted(finishReason: 'tool_calls'),
-      ];
-      final tools = _FakeTools(AgentToolResult(payload: const {'ok': true}));
+      final transport = _TurnTransport(
+        List.generate(
+          3,
+          (i) => [
+            AgentToolCallDelta(
+              index: 0,
+              id: 'repeat-$i',
+              name: 'read_summary',
+              argumentsDelta: '{}',
+            ),
+            const AgentModelCompleted(finishReason: 'tool_calls'),
+          ],
+        ),
+      );
       final container = _container(
-        transport: _ScriptedTransport(events),
-        tools: tools,
+        transport: transport,
+        tools: _FakeTools(const AgentToolResult(payload: {'ok': true})),
       );
       addTearDown(container.dispose);
-
       await container
           .read(agentHarnessControllerProvider.notifier)
-          .submit('Call too many tools');
-
+          .submit('Read data');
       final run = container.read(agentHarnessControllerProvider).runState;
-      expect(run.phase, AgentRunPhase.failed);
-      expect(run.toolCalls, AgentRunLimits.maxToolCalls);
-      expect(tools.calls, hasLength(AgentRunLimits.maxToolCalls));
+      expect(run.phase, AgentRunPhase.interrupted);
+      expect(run.errorCode, 'no_progress');
+      expect(transport.requests, hasLength(3));
     },
   );
 

@@ -556,7 +556,11 @@ class DatabaseRepository {
     if (activeInstanceId == null) {
       return null;
     }
-    return fetchInstance(activeInstanceId);
+    final instance = await fetchInstance(activeInstanceId);
+    return instance?.ownerUserId == ownerUserId &&
+            instance?.engineState['lifecycle'] != 'stopped'
+        ? instance
+        : null;
   }
 
   // ---------- Versioned user content ---------- //
@@ -807,7 +811,14 @@ class DatabaseRepository {
       return null;
     }
 
-    filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final activeId = await fetchActiveInstanceIdForUser(ownerUserId);
+    filtered.sort(
+      (a, b) => a.instanceId == activeId
+          ? -1
+          : b.instanceId == activeId
+          ? 1
+          : b.createdAt.compareTo(a.createdAt),
+    );
     final collection = filtered.first;
     return StoredTrainingInstance(
       instanceId: collection.instanceId,
@@ -957,6 +968,97 @@ class DatabaseRepository {
   Future<T> trainingTransaction<T>(Future<T> Function() operation) => _write(
     () => runZoned(operation, zoneValues: {agentTransactionZoneKey: true}),
   );
+
+  /// A local route and its normally synced summary commit together, while the
+  /// route itself remains outside the synchronization queue.
+  Future<T> cardioTransaction<T>(Future<T> Function() operation) =>
+      trainingTransaction(operation);
+
+  /// CAS lifecycle transition shared by native and Web repositories. The
+  /// pointer, old instance, new instance and optional draft deletion commit
+  /// together. Restart never reuses a historical instance/log identity.
+  Future<StoredTrainingInstance> transitionInstance({
+    required StoredTrainingInstance expected,
+    required String? ownerUserId,
+    required String? expectedActiveInstanceId,
+    required InstanceLifecycleAction action,
+    TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
+    bool discardDraft = false,
+  }) => trainingTransaction(() async {
+    final current = await fetchInstance(expected.instanceId);
+    final activeId = await fetchActiveInstanceIdForUser(ownerUserId);
+    if (current == null ||
+        current.deletedAt != null ||
+        current.ownerUserId != ownerUserId ||
+        expected.ownerUserId != ownerUserId ||
+        current.version != expected.version ||
+        activeId != expectedActiveInstanceId) {
+      throw StateError('Training schedule changed. Reload and try again.');
+    }
+    if (action == InstanceLifecycleAction.stop &&
+        activeId != current.instanceId) {
+      throw StateError('Only the current plan can be stopped.');
+    }
+    if (action == InstanceLifecycleAction.restart) {
+      final template = await fetchStoredTemplate(
+        current.templateId,
+        ownerUserId: ownerUserId,
+      );
+      if (template == null) {
+        throw StateError('Training plan is no longer available.');
+      }
+      final draft = await fetchActiveSessionDraft(
+        current.instanceId,
+        ownerUserId: ownerUserId,
+      );
+      if (draft != null && !discardDraft) {
+        throw StateError(
+          'Finish or discard the active workout before restarting the plan.',
+        );
+      }
+      final fresh = await _createInstanceForTemplate(
+        templateId: current.templateId,
+        preferredInstanceId: const Uuid().v4(),
+        ownerUserId: ownerUserId,
+        trainingMaxProfile: trainingMaxProfile,
+        planStartLoadReview: planStartLoadReview,
+      );
+      await saveInstance(
+        current.copyWith(
+          engineState: {
+            ...current.engineState,
+            'lifecycle': 'stopped',
+            'restartedAs': fresh.instanceId,
+          },
+        ),
+      );
+      if (draft != null) {
+        await clearActiveSessionDraft(
+          current.instanceId,
+          ownerUserId: ownerUserId,
+        );
+      }
+      await saveActiveInstanceIdForUser(fresh.instanceId, ownerUserId);
+      return (await fetchInstance(fresh.instanceId))!;
+    }
+    await saveInstance(
+      current.copyWith(
+        engineState: {
+          ...current.engineState,
+          'lifecycle': action == InstanceLifecycleAction.stop
+              ? 'stopped'
+              : 'running',
+        },
+      ),
+    );
+    if (action == InstanceLifecycleAction.stop) {
+      await clearActiveInstanceIdForUser(ownerUserId);
+    } else {
+      await saveActiveInstanceIdForUser(current.instanceId, ownerUserId);
+    }
+    return (await fetchInstance(current.instanceId))!;
+  });
 
   Future<void> _saveInstance(
     StoredTrainingInstance data, {
@@ -1757,6 +1859,8 @@ class StoredTemplateRecord {
 
   bool get isUserOwned => !isBuiltIn;
 }
+
+enum InstanceLifecycleAction { stop, resume, restart }
 
 class StoredTrainingInstance {
   StoredTrainingInstance({

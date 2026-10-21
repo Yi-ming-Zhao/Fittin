@@ -36,7 +36,6 @@ class _FreeTrainingScreenState extends ConsumerState<FreeTrainingScreen> {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '按自己的节奏' : 'ON YOUR TERMS',
           title: strings.isChinese ? '自由训练' : 'Free training',
           subtitle: strings.isChinese
               ? '自由组合动作，不改变当前计划。未完成的记录会保存在本机。'

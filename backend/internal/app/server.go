@@ -49,6 +49,7 @@ type Server struct {
 	agentResolver         agentDNSResolver
 	agentClientFactory    agentHTTPClientFactory
 	agentStats            agentRelayMetrics
+	routeMu               sync.Mutex
 }
 
 type rateWindow struct {
@@ -195,6 +196,7 @@ func NewServer() (*Server, error) {
 	mux.HandleFunc("/v1/sync/", server.withAuth(server.handleSync))
 	mux.HandleFunc("/v1/files/progress-photos", server.withAuth(server.handleProgressPhotoUpload))
 	mux.HandleFunc("/v1/files/progress-photos/", server.withAuth(server.handleProgressPhotoDownload))
+	mux.HandleFunc("/v1/private-routes/", server.withAuth(server.handlePrivateRoute))
 	mux.HandleFunc("/v1/agent/chat-completions", server.withAuth(server.handleAgentChatCompletions))
 
 	server.httpServer = &http.Server{

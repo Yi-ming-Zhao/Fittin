@@ -91,6 +91,66 @@ class SupabaseRemoteRepository {
     await upsertRow(table: 'plans', row: planRowFromCollection(collection));
   }
 
+  /// Separate, explicit location transfer. Never called by ordinary sync.
+  Future<http.Response> privateRouteRequest({
+    required String method,
+    required String id,
+    required String suffix,
+    required String expectedOwner,
+    String? body,
+    int? version,
+    String? after,
+  }) async {
+    final inventory = id.isEmpty && suffix.isEmpty && method == 'GET';
+    if (!inventory &&
+        (!RegExp(r'^cardio-record:[a-fA-F0-9-]{36}$').hasMatch(id) ||
+            !(suffix == 'manifest' ||
+                RegExp(r'^chunks/[a-f0-9]{64}$').hasMatch(suffix)) ||
+            !const {'GET', 'PUT', 'DELETE'}.contains(method))) {
+      throw const FormatException('Invalid private route request.');
+    }
+    final uri =
+        Uri.parse(
+          inventory
+              ? '$_requireBaseUrl/v1/private-routes/'
+              : '$_requireBaseUrl/v1/private-routes/${Uri.encodeComponent(id)}/$suffix',
+        ).replace(
+          queryParameters: {
+            if (version != null) 'version': '$version',
+            if (inventory && after != null) 'after': after,
+          },
+        );
+    final response = await _sendAuthenticated((headers) {
+      // Loading/refreshing a token may overlap account switching. Check the
+      // actual token used for every attempt, not merely the UI's earlier owner.
+      try {
+        final token = headers['Authorization']?.substring(7) ?? '';
+        final claims = jsonDecode(
+          utf8.decode(
+            base64Url.decode(base64Url.normalize(token.split('.')[1])),
+          ),
+        );
+        if (claims is! Map || claims['sub'] != expectedOwner) {
+          throw const FormatException();
+        }
+      } catch (_) {
+        throw const RemoteRepositoryException(
+          'Sign in to the original account before transferring a route.',
+        );
+      }
+      return _guardRequest(
+        () => switch (method) {
+          'PUT' => _requireClient.put(uri, headers: headers, body: body),
+          'DELETE' => _requireClient.delete(uri, headers: headers),
+          _ => _requireClient.get(uri, headers: headers),
+        },
+      );
+    });
+    if (response.statusCode == 404 && method == 'GET') return response;
+    _ensureSuccess(response, _decodeJson(response));
+    return response;
+  }
+
   Future<void> upsertInstance(StoredTrainingInstance instance) async {
     await upsertRow(
       table: 'plan_instances',

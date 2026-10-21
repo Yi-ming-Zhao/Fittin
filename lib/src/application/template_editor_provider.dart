@@ -5,6 +5,7 @@ import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_plan_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/template_validation.dart';
+import 'app_locale_provider.dart';
 
 final templateLibraryProvider = FutureProvider<List<StoredTemplateRecord>>((
   ref,
@@ -66,6 +67,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   TemplateEditorNotifier(this._ref) : super(TemplateEditorState());
 
   final Ref _ref;
+  bool get _isChinese => _ref.read(appLocaleProvider) == AppLocale.zh;
 
   DatabaseRepository get _repository => _ref.read(databaseRepositoryProvider);
   LocalPlanRepository get _localPlanRepository =>
@@ -119,10 +121,17 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   }
 
   void addWorkout() {
-    _updateDraft(
-      (draft) =>
-          _copyWithWorkouts(draft, [..._workoutsOf(draft), _newWorkout()]),
-    );
+    _updateDraft((draft) {
+      final workouts = _workoutsOf(draft);
+      var dayNumber = workouts.length + 1;
+      while (workouts.any((day) => day.dayLabel == 'D$dayNumber')) {
+        dayNumber++;
+      }
+      return _copyWithWorkouts(draft, [
+        ...workouts,
+        _newWorkout(dayNumber: dayNumber),
+      ]);
+    });
   }
 
   void duplicateWorkout(int workoutIndex) {
@@ -766,7 +775,13 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
     List<Workout> workouts,
   ) {
     final phases = template.phases.isEmpty
-        ? [Phase(id: _newId('phase'), name: 'Main Phase', workouts: workouts)]
+        ? [
+            Phase(
+              id: _newId('phase'),
+              name: _isChinese ? '主要阶段' : 'Main Phase',
+              workouts: workouts,
+            ),
+          ]
         : [
             template.phases.first.copyWith(workouts: workouts),
             ...template.phases.skip(1),
@@ -777,13 +792,13 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   PlanTemplate _blankTemplate() {
     return PlanTemplate(
       id: _newId('template'),
-      name: 'Custom Plan',
-      description: 'Editable training plan',
+      name: _isChinese ? '自定义计划' : 'Custom Plan',
+      description: '',
       scheduleMode: PlanScheduleModes.linear,
       phases: [
         Phase(
           id: _newId('phase'),
-          name: 'Main Phase',
+          name: _isChinese ? '主要阶段' : 'Main Phase',
           workouts: [_newWorkout()],
         ),
       ],
@@ -840,11 +855,11 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
     );
   }
 
-  Workout _newWorkout() {
+  Workout _newWorkout({int dayNumber = 1}) {
     return Workout(
       id: _newId('workout'),
-      name: 'New Workout',
-      dayLabel: 'Day 1',
+      name: _isChinese ? '训练日 $dayNumber' : 'Workout $dayNumber',
+      dayLabel: 'D$dayNumber',
       estimatedDurationMinutes: 45,
       exercises: [_newExercise()],
     );
@@ -853,7 +868,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   Workout _duplicateWorkout(Workout workout) {
     return workout.copyWith(
       id: _newId('workout'),
-      name: '${workout.name} Copy',
+      name: '${workout.name} ${_isChinese ? '副本' : 'Copy'}',
       exercises: [
         for (final exercise in workout.exercises) _duplicateExercise(exercise),
       ],
@@ -864,7 +879,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
     return Exercise(
       id: _newId('exercise'),
       exerciseId: 'custom_exercise',
-      name: 'New Exercise',
+      name: _isChinese ? '新动作' : 'New Exercise',
       initialBaseWeight: 20,
       tier: 'T2',
       restSeconds: 120,
@@ -877,7 +892,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   Exercise _duplicateExercise(Exercise exercise) {
     return exercise.copyWith(
       id: _newId('exercise'),
-      name: '${exercise.name} Copy',
+      name: '${exercise.name} ${_isChinese ? '副本' : 'Copy'}',
       stages: [for (final stage in exercise.stages) _duplicateStage(stage)],
     );
   }
@@ -885,7 +900,7 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   SetScheme _newStage() {
     return SetScheme(
       id: _newId('stage'),
-      name: '3x10',
+      name: _isChinese ? '基础组' : 'Base sets',
       sets: [
         _newSetDefinition(kind: 'warmup', intensity: 0.6),
         _newSetDefinition(kind: 'working'),
@@ -904,7 +919,10 @@ class TemplateEditorNotifier extends StateNotifier<TemplateEditorState> {
   }
 
   SetScheme _duplicateStage(SetScheme stage) {
-    return stage.copyWith(id: _newId('stage'), name: '${stage.name} Copy');
+    return stage.copyWith(
+      id: _newId('stage'),
+      name: '${stage.name} ${_isChinese ? '副本' : 'Copy'}',
+    );
   }
 
   SetDefinition _newSetDefinition({

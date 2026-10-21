@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
+import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/data/seeds/gzclp_seed.dart';
 import 'package:fittin_v2/src/data/seeds/jacked_and_tan_seed.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
@@ -24,6 +25,38 @@ void main() {
 
   tearDown(() async {
     container?.dispose();
+  });
+
+  test('new Chinese plans have localized names and sequential day labels', () {
+    final localized = ProviderContainer(
+      overrides: [
+        databaseRepositoryProvider.overrideWithValue(repository!),
+        appLocaleProvider.overrideWith(
+          (ref) => AppLocaleNotifier(ref, initialLocale: AppLocale.zh),
+        ),
+      ],
+    );
+    addTearDown(localized.dispose);
+    final editor = localized.read(templateEditorProvider.notifier);
+    editor.createBlankTemplate();
+    editor.addWorkout();
+    final draft = localized.read(templateEditorProvider).draft!;
+    expect(draft.name, '自定义计划');
+    expect(draft.description, isEmpty);
+    expect(draft.workouts.map((day) => day.dayLabel), ['D1', 'D2']);
+    expect(draft.workouts.last.name, '训练日 2');
+    expect(draft.workouts.last.exercises.single.name, '新动作');
+    expect(draft.workouts.last.exercises.single.stages.single.name, '基础组');
+    editor.removeWorkout(0);
+    editor.addWorkout();
+    expect(
+      localized
+          .read(templateEditorProvider)
+          .draft!
+          .workouts
+          .map((day) => day.dayLabel),
+      ['D2', 'D3'],
+    );
   });
 
   test('editing the seeded template saves a customized copy', () async {

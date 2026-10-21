@@ -21,7 +21,7 @@ import (
 const (
 	defaultAgentMaxRequestBytes      = int64(512 << 10)
 	defaultAgentMaxResponseBytes     = int64(8 << 20)
-	defaultAgentUpstreamTimeout      = 5 * time.Minute
+	defaultAgentUpstreamTimeout      = 45 * time.Second
 	defaultAgentMaxConcurrentPerUser = 2
 	defaultAgentRateLimitPerMin      = 12
 	maxAgentRateEntries              = 20_000
@@ -138,8 +138,12 @@ func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	requestContext, cancel := context.WithTimeout(r.Context(), s.agentUpstreamTimeout())
+	// Bound DNS, connect and headers, not a productive response body. Stop the
+	// timer after headers arrive; per-read idle deadlines govern the stream.
+	requestContext, cancel := context.WithCancel(r.Context())
 	defer cancel()
+	headerTimer := time.AfterFunc(s.agentUpstreamTimeout(), cancel)
+	defer headerTimer.Stop()
 	target, err := resolveAgentTarget(requestContext, relayRequest.ProviderBaseURL, s.agentDNSResolver())
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_provider_url", "provider must be a public HTTPS URL")
@@ -163,6 +167,7 @@ func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Reque
 
 	client := s.agentHTTPClient(target)
 	upstreamResponse, err := client.Do(upstreamRequest)
+	headerExpired := !headerTimer.Stop()
 	defer client.CloseIdleConnections()
 	if err != nil {
 		if upstreamResponse != nil && upstreamResponse.Body != nil {
@@ -175,7 +180,7 @@ func (s *Server) handleAgentChatCompletions(w http.ResponseWriter, r *http.Reque
 		switch {
 		case errors.Is(err, errAgentRedirectBlocked):
 			writeError(w, http.StatusBadGateway, "provider_redirect_blocked", "provider redirects are not allowed")
-		case errors.Is(err, context.DeadlineExceeded), errors.Is(requestContext.Err(), context.DeadlineExceeded):
+		case headerExpired, errors.Is(err, context.DeadlineExceeded), errors.Is(requestContext.Err(), context.DeadlineExceeded):
 			termination = agentTermTimeout
 			writeError(w, http.StatusGatewayTimeout, "provider_timeout", "provider response timed out")
 		default:
@@ -468,6 +473,9 @@ func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *ht
 		writeError(w, http.StatusInternalServerError, "streaming_unavailable", "streaming is unavailable")
 		return agentTermUnavailable, 0
 	}
+	controller := http.NewResponseController(w)
+	// The HTTP server's generic absolute write deadline must not kill SSE.
+	_ = controller.SetWriteDeadline(time.Now().Add(60 * time.Second))
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
@@ -475,18 +483,31 @@ func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *ht
 	w.WriteHeader(upstreamResponse.StatusCode)
 	flusher.Flush()
 
-	remaining := s.agentMaxResponseBytes()
+	frameLimit := s.agentMaxResponseBytes()
+	var frameBytes int64
+	lineHasContent := false
 	var total int64
 	buffer := make([]byte, 16<<10)
-	for remaining > 0 {
-		readSize := len(buffer)
-		if int64(readSize) > remaining {
-			readSize = int(remaining)
-		}
-		count, readErr := upstreamResponse.Body.Read(buffer[:readSize])
+	for {
+		count, readErr := upstreamResponse.Body.Read(buffer)
 		if count > 0 {
+			for _, b := range buffer[:count] {
+				frameBytes++
+				if frameBytes > frameLimit {
+					w.Header().Set("X-Fittin-Agent-Termination", string(agentTermSizeLimit))
+					return agentTermSizeLimit, total
+				}
+				if b == '\n' {
+					if !lineHasContent {
+						frameBytes = 0
+					}
+					lineHasContent = false
+				} else if b != '\r' {
+					lineHasContent = true
+				}
+			}
+			_ = controller.SetWriteDeadline(time.Now().Add(60 * time.Second))
 			written, writeErr := w.Write(buffer[:count])
-			remaining -= int64(written)
 			total += int64(written)
 			if writeErr != nil || written != count {
 				w.Header().Set("X-Fittin-Agent-Termination", string(agentTermCancelled))
@@ -506,8 +527,6 @@ func (s *Server) streamAgentResponse(w http.ResponseWriter, upstreamResponse *ht
 			return reason, total
 		}
 	}
-	w.Header().Set("X-Fittin-Agent-Termination", string(agentTermSizeLimit))
-	return agentTermSizeLimit, total
 }
 
 func writeAgentUpstreamError(w http.ResponseWriter, status int) {

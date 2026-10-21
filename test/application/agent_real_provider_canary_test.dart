@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/agent_chat_protocol.dart';
 import 'package:fittin_v2/src/application/agent_harness_controller.dart';
 import 'package:fittin_v2/src/application/agent_provider_settings_provider.dart';
 import 'package:fittin_v2/src/data/agent_local_repository.dart';
@@ -114,7 +115,7 @@ void main() {
           ),
         );
         final actions = InMemoryAgentLocalRepository();
-        final transport = NativeAgentModelTransport();
+        final transport = _CanaryTransport();
         final store = _CanarySettings(key!, capabilities: capabilities);
         final c = ProviderContainer(
           overrides: [
@@ -158,6 +159,14 @@ void main() {
           );
         }
         final run = c.read(agentHarnessControllerProvider).runState;
+        if (transport.forceTruncation) {
+          expect(
+            transport.truncations,
+            greaterThanOrEqualTo(2),
+            reason:
+                'The provider must actually truncate twice, not merely accept a small test limit.',
+          );
+        }
         expect(
           run.phase,
           AgentRunPhase.completed,
@@ -314,6 +323,50 @@ String _sanitizedTrace(AgentConversation? conversation) {
 class _RealProviderTestBinding extends AutomatedTestWidgetsFlutterBinding {
   @override
   bool get overrideHttpClient => false;
+}
+
+/// Opt-in fault injection against the real provider, never used by the app.
+class _CanaryTransport extends NativeAgentModelTransport {
+  final forceTruncation =
+      Platform.environment['FITTIN_AGENT_CANARY_FORCE_TRUNCATION'] == '1';
+  int _requests = 0, truncations = 0;
+  @override
+  Map<String, dynamic> bodyFor({
+    required AgentProviderConfig config,
+    required String apiKey,
+    required AgentChatCompletionRequest request,
+  }) {
+    final body = super.bodyFor(
+      config: config,
+      apiKey: apiKey,
+      request: request,
+    );
+    if (forceTruncation && _requests++ < 2) {
+      body.remove('max_completion_tokens');
+      body['max_tokens'] = 8;
+    }
+    return body;
+  }
+
+  @override
+  Stream<AgentModelEvent> stream({
+    required AgentProviderConfig config,
+    required String apiKey,
+    required AgentChatCompletionRequest request,
+    AgentCancellationToken? cancellationToken,
+  }) async* {
+    await for (final event in super.stream(
+      config: config,
+      apiKey: apiKey,
+      request: request,
+      cancellationToken: cancellationToken,
+    )) {
+      if (event is AgentModelCompleted && event.finishReason == 'length') {
+        truncations++;
+      }
+      yield event;
+    }
+  }
 }
 
 class _CanarySettings implements AgentProviderSettingsStore {

@@ -3,6 +3,21 @@ import 'dart:convert';
 import '../domain/models/agent_models.dart';
 import 'agent_chat_protocol.dart';
 import 'agent_tools.dart';
+import 'package:crypto/crypto.dart';
+
+/// Detects a stalled provider rather than imposing a quota on productive work.
+/// Store digests, not potentially large or private tool results.
+class AgentProgressGuard {
+  String? _lastDigest;
+  int _repeats = 0;
+
+  bool observe(String outcome) {
+    final digest = sha256.convert(utf8.encode(outcome)).toString();
+    _repeats = digest == _lastDigest ? _repeats + 1 : 1;
+    _lastDigest = digest;
+    return _repeats < 3;
+  }
+}
 
 /// Provider-neutral turn assembly. Like pi agent-core, completion and tool
 /// execution are separate: syntactically valid arguments can still be cut off.

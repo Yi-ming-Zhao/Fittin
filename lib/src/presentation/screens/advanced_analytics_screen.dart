@@ -41,7 +41,6 @@ class _AdvancedAnalyticsScreenState
           layout: DashboardPageLayout.detail,
           children: [
             DashboardScreenHeader(
-              eyebrow: strings.insights,
               title: strings.advancedAnalytics,
               subtitle: strings.advancedAnalyticsSubtitle,
               showBackButton: true,
@@ -474,7 +473,6 @@ class _TrainingDayDetailScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '训练日' : 'TRAINING DAY',
           title:
               '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}',
           subtitle: strings.isChinese

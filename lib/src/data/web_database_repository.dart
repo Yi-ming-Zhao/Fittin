@@ -482,7 +482,11 @@ class WebDatabaseRepository extends DatabaseRepository {
     if (activeInstanceId == null) {
       return null;
     }
-    return fetchInstance(activeInstanceId);
+    final instance = await fetchInstance(activeInstanceId);
+    return instance?.ownerUserId == ownerUserId &&
+            instance?.engineState['lifecycle'] != 'stopped'
+        ? instance
+        : null;
   }
 
   @override
@@ -739,9 +743,18 @@ class WebDatabaseRepository extends DatabaseRepository {
     if (filtered.isEmpty) {
       return null;
     }
+    final activeId = await fetchActiveInstanceIdForUser(ownerUserId);
     filtered.sort(
-      (a, b) => (parseStoredDateTime(a['createdAt']) ?? DateTime.now())
-          .compareTo(parseStoredDateTime(b['createdAt']) ?? DateTime.now()),
+      (a, b) => a['instanceId'] == activeId
+          ? -1
+          : b['instanceId'] == activeId
+          ? 1
+          : (parseStoredDateTime(b['createdAt']) ??
+                    DateTime.fromMillisecondsSinceEpoch(0))
+                .compareTo(
+                  parseStoredDateTime(a['createdAt']) ??
+                      DateTime.fromMillisecondsSinceEpoch(0),
+                ),
     );
     return storedTrainingInstanceFromDoc(filtered.first);
   }
@@ -953,6 +966,14 @@ class WebDatabaseRepository extends DatabaseRepository {
     );
     return result;
   }
+
+  @override
+  Future<T> cardioTransaction<T>(Future<T> Function() operation) =>
+      store.runInTransaction([
+        WebStoreNames.userContent,
+        WebStoreNames.syncQueue,
+        WebStoreNames.cardioLocal,
+      ], operation);
 
   @override
   Future<StoredTrainingInstance?> fetchInstance(String instanceId) async {

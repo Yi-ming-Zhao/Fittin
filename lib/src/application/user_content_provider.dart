@@ -3,6 +3,8 @@ import 'package:fittin_v2/src/application/exercise_library_provider.dart';
 import 'package:fittin_v2/src/application/sync_refresh_provider.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
 import 'package:fittin_v2/src/domain/models/cardio.dart';
+import 'cardio_recording_provider.dart';
+import '../domain/models/cardio_recording.dart';
 import 'package:fittin_v2/src/domain/models/custom_exercise.dart';
 import 'package:fittin_v2/src/domain/models/custom_theme_palette.dart';
 import 'package:fittin_v2/src/domain/models/user_content.dart';
@@ -87,6 +89,21 @@ final cardioRecordsProvider = FutureProvider<List<CardioRecord>>((ref) async {
       .toList();
   records.sort((left, right) => right.startedAt.compareTo(left.startedAt));
   return records;
+});
+
+/// Includes tombstones so a locally retained route cannot resurrect a deleted
+/// summary as an unsaved recording after another device deletes it.
+final knownCardioRecordIdsProvider = FutureProvider<Set<String>>((ref) async {
+  ref.watch(cardioRecordDocumentsProvider);
+  final owner = ref.watch(currentUserIdProvider);
+  final documents = await ref
+      .watch(databaseRepositoryProvider)
+      .fetchUserContents(
+        UserContentKind.cardioRecord,
+        ownerUserId: owner,
+        includeDeleted: true,
+      );
+  return documents.map((document) => document.id).toSet();
 });
 
 final cardioImportFingerprintDocumentsProvider =
@@ -187,7 +204,11 @@ class UserContentService {
     if (preview.newRecords.isEmpty) {
       throw StateError('The import does not contain any new cardio records.');
     }
+    final owner = _ref.read(currentUserIdProvider);
     final activities = await _ref.read(cardioActivityLibraryProvider.future);
+    if (owner != _ref.read(currentUserIdProvider)) {
+      throw StateError('Account changed. Reopen the import preview.');
+    }
     for (final record in preview.newRecords) {
       final activity = activities.firstWhere(
         (candidate) => candidate.id == record.activityTypeId,
@@ -195,7 +216,6 @@ class UserContentService {
       );
       record.validate(activity);
     }
-    final owner = _ref.read(currentUserIdProvider);
     final receiptId = 'cardio-import:${preview.sourceFingerprint}';
     final importedAt = DateTime.now();
     final documents = <UserContentDocument>[
@@ -218,12 +238,76 @@ class UserContentService {
         },
       ),
     ];
-    await _ref
-        .read(databaseRepositoryProvider)
-        .saveUserContentsAtomically(
-          documents,
-          expectedVersions: {for (final document in documents) document.id: 0},
-        );
+    final database = _ref.read(databaseRepositoryProvider);
+    Future<void> saveSummary() async {
+      await database.saveUserContentsAtomically(
+        documents,
+        expectedVersions: {for (final document in documents) document.id: 0},
+      );
+    }
+
+    final withRoutes = preview.newRecords
+        .where(
+          (record) =>
+              (preview.routes[record.id]?.isNotEmpty ?? false) ||
+              (preview.laps[record.id]?.isNotEmpty ?? false),
+        )
+        .toList();
+    if (withRoutes.isEmpty) {
+      await saveSummary();
+    } else {
+      final local = _ref.read(cardioRecordingStoreProvider);
+      await database.cardioTransaction(() async {
+        if (owner != _ref.read(currentUserIdProvider)) {
+          throw StateError('Account changed. Reopen the import preview.');
+        }
+        await saveSummary();
+        for (final record in withRoutes) {
+          final route = preview.routes[record.id] ?? const <RoutePoint>[];
+          final elapsed = route.isEmpty
+              ? record.metric(CardioMetricKey.durationSeconds)!
+              : route.last.timestamp
+                        .difference(record.startedAt)
+                        .inMilliseconds /
+                    1000;
+          final active = record.metric(CardioMetricKey.durationSeconds)!;
+          final session = CardioRecordingSession(
+            id: record.id,
+            ownerUserId: owner,
+            sport: switch (record.activityTypeId) {
+              'cardio:cycling' => CardioSport.cycling,
+              'cardio:hiking' => CardioSport.hiking,
+              'cardio:outdoor-walking' => CardioSport.walking,
+              _ => route.isEmpty ? CardioSport.indoor : CardioSport.running,
+            },
+            startedAt: record.startedAt,
+            phase: CardioRecordingPhase.finished,
+            activityTypeId: record.activityTypeId,
+            activityName: record.activityName,
+            elapsedMilliseconds: ((elapsed > active ? elapsed : active) * 1000)
+                .round(),
+            activeMilliseconds: (active * 1000).round(),
+            distanceMeters: record.metric(CardioMetricKey.distanceMeters) ?? 0,
+            laps: preview.laps[record.id] ?? const [],
+          );
+          var revision = 0;
+          for (
+            var offset = 0;
+            offset < route.length || offset == 0;
+            offset += 500
+          ) {
+            final saved = await local.checkpoint(
+              session,
+              expectedRevision: revision,
+              batchId: '${preview.sourceFingerprint}:$offset',
+              points: route.skip(offset).take(500).toList(),
+            );
+            revision = saved.revision;
+          }
+        }
+      });
+      _ref.invalidate(localCardioSessionsProvider);
+    }
     _ref.invalidate(cardioRecordDocumentsProvider);
     _ref.invalidate(cardioRecordsProvider);
     _ref.invalidate(cardioImportFingerprintDocumentsProvider);

@@ -29,7 +29,6 @@ class SetTypeGuideScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.profile,
           title: strings.trainingSetGuide,
           showBackButton: true,
           subtitle: strings.trainingSetGuideSubtitle,

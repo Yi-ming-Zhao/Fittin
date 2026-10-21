@@ -13,4 +13,7 @@ flutter test --no-pub --platform chrome \
   test/data/web_local_store_migration_test.dart \
   test/data/web_agent_v3_test.dart \
   test/data/web_agent_user_content_test.dart \
+  test/data/web_agent_checkpoint_transcript_test.dart \
+  test/data/web_agent_conversation_transcript_test.dart \
+  test/data/web_cardio_nested_transaction_test.dart \
   test/data/web_workout_conclusion_transaction_test.dart --reporter expanded

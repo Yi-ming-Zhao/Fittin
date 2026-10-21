@@ -39,7 +39,6 @@ class _MilestoneExerciseSettingsScreenState
         layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
-            eyebrow: strings.settings,
             title: strings.milestoneExercises,
             subtitle: strings.milestoneExercisesSubtitle,
             showBackButton: true,

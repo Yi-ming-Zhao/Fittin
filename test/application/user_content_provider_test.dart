@@ -10,6 +10,54 @@ import '../support/in_memory_database_repository.dart';
 
 void main() {
   test(
+    'known cardio IDs retain owner-scoped tombstones, preventing route resurrection',
+    () async {
+      final repository = InMemoryDatabaseRepository();
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          currentUserIdProvider.overrideWithValue('alice'),
+        ],
+      );
+      addTearDown(container.dispose);
+      final record = CardioRecord(
+        id: 'cardio-record:deleted',
+        activityTypeId: 'cardio:running',
+        activityName: 'Running',
+        startedAt: DateTime.utc(2026),
+        metrics: const {
+          CardioMetricKey.durationSeconds: 600,
+          CardioMetricKey.distanceMeters: 1000,
+        },
+      );
+      await repository.saveUserContent(
+        UserContentDocument(
+          id: record.id,
+          kind: UserContentKind.cardioRecord,
+          payload: record.toJson(),
+          ownerUserId: 'alice',
+        ),
+      );
+      await repository.deleteUserContent(
+        record.id,
+        kind: UserContentKind.cardioRecord,
+        ownerUserId: 'alice',
+      );
+      await repository.saveUserContent(
+        UserContentDocument(
+          id: 'cardio-record:other',
+          kind: UserContentKind.cardioRecord,
+          payload: {...record.toJson(), 'id': 'cardio-record:other'},
+          ownerUserId: 'bob',
+        ),
+      );
+      expect(await container.read(cardioRecordsProvider.future), isEmpty);
+      expect(await container.read(knownCardioRecordIdsProvider.future), {
+        record.id,
+      });
+    },
+  );
+  test(
     'confirmed cardio import commits records and source receipt together',
     () async {
       final repository = InMemoryDatabaseRepository();

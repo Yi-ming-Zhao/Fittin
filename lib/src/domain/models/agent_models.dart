@@ -612,9 +612,6 @@ String redactAgentSecrets(String input, {Iterable<String> secrets = const []}) {
 }
 
 abstract final class AgentRunLimits {
-  static const maxModelTurns = 8;
-  static const maxToolCalls = 12;
-  static const maxConversationMessages = 120;
   static const maxProviderResponseBytes = 8 * 1024 * 1024;
   static const maxActionSnapshotBytes = 2 * 1024 * 1024;
   static const maxRawRows = 100;
