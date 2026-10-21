@@ -1,8 +1,8 @@
 # Fittin v1.5.0 发布验证
 
-current_stage_id: v150-ios-component-20261021-2107
-current_watch: /tmp/fittin-v150-ios-watch-20261021-2107
-current_wakeup_receipt: /tmp/fittin-v150-ios-receipt-20261021-2238
+current_stage_id: none
+current_watch: none
+current_wakeup_receipt: none
 
 状态：v1.5.0+28 试用版已发布（2026-10-21）。Android 第一方下载、应用内
 更新索引、公开 Web 与 GitHub 多平台资产均已上线。真机户外验证及地图授权
@@ -95,8 +95,8 @@ Android 模拟器接受从 v1.4.0 的 `adb install -r` 覆盖安装；没有卸�
   已验证所有手机的后台可靠性。Web 仅前台定位，桌面仅查看、导入与手工记录。
 - iOS 是无签名设备构建，不是可安装 IPA、TestFlight 或 App Store 发布。
   桌面包没有 Apple 公证或 Windows 商业签名。
-- 本机 iOS 官方组件下载由独立监督继续，CI 已完成无签名构建；它不阻挡本次
-  发布，也不会被误报为真机运动验收。
+- 本机 iOS 26.5 官方组件已于 2026-10-21 23:30:58 安装完成，监督验证确认
+  runtime 可用。CI 已完成无签名构建；组件安装不等于真机运动验收。
 
 ## OpenSpec 对照
 
@@ -118,7 +118,9 @@ Android 模拟器接受从 v1.4.0 的 `adb install -r` 覆盖安装；没有卸�
 
 ## 独立组件下载续接
 
-上面的监督仅等待已授权的官方 iOS 26.5 组件安装，不代表发布仍依赖本机
-重复构建。CI 已完成对应源码的无签名 iOS 构建。组件安装结束后复用监督
-验证结果并清理本阶段监听/兜底；失败时保留缓存，只报告具体问题，不重新
-启动下载、不删除用户文件、不重发版本。发布是否完成以本文发布状态为准。
+阶段 `v150-ios-component-20261021-2107` 于 2026-10-21 23:30:58 正常完成。
+监督目录 `/tmp/fittin-v150-ios-watch-20261021-2107` 的安装观察进程与验证命令
+均返回 0，验证摘要为 `Official iOS 26.5 runtime available`。App 于 23:31
+接手匹配的普通事件，在唯一收据目录写入 `APP_HANDLED`，删除 `fittin-ios`
+兜底；终态监听已自行结束。原监督和收据保留，不删除下载缓存或用户文件。
+复用已有 CI 无签名构建结果，没有再次构建、下载或发布版本。
