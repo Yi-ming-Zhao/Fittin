@@ -4,23 +4,36 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing immutable release tag to recover
+        required: true
+        type: string
+      native_run_id:
+        description: Prior run with all four successful native artifacts for that tag
+        required: true
+        type: string
 
 permissions:
   contents: write
+  actions: read
 
 concurrency:
-  group: publish-release-${{ github.ref }}
+  group: publish-release-${{ inputs.release_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   native-platforms:
+    if: github.event_name == 'push'
     uses: ./.github/workflows/platform-builds.yml
 
   build-and-release:
     needs: native-platforms
+    if: ${{ always() && (needs.native-platforms.result == 'success' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.ref_name }}
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
       RELEASE_BACKEND_URL: ${{ vars.RELEASE_BACKEND_URL }}
       EXPECTED_ANDROID_SIGNER_SHA256: 0c52c1350c14a360c833422967ac33469572e9acb64a33ddaad1a407532d0671
     steps:
@@ -28,6 +41,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.release_tag || github.ref }}
+
+      - name: Validate recovered native artifact provenance
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_RUN_ID: ${{ inputs.native_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$NATIVE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          source_commit="$(git rev-parse HEAD)"
+          run_commit="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID" --jq .head_sha)"
+          [[ "$source_commit" == "$run_commit" ]] || { echo 'Native artifacts are from a different source commit.'; exit 1; }
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID/jobs?per_page=100" \
+            --jq '[.jobs[] | select(.name | startswith("native-platforms / native ("))] | length == 4 and all(.[]; .conclusion == "success")' | grep -qx true
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$NATIVE_RUN_ID/artifacts?per_page=100" \
+            --jq '[.artifacts[] | select(.name | startswith("native-"))] | length == 4 and all(.[]; .expired == false)' | grep -qx true
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -37,6 +68,9 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -160,6 +194,7 @@ jobs:
             echo "aab_name=fittin-${RELEASE_TAG}-android.aab"
             echo "web_name=fittin-${RELEASE_TAG}-web.zip"
             echo "sha_name=fittin-${RELEASE_TAG}-sha256.txt"
+            echo "source_commit=$(git rev-parse HEAD)"
           } >> "$GITHUB_OUTPUT"
 
       - name: Materialize Android signing config
@@ -301,6 +336,8 @@ jobs:
           pattern: native-*
           merge-multiple: true
           path: ${{ steps.meta.outputs.release_dir }}
+          run-id: ${{ inputs.native_run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Generate checksums and release notes
         run: |
@@ -351,7 +388,7 @@ jobs:
           set -euo pipefail
           git fetch --force --no-tags origin "refs/tags/${RELEASE_TAG}"
           remote_tag_commit="$(git rev-parse 'FETCH_HEAD^{commit}')"
-          if [[ "$remote_tag_commit" != "$GITHUB_SHA" ]]; then
+          if [[ "$remote_tag_commit" != "$(git rev-parse HEAD)" ]]; then
             echo "Tag $RELEASE_TAG moved after this workflow started; refusing to publish."
             exit 1
           fi
@@ -386,7 +423,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.meta.outputs.source_commit }}
           body_path: ${{ steps.meta.outputs.release_dir }}/release-notes.md
           files: ${{ steps.meta.outputs.release_dir }}/*
           overwrite_files: false

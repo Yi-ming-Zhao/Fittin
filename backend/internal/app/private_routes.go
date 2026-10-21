@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -205,7 +206,7 @@ func (s *Server) handlePrivateRoute(w http.ResponseWriter, r *http.Request) {
 		}
 		// An identical retried commit is idempotent; a changed snapshot requires
 		// the exact version shown to the user before confirmation.
-		identical := bytes.Equal(existing.Session, input.Session) && len(existing.Chunks) == len(input.Chunks)
+		identical := equalRouteSession(existing.Session, input.Session) && len(existing.Chunks) == len(input.Chunks)
 		for i, hash := range input.Chunks {
 			if !routeHashPattern.MatchString(hash) {
 				writeError(w, 400, "invalid_route_chunk_hash")
@@ -325,6 +326,13 @@ func (s *Server) listPrivateRoutes(w http.ResponseWriter, r *http.Request, owner
 }
 
 func routeDigest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
+
+// Persisting a RawMessage compacts whitespace. Retries must compare the JSON
+// value rather than its wire formatting or object-key order.
+func equalRouteSession(a, b json.RawMessage) bool {
+	var left, right any
+	return json.Unmarshal(a, &left) == nil && json.Unmarshal(b, &right) == nil && reflect.DeepEqual(left, right)
+}
 
 func writePrivateRouteFile(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
