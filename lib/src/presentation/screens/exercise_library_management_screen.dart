@@ -45,9 +45,6 @@ class _ExerciseLibraryManagementScreenState
       children: [
         DashboardScreenHeader(
           title: strings.isChinese ? '动作库' : 'Exercise library',
-          subtitle: strings.isChinese
-              ? '内置动作只读；你可以复制后调整，或创建自己的动作和标签。'
-              : 'Built-ins stay read-only. Copy one to customize it, or create your own tagged movement.',
           showBackButton: true,
           trailing: IconButton.filledTonal(
             tooltip: strings.isChinese ? '新建动作' : 'New exercise',
@@ -324,9 +321,6 @@ class _CustomExerciseEditorScreenState
           title: widget.existing == null
               ? (strings.isChinese ? '新建自定义动作' : 'New custom exercise')
               : (strings.isChinese ? '编辑自定义动作' : 'Edit custom exercise'),
-          subtitle: strings.isChinese
-              ? '动作分类会同时用于训练中替换、统计和 Agent 工具。'
-              : 'These tags drive in-session replacement, analytics, and Agent tools.',
           showBackButton: true,
         ),
         const SizedBox(height: 18),

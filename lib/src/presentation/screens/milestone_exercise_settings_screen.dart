@@ -40,7 +40,6 @@ class _MilestoneExerciseSettingsScreenState
         children: [
           DashboardScreenHeader(
             title: strings.milestoneExercises,
-            subtitle: strings.milestoneExercisesSubtitle,
             showBackButton: true,
           ),
           const SizedBox(height: 20),

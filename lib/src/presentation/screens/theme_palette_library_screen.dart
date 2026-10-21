@@ -24,9 +24,6 @@ class ThemePaletteLibraryScreen extends ConsumerWidget {
       children: [
         DashboardScreenHeader(
           title: strings.isChinese ? '配色方案库' : 'Palette library',
-          subtitle: strings.isChinese
-              ? '系统配色不可改写；你可以创建语义化配色，背景、文字、线条和图表会一起更新。'
-              : 'Built-ins stay immutable. Custom semantic palettes update backgrounds, type, lines, and charts together.',
           showBackButton: true,
           trailing: IconButton.filledTonal(
             tooltip: strings.isChinese ? '新建配色' : 'New palette',

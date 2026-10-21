@@ -128,8 +128,6 @@ class DashboardScreenHeader extends StatelessWidget {
             ],
             Text(
               title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
               style: theme.displayStyle(32, theme.fg).copyWith(height: 0.98),
             ),
             if (subtitle != null) ...[

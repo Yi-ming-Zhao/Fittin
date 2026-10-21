@@ -42,7 +42,6 @@ class _AdvancedAnalyticsScreenState
           children: [
             DashboardScreenHeader(
               title: strings.advancedAnalytics,
-              subtitle: strings.advancedAnalyticsSubtitle,
               showBackButton: true,
             ),
             const SizedBox(height: 18),
@@ -475,9 +474,6 @@ class _TrainingDayDetailScreen extends ConsumerWidget {
         DashboardScreenHeader(
           title:
               '${record.date.year}-${record.date.month.toString().padLeft(2, '0')}-${record.date.day.toString().padLeft(2, '0')}',
-          subtitle: strings.isChinese
-              ? '力量使用方形标记，有氧使用圆形标记。'
-              : 'Strength uses square markers; cardio uses circles.',
           showBackButton: true,
         ),
         if (record.logs.isNotEmpty) ...[

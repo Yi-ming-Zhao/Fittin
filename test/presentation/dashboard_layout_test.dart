@@ -80,6 +80,14 @@ void main() {
         final compact = find.byKey(
           const ValueKey('dashboard-header-utility-row'),
         );
+        expect(
+          tester
+              .widget<Text>(find.text('A deliberately long detail page title'))
+              .maxLines,
+          isNull,
+          reason:
+              'Page titles must wrap fully instead of hiding their identity.',
+        );
         final title = find.byKey(
           const ValueKey('dashboard-header-title-block'),
         );

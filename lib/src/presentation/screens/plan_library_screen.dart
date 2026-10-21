@@ -75,10 +75,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
         return DashboardPageScaffold(
           bottomPadding: 24,
           children: [
-            DashboardScreenHeader(
-              title: strings.trainingPlans,
-              subtitle: strings.trainingPlansSubtitle,
-            ),
+            DashboardScreenHeader(title: strings.trainingPlans),
             const SizedBox(height: 24),
             Wrap(
               spacing: 8,
@@ -310,10 +307,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       loading: () => DashboardPageScaffold(
         bottomPadding: 24,
         children: [
-          DashboardScreenHeader(
-            title: strings.trainingPlans,
-            subtitle: strings.trainingPlansSubtitle,
-          ),
+          DashboardScreenHeader(title: strings.trainingPlans),
           const SizedBox(height: 24),
           DashboardSurfaceCard(
             child: Row(
@@ -343,10 +337,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       error: (error, _) => DashboardPageScaffold(
         bottomPadding: 24,
         children: [
-          DashboardScreenHeader(
-            title: strings.trainingPlans,
-            subtitle: strings.trainingPlansSubtitle,
-          ),
+          DashboardScreenHeader(title: strings.trainingPlans),
           const SizedBox(height: 24),
           DashboardSurfaceCard(
             child: Column(
@@ -620,9 +611,23 @@ class _PlanDetailScreen extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 16),
-        Text(
-          localizedTemplateDescription(template, locale),
-          style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
+        ExpansionTile(
+          key: const ValueKey('plan-description-disclosure'),
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 16),
+          title: Text(
+            strings.isChinese ? '训练说明' : 'Training instructions',
+            style: theme.uiStyle(14, theme.fg),
+          ),
+          children: [
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                localizedTemplateDescription(template, locale),
+                style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         DashboardSurfaceCard(

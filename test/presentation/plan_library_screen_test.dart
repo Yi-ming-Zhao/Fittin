@@ -23,6 +23,54 @@ void main() {
     exerciseLibrary = await ExerciseLibraryLoader().load();
   });
 
+  testWidgets('long plan instructions stay collapsed before clickable days', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final description = List.filled(
+      100,
+      'Detailed training instructions.',
+    ).join('\n');
+    final plan = fakePlanTemplate.copyWith(
+      id: 'long-plan',
+      name: 'Long plan',
+      description: description,
+      localizedDescription: {},
+    );
+    final record = StoredTemplateRecord(
+      template: plan,
+      isBuiltIn: false,
+      sourceTemplateId: null,
+      createdAt: DateTime(2026),
+      lastModifiedAt: DateTime(2026),
+      instanceCount: 0,
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          planLibraryItemsProvider.overrideWith(
+            (ref) async => [PlanLibraryItem(record: record, isActive: false)],
+          ),
+        ],
+        child: const MaterialApp(home: PlanLibraryScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Long plan'));
+    await tester.pumpAndSettle();
+    expect(find.text(description), findsNothing);
+    final day = find.byKey(ValueKey('plan-day-${plan.workouts.first.id}'));
+    expect(day.hitTestable(), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('plan-description-disclosure')));
+    await tester.pumpAndSettle();
+    expect(find.text(description), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('plan library renders preview metadata and active state', (
     WidgetTester tester,
   ) async {

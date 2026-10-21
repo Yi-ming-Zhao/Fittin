@@ -93,6 +93,17 @@ checked off merely because their unit tests pass.
 - Real Web inspection reproduced wheel/trackpad following while reading older
   output. UserScrollNotification handling now covers inputs without dragDetails;
   both wheel and touch follow/read/return-to-latest widget cases passed.
+- PR #14 is a draft: https://github.com/Yi-ming-Zhao/Fittin/pull/14 . Initial
+  candidate commit `a4b1c6a` passed all CI jobs in run `39610203513`: Flutter,
+  Go, Windows, Linux, macOS and unsigned iOS. Later presentation refinements
+  remain a separate candidate revision and require its matching CI result.
+- The latest presentation refinement passed 53 relevant widget tests, plus the
+  long-plan disclosure case, four full-title responsive cases and three offline
+  font tests. See `docs/visual-review-v1.5.0.md` for coverage boundaries.
+- Public preflight found an expired Fittin TLS certificate. Normal HTTPS
+  validation correctly failed. A separate certificate renewal is in progress;
+  no certificate verification bypass is used and no application deployment has
+  occurred. The 241 production repository is clean at `43acba2` on main.
 
 - Private-route Go tests: four passed in the isolated 241 source checkout;
   authentication, owner isolation, staging visibility, idempotent commit, stale
@@ -204,7 +215,9 @@ checked off merely because their unit tests pass.
 
 ## Next action
 
-Consume the official iOS component installation result before retrying the
-unsigned build. Android debug compilation has passed. Online AMap remains
+Unsigned iOS already passed the initial candidate CI. The authorized local
+component download may finish independently; do not block publication on a
+duplicate local build when matching final-candidate CI succeeds. Android debug
+compilation has passed. Online AMap remains
 disabled by user choice. Continue candidate visual/provider/build verification,
 then PR and publication; do not archive this incomplete change yet.

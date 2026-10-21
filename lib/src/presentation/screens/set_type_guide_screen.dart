@@ -31,7 +31,6 @@ class SetTypeGuideScreen extends ConsumerWidget {
         DashboardScreenHeader(
           title: strings.trainingSetGuide,
           showBackButton: true,
-          subtitle: strings.trainingSetGuideSubtitle,
         ),
         const SizedBox(height: 24),
         guideAsync.when(
