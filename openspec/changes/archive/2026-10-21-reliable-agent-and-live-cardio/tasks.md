@@ -30,6 +30,6 @@
 
 - [x] 5.1 Verify real provider continuation, approval and undo without leaking credentials.
 - [x] 5.2 User-approved trial boundary (2026-10-21): online AMap remains disabled; the user will perform the 60-minute Android outdoor/known-distance trial after download. Release notes must explicitly disclose both limitations. No physical pass is claimed.
-- [ ] 5.3 Verify full CI/platform builds, additive migrations, Android signing and upgrade from v1.4.0; iOS unsigned only.
-- [ ] 5.4 Bump verified unused version to 1.5.0+28, merge reviewed PR, sync 241 safely and deploy backend/Web with rollback.
-- [ ] 5.5 Verify public endpoints/Web/update artifacts, publish latest.json last, sync specs and archive with evidence.
+- [x] 5.3 Verify full CI/platform builds, additive migrations, Android signing and upgrade from v1.4.0; iOS unsigned only. The signed emulator upgrade retains the anonymous fixture's plan/day/draft entry; authenticated storage migration is covered by focused tests, not claimed as a new real-account upgrade canary.
+- [x] 5.4 Bump verified unused version to 1.5.0+28, merge reviewed PR, sync 241 safely and deploy backend/Web with rollback.
+- [x] 5.5 Verify public endpoints/Web/update artifacts, publish latest.json last, sync specs and archive with evidence. Six capability specs are synchronized; final release evidence is retained in docs/release-verification-v1.5.0.md.

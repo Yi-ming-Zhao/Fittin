@@ -24,11 +24,11 @@ The relay SHALL accept only HTTPS provider Base URLs without userinfo, query, or
 - **THEN** the relay refuses the redirect instead of following it
 
 ### Requirement: Bounded streaming forwarding
-The relay SHALL cap request bytes, streamed response bytes, duration, per-user concurrency, and user/IP request rate while preserving JSON and event-stream response delivery.
+The relay SHALL cap request bytes, individual response frames, per-user concurrency and user/IP request rate while preserving JSON and event-stream delivery. It SHALL detect first-response and idle timeouts but MUST NOT terminate a productive stream solely for total elapsed time. Authentication, public-target enforcement, credential redaction and disconnect cancellation SHALL remain enforced.
 
 #### Scenario: Streaming provider response
-- **WHEN** an allowed provider emits multiple SSE chunks
-- **THEN** the relay flushes chunks progressively and cancels the upstream request when the client disconnects
+- **WHEN** an allowed provider emits multiple SSE chunks, including beyond five minutes
+- **THEN** the relay flushes them progressively and cancels upstream when the client disconnects, without a fixed total-duration cutoff
 
 ### Requirement: Secret-safe errors
 Relay error responses SHALL use stable codes and SHALL not contain provider API keys, authorization headers, raw request payloads, or internal network addresses.

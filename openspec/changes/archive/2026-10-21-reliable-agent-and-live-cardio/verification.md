@@ -1,16 +1,20 @@
 # v1.5.0 implementation and verification record
 
-current_stage_id: v150-ios-component-20261021-2107
-current_watch: /tmp/fittin-v150-ios-watch-20261021-2107
-current_wakeup_receipt: /tmp/fittin-v150-ios-receipt-20261021-2107
+current_stage_id: none
+current_watch: none
+current_wakeup_receipt: none
+
+The independent iOS component monitor now follows the stable record
+`docs/release-verification-v1.5.0.md`, so archiving this change does not lose its
+authorized download completion handling. CI already validates unsigned iOS.
 
 ## Release status
 
-Not released. Work is on `codex/reliable-agent-and-live-cardio`, based on
-`43acba2` / `1.4.0+27`. Candidate version is now `1.5.0+28`; no tag, production deployment or
-`latest.json` update has been performed. This is not a release-candidate signoff.
-The task checklist remains authoritative; partially implemented tasks are not
-checked off merely because their unit tests pass.
+Implementation below is a chronological evidence record, not the current release
+status. The authoritative final status, CI runs, immutable source identities,
+public checks and trial limitations are in `docs/release-verification-v1.5.0.md`.
+The original baseline was `43acba2` / `1.4.0+27`. PRs #14 and #15 are merged;
+the immutable client tag is `v1.5.0` / `1.5.0+28`.
 
 ## Verified implementation
 
@@ -33,7 +37,8 @@ checked off merely because their unit tests pass.
   have widget regressions. Unchanged message widgets retain identity when a new
   tail arrives. One consistent status slot covers connecting/generation/tools/
   compaction/resume; its two-line height scales with accessibility text size.
-  Whole-app visual signoff is still outstanding.
+  Subsequent whole-app review and its sampling boundaries are recorded in
+  `docs/visual-review-v1.5.0.md`.
 - Plan stop/resume/restart uses owner/version-checked transactions. Stop preserves
   the draft; restart creates a new instance after load review and cannot silently
   discard an active draft. Native and fake-Web lifecycle regressions pass.
