@@ -358,7 +358,7 @@ func TestAgentRelayBoundsRequestAndJSONResponse(t *testing.T) {
 	}
 }
 
-func TestAgentRelayCapsStreamingResponseBytes(t *testing.T) {
+func TestAgentRelayCapsIndividualStreamingFrameBytes(t *testing.T) {
 	transport := agentRoundTripFunc(func(*http.Request) (*http.Response, error) {
 		return agentResponse(http.StatusOK, "text/event-stream", "1234567890"), nil
 	})
@@ -367,8 +367,45 @@ func TestAgentRelayCapsStreamingResponseBytes(t *testing.T) {
 	})
 	recorder := serveAgentRelay(server, validAgentRelayBody("sk-stream-limit"), "user-stream-limit", "198.18.0.14")
 
-	if recorder.Code != http.StatusOK || recorder.Body.String() != "12345" {
-		t.Fatalf("stream was not capped exactly: %d %q", recorder.Code, recorder.Body.String())
+	if recorder.Code != http.StatusOK || recorder.Body.Len() != 0 || recorder.Header().Get("X-Fittin-Agent-Termination") != string(agentTermSizeLimit) {
+		t.Fatalf("oversized frame was not rejected: %d %q", recorder.Code, recorder.Body.String())
+	}
+}
+
+func TestAgentRelayAllowsManyBoundedFrames(t *testing.T) {
+	body := strings.Repeat("data: ok\r\n\r\n", 100)
+	transport := agentRoundTripFunc(func(*http.Request) (*http.Response, error) {
+		return agentResponse(http.StatusOK, "text/event-stream", body), nil
+	})
+	server := newAgentRelayTestServer(publicAgentResolver(), transport, Config{AgentMaxResponseBytes: 20})
+	recorder := serveAgentRelay(server, validAgentRelayBody("test-key"), "many-frames", "198.18.0.14")
+	if recorder.Body.String() != body {
+		t.Fatal("productive SSE was capped by cumulative bytes")
+	}
+}
+
+func TestAgentRelayHeaderDeadlineDoesNotEndProductiveBody(t *testing.T) {
+	transport := agentRoundTripFunc(func(request *http.Request) (*http.Response, error) {
+		reader, writer := io.Pipe()
+		go func() {
+			defer writer.Close()
+			for i := 0; i < 6; i++ {
+				select {
+				case <-request.Context().Done():
+					return
+				case <-time.After(10 * time.Millisecond):
+				}
+				if _, err := io.WriteString(writer, "data: ok\n\n"); err != nil {
+					return
+				}
+			}
+		}()
+		return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": []string{"text/event-stream"}}, Body: reader}, nil
+	})
+	server := newAgentRelayTestServer(publicAgentResolver(), transport, Config{AgentUpstreamTimeout: 20 * time.Millisecond})
+	recorder := serveAgentRelay(server, validAgentRelayBody("test-key"), "long-body", "198.18.0.14")
+	if recorder.Body.String() != strings.Repeat("data: ok\n\n", 6) {
+		t.Fatal("header deadline terminated response body")
 	}
 }
 

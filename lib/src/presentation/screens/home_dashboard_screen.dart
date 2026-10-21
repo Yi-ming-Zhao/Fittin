@@ -334,21 +334,9 @@ class _AtAGlanceSection extends StatelessWidget {
           DashboardSurfaceCard(
             key: const ValueKey('today-training-empty-state'),
             padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  strings.isChinese ? '从第一场训练开始' : 'Your progress starts here',
-                  style: theme.uiStyle(20, theme.fg, FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  strings.isChinese
-                      ? '记录后，这里会展示力量变化、训练进度和新的个人纪录。今天也可以自由训练，或单独记录有氧。'
-                      : 'Record a workout to see your strength trends, plan progress and personal records. You can also train freely or log cardio.',
-                  style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.65),
-                ),
-              ],
+            child: Text(
+              strings.isChinese ? '暂无训练记录' : 'No workouts recorded yet',
+              style: theme.uiStyle(16, theme.fgDim),
             ),
           )
         else ...[

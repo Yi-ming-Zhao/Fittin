@@ -41,6 +41,8 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
   Future<T> trainingTransaction<T>(Future<T> Function() operation) async {
     final instances = Map<String, StoredTrainingInstance>.from(_instances);
     final logs = List<WorkoutLog>.from(_workoutLogs);
+    final pointers = Map<String, String?>.from(_activeInstanceIdsByOwner);
+    final drafts = Map<String, WorkoutSessionState>.from(_sessionDraftsByScope);
     try {
       return await operation();
     } catch (_) {
@@ -50,6 +52,12 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
       _workoutLogs
         ..clear()
         ..addAll(logs);
+      _activeInstanceIdsByOwner
+        ..clear()
+        ..addAll(pointers);
+      _sessionDraftsByScope
+        ..clear()
+        ..addAll(drafts);
       rethrow;
     }
   }
@@ -414,7 +422,11 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     if (activeInstanceId == null) {
       return null;
     }
-    return _instances[activeInstanceId];
+    final instance = _instances[activeInstanceId];
+    return instance?.ownerUserId == ownerUserId &&
+            instance?.engineState['lifecycle'] != 'stopped'
+        ? instance
+        : null;
   }
 
   @override
@@ -422,6 +434,7 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
     String templateId, {
     String? ownerUserId,
   }) async {
+    final activeId = await fetchActiveInstanceIdForUser(ownerUserId);
     final matches =
         _instances.values
             .where(
@@ -430,7 +443,13 @@ class InMemoryDatabaseRepository extends DatabaseRepository {
                   instance.ownerUserId == ownerUserId,
             )
             .toList()
-          ..sort((a, b) => a.instanceId.compareTo(b.instanceId));
+          ..sort(
+            (a, b) => a.instanceId == activeId
+                ? -1
+                : b.instanceId == activeId
+                ? 1
+                : b.createdAt.compareTo(a.createdAt),
+          );
     return matches.isEmpty ? null : matches.first;
   }
 

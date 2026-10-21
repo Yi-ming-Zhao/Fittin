@@ -24,11 +24,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
         if (overview.exerciseSummaries.isEmpty) {
           return DashboardPageScaffold(
             children: [
-              DashboardScreenHeader(
-                eyebrow: strings.insights,
-                title: strings.advancedAnalytics,
-                subtitle: strings.advancedAnalyticsSubtitle,
-              ),
+              DashboardScreenHeader(title: strings.advancedAnalytics),
               const SizedBox(height: 28),
               _EmptyState(theme: fittinTheme, strings: strings),
             ],
@@ -37,11 +33,7 @@ class ProgressAnalyticsScreen extends ConsumerWidget {
 
         return DashboardPageScaffold(
           children: [
-            DashboardScreenHeader(
-              eyebrow: strings.insights,
-              title: strings.advancedAnalytics,
-              subtitle: strings.advancedAnalyticsSubtitle,
-            ),
+            DashboardScreenHeader(title: strings.advancedAnalytics),
             const SizedBox(height: 20),
             DashboardSurfaceCard(
               radius: 34,
@@ -416,7 +408,6 @@ class _ExerciseDetailSheet extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 DashboardScreenHeader(
-                  eyebrow: strings.exerciseDetails,
                   title: summary.exerciseName,
                   subtitle: strings.activeFormulaLabel(formula),
                 ),

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:fittin_v2/src/domain/models/cardio.dart';
+import '../domain/models/cardio_recording.dart';
 import 'package:xml/xml.dart';
 
 class CardioImportException implements Exception {
@@ -111,6 +112,14 @@ class CardioImportService {
       records: records,
       warnings: parsed.warnings,
       duplicateRecordIds: duplicates,
+      routes: {
+        for (var i = 0; i < parsed.routes.length; i++)
+          records[i].id: parsed.routes[i],
+      },
+      laps: {
+        for (var i = 0; i < parsed.laps.length; i++)
+          records[i].id: parsed.laps[i],
+      },
     );
   }
 
@@ -136,31 +145,43 @@ class CardioImportService {
 
   _ParsedImport _parseGpx(Uint8List bytes) {
     final document = _parseXml(bytes);
-    final points = document.descendants
-        .where((node) => node is XmlElement && node.name.local == 'trkpt')
-        .cast<XmlElement>()
-        .map(_gpxPoint)
-        .whereType<_TrackPoint>()
-        .toList(growable: false);
-    if (points.length < 2) {
-      throw const CardioImportException(
-        'The GPX file needs at least two timestamped track points.',
-      );
-    }
-    final metrics = _metricsFromTrack(points);
-    return _ParsedImport(
-      records: [
-        _importRecord(
-          BuiltInCardioActivities.byId('cardio:running'),
-          points.first.time,
-          metrics,
-        ),
-      ],
-      warnings: [
-        if (points.any((point) => point.heartRate == null))
-          'Heart-rate data was not available for every GPX track point.',
-      ],
+    final tracks = document.descendants.whereType<XmlElement>().where(
+      (element) => element.name.local == 'trk',
     );
+    final records = <CardioRecord>[];
+    final routes = <List<RoutePoint>>[];
+    final warnings = <String>[];
+    for (final track in tracks) {
+      final points = _segmentedXmlPoints(track, 'trkseg', 'trkpt', _gpxPoint);
+      if (points.length < 2) {
+        warnings.add(
+          'Skipped a GPX track with fewer than two timestamped points.',
+        );
+        continue;
+      }
+      final sport = (_firstText(track, 'type') ?? '').toLowerCase();
+      final activityId = sport.contains('cycl') || sport.contains('bik')
+          ? 'cardio:cycling'
+          : sport.contains('hik')
+          ? 'cardio:hiking'
+          : sport.contains('walk')
+          ? 'cardio:outdoor-walking'
+          : 'cardio:running';
+      records.add(
+        _importRecord(
+          BuiltInCardioActivities.byId(activityId),
+          points.first.time,
+          _metricsFromTrack(points),
+        ),
+      );
+      routes.add(_routeFromTrack(points));
+      if (points.any((point) => point.heartRate == null)) {
+        warnings.add(
+          'Heart-rate data was not available for every GPX track point.',
+        );
+      }
+    }
+    return _ParsedImport(records: records, warnings: warnings, routes: routes);
   }
 
   _ParsedImport _parseTcx(Uint8List bytes) {
@@ -170,6 +191,8 @@ class CardioImportService {
         .cast<XmlElement>();
     final records = <CardioRecord>[];
     final warnings = <String>[];
+    final routes = <List<RoutePoint>>[];
+    final laps = <List<CardioLap>>[];
     for (final activity in activities) {
       final sport = (activity.getAttribute('Sport') ?? '').toLowerCase();
       final type = sport.contains('bik')
@@ -177,14 +200,12 @@ class CardioImportService {
           : sport.contains('swim')
           ? BuiltInCardioActivities.byId('cardio:swimming')
           : BuiltInCardioActivities.byId('cardio:running');
-      final points = activity.descendants
-          .where(
-            (node) => node is XmlElement && node.name.local == 'Trackpoint',
-          )
-          .cast<XmlElement>()
-          .map(_tcxPoint)
-          .whereType<_TrackPoint>()
-          .toList(growable: false);
+      final points = _segmentedXmlPoints(
+        activity,
+        'Track',
+        'Trackpoint',
+        _tcxPoint,
+      );
       final idTime = _firstText(activity, 'Id');
       final startedAt = points.isNotEmpty
           ? points.first.time
@@ -223,8 +244,32 @@ class CardioImportService {
         continue;
       }
       records.add(_importRecord(type, startedAt, metrics));
+      routes.add(_routeFromTrack(points));
+      var lapDistance = 0.0;
+      laps.add([
+        for (final lap in activity.descendants.whereType<XmlElement>().where(
+          (e) => e.name.local == 'Lap',
+        ))
+          if ((_firstNumber(lap, 'TotalTimeSeconds') ?? 0) > 0 &&
+              (_firstNumber(lap, 'DistanceMeters') ?? 0) > 0)
+            CardioLap(
+              distanceMeters: _firstNumber(lap, 'DistanceMeters')!,
+              activeMilliseconds:
+                  (_firstNumber(lap, 'TotalTimeSeconds')! * 1000).round(),
+              endDistanceMeters: lapDistance += _firstNumber(
+                lap,
+                'DistanceMeters',
+              )!,
+              automatic: false,
+            ),
+      ]);
     }
-    return _ParsedImport(records: records, warnings: warnings);
+    return _ParsedImport(
+      records: records,
+      warnings: warnings,
+      routes: routes,
+      laps: laps,
+    );
   }
 
   _ParsedImport _parseCsv(Uint8List bytes, CardioCsvMapping? mapping) {
@@ -258,9 +303,12 @@ class CardioImportService {
 
   _ParsedImport _parseFit(Uint8List bytes) {
     try {
-      final sessions = _FitDecoder(bytes).sessions();
+      final messages = _FitDecoder(bytes).messages();
+      final sessions = messages.where((message) => message.globalMessage == 18);
       final records = <CardioRecord>[];
       final warnings = <String>[];
+      final routes = <List<RoutePoint>>[];
+      final laps = <List<CardioLap>>[];
       for (final session in sessions) {
         final duration = session.number(8) ?? session.number(7);
         final startedAt = session.fitDate(2) ?? session.fitDate(253);
@@ -297,8 +345,78 @@ class CardioImportService {
         _put(metrics, CardioMetricKey.cadencePerMinute, session.number(18));
         _put(metrics, CardioMetricKey.elevationGainMeters, session.number(22));
         records.add(_importRecord(activity, startedAt, metrics));
+        final endedAt =
+            session.fitDate(253) ??
+            startedAt.add(
+              Duration(milliseconds: (session.number(7) ?? duration).round()),
+            );
+        bool inSession(_FitMessage message) {
+          final time = message.fitDate(253);
+          return time != null &&
+              !time.isBefore(startedAt) &&
+              !time.isAfter(endedAt);
+        }
+
+        var segment = 0;
+        RoutePoint? previous;
+        final route = <RoutePoint>[];
+        for (final message in messages.where(inSession)) {
+          if (message.globalMessage == 21 && message.number(0) == 0) {
+            // Timer start/stop events mark discontinuities, not travelled links.
+            segment++;
+            previous = null;
+          }
+          if (message.globalMessage != 20) continue;
+          final latitude = message.number(0), longitude = message.number(1);
+          if (latitude == null || longitude == null) {
+            segment++;
+            previous = null;
+            continue;
+          }
+          final time = message.fitDate(253)!;
+          if (previous != null &&
+              (!time.isAfter(previous.timestamp) ||
+                  time.difference(previous.timestamp).inSeconds > 30)) {
+            segment++;
+          }
+          final altitude = message.number(78) ?? message.number(2);
+          final point = RoutePoint(
+            latitude: latitude * 180 / 2147483648,
+            longitude: longitude * 180 / 2147483648,
+            timestamp: time,
+            altitudeMeters: altitude == null ? null : altitude / 5 - 500,
+            accuracyMeters: message.number(31),
+            segment: segment,
+          );
+          if (point.isValid) {
+            route.add(point);
+            previous = point;
+          } else {
+            segment++;
+            previous = null;
+          }
+        }
+        routes.add(route);
+        var endDistance = 0.0;
+        laps.add([
+          for (final lap in messages.where(
+            (m) => m.globalMessage == 19 && inSession(m),
+          ))
+            if ((lap.number(9) ?? 0) > 0 && (lap.number(8) ?? 0) > 0)
+              CardioLap(
+                distanceMeters: lap.number(9)! / 100,
+                activeMilliseconds: lap.number(8)!.round(),
+                endDistanceMeters: endDistance += lap.number(9)! / 100,
+                automatic: lap.number(24) == 1,
+              ),
+        ]);
       }
-      return _ParsedImport(records: records, warnings: warnings);
+      return _ParsedImport(
+        records: records,
+        warnings: warnings,
+        routes: routes,
+        laps: laps,
+      );
     } on CardioImportException {
       rethrow;
     } on Object {
@@ -318,10 +436,17 @@ class CardioImportService {
 }
 
 class _ParsedImport {
-  const _ParsedImport({required this.records, required this.warnings});
+  const _ParsedImport({
+    required this.records,
+    required this.warnings,
+    this.routes = const [],
+    this.laps = const [],
+  });
 
   final List<CardioRecord> records;
   final List<String> warnings;
+  final List<List<RoutePoint>> routes;
+  final List<List<CardioLap>> laps;
 }
 
 class _CsvTable {
@@ -379,6 +504,7 @@ class _TrackPoint {
     this.elevation,
     this.heartRate,
     this.cadence,
+    this.segment = 0,
   });
 
   final DateTime time;
@@ -388,9 +514,10 @@ class _TrackPoint {
   final double? elevation;
   final double? heartRate;
   final double? cadence;
+  final int segment;
 }
 
-_TrackPoint? _gpxPoint(XmlElement element) {
+_TrackPoint? _gpxPoint(XmlElement element, int segment) {
   final time = DateTime.tryParse(_firstText(element, 'time') ?? '');
   if (time == null) return null;
   return _TrackPoint(
@@ -400,10 +527,11 @@ _TrackPoint? _gpxPoint(XmlElement element) {
     elevation: double.tryParse(_firstText(element, 'ele') ?? ''),
     heartRate: _firstNumber(element, 'hr'),
     cadence: _firstNumber(element, 'cad'),
+    segment: segment,
   );
 }
 
-_TrackPoint? _tcxPoint(XmlElement element) {
+_TrackPoint? _tcxPoint(XmlElement element, int segment) {
   final time = DateTime.tryParse(_firstText(element, 'Time') ?? '');
   if (time == null) return null;
   return _TrackPoint(
@@ -414,6 +542,7 @@ _TrackPoint? _tcxPoint(XmlElement element) {
     elevation: _firstNumber(element, 'AltitudeMeters'),
     heartRate: _firstNumber(element, 'HeartRateBpm'),
     cadence: _firstNumber(element, 'Cadence'),
+    segment: segment,
   );
 }
 
@@ -427,28 +556,33 @@ Map<CardioMetricKey, double> _metricsFromTrack(List<_TrackPoint> points) {
   var ascent = 0.0;
   final firstDistance = points.first.distance;
   final lastDistance = points.last.distance;
-  if (firstDistance != null &&
+  final recordedDistance =
+      firstDistance != null &&
       lastDistance != null &&
-      lastDistance > firstDistance) {
-    distance = lastDistance - firstDistance;
-  } else {
-    for (var index = 1; index < points.length; index++) {
-      final previous = points[index - 1];
-      final current = points[index];
-      if (previous.latitude != null &&
-          previous.longitude != null &&
-          current.latitude != null &&
-          current.longitude != null) {
-        distance += _haversineMeters(
-          previous.latitude!,
-          previous.longitude!,
-          current.latitude!,
-          current.longitude!,
-        );
-      }
-      if (previous.elevation != null && current.elevation != null) {
-        ascent += math.max(0, current.elevation! - previous.elevation!);
-      }
+      firstDistance.isFinite &&
+      lastDistance.isFinite &&
+      lastDistance > firstDistance;
+  if (recordedDistance) distance = lastDistance - firstDistance;
+  for (var index = 1; index < points.length; index++) {
+    final previous = points[index - 1];
+    final current = points[index];
+    if (previous.segment != current.segment ||
+        !current.time.isAfter(previous.time)) {
+      continue;
+    }
+    if (!recordedDistance &&
+        _hasValidCoordinates(previous) &&
+        _hasValidCoordinates(current)) {
+      distance += _haversineMeters(
+        previous.latitude!,
+        previous.longitude!,
+        current.latitude!,
+        current.longitude!,
+      );
+    }
+    if (previous.elevation?.isFinite == true &&
+        current.elevation?.isFinite == true) {
+      ascent += math.max(0, current.elevation! - previous.elevation!);
     }
   }
   final heartRates = points.map((point) => point.heartRate).whereType<double>();
@@ -465,6 +599,53 @@ Map<CardioMetricKey, double> _metricsFromTrack(List<_TrackPoint> points) {
           cadences.reduce((left, right) => left + right) / cadences.length,
   };
 }
+
+List<_TrackPoint> _segmentedXmlPoints(
+  XmlNode root,
+  String segmentName,
+  String pointName,
+  _TrackPoint? Function(XmlElement, int) decode,
+) {
+  final result = <_TrackPoint>[];
+  var segment = 0;
+  for (final track in root.descendants.whereType<XmlElement>().where(
+    (node) => node.name.local == segmentName,
+  )) {
+    for (final element in track.descendants.whereType<XmlElement>().where(
+      (node) => node.name.local == pointName,
+    )) {
+      final point = decode(element, segment);
+      if (point == null) {
+        segment++;
+        continue;
+      }
+      result.add(point);
+      if (!_hasValidCoordinates(point)) segment++;
+    }
+    segment++;
+  }
+  return result;
+}
+
+bool _hasValidCoordinates(_TrackPoint point) =>
+    point.latitude != null &&
+    point.longitude != null &&
+    point.latitude!.isFinite &&
+    point.longitude!.isFinite &&
+    point.latitude!.abs() <= 90 &&
+    point.longitude!.abs() <= 180;
+
+List<RoutePoint> _routeFromTrack(List<_TrackPoint> points) => [
+  for (final point in points)
+    if (_hasValidCoordinates(point))
+      RoutePoint(
+        latitude: point.latitude!,
+        longitude: point.longitude!,
+        timestamp: point.time,
+        altitudeMeters: point.elevation,
+        segment: point.segment,
+      ),
+];
 
 const Map<CardioCsvField, List<String>> _csvAliases = {
   CardioCsvField.startedAt: [
@@ -790,14 +971,21 @@ class _FitFieldDefinition {
 }
 
 class _FitDefinition {
-  const _FitDefinition(this.globalMessage, this.littleEndian, this.fields);
+  const _FitDefinition(
+    this.globalMessage,
+    this.littleEndian,
+    this.fields,
+    this.developerBytes,
+  );
   final int globalMessage;
   final bool littleEndian;
   final List<_FitFieldDefinition> fields;
+  final int developerBytes;
 }
 
 class _FitMessage {
-  const _FitMessage(this.values);
+  const _FitMessage(this.globalMessage, this.values);
+  final int globalMessage;
   final Map<int, double> values;
 
   double? number(int field) => values[field];
@@ -819,7 +1007,7 @@ class _FitDecoder {
   final Uint8List bytes;
   final Map<int, _FitDefinition> _definitions = {};
 
-  List<_FitMessage> sessions() {
+  List<_FitMessage> messages() {
     if (bytes.length < 14 ||
         ascii.decode(bytes.sublist(8, 12), allowInvalid: true) != '.FIT') {
       throw const CardioImportException('The FIT header is invalid.');
@@ -833,7 +1021,8 @@ class _FitDecoder {
     if (end > bytes.length) {
       throw const CardioImportException('The FIT file is truncated.');
     }
-    final sessions = <_FitMessage>[];
+    final messages = <_FitMessage>[];
+    int? lastTimestamp;
     var offset = headerSize;
     while (offset < end) {
       final header = bytes[offset++];
@@ -868,6 +1057,7 @@ class _FitDecoder {
           );
           offset += 3;
         }
+        var developerBytes = 0;
         if (header & 0x20 != 0) {
           if (offset >= end) {
             throw const CardioImportException(
@@ -875,14 +1065,22 @@ class _FitDecoder {
             );
           }
           final developerCount = bytes[offset++];
-          offset += developerCount * 3;
-          if (offset > end) {
+          if (offset + developerCount * 3 > end) {
             throw const CardioImportException(
               'FIT developer fields are truncated.',
             );
           }
+          for (var i = 0; i < developerCount; i++) {
+            developerBytes += bytes[offset + 1];
+            offset += 3;
+          }
         }
-        _definitions[localMessage] = _FitDefinition(global, little, fields);
+        _definitions[localMessage] = _FitDefinition(
+          global,
+          little,
+          fields,
+          developerBytes,
+        );
         continue;
       }
       final definition = _definitions[localMessage];
@@ -892,7 +1090,18 @@ class _FitDecoder {
         );
       }
       final values = <int, double>{};
+      if (compressed) {
+        if (lastTimestamp == null) {
+          throw const CardioImportException(
+            'FIT compressed time has no reference.',
+          );
+        }
+        var timestamp = (lastTimestamp & ~31) | (header & 31);
+        if (timestamp < lastTimestamp) timestamp += 32;
+        values[253] = timestamp.toDouble();
+      }
       for (final field in definition.fields) {
+        if (compressed && field.number == 253) continue;
         if (offset + field.size > end) {
           throw const CardioImportException('FIT data is truncated.');
         }
@@ -905,9 +1114,16 @@ class _FitDecoder {
         if (value != null) values[field.number] = value;
         offset += field.size;
       }
-      if (definition.globalMessage == 18) sessions.add(_FitMessage(values));
+      offset += definition.developerBytes;
+      if (offset > end) {
+        throw const CardioImportException('FIT developer data is truncated.');
+      }
+      lastTimestamp = values[253]?.toInt() ?? lastTimestamp;
+      if ({18, 19, 20, 21}.contains(definition.globalMessage)) {
+        messages.add(_FitMessage(definition.globalMessage, values));
+      }
     }
-    return sessions;
+    return messages;
   }
 }
 

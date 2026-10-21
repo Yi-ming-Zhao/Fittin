@@ -82,9 +82,7 @@ class _AboutScreenState extends ConsumerState<AboutScreen> {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.settings,
           title: strings.aboutPageTitle,
-          subtitle: strings.aboutPageSubtitle,
           showBackButton: true,
         ),
         const SizedBox(height: 24),

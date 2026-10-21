@@ -11,6 +11,12 @@ on:
 permissions:
   contents: read
 
+# A branch push immediately followed by opening its PR should not build every
+# native platform twice. A newer run for the same head supersedes the old one.
+concurrency:
+  group: ci-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   native-platforms:
     uses: ./.github/workflows/platform-builds.yml

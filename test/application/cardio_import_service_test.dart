@@ -29,6 +29,8 @@ void main() {
       inInclusiveRange(110, 112),
     );
     expect(first.records.single.metric(CardioMetricKey.durationSeconds), 300);
+    expect(first.routes[first.records.single.id], hasLength(2));
+    expect(first.routes[first.records.single.id]!.first.accuracyMeters, isNull);
 
     final second = service.parse(
       fileName: 'renamed.gpx',
@@ -70,6 +72,41 @@ void main() {
     expect(record.metric(CardioMetricKey.distanceMeters), 2000);
     expect(record.metric(CardioMetricKey.caloriesKcal), 120);
     expect(record.metric(CardioMetricKey.averageHeartRateBpm), 145);
+    expect(preview.laps[record.id]!.single.distanceMeters, 2000);
+  });
+
+  test('GPX keeps separate tracks and never bridges reception gaps', () {
+    final preview = service.parse(
+      fileName: 'segments.gpx',
+      existingRecords: [],
+      bytes: Uint8List.fromList(
+        utf8.encode('''<gpx>
+<trk><trkseg>
+<trkpt lat="30" lon="120"><time>2026-10-20T00:00:00Z</time></trkpt>
+<trkpt lat="30.001" lon="120"><time>2026-10-20T00:01:00Z</time></trkpt>
+</trkseg><trkseg>
+<trkpt lat="31" lon="121"><time>2026-10-20T01:00:00Z</time></trkpt>
+<trkpt lat="31.001" lon="121"><time>2026-10-20T01:01:00Z</time></trkpt>
+</trkseg></trk><trk><type>cycling</type><trkseg>
+<trkpt lat="30" lon="120"><time>2026-10-21T00:00:00Z</time></trkpt>
+<trkpt lat="30.001" lon="120"><time>2026-10-21T00:01:00Z</time></trkpt>
+</trkseg></trk></gpx>'''),
+      ),
+    );
+    expect(preview.records, hasLength(2));
+    expect(
+      preview.records.first.metric(CardioMetricKey.distanceMeters),
+      inInclusiveRange(220, 224),
+    );
+    expect(
+      preview.routes[preview.records.first.id]!.map((p) => p.segment).toSet(),
+      hasLength(2),
+    );
+    expect(preview.records.last.activityTypeId, 'cardio:cycling');
+    expect(
+      preview.records.first.toJson().toString(),
+      isNot(contains('latitude')),
+    );
   });
 
   test('parses a standard FIT session message without an SDK', () {
@@ -85,6 +122,28 @@ void main() {
     expect(record.metric(CardioMetricKey.distanceMeters), 5000);
     expect(record.startedAt.toUtc(), DateTime.utc(1990, 1, 11, 13, 46, 40));
   });
+
+  test(
+    'FIT retains compressed-time route points, developer payload alignment and laps',
+    () {
+      final preview = service.parse(
+        fileName: 'route.fit',
+        bytes: _fitWithRoute(),
+        existingRecords: [],
+      );
+      final id = preview.records.single.id;
+      final route = preview.routes[id]!;
+      expect(route, hasLength(2));
+      expect(route.first.latitude, closeTo(30, 0.000001));
+      expect(route.last.latitude, closeTo(30.0001, 0.000001));
+      expect(
+        route.last.timestamp.difference(route.first.timestamp),
+        const Duration(seconds: 1),
+      );
+      expect(route.first.accuracyMeters, isNull);
+      expect(preview.laps[id]!.single.distanceMeters, 5000);
+    },
+  );
 
   test(
     'parses bilingual CSV exports and skips malformed rows with warnings',
@@ -202,4 +261,77 @@ Uint8List _minimalFitSession() {
   offset += 4;
   bytes[offset] = 1;
   return bytes;
+}
+
+Uint8List _fitWithRoute() {
+  final body = BytesBuilder();
+  void uint32(int value) {
+    final data = ByteData(4)..setUint32(0, value, Endian.little);
+    body.add(data.buffer.asUint8List());
+  }
+
+  void coordinate(double value) => uint32((value * 2147483648 / 180).round());
+  // Local 0: record with a 2-byte developer field, which must be skipped in
+  // every data message without becoming part of the following record header.
+  body.add([
+    0x60,
+    0,
+    0,
+    20,
+    0,
+    3,
+    253,
+    4,
+    0x86,
+    0,
+    4,
+    0x85,
+    1,
+    4,
+    0x85,
+    1,
+    0,
+    2,
+    0,
+  ]);
+  body.addByte(0);
+  uint32(1000001);
+  coordinate(30);
+  coordinate(120);
+  body.add([7, 8]);
+  body.addByte(0x80 | (1000002 & 31));
+  coordinate(30.0001);
+  coordinate(120);
+  body.add([9, 10]);
+  body.add([
+    0x41,
+    0,
+    0,
+    19,
+    0,
+    4,
+    253,
+    4,
+    0x86,
+    2,
+    4,
+    0x86,
+    8,
+    4,
+    0x86,
+    9,
+    4,
+    0x86,
+  ]);
+  body.addByte(1);
+  uint32(1000600);
+  uint32(1000000);
+  uint32(600000);
+  uint32(500000);
+  final original = _minimalFitSession();
+  body.add(original.sublist(14));
+  final payload = body.takeBytes();
+  final header = Uint8List.fromList(original.sublist(0, 14));
+  ByteData.sublistView(header).setUint32(4, payload.length, Endian.little);
+  return Uint8List.fromList([...header, ...payload]);
 }

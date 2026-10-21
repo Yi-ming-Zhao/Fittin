@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/application/ui_settings_provider.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/account_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_route_review_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/agent_settings_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/cardio_activity_library_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/exercise_library_management_screen.dart';
@@ -41,13 +42,7 @@ class ProfileHubScreen extends ConsumerWidget {
     };
     return DashboardPageScaffold(
       children: [
-        DashboardScreenHeader(
-          eyebrow: strings.profile,
-          title: strings.isChinese ? '我的' : 'My Fittin',
-          subtitle: strings.isChinese
-              ? '账号、训练、外观和数据设置已按任务分组。'
-              : 'Account, training, appearance, and data settings are grouped by task.',
-        ),
+        DashboardScreenHeader(title: strings.isChinese ? '我的' : 'My Fittin'),
         const SizedBox(height: 20),
         FittinCard(
           theme: theme,
@@ -138,11 +133,7 @@ class AccountAndProfileScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '账号' : 'ACCOUNT',
           title: strings.isChinese ? '账号与同步' : 'Account & sync',
-          subtitle: strings.isChinese
-              ? '管理登录、云同步和首页显示名称。'
-              : 'Manage sign-in, cloud sync, and your Home display name.',
           showBackButton: true,
         ),
         const SizedBox(height: 18),
@@ -192,11 +183,7 @@ class TrainingSettingsScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '训练' : 'TRAINING',
           title: strings.isChinese ? '训练与动作库' : 'Training & libraries',
-          subtitle: strings.isChinese
-              ? '集中管理记录交互、动作标签、有氧项目和重量工具。'
-              : 'Manage logging interaction, exercise tags, cardio activities, and weight tools.',
           showBackButton: true,
         ),
         const SizedBox(height: 20),
@@ -322,9 +309,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '外观' : 'APPEARANCE',
           title: strings.isChinese ? '外观与语言' : 'Appearance & language',
-          subtitle: strings.appearanceDescription,
           showBackButton: true,
         ),
         const SizedBox(height: 20),
@@ -413,12 +398,22 @@ class DataPrivacyScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '隐私' : 'PRIVACY',
           title: strings.isChinese ? '数据与隐私' : 'Data & privacy',
           subtitle: strings.isChinese
               ? '训练优先写入本机，登录后再通过你的账号同步。'
               : 'Training writes locally first, then syncs through your account when signed in.',
           showBackButton: true,
+        ),
+        const SizedBox(height: 18),
+        ListTile(
+          key: const ValueKey('privacy-local-cardio-routes'),
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.route_outlined),
+          title: Text(strings.isChinese ? '本机运动轨迹' : 'Local activity routes'),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LocalCardioRoutesScreen()),
+          ),
         ),
         const SizedBox(height: 18),
         for (final item in [

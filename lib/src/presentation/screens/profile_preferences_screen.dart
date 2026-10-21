@@ -48,9 +48,7 @@ class _ProfilePreferencesScreenState
         layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
-            eyebrow: strings.profile,
             title: strings.profilePreferences,
-            subtitle: strings.profilePreferencesSubtitle,
             showBackButton: true,
           ),
           const SizedBox(height: 24),

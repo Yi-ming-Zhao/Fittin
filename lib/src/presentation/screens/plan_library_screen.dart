@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/application/plan_library_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/data/local/local_workout_log_repository.dart';
+import 'package:fittin_v2/src/data/local/local_instance_repository.dart';
 import 'package:fittin_v2/src/domain/exercise_performance_profile.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
 import 'package:fittin_v2/src/domain/models/training_max.dart';
@@ -15,6 +16,7 @@ import 'package:fittin_v2/src/domain/plan_start_load_review.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/localization/plan_text.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
+import 'plan_day_detail_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/share_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
@@ -73,11 +75,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
         return DashboardPageScaffold(
           bottomPadding: 24,
           children: [
-            DashboardScreenHeader(
-              eyebrow: strings.planLibrary,
-              title: strings.trainingPlans,
-              subtitle: strings.trainingPlansSubtitle,
-            ),
+            DashboardScreenHeader(title: strings.trainingPlans),
             const SizedBox(height: 24),
             Wrap(
               spacing: 8,
@@ -309,11 +307,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       loading: () => DashboardPageScaffold(
         bottomPadding: 24,
         children: [
-          DashboardScreenHeader(
-            eyebrow: strings.planLibrary,
-            title: strings.trainingPlans,
-            subtitle: strings.trainingPlansSubtitle,
-          ),
+          DashboardScreenHeader(title: strings.trainingPlans),
           const SizedBox(height: 24),
           DashboardSurfaceCard(
             child: Row(
@@ -343,11 +337,7 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
       error: (error, _) => DashboardPageScaffold(
         bottomPadding: 24,
         children: [
-          DashboardScreenHeader(
-            eyebrow: strings.planLibrary,
-            title: strings.trainingPlans,
-            subtitle: strings.trainingPlansSubtitle,
-          ),
+          DashboardScreenHeader(title: strings.trainingPlans),
           const SizedBox(height: 24),
           DashboardSurfaceCard(
             child: Column(
@@ -377,9 +367,10 @@ class _PlanLibraryScreenState extends ConsumerState<PlanLibraryScreen> {
 
 Future<TrainingMaxProfile?> _resolveTrainingMaxProfile(
   BuildContext context,
-  StoredTemplateRecord record,
-) async {
-  if (record.instanceCount > 0 ||
+  StoredTemplateRecord record, {
+  bool restarting = false,
+}) async {
+  if ((!restarting && record.instanceCount > 0) ||
       record.template.requiredTrainingMaxKeys.isEmpty) {
     return TrainingMaxProfile.empty;
   }
@@ -463,6 +454,17 @@ class _PlanDetailScreen extends ConsumerWidget {
       (sum, workout) => sum + workout.exercises.length,
     );
     final progression = _buildProgressionSummary(template);
+    final currentInstance = ref
+        .watch(planInstanceProvider(template.id))
+        .valueOrNull;
+    final isActive =
+        ref
+            .watch(planLibraryItemsProvider)
+            .valueOrNull
+            ?.where((item) => item.record.template.id == template.id)
+            .firstOrNull
+            ?.isActive ??
+        this.isActive;
 
     return DashboardPageScaffold(
       layout: DashboardPageLayout.detail,
@@ -567,10 +569,65 @@ class _PlanDetailScreen extends ConsumerWidget {
             ],
           ),
         ],
+        if (currentInstance != null) ...[
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FittinBtn(
+                theme,
+                strings.isChinese
+                    ? (isActive ? '停止计划' : '恢复进度')
+                    : (isActive ? 'Stop plan' : 'Resume plan'),
+                key: const ValueKey('plan-lifecycle-toggle'),
+                variant: 'secondary',
+                onPressed: ref.watch(planLibraryActionProvider).isSwitching
+                    ? null
+                    : () => _transition(
+                        context,
+                        ref,
+                        currentInstance,
+                        isActive
+                            ? InstanceLifecycleAction.stop
+                            : InstanceLifecycleAction.resume,
+                      ),
+              ),
+              FittinBtn(
+                theme,
+                strings.isChinese ? '重新开始' : 'Restart',
+                key: const ValueKey('plan-lifecycle-restart'),
+                variant: 'secondary',
+                onPressed: ref.watch(planLibraryActionProvider).isSwitching
+                    ? null
+                    : () => _transition(
+                        context,
+                        ref,
+                        currentInstance,
+                        InstanceLifecycleAction.restart,
+                      ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 16),
-        Text(
-          localizedTemplateDescription(template, locale),
-          style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
+        ExpansionTile(
+          key: const ValueKey('plan-description-disclosure'),
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 16),
+          title: Text(
+            strings.isChinese ? '训练说明' : 'Training instructions',
+            style: theme.uiStyle(14, theme.fg),
+          ),
+          children: [
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                localizedTemplateDescription(template, locale),
+                style: theme.uiStyle(14, theme.fgDim).copyWith(height: 1.5),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 20),
         DashboardSurfaceCard(
@@ -617,6 +674,13 @@ class _PlanDetailScreen extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: DashboardSurfaceCard(
+              key: ValueKey('plan-day-${workout.id}'),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      PlanDayDetailScreen(template: template, workout: workout),
+                ),
+              ),
               radius: theme.radius,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Row(
@@ -702,6 +766,87 @@ class _PlanDetailScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _transition(
+    BuildContext context,
+    WidgetRef ref,
+    StoredTrainingInstance instance,
+    InstanceLifecycleAction action,
+  ) async {
+    final strings = AppStrings.of(context, ref);
+    final repository = ref.read(localInstanceRepositoryProvider);
+    final expectedActiveId = await repository.fetchActiveInstanceId();
+    if (!context.mounted) return;
+    if (action != InstanceLifecycleAction.resume) {
+      final restart = action == InstanceLifecycleAction.restart;
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            strings.isChinese
+                ? (restart ? '重新开始这个计划？' : '停止这个计划？')
+                : (restart ? 'Restart this plan?' : 'Stop this plan?'),
+          ),
+          content: Text(
+            strings.isChinese
+                ? (restart
+                      ? '旧记录会保留，新周期从第一天开始。有未完成训练时，请先完成或取消该训练。'
+                      : '训练进度和未完成记录会保留，之后可以恢复。')
+                : (restart
+                      ? 'Keep all history and start a new cycle at day one. Finish or discard any unfinished workout first.'
+                      : 'Keep progress and the unfinished workout. You can resume later.'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(strings.isChinese ? '取消' : 'Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(strings.isChinese ? '确定' : 'Confirm'),
+            ),
+          ],
+        ),
+      );
+      if (accepted != true || !context.mounted) return;
+    }
+    var maxes = TrainingMaxProfile.empty;
+    PlanStartLoadReview? loadReview;
+    if (action == InstanceLifecycleAction.restart) {
+      final answer = await _resolveTrainingMaxProfile(
+        context,
+        record,
+        restarting: true,
+      );
+      if (answer == null || !context.mounted) return;
+      maxes = answer;
+      loadReview = await _resolvePlanStartLoadReview(context, ref, record);
+      if (loadReview == null || !context.mounted) return;
+    }
+    try {
+      await ref
+          .read(planLibraryActionProvider.notifier)
+          .transition(
+            instance,
+            action: action,
+            expectedActiveInstanceId: expectedActiveId,
+            trainingMaxProfile: maxes,
+            planStartLoadReview: loadReview,
+          );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              strings.isChinese
+                  ? '无法更新：请先完成或取消未完成训练，并刷新计划后重试。'
+                  : 'Could not update. Resolve any unfinished workout, refresh the plan and retry.',
+            ),
+          ),
+        );
+      }
+    }
   }
 }
 

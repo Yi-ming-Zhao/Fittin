@@ -23,11 +23,7 @@ class ThemePaletteLibraryScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '外观' : 'APPEARANCE',
           title: strings.isChinese ? '配色方案库' : 'Palette library',
-          subtitle: strings.isChinese
-              ? '系统配色不可改写；你可以创建语义化配色，背景、文字、线条和图表会一起更新。'
-              : 'Built-ins stay immutable. Custom semantic palettes update backgrounds, type, lines, and charts together.',
           showBackButton: true,
           trailing: IconButton.filledTonal(
             tooltip: strings.isChinese ? '新建配色' : 'New palette',
@@ -264,7 +260,6 @@ class _CustomPaletteEditorScreenState
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '配色编辑器' : 'PALETTE EDITOR',
           title: widget.existing == null
               ? (strings.isChinese ? '新建配色' : 'New palette')
               : (strings.isChinese ? '编辑配色' : 'Edit palette'),

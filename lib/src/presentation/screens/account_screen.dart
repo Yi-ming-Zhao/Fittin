@@ -41,12 +41,7 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
     return DashboardPageScaffold(
       bottomPadding: 40,
       children: [
-        DashboardScreenHeader(
-          eyebrow: strings.profile,
-          title: strings.account,
-          subtitle: strings.accountSubtitle,
-          showBackButton: canPop,
-        ),
+        DashboardScreenHeader(title: strings.account, showBackButton: canPop),
         const SizedBox(height: 24),
         if (!supabaseState.isConfigured)
           DashboardSurfaceCard(

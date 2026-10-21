@@ -48,10 +48,7 @@ class _PRDashboardScreenState extends ConsumerState<PRDashboardScreen> {
           return DashboardPageScaffold(
             topPadding: 24,
             children: [
-              DashboardScreenHeader(
-                eyebrow: strings.performance,
-                title: strings.prDashboard,
-              ),
+              DashboardScreenHeader(title: strings.prDashboard),
               const SizedBox(height: 14),
               _buildMetricToggle(fittinTheme, strings),
               const SizedBox(height: 12),
@@ -585,7 +582,6 @@ class _MilestoneHistoryScreenState
         layout: DashboardPageLayout.detail,
         children: [
           DashboardScreenHeader(
-            eyebrow: strings.recentMilestones,
             title: strings.milestoneHistory,
             showBackButton: true,
           ),

@@ -1,3 +1,5 @@
+import 'cardio_recording.dart';
+
 enum CardioMetricKey {
   durationSeconds,
   distanceMeters,
@@ -107,6 +109,7 @@ class CardioRecord {
     this.note,
     this.source = 'manual',
     this.sourceFingerprint,
+    this.elapsedSeconds,
   }) : metrics = Map.unmodifiable(_withDerivedMetrics(metrics));
 
   final String id;
@@ -118,9 +121,20 @@ class CardioRecord {
   final String source;
   final String? sourceFingerprint;
 
+  /// Total time includes pauses; durationSeconds remains the measured moving time.
+  final double? elapsedSeconds;
+
   double? metric(CardioMetricKey key) => metrics[key];
 
   void validate(CardioActivityDefinition definition) {
+    if (elapsedSeconds != null &&
+        (!elapsedSeconds!.isFinite ||
+            elapsedSeconds! <
+                (metrics[CardioMetricKey.durationSeconds] ?? 0))) {
+      throw const FormatException(
+        'Total time cannot be shorter than moving time.',
+      );
+    }
     if (id.trim().isEmpty || activityTypeId != definition.id) {
       throw const FormatException('Cardio record identity is invalid.');
     }
@@ -156,6 +170,7 @@ class CardioRecord {
     'note': note,
     'source': source,
     'sourceFingerprint': sourceFingerprint,
+    if (elapsedSeconds != null) 'elapsedSeconds': elapsedSeconds,
   };
 
   factory CardioRecord.fromJson(Map<String, dynamic> json) => CardioRecord(
@@ -172,6 +187,7 @@ class CardioRecord {
     note: json['note'] as String?,
     source: json['source'] as String? ?? 'manual',
     sourceFingerprint: json['sourceFingerprint'] as String?,
+    elapsedSeconds: (json['elapsedSeconds'] as num?)?.toDouble(),
   );
 }
 
@@ -202,7 +218,9 @@ void validateCardioMetricValue(CardioMetricKey key, double value) {
     CardioMetricKey.durationSeconds => value > 0 && value <= 604800,
     CardioMetricKey.distanceMeters => value <= 1000000,
     CardioMetricKey.averageSpeedMps => value <= 50,
-    CardioMetricKey.paceSecondsPerKm => value >= 60 && value <= 7200,
+    // Pace also accompanies cycling imports; 60 s/km is not a universal
+    // lower bound (a downhill rider can exceed 60 km/h).
+    CardioMetricKey.paceSecondsPerKm => value >= 10 && value <= 7200,
     CardioMetricKey.inclinePercent => value <= 40,
     CardioMetricKey.averageHeartRateBpm || CardioMetricKey.maxHeartRateBpm =>
       value == 0 || (value >= 30 && value <= 260),
@@ -226,15 +244,29 @@ class CardioImportPreview {
     required List<CardioRecord> records,
     required List<String> warnings,
     required Set<String> duplicateRecordIds,
+    Map<String, List<RoutePoint>> routes = const {},
+    Map<String, List<CardioLap>> laps = const {},
   }) : records = List.unmodifiable(records),
        warnings = List.unmodifiable(warnings),
-       duplicateRecordIds = Set.unmodifiable(duplicateRecordIds);
+       duplicateRecordIds = Set.unmodifiable(duplicateRecordIds),
+       routes = Map.unmodifiable({
+         for (final e in routes.entries)
+           e.key: List<RoutePoint>.unmodifiable(e.value),
+       }),
+       laps = Map.unmodifiable({
+         for (final e in laps.entries)
+           e.key: List<CardioLap>.unmodifiable(e.value),
+       });
 
   final String sourceName;
   final String sourceFingerprint;
   final List<CardioRecord> records;
   final List<String> warnings;
   final Set<String> duplicateRecordIds;
+
+  /// Local-only import material, deliberately excluded from CardioRecord JSON.
+  final Map<String, List<RoutePoint>> routes;
+  final Map<String, List<CardioLap>> laps;
 
   List<CardioRecord> get newRecords => records
       .where((record) => !duplicateRecordIds.contains(record.id))

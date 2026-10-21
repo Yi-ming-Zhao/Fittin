@@ -44,7 +44,6 @@ class ShareScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.planLibrary,
           title: strings.shareTrainingPlan,
           subtitle: localizedTemplateName(planTemplate, locale),
           showBackButton: canPop,

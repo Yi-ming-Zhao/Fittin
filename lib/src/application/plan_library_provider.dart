@@ -72,16 +72,67 @@ final planLibraryActionProvider =
       return PlanLibraryActionNotifier(ref);
     });
 
+final planInstanceProvider =
+    FutureProvider.family<StoredTrainingInstance?, String>((
+      ref,
+      templateId,
+    ) async {
+      ref.watch(syncRefreshProvider);
+      return ref
+          .watch(localInstanceRepositoryProvider)
+          .fetchInstanceForTemplate(templateId);
+    });
+
 class PlanLibraryActionNotifier extends StateNotifier<PlanLibraryActionState> {
   PlanLibraryActionNotifier(this._ref) : super(const PlanLibraryActionState());
 
   final Ref _ref;
+
+  Future<void> transition(
+    StoredTrainingInstance expected, {
+    required InstanceLifecycleAction action,
+    required String? expectedActiveInstanceId,
+    TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
+    PlanStartLoadReview? planStartLoadReview,
+  }) async {
+    if (state.isSwitching) return;
+    state = PlanLibraryActionState(
+      isSwitching: true,
+      switchingTemplateId: expected.templateId,
+    );
+    try {
+      await _ref
+          .read(localInstanceRepositoryProvider)
+          .transition(
+            expected,
+            action: action,
+            expectedActiveInstanceId: expectedActiveInstanceId,
+            trainingMaxProfile: trainingMaxProfile,
+            planStartLoadReview: planStartLoadReview,
+          );
+      _refresh();
+      state = const PlanLibraryActionState();
+    } catch (error) {
+      state = PlanLibraryActionState(errorMessage: error.toString());
+      rethrow;
+    }
+  }
+
+  void _refresh() {
+    _ref.invalidate(planInstanceProvider);
+    _ref.invalidate(planLibraryItemsProvider);
+    _ref.invalidate(templateLibraryProvider);
+    _ref.invalidate(todayWorkoutSummaryProvider);
+    _ref.invalidate(activeTemplateProvider);
+    _ref.invalidate(activeSessionProvider);
+  }
 
   Future<void> activateTemplate(
     StoredTemplateRecord record, {
     TrainingMaxProfile trainingMaxProfile = TrainingMaxProfile.empty,
     PlanStartLoadReview? planStartLoadReview,
   }) async {
+    if (state.isSwitching) return;
     state = PlanLibraryActionState(
       isSwitching: true,
       switchingTemplateId: record.template.id,
@@ -95,11 +146,7 @@ class PlanLibraryActionNotifier extends StateNotifier<PlanLibraryActionState> {
             trainingMaxProfile: trainingMaxProfile,
             planStartLoadReview: planStartLoadReview,
           );
-      _ref.invalidate(planLibraryItemsProvider);
-      _ref.invalidate(templateLibraryProvider);
-      _ref.invalidate(todayWorkoutSummaryProvider);
-      _ref.invalidate(activeTemplateProvider);
-      _ref.invalidate(activeSessionProvider);
+      _refresh();
       state = PlanLibraryActionState(
         infoMessage: '${record.template.name} is now active.',
       );

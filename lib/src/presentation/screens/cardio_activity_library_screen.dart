@@ -23,11 +23,7 @@ class CardioActivityLibraryScreen extends ConsumerWidget {
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '训练设置' : 'TRAINING',
           title: strings.isChinese ? '有氧项目库' : 'Cardio activity library',
-          subtitle: strings.isChinese
-              ? '每个项目只展示真正有用的必填和可选指标。'
-              : 'Each activity exposes only the required and optional metrics that matter.',
           showBackButton: true,
           trailing: IconButton.filledTonal(
             tooltip: strings.isChinese ? '新建项目' : 'New activity',
@@ -192,7 +188,6 @@ class _CardioActivityEditorScreenState
       layout: DashboardPageLayout.detail,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.isChinese ? '有氧项目库' : 'CARDIO LIBRARY',
           title: widget.existing == null
               ? (strings.isChinese ? '新建有氧项目' : 'New cardio activity')
               : (strings.isChinese ? '编辑有氧项目' : 'Edit cardio activity'),

@@ -220,10 +220,14 @@ class AgentCheckpoint {
   final String? errorMessage;
   final String contextSummary;
   final List<String> steering;
-  Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson({bool includeMessages = true}) => {
     'id': run.id,
     'run': run.toJson(),
-    'conversation': conversation.toJson(),
+    'conversation':
+        (includeMessages
+                ? conversation
+                : conversation.copyWith(messages: const []))
+            .toJson(),
     'proposal': proposal?.toJson(),
     'pendingToolCallId': pendingToolCallId,
     'errorCode': errorCode,

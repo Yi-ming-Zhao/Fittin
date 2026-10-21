@@ -43,6 +43,17 @@ class AgentRunTimeline extends StatelessWidget {
       }
     }
     if (steps.isEmpty) return const SizedBox.shrink();
+    final usageByTurn = <String, int>{};
+    for (final event in events) {
+      final tokens = event.usage?['total_tokens'];
+      if (event.turnId != null && tokens != null) {
+        usageByTurn[event.turnId!] = tokens;
+      }
+    }
+    final recentTokens = usageByTurn.values.fold(
+      0,
+      (sum, count) => sum + count,
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: ExpansionTile(
@@ -58,7 +69,8 @@ class AgentRunTimeline extends StatelessWidget {
           style: theme.uiStyle(12, theme.fgDim, FontWeight.w700),
         ),
         subtitle: Text(
-          agentPhaseLabel(steps.last.phase, strings.isChinese),
+          '${agentPhaseLabel(steps.last.phase, strings.isChinese)} · '
+          '${usageByTurn.isEmpty ? (strings.isChinese ? '供应商尚未返回用量' : 'Usage not reported yet') : '${strings.isChinese ? '最近请求' : 'Recent requests'} $recentTokens tokens'}',
           style: theme.uiStyle(11, theme.fgMuted),
         ),
         children: [

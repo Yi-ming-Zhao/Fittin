@@ -11,6 +11,56 @@ import '../support/in_memory_database_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets(
+    'record editor exposes total time and validates moving time against it',
+    (tester) async {
+      final activity = BuiltInCardioActivities.byId('cardio:running');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(
+              InMemoryDatabaseRepository(),
+            ),
+          ],
+          child: MaterialApp(
+            home: CardioRecordEditorScreen(
+              activity: activity,
+              existing: CardioRecord(
+                id: 'cardio-record:elapsed-test',
+                activityTypeId: activity.id,
+                activityName: 'Running',
+                startedAt: DateTime(2026, 10, 21),
+                metrics: const {
+                  CardioMetricKey.durationSeconds: 1200,
+                  CardioMetricKey.distanceMeters: 3000,
+                },
+                elapsedSeconds: 1800,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('cardio-field-durationSeconds')),
+        '40',
+      );
+      final form = tester.state<FormState>(find.byType(Form));
+      expect(form.validate(), isFalse);
+      await tester.pump();
+      expect(
+        find.text('Elapsed time cannot be shorter than moving time'),
+        findsOneWidget,
+      );
+      final elapsed = find.byKey(const ValueKey('cardio-field-elapsedSeconds'));
+      await tester.ensureVisible(elapsed);
+      await tester.enterText(elapsed, '45');
+      expect(form.validate(), isTrue);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('cardio hub adapts activity library at 320px without overflow', (
     tester,
   ) async {

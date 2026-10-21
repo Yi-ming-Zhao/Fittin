@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fittin_v2/src/application/active_session_provider.dart';
@@ -16,6 +17,70 @@ import '../support/in_memory_database_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('loading an earlier message page preserves the reading anchor', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final now = DateTime(2026, 10, 21);
+    final conversation = AgentConversation(
+      id: 'long-history',
+      title: 'History',
+      createdAt: now,
+      updatedAt: now,
+      messages: List.generate(
+        120,
+        (index) => AgentMessage(
+          id: 'history-$index',
+          role: AgentMessageRole.user,
+          content: 'History message $index',
+          createdAt: now,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          agentProviderSettingsStoreProvider.overrideWithValue(
+            _ReadySettingsStore(),
+          ),
+          agentUiStateProvider.overrideWithValue(
+            AgentUiState(
+              runState: AgentRunState(
+                phase: AgentRunPhase.completed,
+                conversation: conversation,
+              ),
+            ),
+          ),
+          agentUiBridgeProvider.overrideWithValue(const _NoopAgentUiBridge()),
+        ],
+        child: const MaterialApp(home: AgentScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final scrollable = find
+        .descendant(
+          of: find.byKey(const ValueKey('agent-conversation-list')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    final position = tester.state<ScrollableState>(scrollable).position;
+    position.jumpTo(position.minScrollExtent);
+    await tester.pumpAndSettle();
+    final anchor = find.text('History message 70');
+    expect(anchor, findsOneWidget);
+    final before = tester.getTopLeft(anchor).dy;
+    final offset = position.pixels;
+    await tester.tap(find.byKey(const ValueKey('agent-load-earlier-messages')));
+    await tester.pumpAndSettle();
+    expect(position.pixels, closeTo(offset, 1));
+    expect(tester.getTopLeft(anchor).dy, closeTo(before, 1));
+    expect(tester.takeException(), isNull);
+  });
 
   for (final viewport in const [
     Size(390, 844),
@@ -180,80 +245,113 @@ void main() {
     },
   );
 
-  testWidgets(
-    'new output follows near the bottom without stealing an older reading position',
-    (tester) async {
-      const viewport = Size(390, 568);
-      await tester.binding.setSurfaceSize(viewport);
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final container = ProviderContainer(
-        overrides: [
-          databaseRepositoryProvider.overrideWithValue(
-            InMemoryDatabaseRepository(),
+  for (final wheel in [false, true]) {
+    testWidgets(
+      'new output follows near the bottom without stealing an older reading position (wheel=$wheel)',
+      (tester) async {
+        const viewport = Size(390, 568);
+        await tester.binding.setSurfaceSize(viewport);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final container = ProviderContainer(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(
+              InMemoryDatabaseRepository(),
+            ),
+            agentProviderSettingsStoreProvider.overrideWithValue(
+              _ReadySettingsStore(),
+            ),
+            agentUiStateProvider.overrideWith(
+              (ref) => ref.watch(_scrollAgentStateProvider),
+            ),
+            agentUiBridgeProvider.overrideWithValue(const _NoopAgentUiBridge()),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: AgentScreen()),
           ),
-          agentProviderSettingsStoreProvider.overrideWithValue(
-            _ReadySettingsStore(),
-          ),
-          agentUiStateProvider.overrideWith(
-            (ref) => ref.watch(_scrollAgentStateProvider),
-          ),
-          agentUiBridgeProvider.overrideWithValue(const _NoopAgentUiBridge()),
-        ],
-      );
-      addTearDown(container.dispose);
+        );
+        await tester.pumpAndSettle();
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: AgentScreen()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        final scrollable = find
+            .descendant(
+              of: find.byKey(const ValueKey('agent-conversation-list')),
+              matching: find.byType(Scrollable),
+            )
+            .first;
+        final position = tester.state<ScrollableState>(scrollable).position;
+        await tester.drag(scrollable, const Offset(0, -4000));
+        await tester.pumpAndSettle();
+        expect(position.pixels, closeTo(position.maxScrollExtent, 1));
 
-      final scrollable = find
-          .descendant(
-            of: find.byKey(const ValueKey('agent-conversation-list')),
-            matching: find.byType(Scrollable),
-          )
-          .first;
-      final position = tester.state<ScrollableState>(scrollable).position;
-      await tester.drag(scrollable, const Offset(0, -4000));
-      await tester.pumpAndSettle();
-      expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+        container.read(_scrollAgentStateProvider.notifier).state =
+            _scrollAgentState(1);
+        await tester.pump();
+        for (var i = 0; i < 4; i++) {
+          await tester.pump(const Duration(milliseconds: 180));
+        }
+        expect(position.pixels, closeTo(position.maxScrollExtent, 1));
 
-      container.read(_scrollAgentStateProvider.notifier).state =
-          _scrollAgentState(1);
-      await tester.pump();
-      await tester.pump();
-      expect(position.pixels, closeTo(position.maxScrollExtent, 1));
+        if (wheel) {
+          await tester.sendEventToBinding(
+            PointerScrollEvent(
+              position: tester.getCenter(scrollable),
+              scrollDelta: const Offset(0, -260),
+            ),
+          );
+        } else {
+          await tester.drag(scrollable, const Offset(0, 260));
+        }
+        await tester.pump(const Duration(milliseconds: 300));
+        final readingOffset = position.pixels;
+        expect(
+          position.maxScrollExtent - readingOffset,
+          greaterThan(_agentNearBottomTestDistance),
+        );
+        expect(
+          find.byKey(const ValueKey('agent-jump-to-latest')),
+          findsOneWidget,
+        );
 
-      await tester.drag(scrollable, const Offset(0, 260));
-      await tester.pump(const Duration(milliseconds: 300));
-      final readingOffset = position.pixels;
-      expect(
-        position.maxScrollExtent - readingOffset,
-        greaterThan(_agentNearBottomTestDistance),
-      );
-      expect(
-        find.byKey(const ValueKey('agent-jump-to-latest')),
-        findsOneWidget,
-      );
+        final stableMessage = find
+            .byWidgetPredicate(
+              (widget) =>
+                  widget is KeyedSubtree &&
+                  widget.key is ValueKey<String> &&
+                  (widget.key as ValueKey<String>).value.startsWith(
+                    'scroll-message-',
+                  ),
+            )
+            .first;
+        final stableCard = tester.widget(stableMessage);
 
-      container.read(_scrollAgentStateProvider.notifier).state =
-          _scrollAgentState(2);
-      await tester.pump();
-      await tester.pump();
-      expect(position.pixels, closeTo(readingOffset, 1));
+        container.read(_scrollAgentStateProvider.notifier).state =
+            _scrollAgentState(2);
+        await tester.pump();
+        await tester.pump();
+        expect(position.pixels, closeTo(readingOffset, 1));
+        expect(
+          identical(tester.widget(find.byKey(stableCard.key!)), stableCard),
+          isTrue,
+          reason: 'A streamed tail must not rebuild an unchanged message card.',
+        );
 
-      await tester.tap(find.byKey(const ValueKey('agent-jump-to-latest')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 240));
-      await tester.pump();
-      expect(position.extentAfter, lessThanOrEqualTo(1));
-      expect(find.byKey(const ValueKey('agent-jump-to-latest')), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+        await tester.tap(find.byKey(const ValueKey('agent-jump-to-latest')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 240));
+        await tester.pump();
+        expect(position.extentAfter, lessThanOrEqualTo(1));
+        expect(
+          find.byKey(const ValueKey('agent-jump-to-latest')),
+          findsNothing,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('settings remain scrollable at narrow width with keyboard', (
     tester,

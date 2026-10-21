@@ -4,7 +4,18 @@ library;
 import 'dart:async';
 import 'dart:js_interop';
 
-import 'package:fittin_v2/src/data/web_local_store_web.dart';
+import 'package:fittin_v2/src/data/web_local_store.dart';
+import 'package:fittin_v2/src/data/cardio_recording_store.dart';
+import 'package:fittin_v2/src/data/cardio_recording_store_web.dart';
+import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
+import 'package:fittin_v2/src/domain/models/cardio.dart';
+import 'package:fittin_v2/src/domain/models/user_content.dart';
+import 'package:fittin_v2/src/data/web_database_repository.dart';
+import 'package:fittin_v2/src/application/active_session_provider.dart';
+import 'package:fittin_v2/src/application/auth_provider.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
+import 'package:fittin_v2/src/application/cardio_recording_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
 
@@ -23,6 +34,161 @@ const _legacyStores = <String>[
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'Web import commits routes and summaries atomically without syncing coordinates',
+    () async {
+      final name =
+          'fittin_route_import_${DateTime.now().microsecondsSinceEpoch}';
+      final store = await WebLocalStore.open(databaseName: name);
+      final database = WebDatabaseRepository(store);
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(database),
+          currentUserIdProvider.overrideWithValue('alice'),
+        ],
+      );
+      try {
+        final record = CardioRecord(
+          id: 'cardio-record:web-import',
+          activityTypeId: 'cardio:running',
+          activityName: 'Running',
+          startedAt: DateTime.utc(2026),
+          metrics: const {
+            CardioMetricKey.durationSeconds: 600,
+            CardioMetricKey.distanceMeters: 1000,
+          },
+        );
+        final local = container.read(cardioRecordingStoreProvider);
+        for (final valid in [false, true]) {
+          final preview = CardioImportPreview(
+            sourceName: 'route.gpx',
+            sourceFingerprint: 'b' * 64,
+            records: [record],
+            warnings: [],
+            duplicateRecordIds: {},
+            routes: {
+              record.id: [
+                for (var i = 0; i < 501; i++)
+                  RoutePoint(
+                    latitude: !valid && i == 500 ? 100 : 30,
+                    longitude: 120,
+                    timestamp: record.startedAt.add(Duration(seconds: i)),
+                  ),
+              ],
+            },
+          );
+          final saving = container
+              .read(userContentServiceProvider)
+              .saveCardioImport(preview);
+          if (!valid) {
+            await expectLater(saving, throwsFormatException);
+            expect(
+              await store.getAllRecords(WebStoreNames.userContent),
+              isEmpty,
+            );
+            expect(
+              await store.getAllRecords(WebStoreNames.cardioLocal),
+              isEmpty,
+            );
+            expect(await store.getAllRecords(WebStoreNames.syncQueue), isEmpty);
+          } else {
+            await saving;
+            expect(
+              (await local.read(record.id, ownerUserId: 'alice'))!.chunkCount,
+              2,
+            );
+            expect(await local.read(record.id, ownerUserId: 'bob'), isNull);
+            final summary = (await database.fetchUserContents(
+              UserContentKind.cardioRecord,
+              ownerUserId: 'alice',
+            )).single;
+            expect(summary.payload.toString(), isNot(contains('latitude')));
+            expect(
+              (await store.getAllRecords(WebStoreNames.syncQueue)).toString(),
+              isNot(contains('latitude')),
+            );
+          }
+        }
+      } finally {
+        container.dispose();
+        store.close();
+        await _deleteDatabase(name);
+      }
+    },
+  );
+
+  test(
+    'v4 to v5 preserves all data and atomically isolates local cardio',
+    () async {
+      final name = 'fittin_v4_cardio_${DateTime.now().microsecondsSinceEpoch}';
+      final oldStores = WebStoreNames.all
+          .where((name) => name != WebStoreNames.cardioLocal)
+          .toList();
+      final legacy = await _openDatabase(name, 4, oldStores);
+      for (final name in oldStores) {
+        await _putRecord(legacy, name, 'preserved', {'marker': name});
+      }
+      legacy.close();
+      final db = await WebLocalStore.open(databaseName: name);
+      for (final name in oldStores) {
+        expect(
+          await db.getRecord(name, 'preserved'),
+          containsPair('marker', name),
+        );
+      }
+      final store = CardioRecordingStore(WebCardioLocalDocuments(db));
+      final session = CardioRecordingSession(
+        id: 'run',
+        ownerUserId: 'alice',
+        sport: CardioSport.running,
+        startedAt: DateTime.utc(2026),
+        phase: CardioRecordingPhase.recording,
+      );
+      final point = RoutePoint(
+        latitude: 30,
+        longitude: 120,
+        timestamp: DateTime.utc(2026),
+        accuracyMeters: 5,
+      );
+      await store.checkpoint(
+        session,
+        expectedRevision: 0,
+        batchId: 'first',
+        points: [point],
+      );
+      await store.checkpoint(
+        session,
+        expectedRevision: 0,
+        batchId: 'first',
+        points: [point],
+      );
+      expect((await store.read('run', ownerUserId: 'alice'))!.chunkCount, 1);
+      expect(await store.read('run', ownerUserId: 'bob'), isNull);
+      final writes = await Future.wait(
+        ['a', 'b'].map((batch) async {
+          try {
+            await store.checkpoint(
+              session,
+              expectedRevision: 1,
+              batchId: batch,
+              points: [point],
+            );
+            return true;
+          } on CardioRecordingConflict {
+            return false;
+          }
+        }),
+      );
+      expect(writes.where((ok) => ok), hasLength(1));
+      expect((await store.read('run', ownerUserId: 'alice'))!.chunkCount, 2);
+      expect(await db.getAllRecords(WebStoreNames.syncQueue), hasLength(1));
+      await store.delete('run', ownerUserId: 'alice', expectedRevision: 2);
+      expect(await db.getAllRecords(WebStoreNames.cardioLocal), isEmpty);
+      db.close();
+      await _deleteDatabase(name);
+    },
+  );
 
   test(
     'IndexedDB v1 upgrades additively and aborts cross-store writes',
@@ -206,7 +372,11 @@ void main() {
           'fittin_v3_user_content_${DateTime.now().microsecondsSinceEpoch}';
       await _deleteDatabase(name);
       final v3Stores = WebStoreNames.all
-          .where((store) => store != WebStoreNames.userContent)
+          .where(
+            (store) =>
+                store != WebStoreNames.userContent &&
+                store != WebStoreNames.cardioLocal,
+          )
           .toList();
       final legacy = await _openDatabase(name, 3, v3Stores);
       for (final storeName in v3Stores) {

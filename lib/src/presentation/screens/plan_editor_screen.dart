@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/application/fittin_theme_provider.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
+import 'package:fittin_v2/src/domain/template_validation.dart';
 import 'package:fittin_v2/src/presentation/localization/app_strings.dart';
 import 'package:fittin_v2/src/presentation/screens/share_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/dashboard_primitives.dart';
@@ -22,6 +23,14 @@ class PlanEditorScreen extends ConsumerStatefulWidget {
 class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
   int _selectedWorkoutIndex = 0;
   int _selectedPeriodizedWeek = 0;
+  final _settingsController = ExpansibleController();
+  final _settingsAnchor = GlobalKey();
+
+  @override
+  void dispose() {
+    _settingsController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -51,6 +60,29 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     final fittinTheme = ref.watch(resolvedFittinThemeProvider);
     final draft = state.draft;
 
+    if (draft == null && state.errorMessage != null) {
+      return DashboardPageScaffold(
+        layout: DashboardPageLayout.detail,
+        children: [
+          DashboardScreenHeader(
+            title: strings.templateEditor,
+            showBackButton: true,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            strings.isChinese
+                ? '计划暂不可读取，草稿没有被覆盖。'
+                : 'The plan could not be loaded. Existing drafts were not overwritten.',
+          ),
+          FilledButton(
+            onPressed: widget.templateId == null
+                ? notifier.createBlankTemplate
+                : () => notifier.loadTemplate(widget.templateId!),
+            child: Text(strings.isChinese ? '重试' : 'Retry'),
+          ),
+        ],
+      );
+    }
     if (state.isLoading || draft == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -63,8 +95,12 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
     }
 
     final isPeriodized = draft.isPeriodized;
-    final visibleWorkout = workouts[_selectedWorkoutIndex];
-    final availableWeeks = _weekCountForWorkout(visibleWorkout);
+    final visibleWorkout = workouts.isEmpty
+        ? null
+        : workouts[_selectedWorkoutIndex];
+    final availableWeeks = visibleWorkout == null
+        ? 1
+        : _weekCountForWorkout(visibleWorkout);
     if (_selectedPeriodizedWeek >= availableWeeks) {
       _selectedPeriodizedWeek = 0;
     }
@@ -92,22 +128,11 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           ],
         ),
         const SizedBox(height: 22),
-        FittinEyebrow(fittinTheme, strings.templateEditor),
-        const SizedBox(height: 10),
         Text(
           draft.name,
           style: fittinTheme
               .displayStyle(28, fittinTheme.fg)
               .copyWith(height: 1.15),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          draft.isPeriodized
-              ? strings.planEditorPeriodizedDescription
-              : strings.planEditorLinearDescription,
-          style: fittinTheme
-              .uiStyle(13, fittinTheme.fgDim)
-              .copyWith(height: 1.45),
         ),
         const SizedBox(height: 20),
         if (state.sourceTemplate != null)
@@ -127,17 +152,69 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             child: _ValidationBanner(
               errors: state.validationErrors,
               strings: strings,
+              onSelect: (index) {
+                final issues = TemplateValidation.validate(draft).issues;
+                if (index >= issues.length) return;
+                final issue = issues[index];
+                if (issue.workoutId == null) {
+                  _settingsController.expand();
+                  final settingsContext = _settingsAnchor.currentContext;
+                  if (settingsContext != null) {
+                    Scrollable.ensureVisible(
+                      settingsContext,
+                      duration: const Duration(milliseconds: 180),
+                    );
+                  }
+                  return;
+                }
+                final exercise = draft.workouts
+                    .firstWhere((day) => day.id == issue.workoutId)
+                    .exercises
+                    .where((exercise) => exercise.id == issue.exerciseId)
+                    .firstOrNull;
+                final stageIndex =
+                    exercise?.stages.indexWhere(
+                      (stage) => stage.id == issue.stageId,
+                    ) ??
+                    -1;
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => exercise == null
+                        ? _PlanDayEditor(workoutId: issue.workoutId!)
+                        : _PlanExerciseEditor(
+                            workoutId: issue.workoutId!,
+                            exerciseId: exercise.id,
+                            week: isPeriodized && stageIndex >= 0
+                                ? stageIndex
+                                : null,
+                          ),
+                  ),
+                );
+              },
             ),
           ),
-        _TemplateMetaCard(draft: draft, notifier: notifier, strings: strings),
-        const SizedBox(height: 16),
-        _ModeSelectorCard(
-          scheduleMode: draft.resolvedScheduleMode,
-          notifier: notifier,
-          strings: strings,
+        ExpansionTile(
+          key: const ValueKey('plan-editor-settings'),
+          controller: _settingsController,
+          title: Text(
+            strings.isChinese ? '计划设置' : 'Plan settings',
+            key: _settingsAnchor,
+          ),
+          children: [
+            _TemplateMetaCard(
+              draft: draft,
+              notifier: notifier,
+              strings: strings,
+            ),
+            _ModeSelectorCard(
+              scheduleMode: draft.resolvedScheduleMode,
+              notifier: notifier,
+              strings: strings,
+            ),
+          ],
         ),
         const SizedBox(height: 16),
-        if (isPeriodized) ...[
+        if (isPeriodized && visibleWorkout != null) ...[
           _PeriodizedSlotCard(
             theme: fittinTheme,
             strings: strings,
@@ -157,19 +234,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
             },
           ),
           const SizedBox(height: 16),
-          _WorkoutEditorCard(
-            workout: visibleWorkout,
-            workoutIndex: _selectedWorkoutIndex,
-            notifier: notifier,
-            strings: strings,
-            periodizedWeekIndex: _selectedPeriodizedWeek,
-            showWorkoutMetadataEditor: true,
-            allowPeriodizedSlotFocus: true,
-            periodizedSlotLabel: strings.periodizedEditorSlotLabel(
-              _selectedPeriodizedWeek + 1,
-              _selectedWorkoutIndex + 1,
-            ),
-          ),
+          _dayTile(context, visibleWorkout, _selectedPeriodizedWeek, strings),
         ] else ...[
           for (
             var workoutIndex = 0;
@@ -178,13 +243,7 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
           )
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _WorkoutEditorCard(
-                workout: workouts[workoutIndex],
-                workoutIndex: workoutIndex,
-                notifier: notifier,
-                strings: strings,
-                showWorkoutMetadataEditor: true,
-              ),
+              child: _dayTile(context, workouts[workoutIndex], null, strings),
             ),
           Align(
             alignment: Alignment.centerLeft,
@@ -201,6 +260,45 @@ class _PlanEditorScreenState extends ConsumerState<PlanEditorScreen> {
       ],
     );
   }
+
+  Widget _dayTile(
+    BuildContext context,
+    Workout workout,
+    int? week,
+    AppStrings strings,
+  ) => DashboardSurfaceCard(
+    key: ValueKey('edit-day-${workout.id}'),
+    onTap: () => Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _PlanDayEditor(workoutId: workout.id, week: week),
+      ),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                workout.name,
+                style: refTheme(
+                  context,
+                ).uiStyle(17, refTheme(context).fg, FontWeight.w600),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                strings.isChinese
+                    ? '${workout.exercises.length} 个动作 · ${workout.estimatedDurationMinutes} 分钟'
+                    : '${workout.exercises.length} exercises · ${workout.estimatedDurationMinutes} min',
+                style: refTheme(context).uiStyle(13, refTheme(context).fgDim),
+              ),
+            ],
+          ),
+        ),
+        Icon(Icons.chevron_right_rounded, color: refTheme(context).fgDim),
+      ],
+    ),
+  );
 
   void _showPendingSnackbars(
     TemplateEditorState state,
@@ -435,6 +533,101 @@ class _PeriodizedSlotCard extends StatelessWidget {
   }
 }
 
+class _PlanDayEditor extends ConsumerWidget {
+  const _PlanDayEditor({required this.workoutId, this.week});
+  final String workoutId;
+  final int? week;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final draft = ref.watch(templateEditorProvider).draft;
+    final index =
+        draft?.workouts.indexWhere((day) => day.id == workoutId) ?? -1;
+    final strings = AppStrings.of(context, ref);
+    return DashboardPageScaffold(
+      layout: DashboardPageLayout.detail,
+      children: [
+        DashboardScreenHeader(
+          title: index < 0 ? strings.workoutName : draft!.workouts[index].name,
+          showBackButton: true,
+        ),
+        const SizedBox(height: 16),
+        if (index >= 0)
+          _WorkoutEditorCard(
+            workout: draft!.workouts[index],
+            workoutIndex: index,
+            notifier: ref.read(templateEditorProvider.notifier),
+            strings: strings,
+            periodizedWeekIndex: week,
+            showWorkoutMetadataEditor: true,
+            allowPeriodizedSlotFocus: week != null,
+            compactExercises: true,
+            periodizedSlotLabel: week == null
+                ? null
+                : strings.periodizedEditorSlotLabel(week! + 1, index + 1),
+          ),
+        if (index < 0)
+          Text(
+            strings.isChinese
+                ? '这个训练日已移除，请返回计划总览。'
+                : 'This day was removed. Return to the plan overview.',
+          ),
+      ],
+    );
+  }
+}
+
+class _PlanExerciseEditor extends ConsumerWidget {
+  const _PlanExerciseEditor({
+    required this.workoutId,
+    required this.exerciseId,
+    this.week,
+  });
+  final String workoutId;
+  final String exerciseId;
+  final int? week;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final draft = ref.watch(templateEditorProvider).draft;
+    final dayIndex =
+        draft?.workouts.indexWhere((day) => day.id == workoutId) ?? -1;
+    final exerciseIndex = dayIndex < 0
+        ? -1
+        : draft!.workouts[dayIndex].exercises.indexWhere(
+            (exercise) => exercise.id == exerciseId,
+          );
+    final strings = AppStrings.of(context, ref);
+    return DashboardPageScaffold(
+      layout: DashboardPageLayout.detail,
+      children: [
+        DashboardScreenHeader(
+          title: exerciseIndex < 0
+              ? strings.exerciseName
+              : draft!.workouts[dayIndex].exercises[exerciseIndex].name,
+          showBackButton: true,
+        ),
+        const SizedBox(height: 16),
+        if (exerciseIndex >= 0)
+          _ExerciseEditorCard(
+            workoutIndex: dayIndex,
+            exerciseIndex: exerciseIndex,
+            exercise: draft!.workouts[dayIndex].exercises[exerciseIndex],
+            notifier: ref.read(templateEditorProvider.notifier),
+            strings: strings,
+            visibleStageIndex: week,
+            showRules: week == null,
+            standalone: true,
+          ),
+        if (exerciseIndex < 0)
+          Text(
+            strings.isChinese
+                ? '这个动作已移除，请返回训练日。'
+                : 'This exercise was removed. Return to its training day.',
+          ),
+      ],
+    );
+  }
+}
+
 class _WorkoutEditorCard extends StatelessWidget {
   const _WorkoutEditorCard({
     required this.workout,
@@ -445,6 +638,7 @@ class _WorkoutEditorCard extends StatelessWidget {
     this.showWorkoutMetadataEditor = false,
     this.allowPeriodizedSlotFocus = false,
     this.periodizedSlotLabel,
+    this.compactExercises = false,
   });
 
   final Workout workout;
@@ -455,6 +649,7 @@ class _WorkoutEditorCard extends StatelessWidget {
   final bool showWorkoutMetadataEditor;
   final bool allowPeriodizedSlotFocus;
   final String? periodizedSlotLabel;
+  final bool compactExercises;
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +658,8 @@ class _WorkoutEditorCard extends StatelessWidget {
         : '$periodizedSlotLabel · ${workout.name}';
 
     return _EditorCard(
-      title: title,
+      title: compactExercises ? '' : title,
+      plain: compactExercises,
       actions: allowPeriodizedSlotFocus
           ? null
           : [
@@ -493,6 +689,7 @@ class _WorkoutEditorCard extends StatelessWidget {
               ),
             ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (showWorkoutMetadataEditor) ...[
             _DraftTextField(
@@ -535,15 +732,46 @@ class _WorkoutEditorCard extends StatelessWidget {
           )
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _ExerciseEditorCard(
-                workoutIndex: workoutIndex,
-                exerciseIndex: exerciseIndex,
-                exercise: workout.exercises[exerciseIndex],
-                notifier: notifier,
-                strings: strings,
-                visibleStageIndex: periodizedWeekIndex,
-                showRules: periodizedWeekIndex == null,
-              ),
+              child: compactExercises
+                  ? DashboardSurfaceCard(
+                      key: ValueKey(
+                        'edit-exercise-${workout.exercises[exerciseIndex].id}',
+                      ),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _PlanExerciseEditor(
+                            workoutId: workout.id,
+                            exerciseId: workout.exercises[exerciseIndex].id,
+                            week: periodizedWeekIndex,
+                          ),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              workout.exercises[exerciseIndex].name,
+                              style: refTheme(
+                                context,
+                              ).uiStyle(16, refTheme(context).fg),
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: refTheme(context).fgDim,
+                          ),
+                        ],
+                      ),
+                    )
+                  : _ExerciseEditorCard(
+                      workoutIndex: workoutIndex,
+                      exerciseIndex: exerciseIndex,
+                      exercise: workout.exercises[exerciseIndex],
+                      notifier: notifier,
+                      strings: strings,
+                      visibleStageIndex: periodizedWeekIndex,
+                      showRules: periodizedWeekIndex == null,
+                    ),
             ),
           Align(
             alignment: Alignment.centerLeft,
@@ -571,6 +799,7 @@ class _ExerciseEditorCard extends StatelessWidget {
     required this.strings,
     this.visibleStageIndex,
     required this.showRules,
+    this.standalone = false,
   });
 
   final int workoutIndex;
@@ -580,6 +809,7 @@ class _ExerciseEditorCard extends StatelessWidget {
   final AppStrings strings;
   final int? visibleStageIndex;
   final bool showRules;
+  final bool standalone;
 
   @override
   Widget build(BuildContext context) {
@@ -591,14 +821,14 @@ class _ExerciseEditorCard extends StatelessWidget {
               MapEntry(visibleStageIndex!, exercise.stages[visibleStageIndex!]),
           ];
 
-    return DashboardSurfaceCard(
-      radius: 24,
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            if (standalone)
+              const Spacer()
+            else
               Expanded(
                 child: Text(
                   exercise.name,
@@ -607,285 +837,287 @@ class _ExerciseEditorCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _EditorActionButton(
-                controlKey: ValueKey(
-                  'exercise-$workoutIndex-$exerciseIndex-move-up',
-                ),
-                onPressed: () =>
-                    notifier.moveExercise(workoutIndex, exerciseIndex, -1),
-                label: strings.moveExerciseUp,
-                icon: Icons.arrow_upward_rounded,
+            _EditorActionButton(
+              controlKey: ValueKey(
+                'exercise-$workoutIndex-$exerciseIndex-move-up',
               ),
-              _EditorActionButton(
-                controlKey: ValueKey(
-                  'exercise-$workoutIndex-$exerciseIndex-move-down',
-                ),
-                onPressed: () =>
-                    notifier.moveExercise(workoutIndex, exerciseIndex, 1),
-                label: strings.moveExerciseDown,
-                icon: Icons.arrow_downward_rounded,
+              onPressed: () =>
+                  notifier.moveExercise(workoutIndex, exerciseIndex, -1),
+              label: strings.moveExerciseUp,
+              icon: Icons.arrow_upward_rounded,
+            ),
+            _EditorActionButton(
+              controlKey: ValueKey(
+                'exercise-$workoutIndex-$exerciseIndex-move-down',
               ),
-              _EditorActionButton(
-                controlKey: ValueKey(
-                  'exercise-$workoutIndex-$exerciseIndex-duplicate',
-                ),
-                onPressed: () =>
-                    notifier.duplicateExercise(workoutIndex, exerciseIndex),
-                label: strings.duplicateExercise,
-                icon: Icons.copy_rounded,
+              onPressed: () =>
+                  notifier.moveExercise(workoutIndex, exerciseIndex, 1),
+              label: strings.moveExerciseDown,
+              icon: Icons.arrow_downward_rounded,
+            ),
+            _EditorActionButton(
+              controlKey: ValueKey(
+                'exercise-$workoutIndex-$exerciseIndex-duplicate',
               ),
-              _EditorActionButton(
-                controlKey: ValueKey(
-                  'exercise-$workoutIndex-$exerciseIndex-delete',
-                ),
-                onPressed: () =>
-                    notifier.removeExercise(workoutIndex, exerciseIndex),
-                label: strings.deleteExercise,
-                icon: Icons.delete_outline_rounded,
+              onPressed: () =>
+                  notifier.duplicateExercise(workoutIndex, exerciseIndex),
+              label: strings.duplicateExercise,
+              icon: Icons.copy_rounded,
+            ),
+            _EditorActionButton(
+              controlKey: ValueKey(
+                'exercise-$workoutIndex-$exerciseIndex-delete',
               ),
-            ],
-          ),
-          _DraftTextField(
-            label: strings.exerciseName,
-            value: exercise.name,
-            onChanged: (value) =>
-                notifier.updateExerciseName(workoutIndex, exerciseIndex, value),
-          ),
-          const SizedBox(height: 12),
-          _DraftTextField(
-            label: strings.movementId,
-            value: exercise.exerciseId,
-            onChanged: (value) => notifier.updateExerciseMovementId(
-              workoutIndex,
-              exerciseIndex,
-              value,
+              onPressed: () =>
+                  notifier.removeExercise(workoutIndex, exerciseIndex),
+              label: strings.deleteExercise,
+              icon: Icons.delete_outline_rounded,
+            ),
+          ],
+        ),
+        _DraftTextField(
+          label: strings.exerciseName,
+          value: exercise.name,
+          onChanged: (value) =>
+              notifier.updateExerciseName(workoutIndex, exerciseIndex, value),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 120,
+              child: _DraftIntField(
+                label: strings.restSeconds,
+                value: exercise.restSeconds,
+                onChanged: (value) => notifier.updateExerciseRestSeconds(
+                  workoutIndex,
+                  exerciseIndex,
+                  value,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 140,
+              child: _DraftDoubleField(
+                label: strings.startWeight,
+                value: exercise.initialBaseWeight,
+                onChanged: (value) => notifier.updateExerciseBaseWeight(
+                  workoutIndex,
+                  exerciseIndex,
+                  value,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 160,
+              child: DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: exercise.loadUnit,
+                decoration: InputDecoration(labelText: strings.loadUnit),
+                items: [
+                  DropdownMenuItem(
+                    value: LoadUnits.kg,
+                    child: const Text('kg'),
+                  ),
+                  DropdownMenuItem(
+                    value: LoadUnits.lbs,
+                    child: const Text('lbs'),
+                  ),
+                  DropdownMenuItem(
+                    value: LoadUnits.bodyweight,
+                    child: Text(strings.bodyweightLoad),
+                  ),
+                  DropdownMenuItem(
+                    value: LoadUnits.cableStack,
+                    child: Text(strings.cableStack),
+                  ),
+                  DropdownMenuItem(
+                    value: LoadUnits.percent1rm,
+                    child: Text(strings.percent1rm),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    notifier.updateExerciseLoadUnit(
+                      workoutIndex,
+                      exerciseIndex,
+                      value,
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: 160,
+              child: DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: exercise.equipmentType,
+                decoration: InputDecoration(labelText: strings.equipmentType),
+                items: [
+                  DropdownMenuItem(
+                    value: EquipmentTypes.general,
+                    child: Text(strings.equipmentGeneral),
+                  ),
+                  DropdownMenuItem(
+                    value: EquipmentTypes.barbell,
+                    child: Text(strings.equipmentBarbell),
+                  ),
+                  DropdownMenuItem(
+                    value: EquipmentTypes.dumbbell,
+                    child: Text(strings.equipmentDumbbell),
+                  ),
+                  DropdownMenuItem(
+                    value: EquipmentTypes.machine,
+                    child: Text(strings.equipmentMachine),
+                  ),
+                  DropdownMenuItem(
+                    value: EquipmentTypes.cable,
+                    child: Text(strings.equipmentCable),
+                  ),
+                  DropdownMenuItem(
+                    value: EquipmentTypes.bodyweight,
+                    child: Text(strings.equipmentBodyweight),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    notifier.updateExerciseEquipmentType(
+                      workoutIndex,
+                      exerciseIndex,
+                      value,
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        for (final entry in visibleStages)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _StageEditorCard(
+              workoutIndex: workoutIndex,
+              exerciseIndex: exerciseIndex,
+              stageIndex: entry.key,
+              stage: entry.value,
+              stageIds: [for (final stage in exercise.stages) stage.id],
+              notifier: notifier,
+              strings: strings,
+              showRules: showRules,
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              SizedBox(
-                width: 120,
-                child: DropdownButtonFormField<String>(
-                  initialValue: tierOptions.contains(exercise.tier)
-                      ? exercise.tier
-                      : tierOptions.first,
-                  decoration: InputDecoration(labelText: strings.tier),
-                  items: [
-                    for (final tier in tierOptions)
-                      DropdownMenuItem(value: tier, child: Text(tier)),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      notifier.updateExerciseTier(
-                        workoutIndex,
-                        exerciseIndex,
-                        value,
-                      );
-                    }
-                  },
-                ),
+        ExpansionTile(
+          key: ValueKey('exercise-advanced-$workoutIndex-$exerciseIndex'),
+          tilePadding: EdgeInsets.zero,
+          title: Text(
+            strings.isChinese ? '动作高级设置' : 'Advanced exercise settings',
+          ),
+          childrenPadding: const EdgeInsets.only(bottom: 16),
+          children: [
+            _DraftTextField(
+              label: strings.movementId,
+              value: exercise.exerciseId,
+              onChanged: (value) => notifier.updateExerciseMovementId(
+                workoutIndex,
+                exerciseIndex,
+                value,
               ),
-              SizedBox(
-                width: 120,
-                child: _DraftIntField(
-                  label: strings.restSeconds,
-                  value: exercise.restSeconds,
-                  onChanged: (value) => notifier.updateExerciseRestSeconds(
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: tierOptions.contains(exercise.tier)
+                  ? exercise.tier
+                  : tierOptions.first,
+              decoration: InputDecoration(labelText: strings.tier),
+              items: [
+                for (final tier in tierOptions)
+                  DropdownMenuItem(value: tier, child: Text(tier)),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  notifier.updateExerciseTier(
                     workoutIndex,
                     exerciseIndex,
                     value,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              SizedBox(
-                width: 140,
-                child: _DraftDoubleField(
-                  label: strings.startWeight,
-                  value: exercise.initialBaseWeight,
-                  onChanged: (value) => notifier.updateExerciseBaseWeight(
-                    workoutIndex,
-                    exerciseIndex,
-                    value,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: exercise.loadUnit,
-                  decoration: InputDecoration(labelText: strings.loadUnit),
-                  items: [
-                    DropdownMenuItem(
-                      value: LoadUnits.kg,
-                      child: const Text('kg'),
-                    ),
-                    DropdownMenuItem(
-                      value: LoadUnits.lbs,
-                      child: const Text('lbs'),
-                    ),
-                    DropdownMenuItem(
-                      value: LoadUnits.bodyweight,
-                      child: Text(strings.bodyweightLoad),
-                    ),
-                    DropdownMenuItem(
-                      value: LoadUnits.cableStack,
-                      child: Text(strings.cableStack),
-                    ),
-                    DropdownMenuItem(
-                      value: LoadUnits.percent1rm,
-                      child: Text(strings.percent1rm),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      notifier.updateExerciseLoadUnit(
-                        workoutIndex,
-                        exerciseIndex,
-                        value,
-                      );
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              SizedBox(
-                width: 160,
-                child: DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: exercise.equipmentType,
-                  decoration: InputDecoration(labelText: strings.equipmentType),
-                  items: [
-                    DropdownMenuItem(
-                      value: EquipmentTypes.general,
-                      child: Text(strings.equipmentGeneral),
-                    ),
-                    DropdownMenuItem(
-                      value: EquipmentTypes.barbell,
-                      child: Text(strings.equipmentBarbell),
-                    ),
-                    DropdownMenuItem(
-                      value: EquipmentTypes.dumbbell,
-                      child: Text(strings.equipmentDumbbell),
-                    ),
-                    DropdownMenuItem(
-                      value: EquipmentTypes.machine,
-                      child: Text(strings.equipmentMachine),
-                    ),
-                    DropdownMenuItem(
-                      value: EquipmentTypes.cable,
-                      child: Text(strings.equipmentCable),
-                    ),
-                    DropdownMenuItem(
-                      value: EquipmentTypes.bodyweight,
-                      child: Text(strings.equipmentBodyweight),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      notifier.updateExerciseEquipmentType(
-                        workoutIndex,
-                        exerciseIndex,
-                        value,
-                      );
-                    }
-                  },
-                ),
-              ),
-              SizedBox(
-                width: 180,
-                child: DropdownButtonFormField<String?>(
-                  isExpanded: true,
-                  initialValue: exercise.trainingMaxLift,
-                  decoration: InputDecoration(
-                    labelText: strings.trainingMaxMapping,
-                  ),
-                  items: [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(strings.noneOrLater),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'squat',
-                      child: Text(strings.squatShort),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'bench',
-                      child: Text(strings.benchShort),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'deadlift',
-                      child: Text(strings.deadliftShort),
-                    ),
-                    DropdownMenuItem<String?>(
-                      value: 'overhead_press',
-                      child: Text(strings.overheadPressShort),
-                    ),
-                  ],
-                  onChanged: (value) => notifier.updateExerciseTrainingMaxLift(
-                    workoutIndex,
-                    exerciseIndex,
-                    value,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            strings.planEditorDeferredLoadHint,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.68),
+                  );
+                }
+              },
             ),
-          ),
-          const SizedBox(height: 16),
-          for (final entry in visibleStages)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _StageEditorCard(
-                workoutIndex: workoutIndex,
-                exerciseIndex: exerciseIndex,
-                stageIndex: entry.key,
-                stage: entry.value,
-                stageIds: [for (final stage in exercise.stages) stage.id],
-                notifier: notifier,
-                strings: strings,
-                showRules: showRules,
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              isExpanded: true,
+              initialValue: exercise.trainingMaxLift,
+              decoration: InputDecoration(
+                labelText: strings.trainingMaxMapping,
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(strings.noneOrLater),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'squat',
+                  child: Text(strings.squatShort),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'bench',
+                  child: Text(strings.benchShort),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'deadlift',
+                  child: Text(strings.deadliftShort),
+                ),
+                DropdownMenuItem<String?>(
+                  value: 'overhead_press',
+                  child: Text(strings.overheadPressShort),
+                ),
+              ],
+              onChanged: (value) => notifier.updateExerciseTrainingMaxLift(
+                workoutIndex,
+                exerciseIndex,
+                value,
               ),
             ),
-          if (visibleStageIndex == null)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: FittinBtn(
-                refTheme(context),
-                strings.addStage,
-                variant: 'secondary',
-                size: 'sm',
-                icon: Icons.add_rounded,
-                onPressed: () => notifier.addStage(workoutIndex, exerciseIndex),
-              ),
+          ],
+        ),
+        if (visibleStageIndex == null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FittinBtn(
+              refTheme(context),
+              strings.addStage,
+              variant: 'secondary',
+              size: 'sm',
+              icon: Icons.add_rounded,
+              onPressed: () => notifier.addStage(workoutIndex, exerciseIndex),
             ),
-        ],
-      ),
+          ),
+      ],
     );
+    return standalone
+        ? content
+        : DashboardSurfaceCard(
+            radius: 24,
+            padding: const EdgeInsets.all(16),
+            child: content,
+          );
   }
 }
 
@@ -1029,35 +1261,34 @@ class _StageEditorCard extends StatelessWidget {
           ),
           if (showRules) ...[
             const SizedBox(height: 16),
-            Text(
-              strings.progression,
-              style: Theme.of(
-                context,
-              ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            _RuleEditor(
-              title: strings.onSuccess,
-              strings: strings,
-              condition: 'on_success',
-              stage: stage,
-              stageIds: stageIds,
-              workoutIndex: workoutIndex,
-              exerciseIndex: exerciseIndex,
-              stageIndex: stageIndex,
-              notifier: notifier,
-            ),
-            const SizedBox(height: 8),
-            _RuleEditor(
-              title: strings.onFailure,
-              strings: strings,
-              condition: 'on_failure',
-              stage: stage,
-              stageIds: stageIds,
-              workoutIndex: workoutIndex,
-              exerciseIndex: exerciseIndex,
-              stageIndex: stageIndex,
-              notifier: notifier,
+            ExpansionTile(
+              key: ValueKey('stage-$stageIndex-progression'),
+              title: Text(strings.progression),
+              children: [
+                _RuleEditor(
+                  title: strings.onSuccess,
+                  strings: strings,
+                  condition: 'on_success',
+                  stage: stage,
+                  stageIds: stageIds,
+                  workoutIndex: workoutIndex,
+                  exerciseIndex: exerciseIndex,
+                  stageIndex: stageIndex,
+                  notifier: notifier,
+                ),
+                const SizedBox(height: 8),
+                _RuleEditor(
+                  title: strings.onFailure,
+                  strings: strings,
+                  condition: 'on_failure',
+                  stage: stage,
+                  stageIds: stageIds,
+                  workoutIndex: workoutIndex,
+                  exerciseIndex: exerciseIndex,
+                  stageIndex: stageIndex,
+                  notifier: notifier,
+                ),
+              ],
             ),
           ],
         ],
@@ -1087,189 +1318,207 @@ class _SetEditorRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DashboardSurfaceCard(
-      radius: 18,
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: setDefinition.kind,
-                  decoration: InputDecoration(labelText: strings.role),
-                  items: [
-                    DropdownMenuItem(
-                      value: SetKinds.warmup,
-                      child: Text(strings.warmup),
-                    ),
-                    DropdownMenuItem(
-                      value: SetKinds.working,
-                      child: Text(strings.working),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    if (value != null) {
-                      notifier.updateSetKind(
-                        workoutIndex,
-                        exerciseIndex,
-                        stageIndex,
-                        setIndex,
-                        value,
-                      );
-                      if (value == SetKinds.warmup) {
-                        notifier.updateSetType(
+    final typeLabel = switch (setDefinition.resolvedSetType) {
+      SetTypes.warmupSet => strings.warmup,
+      SetTypes.topSet => strings.topSet,
+      SetTypes.backoffSet => strings.backoffSet,
+      SetTypes.amrapSet => strings.amrapSet,
+      _ => strings.straightSet,
+    };
+    return ExpansionTile(
+      key: ValueKey(
+        'set-details-$workoutIndex-$exerciseIndex-$stageIndex-$setIndex',
+      ),
+      tilePadding: EdgeInsets.zero,
+      childrenPadding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+      title: Text('${setIndex + 1} · $typeLabel'),
+      subtitle: Text(
+        '${setDefinition.targetReps} ${strings.isChinese ? '次' : 'reps'}'
+        '${setDefinition.targetRpe == null ? '' : ' · RPE ${setDefinition.targetRpe}'}',
+      ),
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: setDefinition.kind,
+                    decoration: InputDecoration(labelText: strings.role),
+                    items: [
+                      DropdownMenuItem(
+                        value: SetKinds.warmup,
+                        child: Text(strings.warmup),
+                      ),
+                      DropdownMenuItem(
+                        value: SetKinds.working,
+                        child: Text(strings.working),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        notifier.updateSetKind(
                           workoutIndex,
                           exerciseIndex,
                           stageIndex,
                           setIndex,
-                          SetTypes.warmupSet,
+                          value,
                         );
+                        if (value == SetKinds.warmup) {
+                          notifier.updateSetType(
+                            workoutIndex,
+                            exerciseIndex,
+                            stageIndex,
+                            setIndex,
+                            SetTypes.warmupSet,
+                          );
+                        }
                       }
+                    },
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'up':
+                        notifier.moveSet(
+                          workoutIndex,
+                          exerciseIndex,
+                          stageIndex,
+                          setIndex,
+                          -1,
+                        );
+                        break;
+                      case 'down':
+                        notifier.moveSet(
+                          workoutIndex,
+                          exerciseIndex,
+                          stageIndex,
+                          setIndex,
+                          1,
+                        );
+                        break;
+                      case 'duplicate':
+                        notifier.duplicateSet(
+                          workoutIndex,
+                          exerciseIndex,
+                          stageIndex,
+                          setIndex,
+                        );
+                        break;
+                      case 'delete':
+                        notifier.removeSet(
+                          workoutIndex,
+                          exerciseIndex,
+                          stageIndex,
+                          setIndex,
+                        );
+                        break;
                     }
                   },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(value: 'up', child: Text(strings.moveUp)),
+                    PopupMenuItem(value: 'down', child: Text(strings.moveDown)),
+                    PopupMenuItem(
+                      value: 'duplicate',
+                      child: Text(strings.duplicate),
+                    ),
+                    PopupMenuItem(value: 'delete', child: Text(strings.delete)),
+                  ],
                 ),
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'up':
-                      notifier.moveSet(
-                        workoutIndex,
-                        exerciseIndex,
-                        stageIndex,
-                        setIndex,
-                        -1,
-                      );
-                      break;
-                    case 'down':
-                      notifier.moveSet(
-                        workoutIndex,
-                        exerciseIndex,
-                        stageIndex,
-                        setIndex,
-                        1,
-                      );
-                      break;
-                    case 'duplicate':
-                      notifier.duplicateSet(
-                        workoutIndex,
-                        exerciseIndex,
-                        stageIndex,
-                        setIndex,
-                      );
-                      break;
-                    case 'delete':
-                      notifier.removeSet(
-                        workoutIndex,
-                        exerciseIndex,
-                        stageIndex,
-                        setIndex,
-                      );
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  PopupMenuItem(value: 'up', child: Text(strings.moveUp)),
-                  PopupMenuItem(value: 'down', child: Text(strings.moveDown)),
-                  PopupMenuItem(
-                    value: 'duplicate',
-                    child: Text(strings.duplicate),
-                  ),
-                  PopupMenuItem(value: 'delete', child: Text(strings.delete)),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            isExpanded: true,
-            initialValue: setDefinition.resolvedSetType,
-            decoration: InputDecoration(labelText: strings.setType),
-            items: [
-              DropdownMenuItem(
-                value: SetTypes.straightSet,
-                child: Text(strings.straightSet),
-              ),
-              DropdownMenuItem(
-                value: SetTypes.topSet,
-                child: Text(strings.topSet),
-              ),
-              DropdownMenuItem(
-                value: SetTypes.backoffSet,
-                child: Text(strings.backoffSet),
-              ),
-              DropdownMenuItem(
-                value: SetTypes.amrapSet,
-                child: Text(strings.amrapSet),
-              ),
-              DropdownMenuItem(
-                value: SetTypes.warmupSet,
-                child: Text(strings.warmup),
-              ),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                notifier.updateSetType(
-                  workoutIndex,
-                  exerciseIndex,
-                  stageIndex,
-                  setIndex,
-                  value,
-                );
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              SizedBox(
-                width: 100,
-                child: _DraftIntField(
-                  label: strings.reps,
-                  value: setDefinition.targetReps,
-                  onChanged: (value) => notifier.updateSetTargetReps(
-                    workoutIndex,
-                    exerciseIndex,
-                    stageIndex,
-                    setIndex,
-                    value,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 120,
-                child: _DraftDoubleField(
-                  label: strings.intensity,
-                  value: setDefinition.intensity,
-                  onChanged: (value) => notifier.updateSetIntensity(
-                    workoutIndex,
-                    exerciseIndex,
-                    stageIndex,
-                    setIndex,
-                    value,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _DraftDoubleField(
-            label: strings.targetRpe,
-            value: setDefinition.targetRpe ?? 0,
-            onChanged: (value) => notifier.updateSetTargetRpe(
-              workoutIndex,
-              exerciseIndex,
-              stageIndex,
-              setIndex,
-              value <= 0 ? null : value,
+              ],
             ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              initialValue: setDefinition.resolvedSetType,
+              decoration: InputDecoration(labelText: strings.setType),
+              items: [
+                DropdownMenuItem(
+                  value: SetTypes.straightSet,
+                  child: Text(strings.straightSet),
+                ),
+                DropdownMenuItem(
+                  value: SetTypes.topSet,
+                  child: Text(strings.topSet),
+                ),
+                DropdownMenuItem(
+                  value: SetTypes.backoffSet,
+                  child: Text(strings.backoffSet),
+                ),
+                DropdownMenuItem(
+                  value: SetTypes.amrapSet,
+                  child: Text(strings.amrapSet),
+                ),
+                DropdownMenuItem(
+                  value: SetTypes.warmupSet,
+                  child: Text(strings.warmup),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  notifier.updateSetType(
+                    workoutIndex,
+                    exerciseIndex,
+                    stageIndex,
+                    setIndex,
+                    value,
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: _DraftIntField(
+                    label: strings.reps,
+                    value: setDefinition.targetReps,
+                    onChanged: (value) => notifier.updateSetTargetReps(
+                      workoutIndex,
+                      exerciseIndex,
+                      stageIndex,
+                      setIndex,
+                      value,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 120,
+                  child: _DraftDoubleField(
+                    label: strings.intensity,
+                    value: setDefinition.intensity,
+                    onChanged: (value) => notifier.updateSetIntensity(
+                      workoutIndex,
+                      exerciseIndex,
+                      stageIndex,
+                      setIndex,
+                      value,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _DraftDoubleField(
+              label: strings.targetRpe,
+              value: setDefinition.targetRpe ?? 0,
+              onChanged: (value) => notifier.updateSetTargetRpe(
+                workoutIndex,
+                exerciseIndex,
+                stageIndex,
+                setIndex,
+                value <= 0 ? null : value,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1499,46 +1748,52 @@ class _RuleActionEditorRow extends StatelessWidget {
 }
 
 class _EditorCard extends StatelessWidget {
-  const _EditorCard({required this.title, required this.child, this.actions});
+  const _EditorCard({
+    required this.title,
+    required this.child,
+    this.actions,
+    this.plain = false,
+  });
 
   final String title;
   final Widget child;
   final List<Widget>? actions;
+  final bool plain;
 
   @override
   Widget build(BuildContext context) {
     final theme = refTheme(context);
-    return DashboardSurfaceCard(
-      radius: 32,
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title.isNotEmpty || actions != null)
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittinEyebrow(theme, title),
-                    const SizedBox(height: 6),
-                    Text(
-                      title,
-                      style: theme
-                          .uiStyle(18, theme.fg)
-                          .copyWith(fontWeight: FontWeight.w700),
-                    ),
-                  ],
+              if (title.isEmpty)
+                const Spacer()
+              else
+                Expanded(
+                  child: Text(
+                    title,
+                    style: theme
+                        .uiStyle(18, theme.fg)
+                        .copyWith(fontWeight: FontWeight.w700),
+                  ),
                 ),
-              ),
               if (actions != null) ...actions!,
             ],
           ),
-          const SizedBox(height: 18),
-          child,
-        ],
-      ),
+        if (title.isNotEmpty || actions != null) const SizedBox(height: 18),
+        child,
+      ],
     );
+    return plain
+        ? content
+        : DashboardSurfaceCard(
+            radius: 24,
+            padding: const EdgeInsets.all(20),
+            child: content,
+          );
   }
 }
 
@@ -1890,10 +2145,15 @@ class _InfoBanner extends StatelessWidget {
 }
 
 class _ValidationBanner extends StatelessWidget {
-  const _ValidationBanner({required this.errors, required this.strings});
+  const _ValidationBanner({
+    required this.errors,
+    required this.strings,
+    required this.onSelect,
+  });
 
   final List<String> errors;
   final AppStrings strings;
+  final void Function(int) onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -1910,10 +2170,14 @@ class _ValidationBanner extends StatelessWidget {
             ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 12),
-          for (final error in errors.take(6))
-            Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Text('• ${strings.templateValidationError(error)}'),
+          for (var i = 0; i < errors.length; i++)
+            TextButton(
+              key: ValueKey('plan-validation-$i'),
+              onPressed: () => onSelect(i),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(strings.templateValidationError(errors[i])),
+              ),
             ),
         ],
       ),

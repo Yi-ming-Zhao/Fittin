@@ -9,13 +9,17 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/template_editor_provider.dart';
 import 'package:fittin_v2/src/data/database_repository.dart';
 import 'package:fittin_v2/src/domain/models/training_plan.dart';
+import 'package:fittin_v2/src/domain/template_validation.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
 
 import '../support/in_memory_database_repository.dart';
 
 class _StubTemplateEditorNotifier extends TemplateEditorNotifier {
   _StubTemplateEditorNotifier(super.ref, PlanTemplate draft) {
-    state = TemplateEditorState(draft: draft);
+    state = TemplateEditorState(
+      draft: draft,
+      validationErrors: TemplateValidation.validate(draft).errors,
+    );
   }
 
   @override
@@ -176,6 +180,53 @@ Future<void> _scrollUntilVisible(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  testWidgets('validation navigates straight to the affected exercise', (
+    tester,
+  ) async {
+    final original = _buildLinearTemplate();
+    final day = original.workouts.single;
+    final exercise = day.exercises.single;
+    final invalid = original.copyWith(
+      phases: [
+        original.phases.single.copyWith(
+          workouts: [
+            day.copyWith(
+              exercises: [
+                exercise.copyWith(
+                  stages: [
+                    exercise.stages.single.copyWith(
+                      sets: [
+                        const SetDefinition(targetReps: 0, intensity: .75),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+    await _pumpScreen(tester, draft: invalid);
+    final issue = find.byKey(const ValueKey('plan-validation-0'));
+    await tester.ensureVisible(issue);
+    await tester.tap(issue);
+    await tester.pumpAndSettle();
+    expect(find.text('Exercise Name'), findsOneWidget);
+    expect(find.byKey(const ValueKey('edit-day-workout-a')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('empty plan shows add day without an index exception', (
+    tester,
+  ) async {
+    await _pumpScreen(
+      tester,
+      draft: _buildLinearTemplate().copyWith(phases: []),
+    );
+    expect(find.text('Add Workout'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'plan editor keeps linear templates in the reusable workout flow',
     (WidgetTester tester) async {
@@ -184,8 +235,11 @@ void main() {
 
       expect(
         find.text('Linear plans are edited as reusable workout structures.'),
-        findsOneWidget,
+        findsNothing,
       );
+      expect(find.text('Exercise Name'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('plan-editor-settings')));
+      await tester.pumpAndSettle();
       expect(find.text('Schedule Mode'), findsWidgets);
       expect(find.text('Week/Day Slot'), findsNothing);
       expect(find.textContaining('W1D1'), findsNothing);
@@ -202,6 +256,7 @@ void main() {
         ),
       );
 
+      await _openEditorDay(tester);
       await _scrollUntilVisible(
         tester,
         find.byKey(const ValueKey('workout-0-move-up')),
@@ -216,6 +271,7 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       }
 
+      await _openEditorExercise(tester);
       await _scrollUntilVisible(tester, find.text('Exercise Name'));
       expect(find.text('Exercise Name'), findsOneWidget);
       expect(find.text('动作名称'), findsNothing);
@@ -231,8 +287,13 @@ void main() {
 
       await _scrollUntilVisible(tester, find.text('Equipment'));
       expect(find.text('Equipment'), findsOneWidget);
-      expect(find.text('TM Mapping'), findsOneWidget);
+      expect(find.text('TM Mapping'), findsNothing);
 
+      expect(find.text('Target RPE'), findsNothing);
+      final setDetails = find.byKey(const ValueKey('set-details-0-0-0-0'));
+      await _scrollUntilVisible(tester, setDetails);
+      await tester.tap(setDetails);
+      await tester.pumpAndSettle();
       await _scrollUntilVisible(tester, find.text('Target RPE'));
       expect(find.text('Target RPE'), findsOneWidget);
       for (final label in const [
@@ -245,6 +306,7 @@ void main() {
         expect(find.bySemanticsLabel(label), findsOneWidget);
       }
 
+      await _openProgression(tester);
       await _scrollUntilVisible(tester, find.text('Action'));
       expect(find.text('Action'), findsOneWidget);
       expect(find.text('Add Weight'), findsOneWidget);
@@ -253,6 +315,27 @@ void main() {
       expect(find.text('On Success'), findsOneWidget);
       expect(find.text('On Failure'), findsOneWidget);
 
+      final advanced = find.byKey(const ValueKey('exercise-advanced-0-0'));
+      await _scrollUntilVisible(tester, advanced);
+      await tester.tap(advanced);
+      await tester.pumpAndSettle();
+      await _scrollUntilVisible(tester, find.text('TM Mapping'));
+      expect(find.text('TM Mapping'), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('dashboard-header-back')),
+        -400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const ValueKey('dashboard-header-back')));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('dashboard-header-back')),
+        -400,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.byKey(const ValueKey('dashboard-header-back')));
+      await tester.pumpAndSettle();
       await _scrollUntilVisible(tester, find.text('Add Workout'));
       expect(find.text('Add Workout'), findsOneWidget);
       semantics.dispose();
@@ -287,10 +370,7 @@ void main() {
     final semantics = tester.ensureSemantics();
     await _pumpScreen(tester, draft: _buildPeriodizedTemplate());
 
-    expect(
-      find.text('Edit periodized plans by week/day slot.'),
-      findsOneWidget,
-    );
+    expect(find.text('Edit periodized plans by week/day slot.'), findsNothing);
     expect(find.text('On Success'), findsNothing);
     expect(find.text('On Failure'), findsNothing);
 
@@ -334,6 +414,9 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     await _pumpScreen(tester, draft: _buildLinearTemplate());
+    await _openEditorDay(tester);
+    await _openEditorExercise(tester);
+    await _openProgression(tester);
     await _scrollUntilVisible(tester, find.text('Action'));
 
     expect(
@@ -353,7 +436,9 @@ void main() {
       locale: AppLocale.zh,
     );
 
-    expect(find.text('线性计划按可复用训练日整体编辑。'), findsOneWidget);
+    expect(find.text('线性计划按可复用训练日整体编辑。'), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('plan-editor-settings')));
+    await tester.pumpAndSettle();
     expect(find.text('模板'), findsWidgets);
     expect(find.text('描述'), findsOneWidget);
     expect(
@@ -366,9 +451,10 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, '计划名称'), '');
     await tester.pump();
     expect(find.text('校验问题'), findsWidgets);
-    expect(find.text('• 计划名称不能为空。'), findsOneWidget);
+    expect(find.text('计划名称不能为空。'), findsOneWidget);
     expect(find.text('Template name is required.'), findsNothing);
 
+    await _openEditorDay(tester);
     await _scrollUntilVisible(
       tester,
       find.byKey(const ValueKey('workout-0-move-up')),
@@ -378,6 +464,7 @@ void main() {
       expect(find.bySemanticsLabel(label), findsOneWidget);
     }
 
+    await _openEditorExercise(tester);
     await _scrollUntilVisible(tester, find.text('动作名称'));
     expect(find.text('动作名称'), findsOneWidget);
     expect(find.text('Exercise Name'), findsNothing);
@@ -388,19 +475,52 @@ void main() {
 
     await _scrollUntilVisible(tester, find.text('器械类型'));
     expect(find.text('器械类型'), findsOneWidget);
-    expect(find.text('训练最大值映射'), findsOneWidget);
+    expect(find.text('训练最大值映射'), findsNothing);
     expect(find.text('Equipment'), findsNothing);
     expect(find.text('TM Mapping'), findsNothing);
 
+    expect(find.text('目标 RPE'), findsNothing);
+    final setDetails = find.byKey(const ValueKey('set-details-0-0-0-0'));
+    await _scrollUntilVisible(tester, setDetails);
+    await tester.tap(setDetails);
+    await tester.pumpAndSettle();
     await _scrollUntilVisible(tester, find.text('目标 RPE'));
     expect(find.text('目标 RPE'), findsOneWidget);
     expect(find.text('Target RPE'), findsNothing);
 
+    await _openProgression(tester);
     await _scrollUntilVisible(tester, find.text('操作'));
     expect(find.text('操作'), findsOneWidget);
     expect(find.text('增加重量'), findsOneWidget);
     expect(find.text('Action'), findsNothing);
     expect(find.text('Add Weight'), findsNothing);
+    final advanced = find.byKey(const ValueKey('exercise-advanced-0-0'));
+    await _scrollUntilVisible(tester, advanced);
+    await tester.tap(advanced);
+    await tester.pumpAndSettle();
+    await _scrollUntilVisible(tester, find.text('训练最大值映射'));
+    expect(find.text('训练最大值映射'), findsOneWidget);
     semantics.dispose();
   });
+}
+
+Future<void> _openEditorDay(WidgetTester tester) async {
+  final tile = find.byKey(const ValueKey('edit-day-workout-a'));
+  await _scrollUntilVisible(tester, tile);
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openEditorExercise(WidgetTester tester) async {
+  final tile = find.byKey(const ValueKey('edit-exercise-exercise-1'));
+  await _scrollUntilVisible(tester, tile);
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _openProgression(WidgetTester tester) async {
+  final tile = find.byKey(const ValueKey('stage-0-progression'));
+  await _scrollUntilVisible(tester, tile);
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
 }

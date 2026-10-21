@@ -59,11 +59,7 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                 topPadding: topPadding,
                 bottomPadding: bottomPadding,
                 children: [
-                  DashboardScreenHeader(
-                    eyebrow: strings.composition,
-                    title: strings.bodyMetrics,
-                    subtitle: strings.bodyMetricsSubtitle,
-                  ),
+                  DashboardScreenHeader(title: strings.bodyMetrics),
                   SizedBox(height: majorGap),
                   _buildHeroCard(
                     context,
@@ -151,7 +147,9 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
                   child: Text(
                     photos.length >= 2
                         ? strings.photoComparison
-                        : strings.noProgressPhotos,
+                        : photos.isEmpty
+                        ? (strings.isChinese ? '暂无照片' : 'No photos yet')
+                        : (strings.isChinese ? '1 张照片' : '1 photo'),
                     style: theme.uiStyle(12, theme.fgDim),
                   ),
                 ),
@@ -259,9 +257,6 @@ class _BodyMetricsScreenStateful extends ConsumerState<BodyMetricsScreen> {
       title: screenState == _BodyMetricsScreenState.empty
           ? strings.recordFirstCheckIn
           : strings.noWeightTrendYet,
-      body: screenState == _BodyMetricsScreenState.empty
-          ? strings.bodyMetricsHeroEmptyBody
-          : strings.bodyMetricsHeroPartialBody,
       actionLabel: screenState == _BodyMetricsScreenState.empty
           ? strings.addFirstMeasurement
           : strings.addCompleteMeasurement,
@@ -808,11 +803,7 @@ class _BodyMetricsLoadState extends StatelessWidget {
       maxContentWidth: 640,
       topPadding: topPadding,
       children: [
-        DashboardScreenHeader(
-          eyebrow: strings.composition,
-          title: strings.bodyMetrics,
-          subtitle: strings.bodyMetricsSubtitle,
-        ),
+        DashboardScreenHeader(title: strings.bodyMetrics),
         const SizedBox(height: 28),
         DashboardSurfaceCard(
           radius: 26,
@@ -897,14 +888,12 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
   const _BodyMetricsHeroEmptyState({
     required this.theme,
     required this.title,
-    required this.body,
     required this.actionLabel,
     required this.onPressed,
   });
 
   final FittinTheme theme;
   final String title;
-  final String body;
   final String actionLabel;
   final VoidCallback onPressed;
 
@@ -939,13 +928,6 @@ class _BodyMetricsHeroEmptyState extends StatelessWidget {
                   style: theme
                       .uiStyle(16, theme.fg)
                       .copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  body,
-                  style: theme.uiStyle(12, theme.fgDim).copyWith(height: 1.4),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 FittinBtn(

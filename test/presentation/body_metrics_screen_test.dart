@@ -8,6 +8,7 @@ import 'package:fittin_v2/src/application/app_locale_provider.dart';
 import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/progress_repository.dart';
 import 'package:fittin_v2/src/domain/models/body_metric.dart';
+import 'package:fittin_v2/src/domain/models/progress_photo.dart';
 import 'package:fittin_v2/src/presentation/screens/body_metrics_screen.dart';
 import 'package:fittin_v2/src/presentation/widgets/charts/interactive_line_chart.dart';
 import 'package:fittin_v2/src/presentation/widgets/fittin_primitives.dart';
@@ -43,6 +44,34 @@ void main() {
     expect(tester.getSize(hero).height, lessThan(190));
     expect(find.text('Add first measurement'), findsOneWidget);
     expect(find.text('Add measurement'), findsNothing);
+    expect(find.text('No photos yet'), findsOneWidget);
+    expect(find.textContaining('Start with weight'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('one photo is counted accurately on a narrow body page', (
+    tester,
+  ) async {
+    _setViewport(tester, const Size(320, 568));
+    final repository = InMemoryProgressRepository();
+    await repository.saveProgressPhoto(
+      ProgressPhoto(photoId: 'one', timestamp: DateTime(2026), filePath: ''),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: BodyMetricsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('1 photo'), findsOneWidget);
+    expect(find.text('No photos yet'), findsNothing);
+    expect(find.textContaining('Add your first photo'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

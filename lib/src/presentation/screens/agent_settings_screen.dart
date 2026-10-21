@@ -96,7 +96,6 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
       bottomPadding: 40,
       children: [
         DashboardScreenHeader(
-          eyebrow: strings.agentSection,
           title: strings.agentSettings,
           subtitle: strings.agentSettingsSubtitle,
           showBackButton: true,

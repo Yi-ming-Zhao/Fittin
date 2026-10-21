@@ -206,7 +206,7 @@ Map<String, dynamic> _providerRequestBody(
 abstract class _HttpAgentModelTransport implements AgentModelTransport {
   _HttpAgentModelTransport({
     http.Client? client,
-    this.timeout = const Duration(minutes: 5),
+    this.timeout,
     this.firstResponseTimeout = const Duration(seconds: 45),
     this.idleTimeout = const Duration(seconds: 60),
     this.maxErrorBytes = 32 * 1024,
@@ -216,7 +216,10 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
 
   final http.Client _client;
   final bool _ownsClient;
-  final Duration timeout;
+
+  /// Optional explicit request deadline, e.g. for a connection probe. Normal
+  /// chat streams are governed by first-response/idle timeouts, not elapsed time.
+  final Duration? timeout;
   final Duration firstResponseTimeout;
   final Duration idleTimeout;
   final int maxErrorBytes;
@@ -244,6 +247,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
   }) async* {
     final token = cancellationToken ?? AgentCancellationToken();
     final watch = Stopwatch()..start();
+    bool timeRemaining() => timeout == null || watch.elapsed < timeout!;
     var authRetryUsed = false;
     for (var attempt = 0; ; attempt++) {
       var observable = false;
@@ -253,7 +257,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
           apiKey: apiKey,
           request: request,
           cancellationToken: token,
-          remaining: timeout - watch.elapsed,
+          remaining: timeout == null ? null : timeout! - watch.elapsed,
         )) {
           if (event is! AgentResponseMetadata) observable = true;
           yield event;
@@ -263,7 +267,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         if (error.code == 'relay_auth_refreshed' &&
             !observable &&
             !authRetryUsed &&
-            watch.elapsed < timeout) {
+            timeRemaining()) {
           authRetryUsed = true;
           continue;
         }
@@ -283,7 +287,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
             observable ||
             !retryable ||
             attempt >= 2 ||
-            watch.elapsed >= timeout) {
+            !timeRemaining()) {
           rethrow;
         }
         final delay =
@@ -292,7 +296,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
               milliseconds:
                   500 * (1 << attempt) + DateTime.now().millisecond % 200,
             );
-        if (delay >= timeout - watch.elapsed) rethrow;
+        if (timeout != null && delay >= timeout! - watch.elapsed) rethrow;
         await Future.any([Future<void>.delayed(delay), token.whenCancelled]);
         token.throwIfCancelled();
       }
@@ -304,7 +308,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
     required String apiKey,
     required AgentChatCompletionRequest request,
     required AgentCancellationToken cancellationToken,
-    required Duration remaining,
+    required Duration? remaining,
   }) async* {
     final token = cancellationToken;
     token.throwIfCancelled();
@@ -320,16 +324,18 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
     final abort = Completer<void>();
     var timedOut = false;
     var timeoutCode = 'request_timeout';
-    if (remaining <= Duration.zero) {
+    if (remaining != null && remaining <= Duration.zero) {
       throw const AgentTransportException(
         'The model request timed out.',
         code: 'request_timeout',
       );
     }
-    final timeoutTimer = Timer(remaining, () {
-      timedOut = true;
-      if (!abort.isCompleted) abort.complete();
-    });
+    final timeoutTimer = remaining == null
+        ? null
+        : Timer(remaining, () {
+            timedOut = true;
+            if (!abort.isCompleted) abort.complete();
+          });
     unawaited(
       token.whenCancelled.then((_) {
         if (!abort.isCompleted) abort.complete();
@@ -345,7 +351,9 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
       outgoing.headers.addAll(
         await Future.any([
           headersFor(trimmedKey).timeout(
-            remaining < firstResponseTimeout ? remaining : firstResponseTimeout,
+            remaining != null && remaining < firstResponseTimeout
+                ? remaining
+                : firstResponseTimeout,
           ),
           token.whenCancelled.then<Map<String, String>>(
             (_) => throw const AgentRequestCancelledException(),
@@ -414,8 +422,18 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         },
       );
       await for (final event in parseAgentChatCompletionResponse(
-        _limitResponseBytes(body, maxResponseBytes),
+        _limitResponseBytes(
+          body,
+          maxResponseBytes,
+          sse:
+              response.headers['content-type']?.toLowerCase().contains(
+                'text/event-stream',
+              ) ==
+              true,
+        ),
         contentType: response.headers['content-type'],
+        maxJsonBytes: maxResponseBytes,
+        maxSseEventCharacters: maxResponseBytes,
       )) {
         token.throwIfCancelled();
         if (event is AgentModelFailure) {
@@ -471,7 +489,7 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
         _safeMessage(error.toString(), secrets: [trimmedKey]),
       );
     } finally {
-      timeoutTimer.cancel();
+      timeoutTimer?.cancel();
     }
   }
 
@@ -483,16 +501,26 @@ abstract class _HttpAgentModelTransport implements AgentModelTransport {
 
 Stream<List<int>> _limitResponseBytes(
   Stream<List<int>> source,
-  int limit,
-) async* {
+  int limit, {
+  bool sse = false,
+}) async* {
   var received = 0;
+  var lineHasContent = false;
   await for (final chunk in source) {
-    received += chunk.length;
-    if (received > limit) {
-      throw const AgentProtocolException(
-        'The model response exceeded the safety limit.',
-        code: 'provider_response_too_large',
-      );
+    for (final byte in chunk) {
+      received++;
+      if (received > limit) {
+        throw const AgentProtocolException(
+          'A model response frame exceeded the safety limit.',
+          code: 'provider_response_too_large',
+        );
+      }
+      if (sse && byte == 10) {
+        if (!lineHasContent) received = 0;
+        lineHasContent = false;
+      } else if (byte != 13) {
+        lineHasContent = true;
+      }
     }
     yield chunk;
   }
