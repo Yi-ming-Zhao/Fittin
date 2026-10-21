@@ -120,7 +120,98 @@ void main() {
     expect(record.activityTypeId, 'cardio:running');
     expect(record.metric(CardioMetricKey.durationSeconds), 600);
     expect(record.metric(CardioMetricKey.distanceMeters), 5000);
+    expect(record.elapsedSeconds, isNull);
     expect(record.startedAt.toUtc(), DateTime.utc(1990, 1, 11, 13, 46, 40));
+  });
+
+  test('FIT retains elapsed time separately through preview and JSON', () {
+    final record = service
+        .parse(
+          fileName: 'paused.fit',
+          bytes: _minimalFitSession(elapsedMilliseconds: 900000),
+          existingRecords: const [],
+        )
+        .records
+        .single;
+
+    expect(record.elapsedSeconds, 900);
+    expect(record.metric(CardioMetricKey.durationSeconds), 600);
+    expect(record.metric(CardioMetricKey.paceSecondsPerKm), 120);
+    final restored = CardioRecord.fromJson(record.toJson());
+    expect(restored.elapsedSeconds, 900);
+    expect(restored.metric(CardioMetricKey.durationSeconds), 600);
+    restored.validate(BuiltInCardioActivities.byId(restored.activityTypeId));
+  });
+
+  test('FIT omits impossible elapsed time without changing timer or pace', () {
+    final preview = service.parse(
+      fileName: 'bad-elapsed.fit',
+      bytes: _minimalFitSession(elapsedMilliseconds: 500000),
+      existingRecords: const [],
+    );
+    expect(preview.records.single.elapsedSeconds, isNull);
+    expect(preview.records.single.metric(CardioMetricKey.durationSeconds), 600);
+    expect(
+      preview.records.single.metric(CardioMetricKey.paceSecondsPerKm),
+      120,
+    );
+    expect(preview.warnings.single, contains('shorter than timer'));
+  });
+
+  test('TCX weights complete lap summaries without mixing track samples', () {
+    final preview = service.parse(
+      fileName: 'two-laps.tcx',
+      bytes: _tcxLapSummaries(),
+      existingRecords: const [],
+    );
+    final record = preview.records.single;
+    expect(record.metric(CardioMetricKey.durationSeconds), 660);
+    expect(
+      record.metric(CardioMetricKey.averageHeartRateBpm),
+      closeTo(174.54545, .0001),
+    );
+    expect(record.metric(CardioMetricKey.maxHeartRateBpm), 195);
+    expect(
+      record.metric(CardioMetricKey.cadencePerMinute),
+      closeTo(98.18181, .0001),
+    );
+    expect(record.elapsedSeconds, isNull);
+    expect(preview.warnings, isEmpty);
+    expect(preview.laps[record.id], hasLength(2));
+  });
+
+  test(
+    'TCX partial lap values never masquerade as whole activity summaries',
+    () {
+      final preview = service.parse(
+        fileName: 'partial-laps.tcx',
+        bytes: _tcxLapSummaries(completeSecond: false),
+        existingRecords: const [],
+      );
+      final record = preview.records.single;
+      expect(record.metric(CardioMetricKey.averageHeartRateBpm), isNull);
+      expect(record.metric(CardioMetricKey.maxHeartRateBpm), isNull);
+      expect(record.metric(CardioMetricKey.cadencePerMinute), isNull);
+      expect(record.metric(CardioMetricKey.durationSeconds), 660);
+      expect(preview.warnings, hasLength(3));
+      expect(preview.warnings.every((w) => w.contains('partial laps')), isTrue);
+    },
+  );
+
+  test('TCX invalid heart rate omits only the affected summary', () {
+    final preview = service.parse(
+      fileName: 'invalid-heart-rate.tcx',
+      bytes: _tcxLapSummaries(secondAverage: 0),
+      existingRecords: const [],
+    );
+    final record = preview.records.single;
+    expect(record.metric(CardioMetricKey.averageHeartRateBpm), isNull);
+    expect(record.metric(CardioMetricKey.maxHeartRateBpm), 195);
+    expect(
+      record.metric(CardioMetricKey.cadencePerMinute),
+      closeTo(98.18181, .0001),
+    );
+    expect(preview.warnings, hasLength(1));
   });
 
   test(
@@ -221,11 +312,11 @@ bad,跑步,wrong,5.0,152'''),
   });
 }
 
-Uint8List _minimalFitSession() {
+Uint8List _minimalFitSession({int? elapsedMilliseconds}) {
   const headerSize = 14;
-  const definitionSize = 18;
-  const messageSize = 14;
-  const dataSize = definitionSize + messageSize;
+  final definitionSize = 18 + (elapsedMilliseconds == null ? 0 : 3);
+  final messageSize = 14 + (elapsedMilliseconds == null ? 0 : 4);
+  final dataSize = definitionSize + messageSize;
   final bytes = Uint8List(headerSize + dataSize);
   final data = ByteData.sublistView(bytes);
   bytes[0] = headerSize;
@@ -240,11 +331,12 @@ Uint8List _minimalFitSession() {
   bytes[offset++] = 0;
   data.setUint16(offset, 18, Endian.little);
   offset += 2;
-  bytes[offset++] = 4;
-  for (final field in const [
+  bytes[offset++] = elapsedMilliseconds == null ? 4 : 5;
+  for (final field in [
     (2, 4, 0x86),
     (8, 4, 0x86),
     (9, 4, 0x86),
+    if (elapsedMilliseconds != null) (7, 4, 0x86),
     (5, 1, 0x02),
   ]) {
     bytes[offset++] = field.$1;
@@ -259,9 +351,37 @@ Uint8List _minimalFitSession() {
   offset += 4;
   data.setUint32(offset, 500000, Endian.little);
   offset += 4;
+  if (elapsedMilliseconds != null) {
+    data.setUint32(offset, elapsedMilliseconds, Endian.little);
+    offset += 4;
+  }
   bytes[offset] = 1;
   return bytes;
 }
+
+Uint8List _tcxLapSummaries({
+  bool completeSecond = true,
+  int secondAverage = 180,
+}) => Uint8List.fromList(
+  utf8.encode('''
+<TrainingCenterDatabase><Activities><Activity Sport="Running">
+<Id>2026-09-04T01:00:00Z</Id>
+<Lap StartTime="2026-09-04T01:00:00Z">
+<TotalTimeSeconds>60</TotalTimeSeconds><DistanceMeters>200</DistanceMeters>
+<AverageHeartRateBpm><Value>120</Value></AverageHeartRateBpm>
+<MaximumHeartRateBpm><Value>145</Value></MaximumHeartRateBpm><Cadence>80</Cadence>
+<Track><Trackpoint><Time>2026-09-04T01:00:05Z</Time>
+<HeartRateBpm><Value>200</Value></HeartRateBpm><Cadence>200</Cadence></Trackpoint>
+<Trackpoint><Time>2026-09-04T01:00:10Z</Time>
+<HeartRateBpm><Value>200</Value></HeartRateBpm><Cadence>200</Cadence></Trackpoint></Track>
+</Lap><Lap StartTime="2026-09-04T01:01:00Z">
+<TotalTimeSeconds>600</TotalTimeSeconds><DistanceMeters>2000</DistanceMeters>
+${completeSecond ? '<AverageHeartRateBpm><Value>$secondAverage</Value></AverageHeartRateBpm><MaximumHeartRateBpm><Value>195</Value></MaximumHeartRateBpm><Cadence>100</Cadence>' : ''}
+<Track><Trackpoint><Time>2026-09-04T01:10:00Z</Time>
+<HeartRateBpm><Value>200</Value></HeartRateBpm><Cadence>200</Cadence></Trackpoint></Track>
+</Lap></Activity></Activities></TrainingCenterDatabase>
+'''),
+);
 
 Uint8List _fitWithRoute() {
   final body = BytesBuilder();

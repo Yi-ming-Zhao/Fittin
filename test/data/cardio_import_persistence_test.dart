@@ -14,6 +14,87 @@ import '../support/isar_test_helper.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final withRoute in [false, true]) {
+    test('FIT summary and local session preserve explicit elapsed time '
+        'with ${withRoute ? 'route' : 'laps only'}', () async {
+      final db = await openTestIsar('cardio_import_elapsed_$withRoute');
+      addTearDown(() async {
+        await db.isar.close(deleteFromDisk: true);
+        await db.directory.delete(recursive: true);
+      });
+      final repository = DatabaseRepository(db.isar);
+      final container = ProviderContainer(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(repository),
+          currentUserIdProvider.overrideWithValue('alice'),
+        ],
+      );
+      addTearDown(container.dispose);
+      final record = CardioRecord(
+        id: 'cardio-record:elapsed-import',
+        activityTypeId: 'cardio:running',
+        activityName: 'Running',
+        startedAt: DateTime.utc(2026),
+        metrics: const {
+          CardioMetricKey.durationSeconds: 600,
+          CardioMetricKey.distanceMeters: 1000,
+        },
+        elapsedSeconds: 900,
+        source: 'fit',
+      );
+      await container
+          .read(userContentServiceProvider)
+          .saveCardioImport(
+            CardioImportPreview(
+              sourceName: 'paused.fit',
+              sourceFingerprint: 'b' * 64,
+              records: [record],
+              warnings: [],
+              duplicateRecordIds: {},
+              routes: {
+                if (withRoute)
+                  record.id: [
+                    for (final seconds in [0, 700])
+                      RoutePoint(
+                        latitude: 30 + seconds * .000001,
+                        longitude: 120,
+                        timestamp: record.startedAt.add(
+                          Duration(seconds: seconds),
+                        ),
+                      ),
+                  ],
+              },
+              laps: {
+                record.id: const [
+                  CardioLap(
+                    distanceMeters: 1000,
+                    activeMilliseconds: 600000,
+                    endDistanceMeters: 1000,
+                    automatic: true,
+                  ),
+                ],
+              },
+            ),
+          );
+      final summary = CardioRecord.fromJson(
+        (await repository.fetchUserContents(
+          UserContentKind.cardioRecord,
+          ownerUserId: 'alice',
+        )).single.payload,
+      );
+      final session =
+          (await container
+                  .read(cardioRecordingStoreProvider)
+                  .read(record.id, ownerUserId: 'alice'))!
+              .session;
+      expect(summary.elapsedSeconds, 900);
+      expect(summary.metric(CardioMetricKey.durationSeconds), 600);
+      expect(summary.metric(CardioMetricKey.paceSecondsPerKm), 600);
+      expect(session.elapsedMilliseconds, 900000);
+      expect(session.activeMilliseconds, 600000);
+      expect(session.paceSecondsPerKm, 600);
+    });
+  }
   test(
     'import route and summary commit together; invalid route rolls everything back',
     () async {

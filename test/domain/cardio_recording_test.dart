@@ -146,6 +146,107 @@ void main() {
   });
 
   test(
+    'ten-second stationary fixes keep auto-pause active past one minute',
+    () {
+      final r = recorder(autoPause: true);
+      for (var seconds = 0; seconds <= 60; seconds += 10) {
+        r.advance(Duration(seconds: seconds));
+        r.accept(point(seconds, 0));
+      }
+      expect(r.session.autoPaused, isTrue);
+      expect(r.session.activeMilliseconds, 20000);
+      expect(r.session.distanceMeters, 0);
+      expect(r.session.segment, 0);
+      expect(r.session.pauses, hasLength(1));
+      r.advance(const Duration(seconds: 70));
+      r.accept(point(70, 10));
+      expect(r.session.autoPaused, isFalse);
+      expect(r.session.distanceMeters, 0);
+      expect(r.session.activeMilliseconds, 20000);
+      r.advance(const Duration(seconds: 75));
+      r.accept(point(75, 20));
+      expect(r.session.distanceMeters, closeTo(10, .01));
+    },
+  );
+
+  test('a real reception gap while auto-paused does not invent movement', () {
+    final r = recorder(autoPause: true);
+    for (var seconds = 0; seconds <= 30; seconds += 10) {
+      r.advance(Duration(seconds: seconds));
+      r.accept(point(seconds, 0));
+    }
+    r.advance(const Duration(seconds: 90));
+    r.accept(point(90, 200));
+    expect(r.session.autoPaused, isTrue);
+    expect(r.session.distanceMeters, 0);
+    expect(r.session.segment, 1);
+    r.advance(const Duration(seconds: 95));
+    r.accept(point(95, 210));
+    expect(r.session.autoPaused, isFalse);
+    expect(r.session.distanceMeters, 0);
+  });
+
+  test('a jump after prolonged stationary fixes never adds distance', () {
+    final r = recorder();
+    for (var seconds = 0; seconds <= 600; seconds++) {
+      r.advance(Duration(seconds: seconds));
+      r.accept(point(seconds, 0));
+    }
+    r.advance(const Duration(seconds: 601));
+    r.accept(point(601, 1000));
+    expect(r.session.distanceMeters, 0);
+    expect(r.session.laps, isEmpty);
+    expect(r.session.segment, 1);
+    expect(r.currentSpeedMps, isNull);
+    r.advance(const Duration(seconds: 602));
+    r.accept(point(602, 0));
+    expect(r.session.distanceMeters, 0);
+  });
+
+  test('current speed after a stationary period uses adjacent fixes', () {
+    final r = recorder();
+    for (var seconds = 0; seconds <= 600; seconds++) {
+      r.advance(Duration(seconds: seconds));
+      r.accept(point(seconds, 0));
+    }
+    r.advance(const Duration(seconds: 601));
+    r.accept(point(601, 4));
+    expect(r.session.distanceMeters, closeTo(4, .01));
+    expect(r.currentSpeedMps, closeTo(4, .01));
+    r.advance(const Duration(seconds: 602));
+    r.accept(point(602, 8));
+    expect(r.currentSpeedMps, closeTo(4, .01));
+  });
+
+  test(
+    'kilometre split after a stop is not backdated into stationary time',
+    () {
+      final r = recorder();
+      for (var i = 0; i <= 99; i++) {
+        r.advance(Duration(seconds: i * 5));
+        r.accept(point(i * 5, i * 10));
+      }
+      for (var seconds = 500; seconds <= 1100; seconds++) {
+        r.advance(Duration(seconds: seconds));
+        r.accept(point(seconds, 999));
+      }
+      r.advance(const Duration(seconds: 1101));
+      r.accept(point(1101, 1003));
+      expect(r.session.laps.single.activeMilliseconds, closeTo(1100250, 2));
+    },
+  );
+
+  test('split interpolation retains continuous sub-threshold walking time', () {
+    final r = recorder(sport: CardioSport.walking);
+    for (var seconds = 0; seconds <= 1004; seconds++) {
+      r.advance(Duration(seconds: seconds));
+      r.accept(point(seconds, seconds.toDouble()));
+    }
+    expect(r.session.laps.single.activeMilliseconds, closeTo(1000000, 2));
+    expect(r.currentSpeedMps, closeTo(1, .01));
+  });
+
+  test(
     'current speed uses measured movement and clears on gaps and pauses',
     () {
       final r = recorder();

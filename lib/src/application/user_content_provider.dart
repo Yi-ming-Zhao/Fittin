@@ -264,12 +264,16 @@ class UserContentService {
         await saveSummary();
         for (final record in withRoutes) {
           final route = preview.routes[record.id] ?? const <RoutePoint>[];
-          final elapsed = route.isEmpty
-              ? record.metric(CardioMetricKey.durationSeconds)!
-              : route.last.timestamp
-                        .difference(record.startedAt)
-                        .inMilliseconds /
-                    1000;
+          // Explicit source elapsed time includes pauses and is authoritative;
+          // a route's last fix may precede the end of a paused activity.
+          final elapsed =
+              record.elapsedSeconds ??
+              (route.isEmpty
+                  ? record.metric(CardioMetricKey.durationSeconds)!
+                  : route.last.timestamp
+                            .difference(record.startedAt)
+                            .inMilliseconds /
+                        1000);
           final active = record.metric(CardioMetricKey.durationSeconds)!;
           final session = CardioRecordingSession(
             id: record.id,
