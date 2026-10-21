@@ -90,7 +90,21 @@ sudo certbot certonly \
   --domain fittin.hammerscholar.net
 ```
 
-The current certificate expires on 2026-10-10. Renew and install its replacement before that date, then run `sudo nginx -t` before reloading nginx.
+The Fittin certificate was renewed on 2026-10-21 and expires on 2027-01-19.
+Certbot now manages lineage `/etc/letsencrypt/live/fittin`; the legacy nginx
+path `/etc/letsencrypt/live/fittin.hammerscholar.net` points to it. The prior
+imported certificate is retained as `fittin.hammerscholar.net.before-20261021`.
+The Fittin-only deploy hook validates nginx and runs `nginx -s reload`; this
+host's running nginx is not managed by the inactive `nginx.service` unit.
+
+Direct ECS access to the ACME directory still timed out during this renewal.
+A temporary loopback-only CONNECT relay, restricted to the ACME host, allowed
+Certbot to reuse its existing account and perform HTTP-01 validation without
+disabling TLS verification or changing global proxy settings. That relay was
+stopped afterward. **The new renewal configuration does not prove unattended
+renewal works while ECS outbound ACME access remains unavailable**; restore
+that connectivity or arrange an authorized reachable renewal host before expiry.
+Do not renew or change certificates for other domains as part of Fittin releases.
 
 Install `deploy/nginx/fittin.hammerscholar.net.conf` in the nginx include directory, then validate and reload:
 

@@ -93,17 +93,22 @@ checked off merely because their unit tests pass.
 - Real Web inspection reproduced wheel/trackpad following while reading older
   output. UserScrollNotification handling now covers inputs without dragDetails;
   both wheel and touch follow/read/return-to-latest widget cases passed.
-- PR #14 is a draft: https://github.com/Yi-ming-Zhao/Fittin/pull/14 . Initial
+- PR #14: https://github.com/Yi-ming-Zhao/Fittin/pull/14 . Initial
   candidate commit `a4b1c6a` passed all CI jobs in run `39610203513`: Flutter,
-  Go, Windows, Linux, macOS and unsigned iOS. Later presentation refinements
-  remain a separate candidate revision and require its matching CI result.
+  Go, Windows, Linux, macOS and unsigned iOS. Final source candidate
+  `63cbc35c7f9ca215734995dd7d78be0c25a3f390` also passed all six jobs in
+  `39612502104`. Cancelled duplicate push jobs are superseded by the successful
+  PR run; no failed check was bypassed. Subsequent pre-merge edits are docs only.
 - The latest presentation refinement passed 53 relevant widget tests, plus the
   long-plan disclosure case, four full-title responsive cases and three offline
   font tests. See `docs/visual-review-v1.5.0.md` for coverage boundaries.
-- Public preflight found an expired Fittin TLS certificate. Normal HTTPS
-  validation correctly failed. A separate certificate renewal is in progress;
-  no certificate verification bypass is used and no application deployment has
-  occurred. The 241 production repository is clean at `43acba2` on main.
+- Public preflight found an expired Fittin TLS certificate. It was renewed using
+  the existing Certbot account and HTTP-01, activated only after nginx validation,
+  and publicly verified with normal TLS checks: `/api/readyz` returned ready.
+  Expiry is now 2027-01-19; the old imported certificate remains backed up. The
+  temporary ACME-only loopback relay was stopped. No application deployment has
+  occurred. ECS outbound ACME remains a future unattended-renewal limitation.
+  The 241 production repository is clean at `43acba2` on main.
 
 - Private-route Go tests: four passed in the isolated 241 source checkout;
   authentication, owner isolation, staging visibility, idempotent commit, stale

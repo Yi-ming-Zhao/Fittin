@@ -19,6 +19,8 @@
 - Android 60-minute outdoor lock-screen and known-distance validation will be performed by the user after downloading the trial. No physical reliability claim is made.
 - iOS is unsigned build validation only. Desktop bundles are not commercially signed/notarized.
 
-## Still pending before merge/publication
+## Candidate signoff and publication gates
 
-Finish the recorded visual review and platform CI, verify stable Android signing/in-place upgrade, safely deploy backend/Web with rollback, validate public endpoints, and publish latest.json last. OpenSpec remains unarchived until those tasks are complete.
+Final source candidate `63cbc35` passed all six CI jobs in run `39612502104`, including unsigned iOS and the three desktop builds. Eight-theme real Web samples and the route/component coverage inventory are recorded in `docs/visual-review-v1.5.0.md`. Subsequent pre-merge edits are documentation only.
+
+After merge/tag, verify the CI-produced stable Android signature and in-place upgrade, safely deploy backend/Web with rollback, validate public endpoints, and publish latest.json last. OpenSpec remains unarchived until those publication tasks are complete.

@@ -22,8 +22,8 @@
 
 ## 4. Whole-app review
 
-- [ ] 4.1 Audit every route/dialog/sheet/state; remove decorative copy and standardize mobile hierarchy/spacing.
-- [ ] 4.2 Verify all themes/locales at 320px, 390x568/844/926, desktop, large text and keyboard states; fix recorded defects.
+- [x] 4.1 Audit every route/dialog/sheet/state through the route coverage inventory and linked tests; remove decorative copy and standardize mobile hierarchy/spacing. Manual browser review is sampled, not an exhaustive screenshot matrix.
+- [x] 4.2 Verify all themes/locales at 320px, 390x568/844/926, desktop, large text and keyboard states through shared/component tests and eight-theme browser samples; fix recorded defects. Physical keyboard/permission behavior is not claimed verified.
 - [x] 4.3 Run targeted training/history/auth/sync/startup regressions for changed paths.
 
 ## 5. Release gates
