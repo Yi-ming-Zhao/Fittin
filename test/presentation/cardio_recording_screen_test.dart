@@ -302,6 +302,13 @@ void main() {
       expect(tester.takeException(), isNull);
       final export = find.byKey(const ValueKey('cardio-export-route'));
       await tester.scrollUntilVisible(export, 300);
+      await tester.pumpAndSettle();
+      await Scrollable.ensureVisible(
+        tester.element(export),
+        alignment: 0.5,
+        duration: Duration.zero,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(export);
       await tester.pumpAndSettle();
       expect(find.text('Export precise route?'), findsOneWidget);

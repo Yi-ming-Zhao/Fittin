@@ -10,6 +10,7 @@ import '../../domain/models/cardio.dart';
 import '../../domain/models/cardio_recording.dart';
 import '../localization/app_strings.dart';
 import '../widgets/cardio_route_preview.dart';
+import '../widgets/cardio_split_list.dart';
 import '../widgets/dashboard_primitives.dart';
 
 /// Local routes stay manageable after their synced summary was deleted.
@@ -92,6 +93,9 @@ class LocalCardioRoutesScreen extends ConsumerWidget {
                           activityTypeId: entry.session.activityTypeId,
                           activityName: entry.session.activityName,
                           startedAt: entry.session.startedAt,
+                          source: 'local',
+                          elapsedSeconds:
+                              entry.session.elapsedMilliseconds / 1000,
                           metrics: {
                             CardioMetricKey.durationSeconds:
                                 entry.session.activeMilliseconds / 1000,
@@ -345,6 +349,11 @@ class _CardioRouteReviewState extends ConsumerState<CardioRouteReviewScreen> {
     final session = saved?.session;
     final duration = record.metric(CardioMetricKey.durationSeconds);
     final distance = record.metric(CardioMetricKey.distanceMeters);
+    final cycling =
+        session?.sport == CardioSport.cycling ||
+        record.activityTypeId == 'cardio:cycling';
+    final pace = record.metric(CardioMetricKey.paceSecondsPerKm);
+    final speed = record.metric(CardioMetricKey.averageSpeedMps);
     return DashboardPageScaffold(
       layout: DashboardPageLayout.detail,
       children: [
@@ -372,8 +381,8 @@ class _CardioRouteReviewState extends ConsumerState<CardioRouteReviewScreen> {
             if (duration != null)
               _metric(
                 context,
-                zh ? '运动时长' : 'Duration',
-                '${(duration / 60).toStringAsFixed(1)} min',
+                zh ? '运动时长' : 'Timer duration',
+                cardioDurationLabel(duration),
               ),
             if (distance != null)
               _metric(
@@ -381,7 +390,64 @@ class _CardioRouteReviewState extends ConsumerState<CardioRouteReviewScreen> {
                 zh ? '距离' : 'Distance',
                 '${(distance / 1000).toStringAsFixed(2)} km',
               ),
+            if (cycling ? speed != null : pace != null)
+              _metric(
+                context,
+                cycling
+                    ? (zh ? '平均速度 · km/h' : 'Avg speed · km/h')
+                    : (zh ? '平均配速 · /km' : 'Avg pace · /km'),
+                cycling
+                    ? (speed! * 3.6).toStringAsFixed(1)
+                    : cardioDurationLabel(pace!),
+              ),
+            if (record.elapsedSeconds != null)
+              _metric(
+                context,
+                zh ? '总时长' : 'Elapsed time',
+                cardioDurationLabel(record.elapsedSeconds!),
+              ),
+            for (final field in [
+              (
+                CardioMetricKey.averageHeartRateBpm,
+                zh ? '平均心率 · bpm' : 'Avg HR · bpm',
+              ),
+              (
+                CardioMetricKey.maxHeartRateBpm,
+                zh ? '最高心率 · bpm' : 'Max HR · bpm',
+              ),
+              (
+                CardioMetricKey.cadencePerMinute,
+                zh ? '步频 / 踏频 · /min' : 'Cadence · /min',
+              ),
+              (
+                CardioMetricKey.elevationGainMeters,
+                zh ? '累计爬升 · m' : 'Ascent · m',
+              ),
+              (
+                CardioMetricKey.averagePowerWatts,
+                zh ? '平均功率 · W' : 'Avg power · W',
+              ),
+            ])
+              if (record.metric(field.$1) != null &&
+                  record.metric(field.$1)! > 0)
+                _metric(
+                  context,
+                  field.$2,
+                  record.metric(field.$1)!.toStringAsFixed(0),
+                ),
           ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${zh ? '来源' : 'Source'} · ${switch (record.source) {
+            'manual' => zh ? '手动录入' : 'Manual entry',
+            'device' => zh ? '本机定位记录' : 'Device GPS recording',
+            'timer' => zh ? '本机计时记录' : 'Device timer recording',
+            'local' => zh ? '本机轨迹档案' : 'Local route archive',
+            'gpx' || 'fit' || 'tcx' || 'csv' => '${record.source.toUpperCase()} ${zh ? '导入' : 'import'}',
+            _ => record.source,
+          }}',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 24),
         if (local.isLoading) const LinearProgressIndicator(),
@@ -393,17 +459,7 @@ class _CardioRouteReviewState extends ConsumerState<CardioRouteReviewScreen> {
             chinese: zh,
           ),
           const SizedBox(height: 16),
-          for (var i = 0; i < session.laps.length; i++)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text('${zh ? '分段' : 'Lap'} ${i + 1}'),
-              subtitle: Text(
-                '${(session.laps[i].distanceMeters / 1000).toStringAsFixed(2)} km',
-              ),
-              trailing: Text(
-                '${(session.laps[i].activeMilliseconds / 60000).toStringAsFixed(1)} min',
-              ),
-            ),
+          CardioSplitList(laps: session.laps, chinese: zh, cycling: cycling),
           const SizedBox(height: 16),
           if (saved!.chunkCount > 0)
             OutlinedButton.icon(

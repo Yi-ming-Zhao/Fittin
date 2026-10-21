@@ -95,6 +95,7 @@ class CardioImportService {
         note: source.note,
         source: extension,
         sourceFingerprint: fingerprint,
+        elapsedSeconds: source.elapsedSeconds,
       );
       records.add(record);
       if (sourceWasAlreadyImported ||
@@ -225,19 +226,32 @@ class CardioImportService {
       if (distance > 0) {
         metrics[CardioMetricKey.distanceMeters] = distance;
       }
-      final averageHeartRate = _firstNumber(activity, 'AverageHeartRateBpm');
-      final maxHeartRate = _firstNumber(activity, 'MaximumHeartRateBpm');
-      final cadence = _averageDescendantNumbers(activity, 'Cadence');
+      // Lap summaries and sampled track points are different measurement
+      // populations. Never combine them or present a partial lap as a whole
+      // activity. Incomplete summaries stay absent, even when samples exist.
+      final lapMetrics = {
+        CardioMetricKey.averageHeartRateBpm: 'AverageHeartRateBpm',
+        CardioMetricKey.maxHeartRateBpm: 'MaximumHeartRateBpm',
+        CardioMetricKey.cadencePerMinute: 'Cadence',
+      };
+      for (final entry in lapMetrics.entries) {
+        metrics.remove(entry.key);
+        final summary = _completeTcxLapMetric(activity, entry.value, entry.key);
+        if (summary != null) {
+          metrics[entry.key] = summary;
+        } else if (_firstText(activity, entry.value) != null ||
+            points.any(
+              (point) => entry.key == CardioMetricKey.cadencePerMinute
+                  ? point.cadence != null
+                  : point.heartRate != null,
+            )) {
+          warnings.add(
+            'TCX ${entry.value} omitted: complete valid lap summaries are '
+            'unavailable; partial laps and track samples are not activity totals.',
+          );
+        }
+      }
       final calories = _sumLapSummary(activity, 'Calories');
-      if (averageHeartRate != null) {
-        metrics[CardioMetricKey.averageHeartRateBpm] = averageHeartRate;
-      }
-      if (maxHeartRate != null) {
-        metrics[CardioMetricKey.maxHeartRateBpm] = maxHeartRate;
-      }
-      if (cadence != null) {
-        metrics[CardioMetricKey.cadencePerMinute] = cadence;
-      }
       if (calories > 0) metrics[CardioMetricKey.caloriesKcal] = calories;
       if ((metrics[CardioMetricKey.durationSeconds] ?? 0) <= 0) {
         warnings.add('Skipped a TCX activity with zero duration.');
@@ -310,7 +324,9 @@ class CardioImportService {
       final routes = <List<RoutePoint>>[];
       final laps = <List<CardioLap>>[];
       for (final session in sessions) {
-        final duration = session.number(8) ?? session.number(7);
+        final timer = session.number(8);
+        final elapsed = session.number(7);
+        final duration = timer ?? elapsed;
         final startedAt = session.fitDate(2) ?? session.fitDate(253);
         if (duration == null || duration <= 0 || startedAt == null) {
           warnings.add('Skipped an incomplete FIT session.');
@@ -344,7 +360,28 @@ class CardioImportService {
         _put(metrics, CardioMetricKey.maxHeartRateBpm, session.number(17));
         _put(metrics, CardioMetricKey.cadencePerMinute, session.number(18));
         _put(metrics, CardioMetricKey.elevationGainMeters, session.number(22));
-        records.add(_importRecord(activity, startedAt, metrics));
+        if (timer == null) {
+          warnings.add(
+            'FIT timer duration is unavailable; duration uses the reported '
+            'elapsed time and may include pauses.',
+          );
+        }
+        final validElapsed =
+            elapsed != null && elapsed.isFinite && elapsed >= duration;
+        if (elapsed != null && !validElapsed) {
+          warnings.add(
+            'FIT elapsed time is invalid or shorter than timer duration; '
+            'elapsed time was omitted.',
+          );
+        }
+        records.add(
+          _importRecord(
+            activity,
+            startedAt,
+            metrics,
+            elapsedSeconds: validElapsed ? elapsed / 1000 : null,
+          ),
+        );
         final endedAt =
             session.fitDate(253) ??
             startedAt.add(
@@ -765,8 +802,9 @@ CardioRecord? _csvRecord(Map<String, String> row, CardioCsvMapping? mapping) {
 CardioRecord _importRecord(
   CardioActivityDefinition activity,
   DateTime startedAt,
-  Map<CardioMetricKey, double> sourceMetrics,
-) {
+  Map<CardioMetricKey, double> sourceMetrics, {
+  double? elapsedSeconds,
+}) {
   if (!sourceMetrics.keys.toSet().containsAll(activity.requiredMetrics)) {
     activity = BuiltInCardioActivities.byId('cardio:generic');
   }
@@ -788,6 +826,7 @@ CardioRecord _importRecord(
     startedAt: startedAt.toLocal(),
     metrics: metrics,
     source: 'import',
+    elapsedSeconds: elapsedSeconds,
   );
 }
 
@@ -865,14 +904,45 @@ double _sumLapSummary(XmlElement activity, String localName) {
   return values.fold(0, (sum, value) => sum + value);
 }
 
-double? _averageDescendantNumbers(XmlElement element, String localName) {
-  final values = element.descendants
-      .where((node) => node is XmlElement && node.name.local == localName)
-      .cast<XmlElement>()
-      .map((node) => double.tryParse(node.innerText.trim()))
-      .whereType<double>()
-      .toList();
-  return values.isEmpty ? null : values.reduce((a, b) => a + b) / values.length;
+double? _completeTcxLapMetric(
+  XmlElement activity,
+  String localName,
+  CardioMetricKey metric,
+) {
+  final laps = activity.childElements.where((e) => e.name.local == 'Lap');
+  var weightedSum = 0.0;
+  var totalSeconds = 0.0;
+  double? maximum;
+  for (final lap in laps) {
+    double? directNumber(String name) {
+      final element = lap.childElements
+          .where((e) => e.name.local == name)
+          .firstOrNull;
+      return element == null ? null : double.tryParse(element.innerText.trim());
+    }
+
+    final seconds = directNumber('TotalTimeSeconds');
+    final value = directNumber(localName);
+    if (seconds == null || !seconds.isFinite || seconds <= 0 || value == null) {
+      return null;
+    }
+    try {
+      validateCardioMetricValue(CardioMetricKey.durationSeconds, seconds);
+      validateCardioMetricValue(metric, value);
+    } on FormatException {
+      return null;
+    }
+    // Zero cadence can be measured coasting/rest; zero heart rate is not a
+    // usable physiological observation and must not lower the activity mean.
+    if (metric != CardioMetricKey.cadencePerMinute && value == 0) return null;
+    weightedSum += value * seconds;
+    totalSeconds += seconds;
+    maximum = maximum == null ? value : math.max(maximum, value);
+  }
+  if (totalSeconds == 0) return null;
+  return metric == CardioMetricKey.maxHeartRateBpm
+      ? maximum
+      : weightedSum / totalSeconds;
 }
 
 String _delimiterFor(String header) {

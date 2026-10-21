@@ -39,6 +39,10 @@ import 'package:fittin_v2/src/presentation/screens/agent_settings_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/about_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/plan_editor_screen.dart';
 import 'package:fittin_v2/src/presentation/screens/profile_preferences_screen.dart';
+import 'package:fittin_v2/src/presentation/screens/cardio_route_review_screen.dart';
+import 'package:fittin_v2/src/application/user_content_provider.dart';
+import 'package:fittin_v2/src/data/cardio_recording_store.dart';
+import 'package:fittin_v2/src/data/cardio_recording_store_web.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,10 +61,66 @@ Future<void> main() async {
   final palette = FittinPaletteRegistry.decode(
     Uri.base.queryParameters['theme'],
   );
+  final cardioFixture = CardioRecord(
+    id: 'synthetic-cardio-review',
+    activityTypeId: 'cardio:running',
+    activityName: locale == AppLocale.zh ? '跑步' : 'Running',
+    startedAt: DateTime(2026, 10, 22, 7),
+    metrics: const {
+      CardioMetricKey.durationSeconds: 1500,
+      CardioMetricKey.distanceMeters: 5000,
+      CardioMetricKey.averageHeartRateBpm: 145,
+      CardioMetricKey.maxHeartRateBpm: 168,
+      CardioMetricKey.cadencePerMinute: 172,
+      CardioMetricKey.elevationGainMeters: 24,
+    },
+    elapsedSeconds: 1680,
+    source: 'fit',
+  );
+  if (Uri.base.queryParameters['screen'] == 'cardio-review') {
+    final local = CardioRecordingStore(WebCardioLocalDocuments(store));
+    final session = CardioRecordingSession(
+      id: cardioFixture.id,
+      ownerUserId: null,
+      sport: CardioSport.running,
+      startedAt: cardioFixture.startedAt,
+      phase: CardioRecordingPhase.finished,
+      activityTypeId: cardioFixture.activityTypeId,
+      activityName: cardioFixture.activityName,
+      activeMilliseconds: 1500000,
+      elapsedMilliseconds: 1680000,
+      distanceMeters: 5000,
+      laps: [
+        for (var i = 0; i < 5; i++)
+          CardioLap(
+            distanceMeters: 1000,
+            activeMilliseconds: [310000, 305000, 300000, 295000, 290000][i],
+            endDistanceMeters: (i + 1) * 1000,
+            automatic: true,
+          ),
+      ],
+    );
+    await local.checkpoint(
+      session,
+      expectedRevision: 0,
+      batchId: 'synthetic-rqrun-review-v1',
+      points: [
+        for (var i = 0; i < 100; i++)
+          RoutePoint(
+            latitude: 30 + (i < 50 ? i : 100 - i) * .0001,
+            longitude: 120 + i * .00005,
+            timestamp: session.startedAt.add(Duration(seconds: i * 15)),
+            accuracyMeters: 5,
+          ),
+      ],
+    );
+  }
   runApp(
     ProviderScope(
       overrides: [
         databaseRepositoryProvider.overrideWithValue(database),
+        if (Uri.base.queryParameters['screen'] == 'cardio-review')
+          cardioRecordsProvider.overrideWith((ref) async => [cardioFixture]),
         cardioLocationSourceProvider.overrideWithValue(_SyntheticLocation()),
         progressRepositoryProvider.overrideWithValue(
           WebProgressRepository(store),
@@ -155,6 +215,19 @@ class _ReviewApp extends ConsumerWidget {
         'cardio-live' => CardioRecordingScreen(
           activity: BuiltInCardioActivities.byId('cardio:running'),
         ),
+        'cardio-review' =>
+          ref
+              .watch(cardioRecordsProvider)
+              .when(
+                data: (records) => CardioRouteReviewScreen(
+                  record: records.single,
+                  ownerUserId: null,
+                ),
+                loading: () => const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => Scaffold(body: Text('$error')),
+              ),
         'cardio-library' => const CardioActivityLibraryScreen(),
         'cardio-editor' => const CardioActivityEditorScreen(),
         'exercise-editor' => const CustomExerciseEditorScreen(),

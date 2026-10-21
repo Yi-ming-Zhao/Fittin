@@ -12,6 +12,7 @@ import '../../domain/models/user_content.dart';
 import '../localization/app_strings.dart';
 import '../widgets/dashboard_primitives.dart';
 import '../widgets/cardio_route_preview.dart';
+import '../widgets/cardio_split_list.dart';
 import 'cardio_screen.dart';
 
 CardioSport cardioSportFor(String id) => switch (id) {
@@ -325,16 +326,11 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
                   ),
                   trailing: Text(_duration(session.elapsedMilliseconds)),
                 ),
-                for (var i = 0; i < session.laps.length; i++)
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      '${zh ? '分段' : 'Lap'} ${i + 1} · ${(session.laps[i].distanceMeters / 1000).toStringAsFixed(2)} km',
-                    ),
-                    trailing: Text(
-                      _duration(session.laps[i].activeMilliseconds),
-                    ),
-                  ),
+                CardioSplitList(
+                  laps: session.laps,
+                  chinese: zh,
+                  cycling: session.sport == CardioSport.cycling,
+                ),
               ],
             ),
             if (!indoor) ...[

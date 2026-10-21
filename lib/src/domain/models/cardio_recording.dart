@@ -243,7 +243,7 @@ class CardioRecorder {
   CardioRecorder(this.session);
   final CardioRecordingSession session;
   RoutePoint? _anchor;
-  DateTime? _lastTimestamp;
+  RoutePoint? _lastFix;
   int? _stillSince;
   int? _lastMovementClock;
   final List<({DateTime end, double meters, double seconds})> _speedWindow = [];
@@ -365,19 +365,30 @@ class CardioRecorder {
       _breakSegment();
       return false;
     }
-    if (_lastTimestamp != null && !raw.timestamp.isAfter(_lastTimestamp!)) {
+    final lastFix = _lastFix;
+    if (lastFix != null && !raw.timestamp.isAfter(lastFix.timestamp)) {
       return false;
     }
-    _lastTimestamp = raw.timestamp;
+    // The displacement anchor deliberately stays put while jitter is ignored.
+    // Reception continuity must instead use the last valid fix, otherwise a
+    // stationary phone is treated as disconnected every fifteen seconds.
+    final receptionGap = lastFix == null
+        ? null
+        : raw.timestamp.difference(lastFix.timestamp);
+    final fixSeconds = receptionGap == null
+        ? 0.0
+        : receptionGap.inMicroseconds / 1000000;
+    final fixMeters = lastFix == null ? 0.0 : routeDistanceMeters(lastFix, raw);
+    _lastFix = raw;
     final previous = _anchor;
     if (previous == null) {
       _anchor = raw;
       _pendingPoints.add(raw.inSegment(session.segment));
       return true;
     }
-    final seconds =
-        raw.timestamp.difference(previous.timestamp).inMilliseconds / 1000;
     final meters = routeDistanceMeters(previous, raw);
+    final anchorSeconds =
+        raw.timestamp.difference(previous.timestamp).inMicroseconds / 1000000;
     final maximumSpeed = switch (session.sport) {
       CardioSport.cycling => 35.0,
       CardioSport.running => 12.0,
@@ -385,7 +396,8 @@ class CardioRecorder {
       CardioSport.hiking => 7.0,
       CardioSport.indoor => 0.0,
     };
-    if (seconds > 15 || meters / seconds > maximumSpeed) {
+    if ((receptionGap != null && receptionGap > const Duration(seconds: 15)) ||
+        (fixSeconds > 0 && fixMeters / fixSeconds > maximumSpeed)) {
       _breakSegment();
       _anchor = raw;
       _pendingPoints.add(raw.inSegment(session.segment));
@@ -400,6 +412,9 @@ class CardioRecorder {
       }
       return false;
     }
+    final wasStationary =
+        _stillSince != null &&
+        session.elapsedMilliseconds - _stillSince! >= 10000;
     _stillSince = null;
     if (session.autoPaused) {
       session.autoPaused = false;
@@ -410,14 +425,24 @@ class CardioRecorder {
       _speedWindow.removeWhere(
         (part) => raw.timestamp.difference(part.end).inMilliseconds > 10000,
       );
-      _speedWindow.add((end: raw.timestamp, meters: meters, seconds: seconds));
+      // A stationary displacement anchor may be minutes old. It is useful for
+      // accumulating small movements, not for the current measured speed.
+      _speedWindow.add((
+        end: raw.timestamp,
+        meters: fixMeters,
+        seconds: fixSeconds,
+      ));
       final before = session.distanceMeters;
       session.distanceMeters += meters;
       if (session.distanceMeters >= session.nextSplitMeters) {
         final fraction = (session.nextSplitMeters - before) / meters;
+        // Normal sub-threshold motion spans several fixes; retain its time.
+        // After a detected stop, crossing occurs in the resumed interval,
+        // not somewhere inside the preceding stationary minutes.
+        final splitSeconds = wasStationary ? fixSeconds : anchorSeconds;
         final endTime =
             session.activeMilliseconds -
-            ((1 - fraction) * seconds * 1000).round();
+            ((1 - fraction) * splitSeconds * 1000).round();
         _addLap(
           session.nextSplitMeters,
           endTime.clamp(
