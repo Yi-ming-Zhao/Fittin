@@ -46,6 +46,16 @@ func TestPrivateRouteIsolationCommitConflictAndDelete(t *testing.T) {
 	if got := request(owner, "PUT", "/manifest", manifest(0)); got.Code != 200 {
 		t.Fatalf("commit retry: %d", got.Code)
 	}
+	// A real HTTP client may pretty-print or reorder fields. Marshal compacts
+	// RawMessage when saving; wire-byte comparison incorrectly rejected retries.
+	reordered := `{"expectedVersion":0,"session":{
+		"phase":"finished", "id":"` + id + `", "distanceMeters":100,
+		"activeMilliseconds":60000, "elapsedMilliseconds":60000,
+		"activityName":"Run", "startedAt":"2026-10-21T01:00:00Z"
+	},"chunks":["` + hash + `"]}`
+	if got := request(owner, "PUT", "/manifest", reordered); got.Code != 200 {
+		t.Fatalf("formatted/reordered retry: %d", got.Code)
+	}
 	session["activityName"] = "Changed"
 	if got := request(owner, "PUT", "/manifest", manifest(0)); got.Code != 409 {
 		t.Fatalf("stale commit: %d", got.Code)
