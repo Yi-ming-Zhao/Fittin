@@ -50,6 +50,11 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(cardioRecordingProvider.notifier).refreshBackgroundStatus();
+      }
+    });
     if (widget.restoreId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -74,6 +79,7 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
     final finished = session?.phase == CardioRecordingPhase.finished;
     final recording = session?.phase == CardioRecordingPhase.recording;
     final ready = session == null;
+    final locked = _locked && session != null && !finished;
     final unfinished = ref
         .watch(localCardioSessionsProvider)
         .valueOrNull
@@ -85,23 +91,30 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
     final locale = ref.watch(appLocaleProvider);
     final colors = Theme.of(context).colorScheme;
     return PopScope(
-      canPop: !_locked,
+      canPop: !locked,
       child: DashboardPageScaffold(
         layout: DashboardPageLayout.detail,
+        absorbBodyPointers: locked,
         bottomNavigationBar: ready ? null : _controls(view, controller, zh),
         children: [
           DashboardScreenHeader(
             title:
                 session?.activityName ??
                 widget.activity.displayName(locale.code),
-            showBackButton: !_locked,
+            showBackButton: !locked,
             trailing: session == null || finished
                 ? null
                 : IconButton(
                     key: const ValueKey('cardio-screen-lock'),
-                    tooltip: zh ? '锁定操作' : 'Lock controls',
-                    onPressed: () => setState(() => _locked = true),
-                    icon: const Icon(Icons.lock_outline_rounded),
+                    tooltip: locked
+                        ? (zh ? '操作已锁定' : 'Controls locked')
+                        : (zh ? '锁定操作' : 'Lock controls'),
+                    onPressed: locked
+                        ? null
+                        : () => setState(() => _locked = true),
+                    icon: Icon(
+                      locked ? Icons.lock_rounded : Icons.lock_outline_rounded,
+                    ),
                   ),
           ),
           SizedBox(
@@ -214,6 +227,7 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
                     },
               child: Text(zh ? '手动补记' : 'Log manually'),
             ),
+            if (!kIsWeb && !indoor) _backgroundInfo(view, controller, zh),
           ] else ...[
             Text(
               finished
@@ -307,13 +321,15 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
                 textAlign: TextAlign.center,
               ),
             const SizedBox(height: 20),
-            if (!_locked && !finished && !indoor)
+            if (!locked && !finished && !indoor)
               SwitchListTile.adaptive(
                 contentPadding: EdgeInsets.zero,
                 title: Text(zh ? '自动暂停' : 'Auto-pause'),
                 value: session.autoPauseEnabled,
                 onChanged: view.busy ? null : controller.setAutoPause,
               ),
+            if (!locked && !finished && !indoor && !kIsWeb)
+              _backgroundInfo(view, controller, zh),
             const SizedBox(height: 20),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
@@ -373,23 +389,36 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
             constraints: const BoxConstraints(maxWidth: 430),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-              child: _locked
-                  ? Semantics(
-                      button: true,
-                      onLongPress: () => setState(() => _locked = false),
-                      child: GestureDetector(
-                        onLongPress: () => setState(() => _locked = false),
-                        child: Container(
-                          key: const ValueKey('cardio-unlock'),
-                          padding: const EdgeInsets.all(20),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: colors.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(zh ? '长按解锁' : 'Hold to unlock'),
+              child: _locked && !finished
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          recording
+                              ? (zh
+                                    ? '操作已锁定 · 记录继续'
+                                    : 'Controls locked · recording continues')
+                              : (zh
+                                    ? '操作已锁定 · 运动暂停'
+                                    : 'Controls locked · activity paused'),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelMedium,
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          key: const ValueKey('cardio-unlock'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(56),
+                            backgroundColor: colors.surfaceContainerHighest,
+                          ),
+                          onPressed: () {},
+                          onLongPress: () => setState(() => _locked = false),
+                          icon: const Icon(Icons.lock_open_rounded),
+                          label: Text(
+                            zh ? '长按此按钮解锁' : 'Hold this button to unlock',
+                          ),
+                        ),
+                      ],
                     )
                   : finished
                   ? FilledButton(
@@ -452,6 +481,64 @@ class _CardioRecordingScreenState extends ConsumerState<CardioRecordingScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _backgroundInfo(
+    CardioRecordingView view,
+    CardioRecordingController controller,
+    bool zh,
+  ) {
+    final status = view.backgroundStatus;
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      leading: const Icon(Icons.phonelink_lock_rounded),
+      title: Text(zh ? '后台与锁屏记录' : 'Background recording'),
+      children: [
+        Text(
+          zh
+              ? '开始后可切换应用或锁屏。请勿强行停止或清理 Fittin；系统若终止进程，可恢复已保存部分。'
+              : 'After starting, you can switch apps or lock your phone. Do not force-stop or clear Fittin; if the system terminates it, saved activity can be recovered.',
+        ),
+        if (status != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            [
+              status.notificationsEnabled
+                  ? (zh ? '通知已允许' : 'Notifications allowed')
+                  : (zh
+                        ? '通知未允许：建议开启，以便看到持续记录状态。'
+                        : 'Notifications disabled: enable them to see ongoing recording.'),
+              if (!status.batteryUnrestricted)
+                zh
+                    ? '电池优化已开启：如锁屏后断点，请在系统电池设置中允许后台运行。'
+                    : 'Battery optimization is on: if gaps occur while locked, allow background activity in system battery settings.',
+              if (status.powerSaveMode)
+                zh
+                    ? '当前开启省电模式，可能限制定位。'
+                    : 'Battery saver is on and may restrict location.',
+            ].join('\n'),
+          ),
+          TextButton(
+            key: const ValueKey('cardio-background-settings'),
+            onPressed: () async {
+              final opened = await controller.openBackgroundSettings();
+              if (!opened && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      zh
+                          ? '请手动打开系统设置 → Fittin。'
+                          : 'Open system Settings → Fittin manually.',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: Text(zh ? '打开系统设置' : 'Open system settings'),
+          ),
+        ],
+      ],
     );
   }
 
@@ -600,6 +687,8 @@ String _duration(int milliseconds) {
 }
 
 String _errorText(String code, bool zh) => switch (code) {
+  'foreground_required' =>
+    zh ? '请回到应用后重新开始或继续运动。' : 'Return to the app to start or resume recording.',
   'permission_denied' =>
     zh
         ? '定位权限未开启，请在系统设置中允许后重试。'

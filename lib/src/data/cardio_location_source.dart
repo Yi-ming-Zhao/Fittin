@@ -64,6 +64,13 @@ class DeviceCardioLocationSource implements CardioLocationSource {
                     ? '定位仅用于本次运动，返回应用可暂停或结束。'
                     : 'Location is used only for this activity. Open Fittin to pause or finish.',
                 enableWakeLock: true,
+                setOngoing: true,
+                notificationChannelName: chinese
+                    ? '运动记录'
+                    : 'Activity recording',
+                notificationIcon: const AndroidResource(
+                  name: 'ic_stat_running',
+                ),
               ),
       );
     } else {
