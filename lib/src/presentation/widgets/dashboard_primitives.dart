@@ -22,6 +22,7 @@ class DashboardPageScaffold extends StatelessWidget {
     this.scrollable = true,
     this.safeAreaBottom,
     this.maxContentWidth = 430,
+    this.absorbBodyPointers = false,
   });
 
   final List<Widget> children;
@@ -34,6 +35,7 @@ class DashboardPageScaffold extends StatelessWidget {
   final bool scrollable;
   final bool? safeAreaBottom;
   final double maxContentWidth;
+  final bool absorbBodyPointers;
 
   @override
   Widget build(BuildContext context) {
@@ -50,43 +52,46 @@ class DashboardPageScaffold extends StatelessWidget {
           floatingActionButton: floatingActionButton,
           bottomNavigationBar: bottomNavigationBar,
           extendBody: extendBody,
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  fittinTheme.bgDeep,
-                  fittinTheme.bg,
-                  Color.lerp(fittinTheme.bg, fittinTheme.bgDeep, 0.48)!,
-                ],
+          body: AbsorbPointer(
+            absorbing: absorbBodyPointers,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    fittinTheme.bgDeep,
+                    fittinTheme.bg,
+                    Color.lerp(fittinTheme.bg, fittinTheme.bgDeep, 0.48)!,
+                  ],
+                ),
               ),
-            ),
-            child: SafeArea(
-              bottom: resolvedSafeAreaBottom && bottomNavigationBar == null,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxContentWidth),
-                  child: scrollable
-                      ? ListView(
-                          key: const ValueKey('dashboard-page-scroll'),
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            resolvedTopPadding,
-                            20,
-                            resolvedBottomPadding,
+              child: SafeArea(
+                bottom: resolvedSafeAreaBottom && bottomNavigationBar == null,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxContentWidth),
+                    child: scrollable
+                        ? ListView(
+                            key: const ValueKey('dashboard-page-scroll'),
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              resolvedTopPadding,
+                              20,
+                              resolvedBottomPadding,
+                            ),
+                            children: children,
+                          )
+                        : Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              20,
+                              resolvedTopPadding,
+                              20,
+                              resolvedBottomPadding,
+                            ),
+                            child: Column(children: children),
                           ),
-                          children: children,
-                        )
-                      : Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            20,
-                            resolvedTopPadding,
-                            20,
-                            resolvedBottomPadding,
-                          ),
-                          child: Column(children: children),
-                        ),
+                  ),
                 ),
               ),
             ),

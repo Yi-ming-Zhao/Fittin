@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../data/cardio_location_source.dart';
+import '../data/cardio_background_support.dart';
 import '../data/cardio_recording_store.dart';
 import '../data/cardio_recording_store_native.dart';
 import '../data/cardio_recording_store_web.dart';
@@ -52,6 +53,7 @@ class CardioRecordingView {
     this.busy = false,
     this.preparingLocation = false,
     this.locationReady = false,
+    this.backgroundStatus,
   });
   final CardioRecordingSession? session;
   final double? accuracyMeters;
@@ -61,6 +63,7 @@ class CardioRecordingView {
   final bool busy;
   final bool preparingLocation;
   final bool locationReady;
+  final CardioBackgroundStatus? backgroundStatus;
 }
 
 class _RecordingBatch {
@@ -79,16 +82,50 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
     required this.location,
     required this.ownerUserId,
     required this.onSaved,
+    CardioBackgroundSupport? backgroundSupport,
+    Stopwatch? clock,
   }) : super(const CardioRecordingView()) {
+    _backgroundSupport = backgroundSupport ?? CardioBackgroundSupport();
+    _clock = clock ?? Stopwatch();
     WidgetsBinding.instance.addObserver(this);
   }
   final CardioRecordingStore store;
   final CardioLocationSource location;
   final String? ownerUserId;
   final void Function() onSaved;
+  late final CardioBackgroundSupport _backgroundSupport;
+  CardioBackgroundStatus? _backgroundStatus;
+  bool _foreground = true;
+  int _lastCheckpointClock = 0;
+
+  Future<void> refreshBackgroundStatus() async {
+    final status = await _backgroundSupport.status();
+    if (_closed) return;
+    if (status == null && _backgroundStatus == null) return;
+    _backgroundStatus = status;
+    _publish();
+  }
+
+  Future<bool> openBackgroundSettings() => _backgroundSupport.openSettings();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _foreground = true;
+      _advance();
+      _publish();
+      unawaited(refreshBackgroundStatus());
+    } else if ({
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+      AppLifecycleState.detached,
+    }.contains(state)) {
+      _foreground = false;
+      if (!kIsWeb && _recorder != null) {
+        _advance();
+        unawaited(_flush());
+      }
+    }
     if ({
           AppLifecycleState.paused,
           AppLifecycleState.hidden,
@@ -109,8 +146,8 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
   CardioRecorder? _recorder;
   StreamSubscription<RoutePoint>? _positions;
   Timer? _ticker;
-  final Stopwatch _clock = Stopwatch();
-  int _clockBase = 0, _revision = 0, _ticks = 0;
+  late final Stopwatch _clock;
+  int _clockBase = 0, _revision = 0;
   bool _closed = false, _command = false;
   Future<bool>? _writing;
   _RecordingBatch? _retry;
@@ -216,6 +253,7 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
       busy: _command || _preparing,
       preparingLocation: _preparing,
       locationReady: _locationReady,
+      backgroundStatus: _backgroundStatus,
     );
   }
 
@@ -244,6 +282,15 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
       if (_closed) return;
       if (sport != CardioSport.indoor) await location.requestPermission();
       if (_closed) return;
+      if (sport != CardioSport.indoor) {
+        _backgroundStatus = await _backgroundSupport.status(
+          requestNotification: true,
+        );
+      }
+      if (_closed) return;
+      if (!_foreground) {
+        throw const CardioLocationException('foreground_required');
+      }
       if (sport != CardioSport.indoor && !_locationReady) {
         throw const CardioLocationException('location_prepare_required');
       }
@@ -260,6 +307,11 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
         ),
       )..start();
       if (!await _flush() || _closed) return;
+      if (!_foreground) {
+        _error = 'foreground_required';
+        await interrupt();
+        return;
+      }
       _beginClock();
       _listen();
     } catch (error) {
@@ -313,8 +365,15 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
       _advance();
       _publish();
-      if (++_ticks % 5 == 0) unawaited(_flush());
+      _checkpointIfDue();
     });
+  }
+
+  void _checkpointIfDue() {
+    final elapsed = _recorder?.session.elapsedMilliseconds ?? 0;
+    if (elapsed - _lastCheckpointClock < 5000 || _writing != null) return;
+    _lastCheckpointClock = elapsed;
+    unawaited(_flush());
   }
 
   void _advance() {
@@ -348,6 +407,9 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
               _lastFixClock = _recorder!.session.elapsedMilliseconds;
             }
             _recorder!.accept(point);
+            // iOS may defer UI timers while locked. Location delivery is also
+            // a persistence trigger; recording never depends on rendering.
+            _checkpointIfDue();
             _publish();
           },
           onError: (Object _) {
@@ -398,6 +460,9 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
         await location.requestPermission();
       }
       if (_closed) return;
+      if (!_foreground) {
+        throw const CardioLocationException('foreground_required');
+      }
       if (!_clock.isRunning) {
         final wallElapsed = DateTime.now()
             .difference(_recorder!.session.startedAt)
@@ -408,6 +473,12 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
       _recorder!.resume();
       _error = null;
       if (!await _flush()) return;
+      if (_closed) return;
+      if (!_foreground) {
+        _error = 'foreground_required';
+        await interrupt();
+        return;
+      }
       _beginClock();
       _listen();
     } catch (error) {
@@ -496,6 +567,7 @@ class CardioRecordingController extends StateNotifier<CardioRecordingView>
     _error = null;
     _accuracy = null;
     _lastFixClock = null;
+    _lastCheckpointClock = 0;
     _publish();
   }
 

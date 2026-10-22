@@ -236,6 +236,30 @@ void main() {
                 lessThanOrEqualTo(size.height),
               );
               expect(tester.getSize(primary).height, greaterThanOrEqualTo(48));
+              if (phase == CardioRecordingPhase.recording) {
+                await tester.tap(
+                  find.byKey(const ValueKey('cardio-screen-lock')),
+                );
+                await tester.pumpAndSettle();
+                final unlock = find.byKey(const ValueKey('cardio-unlock'));
+                expect(unlock.hitTestable(), findsOneWidget);
+                expect(tester.getSize(unlock).height, greaterThanOrEqualTo(48));
+                expect(find.text('1:06:40'), findsOneWidget);
+                await tester.longPress(
+                  find.text('1:06:40'),
+                  warnIfMissed: false,
+                );
+                await tester.pumpAndSettle();
+                expect(unlock, findsOneWidget);
+                await tester.tap(unlock);
+                await tester.pumpAndSettle();
+                expect(unlock, findsOneWidget);
+                await tester.longPress(unlock);
+                await tester.pumpAndSettle();
+                expect(unlock, findsNothing);
+                expect(primary.hitTestable(), findsOneWidget);
+                expect(tester.takeException(), isNull);
+              }
             }
           }
         }

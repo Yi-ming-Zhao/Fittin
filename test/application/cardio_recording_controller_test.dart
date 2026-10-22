@@ -6,6 +6,7 @@ import 'package:fittin_v2/src/data/cardio_recording_store_native.dart';
 import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
+import 'package:fittin_v2/src/data/cardio_background_support.dart';
 import '../support/isar_test_helper.dart';
 
 void main() {
@@ -28,6 +29,91 @@ void main() {
       onSaved: () {},
     );
   });
+
+  test(
+    'background fixes checkpoint without UI timers and keep one subscription',
+    () async {
+      controller.dispose();
+      final clock = _ManualClock();
+      var saved = Completer<void>();
+      controller = CardioRecordingController(
+        store: store,
+        location: location,
+        ownerUserId: 'alice',
+        clock: clock,
+        onSaved: () {
+          if (!saved.isCompleted) saved.complete();
+        },
+      );
+      await _start(controller);
+      final id = controller.state.session!.id;
+      saved = Completer<void>();
+      controller.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await saved.future;
+      expect(location.cancellations, 0);
+      saved = Completer<void>();
+      clock.milliseconds = 6100;
+      location.stream.add(
+        RoutePoint(
+          latitude: 30,
+          longitude: 120,
+          timestamp: DateTime.now(),
+          accuracyMeters: 5,
+        ),
+      );
+      await saved.future;
+      final snapshot = (await store.read(id, ownerUserId: 'alice'))!;
+      expect(snapshot.session.activeMilliseconds, 6100);
+      expect(
+        (await store.route(id, ownerUserId: 'alice').toList()).single,
+        hasLength(1),
+      );
+      expect(location.subscriptions, 1);
+      controller.didChangeAppLifecycleState(AppLifecycleState.paused);
+      clock.milliseconds = 7100;
+      controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      expect(controller.state.session!.activeMilliseconds, 7100);
+      expect(location.subscriptions, 1);
+      await controller.finish();
+      expect(location.cancellations, 1);
+      controller.dispose();
+    },
+  );
+
+  test('notification denial does not prevent native recording', () async {
+    controller.dispose();
+    controller = CardioRecordingController(
+      store: store,
+      location: location,
+      ownerUserId: 'alice',
+      onSaved: () {},
+      backgroundSupport: _DeniedNotification(),
+    );
+    await _start(controller);
+    expect(controller.state.backgroundStatus!.notificationsEnabled, isFalse);
+    expect(controller.state.errorCode, isNull);
+    expect(controller.state.session!.phase, CardioRecordingPhase.recording);
+    await controller.finish();
+    controller.dispose();
+  });
+
+  test(
+    'late resume permission cannot start service after app is hidden',
+    () async {
+      await _start(controller);
+      await controller.pause();
+      location.permission = Completer<void>();
+      final resuming = controller.resume();
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+      controller.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      location.permission!.complete();
+      await resuming;
+      expect(location.subscriptions, 1);
+      expect(controller.state.errorCode, 'foreground_required');
+      expect(controller.state.session!.phase, CardioRecordingPhase.interrupted);
+      controller.dispose();
+    },
+  );
 
   test(
     'pause and finish cancel location; checkpoints retain measured points',
@@ -291,6 +377,40 @@ void main() {
       await controller.finish();
       controller.dispose();
     },
+  );
+}
+
+class _ManualClock extends Stopwatch {
+  int milliseconds = 0;
+  bool running = false;
+  @override
+  int get elapsedMilliseconds => milliseconds;
+  @override
+  bool get isRunning => running;
+  @override
+  void reset() {
+    milliseconds = 0;
+  }
+
+  @override
+  void start() {
+    running = true;
+  }
+
+  @override
+  void stop() {
+    running = false;
+  }
+}
+
+class _DeniedNotification extends CardioBackgroundSupport {
+  @override
+  Future<CardioBackgroundStatus?> status({
+    bool requestNotification = false,
+  }) async => const CardioBackgroundStatus(
+    notificationsEnabled: false,
+    batteryUnrestricted: false,
+    powerSaveMode: true,
   );
 }
 
