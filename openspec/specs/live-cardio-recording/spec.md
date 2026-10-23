@@ -27,11 +27,11 @@ Precise routes SHALL remain local by default and SHALL NOT enter ordinary sync, 
 - **THEN** aggregate statistics sync normally and precise points remain local
 
 ### Requirement: Field-verified release
-The user-approved trial SHALL retain GPS/timing/offline route recording and disclose that Android 60-minute lock-screen outdoor recording and known-distance comparison await user testing after download. Shared-key online AMap SHALL remain disabled; a default-off personal-key area preview SHALL be available only after explicit position-sharing consent for the user's authorized use. Migration and signed Android upgrade checks SHALL remain required. General availability claims of background recording reliability SHALL require the actual field test. Unsigned iOS build success MUST NOT be reported as physical-device tracking verification.
+The user-approved trial SHALL retain GPS/timing/offline route recording and disclose that Android 60-minute lock-screen outdoor recording and known-distance comparison await user testing. The default-off configured map preview SHALL require authentication and explicit position-sharing consent for authorized personal use. Migration and signed Android upgrade checks SHALL remain required. General background reliability claims SHALL require actual field tests; unsigned iOS builds MUST NOT be described as physical-device verification.
 
 #### Scenario: Field test is unavailable
-- **WHEN** automated tests pass but physical recording evidence is missing
-- **THEN** the explicitly authorized trial may publish after the remaining release gates pass, with field validation clearly marked outstanding and online AMap disabled by default
+- **WHEN** automated checks pass but physical recording evidence is missing
+- **THEN** the approved trial may release after remaining gates pass, with field validation outstanding and maps disabled until user consent
 
 ### Requirement: Continuous stationary fixes
 The recorder SHALL distinguish an ongoing stream of valid stationary fixes from a true reception gap. Optional automatic pause SHALL remain paused until measured movement resumes; missing signal MUST NOT fabricate distance.
@@ -83,16 +83,16 @@ Locking SHALL preserve live time, distance, pace and location information while 
 - **THEN** normal controls return without pausing or changing the recorded activity
 
 ### Requirement: Personal opt-in online area map
-The app SHALL offer a default-off, personal-key AMap area image separate from offline route capture. Each enable action SHALL require position-sharing confirmation; only the requested point SHALL be sent, using provider GPS coordinate conversion. Keys SHALL remain in session memory, be cleared on account changes, and never ship in public builds or enter sync/logs. Refresh SHALL be manual and limited to one in-flight request; provider errors SHALL be redacted and leave recording unaffected. Actual provider-key verification SHALL be reported separately from mocked protocol checks.
+The app SHALL offer a default-off AMap area image separate from offline route capture, without requiring user Key entry. Each enable action SHALL require sign-in and explicit confirmation that a single requested point passes through Fittin to AMap without storage. The configured Key MUST remain backend-only and never ship in public builds or enter sync/logs. Refresh SHALL be manual and limited to one in-flight request; provider errors SHALL be redacted and leave recording unaffected. Actual provider verification SHALL be reported separately from mocked checks.
 
 #### Scenario: Map is not enabled
-- **WHEN** the activity page or review is opened without explicit map consent
-- **THEN** no request is sent to AMap and the offline route remains available
+- **WHEN** the activity page or review opens without explicit consent
+- **THEN** no map request is sent and the offline route remains available
 
 #### Scenario: Personal map fails
-- **WHEN** the user consents but the key, quota or network prevents map loading
-- **THEN** a safe error and retry/close controls appear without changing recording or exposing the key
+- **WHEN** the configured Key, quota or network prevents loading
+- **THEN** a safe error and retry/close controls appear without changing recording or requesting Key input
 
 #### Scenario: Account changes during map loading
-- **WHEN** the current account changes before the map response completes
-- **THEN** the old map and key are not exposed to the new account and no second provider request is initiated after cancellation
+- **WHEN** the account changes before the response completes
+- **THEN** old map data is discarded and stale consent cannot initiate requests for the new account
