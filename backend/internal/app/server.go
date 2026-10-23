@@ -50,6 +50,8 @@ type Server struct {
 	agentClientFactory    agentHTTPClientFactory
 	agentStats            agentRelayMetrics
 	routeMu               sync.Mutex
+	mapGate               mapRequestGate
+	mapHTTPClient         *http.Client
 }
 
 type rateWindow struct {
@@ -198,6 +200,7 @@ func NewServer() (*Server, error) {
 	mux.HandleFunc("/v1/files/progress-photos/", server.withAuth(server.handleProgressPhotoDownload))
 	mux.HandleFunc("/v1/private-routes/", server.withAuth(server.handlePrivateRoute))
 	mux.HandleFunc("/v1/agent/chat-completions", server.withAuth(server.handleAgentChatCompletions))
+	mux.HandleFunc("/v1/maps/area", server.withNoStore(server.withAuth(server.handleAreaMap)))
 
 	server.httpServer = &http.Server{
 		Addr:              cfg.Addr,
