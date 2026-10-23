@@ -6,123 +6,130 @@ import 'package:fittin_v2/src/data/cardio_online_map.dart';
 import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
 
 void main() {
-  final key = 'a' * 32;
   final point = RoutePoint(
     latitude: 39.9,
     longitude: 116.4,
     timestamp: DateTime.utc(2026),
   );
-  test('converts WGS84 then displays one point, never sends a route', () async {
-    final requests = <http.Request>[];
-    final service = CardioOnlineMap(
-      clientFactory: () => MockClient((request) async {
-        requests.add(request);
-        expect(request.url.scheme, 'https');
-        expect(request.url.host, 'restapi.amap.com');
-        expect(request.followRedirects, isFalse);
-        if (requests.length == 1) {
-          expect(request.url.queryParameters['coordsys'], 'gps');
-          expect(request.url.queryParameters['locations'], '116.4,39.9');
-          return http.Response(
-            jsonEncode({'status': '1', 'locations': '116.406,39.901'}),
-            200,
-          );
-        }
-        expect(request.url.queryParameters['location'], '116.406,39.901');
-        expect(request.url.queryParameters.containsKey('paths'), isFalse);
+  CardioOnlineMap service(
+    Future<http.Response> Function(http.Request) handler, {
+    Future<String?> Function()? token,
+    Future<String?> Function(String)? refresh,
+  }) => CardioOnlineMap(
+    backendBaseUrl: 'https://fittin.example/api',
+    accessTokenLoader: token ?? () async => 'session-token',
+    accessTokenRefresher: refresh,
+    clientFactory: () => MockClient(handler),
+  );
+
+  test(
+    'only single point to authenticated Fittin endpoint, no provider key',
+    () async {
+      final s = service((r) async {
+        expect(r.url.toString(), 'https://fittin.example/api/v1/maps/area');
+        expect(r.method, 'POST');
+        expect(r.followRedirects, isFalse);
+        expect(r.headers['Authorization'], 'Bearer session-token');
+        expect(jsonDecode(r.body), {
+          'latitude': 39.9,
+          'longitude': 116.4,
+          'zoom': 15,
+        });
         return http.Response.bytes(
           [137, 80, 78, 71],
           200,
           headers: {'content-type': 'image/png'},
         );
-      }),
-    );
-    expect(await service.load(key: key, point: point), [137, 80, 78, 71]);
-    expect(requests, hasLength(2));
-  });
-  test('invalid key or coordinates make no request', () async {
-    final service = CardioOnlineMap(
-      clientFactory: () => throw StateError('unexpected network'),
-    );
-    await expectLater(
-      service.load(key: 'invalid', point: point),
-      throwsA(isA<CardioMapUnavailable>()),
-    );
-    await expectLater(
-      service.load(
-        key: key,
-        point: RoutePoint(
-          latitude: 91,
-          longitude: 0,
-          timestamp: point.timestamp,
-        ),
-      ),
-      throwsA(isA<CardioMapUnavailable>()),
-    );
-  });
-  for (final code in [302, 401, 429, 500]) {
-    test('HTTP $code is redacted and not retried', () async {
-      var calls = 0;
-      final service = CardioOnlineMap(
-        clientFactory: () => MockClient((_) async {
-          calls++;
-          return http.Response(
-            key,
-            code,
-            headers: {'location': 'https://example.invalid/$key'},
-          );
-        }),
-      );
-      await expectLater(
-        service.load(key: key, point: point),
-        throwsA(
-          predicate((error) => error.toString() == 'Online map unavailable'),
-        ),
-      );
-      expect(calls, 1);
-    });
-  }
-  test('owner change cancels before second provider request', () async {
+      });
+      expect(await s.load(point: point), [137, 80, 78, 71]);
+    },
+  );
+  test('anonymous, invalid point and stale owner never send', () async {
     var calls = 0;
-    final service = CardioOnlineMap(
-      clientFactory: () => MockClient((_) async {
-        calls++;
-        return http.Response('{"status":"1","locations":"116.4,39.9"}', 200);
-      }),
+    final s = service((_) async {
+      calls++;
+      return http.Response('', 500);
+    }, token: () async => null);
+    await expectLater(
+      s.load(point: point),
+      throwsA(isA<CardioMapUnavailable>()),
     );
     await expectLater(
-      service.load(key: key, point: point, isCurrent: () => false),
+      s.load(point: point, zoom: 18),
+      throwsA(isA<CardioMapUnavailable>()),
+    );
+    final stale = service((_) async {
+      calls++;
+      return http.Response('', 500);
+    });
+    await expectLater(
+      stale.load(point: point, isCurrent: () => false),
+      throwsA(isA<CardioMapUnavailable>()),
+    );
+    expect(calls, 0);
+  });
+  test('expired auth retries once with refreshed token', () async {
+    var calls = 0, refreshes = 0;
+    final s = service(
+      (r) async {
+        if (++calls == 1) return http.Response('', 401);
+        expect(r.headers['Authorization'], 'Bearer refreshed');
+        return http.Response.bytes(
+          [1],
+          200,
+          headers: {'content-type': 'image/png'},
+        );
+      },
+      refresh: (token) async {
+        refreshes++;
+        expect(token, 'session-token');
+        return 'refreshed';
+      },
+    );
+    expect(await s.load(point: point), [1]);
+    expect(calls, 2);
+    expect(refreshes, 1);
+  });
+  test('owner change while refreshing prevents retry', () async {
+    var current = true, calls = 0;
+    final s = service(
+      (_) async {
+        calls++;
+        return http.Response('', 401);
+      },
+      refresh: (_) async {
+        current = false;
+        return 'new';
+      },
+    );
+    await expectLater(
+      s.load(point: point, isCurrent: () => current),
       throwsA(isA<CardioMapUnavailable>()),
     );
     expect(calls, 1);
   });
-  test(
-    'provider quota JSON and excessive responses are not shown as map',
-    () async {
-      for (final large in [false, true]) {
-        var calls = 0;
-        final service = CardioOnlineMap(
-          clientFactory: () => MockClient((_) async {
-            if (++calls == 1) {
-              return http.Response(
-                '{"status":"1","locations":"116.4,39.9"}',
-                200,
-              );
-            }
-            return http.Response(
-              large ? 'a' * (2 * 1024 * 1024 + 1) : '{"error":"$key"}',
-              200,
-              headers: {
-                'content-type': large ? 'image/png' : 'application/json',
-              },
-            );
-          }),
-        );
-        await expectLater(
-          service.load(key: key, point: point),
-          throwsA(isA<CardioMapUnavailable>()),
-        );
-      }
-    },
-  );
+  for (final code in [302, 401, 429, 500]) {
+    test('HTTP $code redacted', () async {
+      final s = service((_) async => http.Response('sensitive error', code));
+      await expectLater(
+        s.load(point: point),
+        throwsA(predicate((e) => e.toString() == 'Online map unavailable')),
+      );
+    });
+  }
+  test('non-images and oversized responses rejected', () async {
+    for (final large in [false, true]) {
+      final s = service(
+        (_) async => http.Response(
+          large ? 'a' * (2 * 1024 * 1024 + 1) : '{}',
+          200,
+          headers: {'content-type': large ? 'image/png' : 'application/json'},
+        ),
+      );
+      await expectLater(
+        s.load(point: point),
+        throwsA(isA<CardioMapUnavailable>()),
+      );
+    }
+  });
 }

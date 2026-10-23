@@ -17,6 +17,13 @@ This document describes the self-hosted backend that replaces the previous Supab
 - `FITTIN_JWT_SECRET`
 - `FITTIN_FILE_STORAGE_ROOT`
 
+Optional personal map configuration: `FITTIN_AMAP_WEB_SERVICE_KEY_FILE` points
+to a private, mode-0600 file containing the Web Service Key. Alternatively use
+`FITTIN_AMAP_WEB_SERVICE_KEY`. Never commit the file or embed the Key in Flutter
+builds. Without configuration, the authenticated `/v1/maps/area` endpoint
+returns a safe unavailable response. It forwards only the explicitly consented
+single point without storing it; user/global rate and concurrency limits apply.
+
 ## Flutter Configuration
 
 Use:

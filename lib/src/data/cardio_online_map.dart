@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../domain/models/cardio_recording.dart';
 
@@ -9,96 +10,107 @@ class CardioMapUnavailable implements Exception {
   String toString() => 'Online map unavailable';
 }
 
-/// A personal-key map preview. Only one explicitly consented position is sent,
-/// never the route. Coordinates are converted by the provider, not relabelled.
+/// Provider credentials remain on the backend. Only a consented single point
+/// passes through the authenticated, no-store endpoint.
 class CardioOnlineMap {
-  CardioOnlineMap({http.Client Function()? clientFactory})
-    : _clientFactory = clientFactory ?? http.Client.new;
+  CardioOnlineMap({
+    required this.backendBaseUrl,
+    required this.accessTokenLoader,
+    this.accessTokenRefresher,
+    http.Client Function()? clientFactory,
+  }) : _clientFactory = clientFactory ?? http.Client.new;
+  final String backendBaseUrl;
+  final Future<String?> Function() accessTokenLoader;
+  final Future<String?> Function(String)? accessTokenRefresher;
   final http.Client Function() _clientFactory;
 
-  static bool validKey(String key) =>
-      RegExp(r'^[a-fA-F0-9]{32}$').hasMatch(key);
-
   Future<Uint8List> load({
-    required String key,
     required RoutePoint point,
     int zoom = 15,
     bool Function()? isCurrent,
   }) async {
-    if (!validKey(key) || !point.isValid || zoom < 3 || zoom > 17) {
+    final base = Uri.tryParse(backendBaseUrl);
+    if (!point.isValid ||
+        zoom < 3 ||
+        zoom > 17 ||
+        base == null ||
+        base.host.isEmpty ||
+        base.userInfo.isNotEmpty ||
+        base.hasQuery ||
+        base.hasFragment ||
+        (base.scheme != 'https' &&
+            !(kDebugMode &&
+                base.scheme == 'http' &&
+                const ['localhost', '127.0.0.1', '::1'].contains(base.host)))) {
       throw const CardioMapUnavailable();
     }
     final client = _clientFactory();
     try {
       return await (() async {
-        final conversion = await _get(
-          client,
-          Uri.https('restapi.amap.com', '/v3/assistant/coordinate/convert', {
-            'key': key,
-            'coordsys': 'gps',
-            'output': 'JSON',
-            'locations': '${point.longitude},${point.latitude}',
-          }),
-          16384,
-        );
-        final json =
-            jsonDecode(utf8.decode(conversion.$1)) as Map<String, dynamic>;
-        final coordinate = json['locations'];
-        if (json['status'] != '1' || coordinate is! String) {
-          throw const CardioMapUnavailable();
+        var token = await accessTokenLoader();
+        for (var attempt = 0; attempt < 2; attempt++) {
+          if (token == null ||
+              token.isEmpty ||
+              (isCurrent != null && !isCurrent())) {
+            throw const CardioMapUnavailable();
+          }
+          final request =
+              http.Request(
+                  'POST',
+                  base.replace(
+                    path:
+                        '${base.path.replaceFirst(RegExp(r'/+$'), '')}/v1/maps/area',
+                  ),
+                )
+                ..followRedirects = false
+                ..headers.addAll({
+                  'Authorization': 'Bearer $token',
+                  'Content-Type': 'application/json',
+                })
+                ..body = jsonEncode({
+                  'latitude': point.latitude,
+                  'longitude': point.longitude,
+                  'zoom': zoom,
+                });
+          final response = await client.send(request);
+          if (response.statusCode == 401 &&
+              attempt == 0 &&
+              accessTokenRefresher != null) {
+            await response.stream.listen(null).cancel();
+            if (isCurrent != null && !isCurrent()) {
+              throw const CardioMapUnavailable();
+            }
+            token = await accessTokenRefresher!(token);
+            continue;
+          }
+          final type = (response.headers['content-type'] ?? '')
+              .split(';')
+              .first;
+          if (response.statusCode != 200 ||
+              (response.contentLength ?? 0) > 2 * 1024 * 1024 ||
+              !const ['image/png', 'image/jpeg'].contains(type)) {
+            await response.stream.listen(null).cancel();
+            throw const CardioMapUnavailable();
+          }
+          final bytes = BytesBuilder(copy: false);
+          await for (final chunk in response.stream) {
+            if (bytes.length + chunk.length > 2 * 1024 * 1024 ||
+                (isCurrent != null && !isCurrent())) {
+              throw const CardioMapUnavailable();
+            }
+            bytes.add(chunk);
+          }
+          if (isCurrent != null && !isCurrent()) {
+            throw const CardioMapUnavailable();
+          }
+          return bytes.takeBytes();
         }
-        final parts = coordinate.split(',');
-        if (parts.length != 2 ||
-            !((double.tryParse(parts[0])?.abs() ?? 181) <= 180) ||
-            !((double.tryParse(parts[1])?.abs() ?? 91) <= 90)) {
-          throw const CardioMapUnavailable();
-        }
-        if (isCurrent != null && !isCurrent()) {
-          throw const CardioMapUnavailable();
-        }
-        final image = await _get(
-          client,
-          Uri.https('restapi.amap.com', '/v3/staticmap', {
-            'key': key,
-            'location': coordinate,
-            'zoom': '$zoom',
-            'size': '600*360',
-            'scale': '1',
-            'markers': 'mid,0xB64337,A:$coordinate',
-          }),
-          2 * 1024 * 1024,
-        );
-        if (!{'image/png', 'image/jpeg'}.contains(image.$2.split(';').first)) {
-          throw const CardioMapUnavailable();
-        }
-        return image.$1;
-      })().timeout(const Duration(seconds: 15));
+        throw const CardioMapUnavailable();
+      })().timeout(const Duration(seconds: 25));
     } catch (_) {
-      // Provider errors/HTTP URLs may contain the key or position. Never
-      // expose them to UI errors, crash reporting or application diagnostics.
       throw const CardioMapUnavailable();
     } finally {
       client.close();
     }
-  }
-
-  Future<(Uint8List, String)> _get(
-    http.Client client,
-    Uri uri,
-    int limit,
-  ) async {
-    final request = http.Request('GET', uri)..followRedirects = false;
-    final response = await client.send(request);
-    if (response.statusCode != 200 || (response.contentLength ?? 0) > limit) {
-      throw const CardioMapUnavailable();
-    }
-    final bytes = BytesBuilder(copy: false);
-    await for (final chunk in response.stream) {
-      if (bytes.length + chunk.length > limit) {
-        throw const CardioMapUnavailable();
-      }
-      bytes.add(chunk);
-    }
-    return (bytes.takeBytes(), response.headers['content-type'] ?? '');
   }
 }

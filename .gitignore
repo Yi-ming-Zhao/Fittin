@@ -39,6 +39,7 @@ cert.pem
 
 # Local deployment credentials
 wsf_passwd.txt
+gaode-key.txt
 zhaoyiming@10.108.17.241
 *.sql.gz
 *migration_export*.tar.gz

@@ -2,17 +2,19 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/auth_provider.dart';
+import '../../application/supabase_bootstrap.dart';
 import '../../data/cardio_online_map.dart';
 import '../../domain/models/cardio_recording.dart';
 
-// Deliberately session-only: no shared release key, disk storage or cloud sync.
-final cardioMapKeyProvider = StateProvider<String?>((ref) {
-  ref.watch(currentUserIdProvider);
-  return null;
+final cardioOnlineMapProvider = Provider<CardioOnlineMap>((ref) {
+  final auth = ref.watch(authRepositoryProvider);
+  return CardioOnlineMap(
+    backendBaseUrl: ref.watch(supabaseBootstrapProvider).url,
+    accessTokenLoader: auth.currentAccessToken,
+    accessTokenRefresher: (token) =>
+        auth.refreshAccessToken(failedAccessToken: token),
+  );
 });
-final cardioOnlineMapProvider = Provider<CardioOnlineMap>(
-  (ref) => CardioOnlineMap(),
-);
 
 class CardioOnlineMapPanel extends ConsumerStatefulWidget {
   const CardioOnlineMapPanel({
@@ -50,30 +52,30 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
     final zh = widget.chinese;
     final owner = ref.read(currentUserIdProvider);
     if (owner != widget.ownerUserId) return;
-    var draft = ref.read(cardioMapKeyProvider) ?? '';
-    final accepted = await showDialog<String>(
+    if (owner == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            zh
+                ? '请先在“我的”中登录后使用在线地图。离线记录不受影响。'
+                : 'Sign in from Me to use online maps. Offline recording is unaffected.',
+          ),
+        ),
+      );
+      return;
+    }
+    final accepted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(zh ? '启用个人在线地图' : 'Enable personal online map'),
+        title: Text(zh ? '启用在线地图' : 'Enable online map'),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 zh
-                    ? '仅用于你已获授权的个人测试。每次加载会将一个定位点及网络信息发送给高德，不发送完整路线，也不上传到 Fittin。可能消耗高德配额。Key 仅保留在本次应用会话，退出登录或重启后清除。'
-                    : 'For your authorized personal testing. Each refresh sends one position and network information to AMap, not the full route or Fittin. Provider quotas may apply. The key stays only in this app session and is cleared on sign-out or restart.',
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                initialValue: draft,
-                onChanged: (value) => draft = value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                decoration: InputDecoration(
-                  labelText: zh ? '高德 Web 服务 Key' : 'AMap Web Service key',
-                ),
+                    ? '使用已配置的个人测试地图，无需填写 Key。每次加载会将一个定位点经 Fittin 转发给高德，不发送完整路线。Fittin 不保存该坐标或地图图片，可能消耗高德配额。'
+                    : 'Use the configured personal test map without entering a key. Each refresh sends one position through Fittin to AMap, never your full route. Fittin does not store the point or map image. Provider quotas may apply.',
               ),
               const SizedBox(height: 8),
               Text(
@@ -90,40 +92,26 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
             child: Text(zh ? '取消' : 'Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(context, draft.trim()),
+            onPressed: () => Navigator.pop(context, true),
             child: Text(zh ? '同意并加载' : 'Agree & load'),
           ),
         ],
       ),
     );
     if (!mounted ||
-        accepted == null ||
+        accepted != true ||
         owner != ref.read(currentUserIdProvider)) {
       return;
     }
-    if (!CardioOnlineMap.validKey(accepted)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            zh
-                ? '请输入有效的 32 位 Web 服务 Key。'
-                : 'Enter a valid 32-character Web Service key.',
-          ),
-        ),
-      );
-      return;
-    }
-    ref.read(cardioMapKeyProvider.notifier).state = accepted;
     setState(() => _enabled = true);
     await _load();
   }
 
   Future<void> _load() async {
-    final point = widget.point, key = ref.read(cardioMapKeyProvider);
+    final point = widget.point;
     if (!_enabled ||
         _busy ||
         point == null ||
-        key == null ||
         widget.ownerUserId != ref.read(currentUserIdProvider)) {
       return;
     }
@@ -136,7 +124,6 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
       final bytes = await ref
           .read(cardioOnlineMapProvider)
           .load(
-            key: key,
             point: point,
             zoom: _zoom,
             isCurrent: () =>
@@ -188,8 +175,8 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
         if (_failed)
           Text(
             zh
-                ? '地图加载失败，请检查 Key 类型、配额和网络。离线记录不受影响。'
-                : 'Map failed to load. Check key type, quota and network. Offline recording is unaffected.',
+                ? '地图暂时无法加载，请稍后重试或检查网络与登录状态。离线记录不受影响。'
+                : 'Map unavailable. Retry later or check your connection and sign-in. Offline recording is unaffected.',
           ),
         if (_pointTime != null)
           Text(
@@ -227,10 +214,9 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
             ),
             TextButton(
               onPressed: () {
-                ref.read(cardioMapKeyProvider.notifier).state = null;
                 _disable();
               },
-              child: Text(zh ? '关闭并清除 Key' : 'Close & clear key'),
+              child: Text(zh ? '关闭地图' : 'Close map'),
             ),
           ],
         ),
