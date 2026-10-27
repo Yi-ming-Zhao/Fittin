@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +13,53 @@ import '../support/in_memory_database_repository.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+    'restored unverified configuration shows composer, not configure',
+    (tester) async {
+      final store = _DelayedSettingsStore();
+      final bridge = _RecordingBridge();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            databaseRepositoryProvider.overrideWithValue(
+              InMemoryDatabaseRepository(),
+            ),
+            agentProviderSettingsStoreProvider.overrideWithValue(store),
+            agentUiBridgeProvider.overrideWithValue(bridge),
+          ],
+          child: const MaterialApp(home: AgentScreen()),
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('agent-settings-loading')),
+        findsOneWidget,
+      );
+      expect(find.text('Configure Agent'), findsNothing);
+      store.loaded.complete(
+        const AgentProviderConfig(
+          baseUrl: 'https://example.com',
+          model: 'saved-model',
+          hasApiKey: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('agent-composer-field')),
+        findsOneWidget,
+      );
+      expect(find.text('Configure Agent'), findsNothing);
+      await tester.enterText(
+        find.byKey(const ValueKey('agent-composer-field')),
+        'Analyze training',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('agent-send')));
+      await tester.pump();
+      expect(bridge.prompts, ['Analyze training']);
+    },
+  );
 
   testWidgets('failed empty and tool-only replies render only the error', (
     tester,
@@ -257,6 +305,12 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+}
+
+class _DelayedSettingsStore extends _MemorySettingsStore {
+  final loaded = Completer<AgentProviderConfig>();
+  @override
+  Future<AgentProviderConfig> load() => loaded.future;
 }
 
 class _MemorySettingsStore implements AgentProviderSettingsStore {

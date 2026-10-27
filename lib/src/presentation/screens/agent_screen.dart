@@ -46,6 +46,10 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
     final state = ref.watch(agentUiStateProvider);
     final providerSettings = ref.watch(agentProviderSettingsControllerProvider);
     final configured = providerSettings.isReady;
+    final loadingSettings =
+        providerSettings.isLoading ||
+        providerSettings.isSaving ||
+        providerSettings.isTesting;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -69,7 +73,7 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
                     theme: theme,
                     strings: strings,
                     config: providerSettings.config,
-                    ready: providerSettings.isReady,
+                    ready: providerSettings.config.isReady,
                     onHistory: () => _showConversationHistory(
                       context,
                       state,
@@ -85,7 +89,13 @@ class _AgentScreenState extends ConsumerState<AgentScreen> {
                     ),
                   ),
                   Expanded(
-                    child: configured
+                    child: loadingSettings
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              key: ValueKey('agent-settings-loading'),
+                            ),
+                          )
+                        : configured
                         ? _ConversationBody(
                             controller: _scrollController,
                             state: state,

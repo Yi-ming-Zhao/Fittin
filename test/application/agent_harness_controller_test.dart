@@ -18,6 +18,25 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
+  test('complete unverified settings run the model directly', () async {
+    final transport = _TurnTransport([
+      [
+        const AgentTextDelta('Ready to help'),
+        const AgentModelCompleted(finishReason: 'stop'),
+      ],
+    ]);
+    final container = _container(
+      transport: transport,
+      settingsStore: _UnverifiedSettingsStore(),
+    );
+    addTearDown(container.dispose);
+    await container
+        .read(agentHarnessControllerProvider.notifier)
+        .submit('Analyze training');
+    final state = container.read(agentHarnessControllerProvider).runState;
+    expect(state.phase, AgentRunPhase.completed);
+    expect(state.conversation!.messages.last.content, 'Ready to help');
+  });
   test(
     'deleting a conversation removes checkpoint pages and incremental tails',
     () async {
@@ -1368,6 +1387,12 @@ class _ReadySettingsStore implements AgentProviderSettingsStore {
     hasApiKey: true,
     toolCallingVerified: toolCallingVerified,
   );
+}
+
+class _UnverifiedSettingsStore extends _ReadySettingsStore {
+  @override
+  Future<AgentProviderConfig> load() async =>
+      (await super.load()).copyWith(toolCallingVerified: false);
 }
 
 class _ApiKeyGateSettingsStore extends _ReadySettingsStore {
