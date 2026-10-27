@@ -1,6 +1,6 @@
 # Fittin v1.5.4 验证
 
-current_stage_id: v154-candidate
+current_stage_id: v154-published
 current_watch: none
 current_wakeup_receipt: none
 
@@ -16,12 +16,34 @@ current_wakeup_receipt: none
 - 241 隔离临时目录的 Go TestAreaMap 通过，未覆盖正式工作区。修改 Dart 9 文件静态分析无问题。
 - 浏览器检查八套主题 390×844，以及 320px 中英文共 10 项，无 JS 错误；查看真实图片与本机路线叠加截图，无溢出。使用真实地图图片、合成账号和替代传输，不冒充真实用户登录。证据 /tmp/fittin-v154-ui/result.json。
 
-## 发布待验收
+## 发布过程
 
-- PR/候选完整 CI、所有平台构建、原签名 Android 覆盖升级。
-- 241 干净工作区快进同步、本地构建及回滚二进制；公开 readyz、认证和地图端点。
-- ECS 保留 v1.5.3 回滚，Web 原子切换及公开移动端检查；最后更新 latest.json。
-- 主规范同步、归档和最终仓库同步。
+- PR #20，候选提交 299f41e；完整 CI 40500557646 六项全部通过，包含完整 Flutter/Go、IndexedDB v1–v4 迁移和四个原生平台构建。合并 eee1c04 与候选 Git 树完全一致；取消重复 main CI 40501424686，复用通过证据。v1.5.4 发布资产运行 40501473398 已完成，等待会话已结束，无后台监控。
+- 字体子集补齐后 346,656 字节，字体定向测试 3 项通过，仓库敏感文件检查通过；OpenSpec strict 通过。
+- 部署前 241 正式工作区干净，GitHub fetch 正常；ECS 为 v1.5.3，系统盘剩余 3.4 GB、数据盘 467 GB，无需清理。
+- Android 模拟器保留 v1.5.3+31；启动时系统界面卡顿，降低模拟器分辨率后重启应用已恢复。升级前 UI 确认原计划、Week 1 Day 1、High-Bar Squat 和 Resume 草稿；首次安装时间仍为 2026-09-05 03:41:31。
+- 在旧版 Android 设置页保存 DeepSeek 地址、deepseek-v4-flash 和无效 QA Key（不调用模型）；出现 Configuration saved 后返回 AI 页仍为 Not configured / Configure Agent，实际复现原问题。该模拟器配置保留供升级后验证，不使用用户真实 Key。
+- 241 从 fabc75e 干净快进至 eee1c04，在服务器本地构建 Go，保留 `.local/bin/fittin-backend.before-v154` 后原子替换并重启；本机 readyz 通过。没有通过 NPS 传输构建产物。
+- 公开 `/api/readyz` 正常，地图匿名请求 401；使用 60 秒临时部署探针身份和公开示例中心点，经公开地图端点返回 600×360 PNG（45,752 字节）及 no-store。没有写用户数据或保存令牌/图片；不是实际用户登录验收。
+- 主规范已同步：新增 session-readiness 的两条要求，live-cardio-recording 增加本机路线叠图要求，均通过 strict 验证。三条要求分别由配置/启动测试、投影/组件测试和实际地图对照覆盖，未发现实现与设计矛盾。
+- 正式发布运行 40501473398 五项全部成功；GitHub v1.5.4 包含 Android APK/AAB、Web、Windows、macOS、Linux、iOS 无签名及校验和。
+
+## 正式资产与升级
+
+- APK 89,072,839 字节，SHA-256 `bdf00e4ad6cce2c324b80fab7164bd34d90861b4353ed72ea0ce350417d3f8bc`；Web ZIP 26,781,587 字节，SHA-256 `0179c011c80d311f97e8c25d3413941a7d17c8df08431ecbe02b050f0b0b76b2`。本机和 ECS 各校验一次，与 CI 清单一致，ZIP 完整性通过。
+- APK 签名 SHA-256 `0c52c1350c14a360c833422967ac33469572e9acb64a33ddaad1a407532d0671`，与稳定签名一致。模拟器 `install -r` 从 1.5.3+31 升至 1.5.4+32，首次安装时间不变；没有卸载或清除数据。
+- 升级后原计划、Week 1 Day 1、High-Bar Squat 和 Resume 草稿全部保留。同一份未经测试的 Agent 配置直接显示 deepseek-v4-flash、推荐问题和 Send 输入框，不再显示 Configure Agent；地址和模型仍在设置页。QA 使用无效 Key，不进行模型请求；未登录模拟器不冒充真实用户会话迁移。
+- ECS 已切换到 `/var/www/fittin/releases/v1.5.4/web`，保留 v1.5.3 回滚。全局 nginx 配置检查被无关 gaokao.conf 的 cnccgeval.home.drapl.cn DNS 失败阻止，第一次切换在修改前停止。核实 Fittin 的 root 已指向 current 软链接、没有文件句柄缓存后，仅原子切换静态内容，不改配置、不重载共享 nginx；公开 readyz 与 version=1.5.4/build32 通过。
+- 公开 390×844 下载页和 Web 首屏已实际查看，无 JS 错误，APK 链接正确。首次浏览器脚本把持续网络请求视为未加载，networkidle 等待超时；改为检查 Flutter 实际挂载和有界启动后的截图，首页正常进入选计划空态。沿用既有顶部两条占位，本轮未修改此状态。证据 `/tmp/fittin-v154-public/`。
+- 第一方 APK HTTP 200、Content-Length=89,072,839，与正式资产一致。Android QA Key 在验证完成后已清除，未发送模型请求。
+- 最后原子更新第一方 latest.json 为 1.5.4/build32/上述 APK 哈希，保留 `latest.json.before-v1.5.4`。公开读取一致；Android 实际点击检查更新，返回 You are up to date。
+
+## 规范核对与收尾
+
+- 完整性：六项实施任务及三条要求均有对应实现和验证；候选 CI、正式构建、部署及升级验收完成。
+- 正确性：配置状态与存储测试、启动身份及状态保留测试、地图投影/组件测试覆盖全部七个规范场景；真实地图及 Android 跨版本验证补充用户可见边界。
+- 一致性：保持本机轨迹、服务器 Key、Web 内存 Key、不改 schema 的设计；无阻止归档的问题。按既有授权同步规范并归档到 `openspec/changes/archive/2026-10-27-fix-agent-startup-route-map/`。
+- 本收尾提交推送后，241 使用 `git pull --ff-only` 同步规范与记录；仅文档变化，无需重复构建后端。保留用户未跟踪文件 `0`。
 
 ## 限制
 
