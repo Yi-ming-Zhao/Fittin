@@ -365,7 +365,8 @@ class AgentProviderSettingsState {
         : AgentProviderReadiness.unverified;
   }
 
-  bool get isReady => readiness == AgentProviderReadiness.ready;
+  // Compatibility testing is diagnostic, not permission to use saved settings.
+  bool get isReady => !isLoading && !isSaving && !isTesting && config.isReady;
 
   AgentProviderSettingsState copyWith({
     AgentProviderConfig? config,
@@ -450,23 +451,33 @@ class AgentProviderSettingsController
     state = state.copyWith(
       isSaving: true,
       isTesting: false,
-      config: state.config.copyWith(
-        toolCallingVerified: false,
-        clearCapabilities: true,
-      ),
       clearError: true,
       clearLastTest: true,
     );
     try {
-      final config = await _write(
-        () => _store.save(
+      final config = await _write(() async {
+        final previous = await _store.load();
+        final normalized = normalizeAgentProviderBaseUrl(
+          baseUrl,
+          allowDebugLoopbackHttp: !kIsWeb && !kReleaseMode,
+        ).toString();
+        final replacement = apiKey?.trim();
+        final unchanged =
+            previous.baseUrl == normalized &&
+            previous.model == model.trim() &&
+            (replacement == null ||
+                replacement.isEmpty ||
+                replacement == await _store.loadApiKey());
+        return _store.save(
           baseUrl: baseUrl,
           model: model,
           apiKey: apiKey,
+          toolCallingVerified: unchanged && previous.toolCallingVerified,
+          capabilities: unchanged ? previous.capabilities : null,
           contextWindowTokens:
               contextWindowTokens ?? state.config.contextWindowTokens,
-        ),
-      );
+        );
+      });
       if (_current(revision)) {
         state = state.copyWith(config: config, isSaving: false);
       }

@@ -107,7 +107,7 @@ func (s *Server) handleAreaMap(w http.ResponseWriter, r *http.Request) {
 	}
 	image, kind, err := fetchMapProvider(ctx, client, "/v3/staticmap", url.Values{
 		"key": {s.cfg.AMapWebServiceKey}, "location": {result.Locations}, "zoom": {strconv.Itoa(input.Zoom)},
-		"size": {"600*360"}, "scale": {"1"}, "markers": {"mid,0xB64337,A:" + result.Locations},
+		"size": {"600*360"}, "scale": {"1"},
 	}, 2<<20)
 	if err != nil || (kind != "image/png" && kind != "image/jpeg") || http.DetectContentType(image) != kind {
 		writeError(w, 502, "map_unavailable", "Map unavailable")

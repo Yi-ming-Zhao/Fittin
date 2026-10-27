@@ -23,10 +23,24 @@ class _CardioRoutePreviewState extends ConsumerState<CardioRoutePreview> {
   final List<RoutePoint> _points = [];
   int _chunks = 0;
   bool _loading = false, _failed = false, _reload = false;
+  int _generation = 0;
   @override
   void initState() {
     super.initState();
     Future.microtask(_load);
+  }
+
+  @override
+  void didUpdateWidget(covariant CardioRoutePreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.session.id != widget.session.id ||
+        oldWidget.session.ownerUserId != widget.session.ownerUserId) {
+      _generation++;
+      _points.clear();
+      _chunks = 0;
+      _failed = false;
+      Future.microtask(_load);
+    }
   }
 
   Future<void> _load() async {
@@ -36,6 +50,7 @@ class _CardioRoutePreviewState extends ConsumerState<CardioRoutePreview> {
       return;
     }
     _loading = true;
+    final generation = _generation;
     try {
       final store = ref.read(cardioRecordingStoreProvider);
       await for (final chunk in store.route(
@@ -43,7 +58,7 @@ class _CardioRoutePreviewState extends ConsumerState<CardioRoutePreview> {
         ownerUserId: widget.session.ownerUserId,
         fromChunk: _chunks,
       )) {
-        if (!mounted) return;
+        if (!mounted || generation != _generation) return;
         _points.addAll(chunk);
         _chunks++;
         // Decimate display geometry only. Full fidelity data stays in storage.
@@ -80,61 +95,59 @@ class _CardioRoutePreviewState extends ConsumerState<CardioRoutePreview> {
   Widget build(BuildContext context) {
     ref.listen(localCardioSessionsProvider, (_, __) => _load());
     final colors = Theme.of(context).colorScheme;
-    return Column(
-      children: [
-        Semantics(
-          label: widget.chinese
-              ? '本机路线示意图，定位中断处断开'
-              : 'Local route overview; location gaps are separated',
-          child: Container(
-            height: 180,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Stack(
-              children: [
-                if (_points.length >= 2)
-                  Positioned.fill(
-                    child: CustomPaint(
-                      painter: _RoutePainter(
-                        List.of(_points),
-                        colors.primary,
-                        colors.onSurfaceVariant,
-                      ),
-                    ),
-                  )
-                else
-                  Center(
-                    child: Text(
-                      _failed
-                          ? (widget.chinese ? '路线暂不可读取' : 'Route unavailable')
-                          : (widget.chinese
-                                ? '等待已保存的路线'
-                                : 'Waiting for saved route'),
+    return CardioOnlineMapPanel(
+      key: ValueKey('${widget.session.ownerUserId}:${widget.session.id}'),
+      ownerUserId: widget.session.ownerUserId,
+      point: _points.lastOrNull,
+      routePoints: List.of(_points),
+      chinese: widget.chinese,
+      offlinePreview: Semantics(
+        label: widget.chinese
+            ? '本机路线示意图，定位中断处断开'
+            : 'Local route overview; location gaps are separated',
+        child: Container(
+          height: 180,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: colors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Stack(
+            children: [
+              if (_points.length >= 2)
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _RoutePainter(
+                      List.of(_points),
+                      colors.primary,
+                      colors.onSurfaceVariant,
                     ),
                   ),
-                Positioned(
-                  left: 14,
-                  bottom: 12,
+                )
+              else
+                Center(
                   child: Text(
-                    widget.chinese
-                        ? '本机路线 · 非在线地图'
-                        : 'Local route · offline overview',
-                    style: Theme.of(context).textTheme.labelSmall,
+                    _failed
+                        ? (widget.chinese ? '路线暂不可读取' : 'Route unavailable')
+                        : (widget.chinese
+                              ? '等待已保存的路线'
+                              : 'Waiting for saved route'),
                   ),
                 ),
-              ],
-            ),
+              Positioned(
+                left: 14,
+                bottom: 12,
+                child: Text(
+                  widget.chinese
+                      ? '本机路线 · 非在线地图'
+                      : 'Local route · offline overview',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              ),
+            ],
           ),
         ),
-        CardioOnlineMapPanel(
-          ownerUserId: widget.session.ownerUserId,
-          point: _points.lastOrNull,
-          chinese: widget.chinese,
-        ),
-      ],
+      ),
     );
   }
 }

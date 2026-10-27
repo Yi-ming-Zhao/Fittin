@@ -35,6 +35,8 @@ final initialUserHydrationProvider = FutureProvider<SyncControllerState>((
 });
 
 final initialHomeValidationProvider = FutureProvider<void>((ref) async {
+  // Validate one snapshot per identity, not every subsequent training refresh.
+  ref.watch(currentUserIdProvider);
   Future<void> validate<T>(Future<T> future) async {
     try {
       await future;
@@ -46,10 +48,10 @@ final initialHomeValidationProvider = FutureProvider<void>((ref) async {
   }
 
   await Future.wait([
-    validate(ref.watch(todayWorkoutSummaryProvider.future)),
-    validate(ref.watch(activeTemplateProvider.future)),
-    validate(ref.watch(homeDashboardDataProvider.future)),
-    validate(ref.watch(planLibraryItemsProvider.future)),
+    validate(ref.read(todayWorkoutSummaryProvider.future)),
+    validate(ref.read(activeTemplateProvider.future)),
+    validate(ref.read(homeDashboardDataProvider.future)),
+    validate(ref.read(planLibraryItemsProvider.future)),
   ]);
 });
 

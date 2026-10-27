@@ -35,6 +35,70 @@ void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   test(
+    'complete saved settings are usable without a connection test',
+    () async {
+      final store = PlatformAgentProviderSettingsStore(
+        secretStore: InMemoryAgentSecretStore(),
+        isWebOverride: false,
+      );
+      await store.save(
+        baseUrl: 'https://provider.example/v1',
+        model: 'm',
+        apiKey: 'test-key',
+      );
+      final controller = AgentProviderSettingsController(
+        store,
+        AgentConnectionTester(_FakeTransport((_) async* {})),
+      );
+      addTearDown(controller.dispose);
+      await controller.initialized;
+      expect(controller.state.readiness, AgentProviderReadiness.unverified);
+      expect(controller.state.isReady, isTrue);
+    },
+  );
+
+  test('saving unchanged settings keeps verified capabilities', () async {
+    final store = PlatformAgentProviderSettingsStore(
+      secretStore: InMemoryAgentSecretStore(),
+      isWebOverride: false,
+    );
+    await store.save(
+      baseUrl: 'https://provider.example/v1',
+      model: 'm',
+      apiKey: 'test-key',
+      toolCallingVerified: true,
+      capabilities: AgentProviderCapabilityProfile(
+        testedAt: DateTime.utc(2026),
+        functionCalling: true,
+        streaming: true,
+      ),
+    );
+    final controller = AgentProviderSettingsController(
+      store,
+      AgentConnectionTester(_FakeTransport((_) async* {})),
+    );
+    addTearDown(controller.dispose);
+    await controller.initialized;
+    expect(
+      await controller.save(
+        baseUrl: 'https://provider.example/v1/',
+        model: ' m ',
+        apiKey: '',
+      ),
+      isTrue,
+    );
+    expect((await store.load()).toolCallingVerified, isTrue);
+    expect((await store.load()).capabilities?.streaming, isTrue);
+    await controller.save(
+      baseUrl: 'https://provider.example/v1',
+      model: 'new-model',
+    );
+    expect((await store.load()).toolCallingVerified, isFalse);
+    expect((await store.load()).capabilities, isNull);
+    expect(controller.state.isReady, isTrue);
+  });
+
+  test(
     'clearing settings cancels a pending test and cannot resurrect its key',
     () async {
       final gate = Completer<void>();

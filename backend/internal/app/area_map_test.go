@@ -112,7 +112,7 @@ func TestAreaMapFixedProviderAndNoStore(t *testing.T) {
 			}
 			return agentResponse(200, "application/json", `{"status":"1","locations":"116.406,39.901"}`), nil
 		}
-		if r.URL.Path != "/v3/staticmap" || r.URL.Query().Get("location") != "116.406,39.901" || r.URL.Query().Has("paths") {
+		if r.URL.Path != "/v3/staticmap" || r.URL.Query().Get("location") != "116.406,39.901" || r.URL.Query().Has("paths") || r.URL.Query().Has("markers") {
 			t.Fatal("bad static request")
 		}
 		return agentResponse(200, "image/png;charset=UTF-8", mapPNG), nil

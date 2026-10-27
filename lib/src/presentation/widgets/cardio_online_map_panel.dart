@@ -5,6 +5,8 @@ import '../../application/auth_provider.dart';
 import '../../application/supabase_bootstrap.dart';
 import '../../data/cardio_online_map.dart';
 import '../../domain/models/cardio_recording.dart';
+import '../../domain/cardio_map_projection.dart';
+import 'cardio_map_route_overlay.dart';
 
 final cardioOnlineMapProvider = Provider<CardioOnlineMap>((ref) {
   final auth = ref.watch(authRepositoryProvider);
@@ -22,10 +24,14 @@ class CardioOnlineMapPanel extends ConsumerStatefulWidget {
     required this.point,
     required this.chinese,
     required this.ownerUserId,
+    this.routePoints = const [],
+    this.offlinePreview,
   });
   final RoutePoint? point;
   final bool chinese;
   final String? ownerUserId;
+  final List<RoutePoint> routePoints;
+  final Widget? offlinePreview;
   @override
   ConsumerState<CardioOnlineMapPanel> createState() =>
       _CardioOnlineMapPanelState();
@@ -36,6 +42,11 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
   DateTime? _pointTime;
   bool _enabled = false, _busy = false, _failed = false;
   int _epoch = 0, _zoom = 15;
+  CardioMapViewport? _viewport;
+
+  List<RoutePoint> get _route => widget.routePoints.isNotEmpty
+      ? widget.routePoints
+      : [if (widget.point != null) widget.point!];
 
   void _disable() {
     _epoch++;
@@ -43,6 +54,7 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
       _enabled = false;
       _busy = false;
       _image = null;
+      _viewport = null;
       _pointTime = null;
       _failed = false;
     });
@@ -74,8 +86,8 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
             children: [
               Text(
                 zh
-                    ? '使用已配置的个人测试地图，无需填写 Key。每次加载会将一个定位点经 Fittin 转发给高德，不发送完整路线。Fittin 不保存该坐标或地图图片，可能消耗高德配额。'
-                    : 'Use the configured personal test map without entering a key. Each refresh sends one position through Fittin to AMap, never your full route. Fittin does not store the point or map image. Provider quotas may apply.',
+                    ? '每次加载仅将地图中心点经 Fittin 转发给高德。路线在本机叠加，不发送完整路线，Fittin 不保存坐标或图片。无需填写 Key，可能消耗高德配额。'
+                    : 'Each refresh sends one position (the map center) through Fittin to AMap. Your route is overlaid locally, never uploaded. Fittin stores neither coordinates nor images. No key entry is needed; provider quotas may apply.',
               ),
               const SizedBox(height: 8),
               Text(
@@ -104,17 +116,21 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
       return;
     }
     setState(() => _enabled = true);
-    await _load();
+    await _load(fitRoute: true);
   }
 
-  Future<void> _load() async {
-    final point = widget.point;
+  Future<void> _load({bool fitRoute = false, int? requestedZoom}) async {
+    final route = _route;
     if (!_enabled ||
         _busy ||
-        point == null ||
+        !route.any((p) => p.isValid) ||
         widget.ownerUserId != ref.read(currentUserIdProvider)) {
       return;
     }
+    final viewport = CardioMapViewport.fit(
+      route,
+      zoom: fitRoute ? null : requestedZoom ?? _zoom,
+    );
     final epoch = ++_epoch;
     setState(() {
       _busy = true;
@@ -124,8 +140,8 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
       final bytes = await ref
           .read(cardioOnlineMapProvider)
           .load(
-            point: point,
-            zoom: _zoom,
+            point: viewport.center,
+            zoom: viewport.zoom,
             isCurrent: () =>
                 mounted &&
                 epoch == _epoch &&
@@ -134,7 +150,9 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
       if (!mounted || epoch != _epoch) return;
       setState(() {
         _image = bytes;
-        _pointTime = point.timestamp;
+        _viewport = viewport;
+        _zoom = viewport.zoom;
+        _pointTime = viewport.center.timestamp;
       });
     } catch (_) {
       if (mounted && epoch == _epoch) setState(() => _failed = true);
@@ -151,24 +169,59 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
     }
     final zh = widget.chinese;
     if (!_enabled) {
-      return TextButton.icon(
-        key: const ValueKey('cardio-enable-online-map'),
-        onPressed: widget.point == null ? null : _enable,
-        icon: const Icon(Icons.map_outlined),
-        label: Text(zh ? '在线周边地图' : 'Online area map'),
+      return Column(
+        children: [
+          if (widget.offlinePreview != null) widget.offlinePreview!,
+          TextButton.icon(
+            key: const ValueKey('cardio-enable-online-map'),
+            onPressed: _route.any((p) => p.isValid) ? _enable : null,
+            icon: const Icon(Icons.map_outlined),
+            label: Text(zh ? '在线周边地图' : 'Online area map'),
+          ),
+        ],
       );
     }
     return Column(
       children: [
-        if (_image != null)
-          Image.memory(
-            _image!,
-            fit: BoxFit.contain,
-            gaplessPlayback: true,
-            errorBuilder: (_, __, ___) => Text(
+        if (_image == null && widget.offlinePreview != null)
+          widget.offlinePreview!,
+        if (_image != null && _viewport != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AspectRatio(
+              aspectRatio: CardioMapViewport.width / CardioMapViewport.height,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.memory(
+                    _image!,
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, __, ___) =>
+                        widget.offlinePreview ??
+                        Text(
+                          zh
+                              ? '地图无法显示，离线记录不受影响。'
+                              : 'Map unavailable; offline recording is unaffected.',
+                        ),
+                  ),
+                  CardioMapRouteOverlay(
+                    key: const ValueKey('cardio-map-route-overlay'),
+                    viewport: _viewport!,
+                    points: List.of(_route),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        if (_image != null && widget.routePoints.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
               zh
-                  ? '地图无法显示，离线记录不受影响。'
-                  : 'Map unavailable; offline recording is unaffected.',
+                  ? 'S 起点 · E 终点 · 轨迹仅本机'
+                  : 'S Start · E End · Route stays on device',
+              style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
         if (_busy) const LinearProgressIndicator(),
@@ -192,23 +245,21 @@ class _CardioOnlineMapPanelState extends ConsumerState<CardioOnlineMapPanel> {
               onPressed: _busy || _zoom <= 3
                   ? null
                   : () {
-                      _zoom--;
-                      _load();
+                      _load(requestedZoom: _zoom - 1);
                     },
               icon: const Icon(Icons.remove),
             ),
             TextButton.icon(
-              onPressed: _busy ? null : _load,
-              icon: const Icon(Icons.refresh),
-              label: Text(zh ? '更新位置' : 'Refresh position'),
+              onPressed: _busy ? null : () => _load(fitRoute: true),
+              icon: const Icon(Icons.fit_screen),
+              label: Text(zh ? '查看全程' : 'Fit route'),
             ),
             IconButton(
               tooltip: zh ? '放大' : 'Zoom in',
               onPressed: _busy || _zoom >= 17
                   ? null
                   : () {
-                      _zoom++;
-                      _load();
+                      _load(requestedZoom: _zoom + 1);
                     },
               icon: const Icon(Icons.add),
             ),

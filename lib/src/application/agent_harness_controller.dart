@@ -314,8 +314,8 @@ class AgentHarnessController extends StateNotifier<AgentHarnessState> {
       if (!settings.isReady) {
         await _fail(
           _isChinese
-              ? '请先配置并测试 Agent 模型服务。'
-              : 'Configure and test an Agent provider first.',
+              ? '请等待配置加载完成，并确认模型地址、模型名称和 API Key 已保存。'
+              : 'Wait for settings to finish loading and save a provider URL, model, and API key.',
         );
         return;
       }

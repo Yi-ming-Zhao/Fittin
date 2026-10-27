@@ -576,7 +576,8 @@ class AppStrings {
       ? '配置你自己的模型服务，API Key 不会进入同步。'
       : 'Connect your own model provider. Your API key is never synced.';
   String get agentNotConfigured => isChinese ? '尚未配置' : 'Not configured';
-  String get agentNeedsTest => isChinese ? '待验证工具调用' : 'Tool test required';
+  String get agentNeedsTest =>
+      isChinese ? '已配置 · 可测试兼容性' : 'Configured · compatibility test optional';
   String get agentReady => isChinese ? '可用' : 'Ready';
   String get agentPageEyebrow => isChinese ? '训练控制台' : 'TRAINING CONSOLE';
   String get agentPageTitle => 'Fittin Agent';

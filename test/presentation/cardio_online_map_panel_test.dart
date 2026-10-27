@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,8 +7,75 @@ import 'package:fittin_v2/src/application/auth_provider.dart';
 import 'package:fittin_v2/src/data/cardio_online_map.dart';
 import 'package:fittin_v2/src/domain/models/cardio_recording.dart';
 import 'package:fittin_v2/src/presentation/widgets/cardio_online_map_panel.dart';
+import 'package:fittin_v2/src/presentation/widgets/cardio_map_route_overlay.dart';
 
 void main() {
+  testWidgets(
+    'route overlays fitted image; failed zoom retains projection; close restores offline',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 568));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final map = _OnceMap();
+      final route = [
+        RoutePoint(
+          latitude: 39.9,
+          longitude: 116.39,
+          timestamp: DateTime.utc(2026),
+        ),
+        RoutePoint(
+          latitude: 39.92,
+          longitude: 116.41,
+          timestamp: DateTime.utc(2026),
+          segment: 1,
+        ),
+      ];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentUserIdProvider.overrideWithValue('alice'),
+            cardioOnlineMapProvider.overrideWithValue(map),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: CardioOnlineMapPanel(
+                point: route.last,
+                routePoints: route,
+                ownerUserId: 'alice',
+                chinese: false,
+                offlinePreview: const Text('offline route'),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('offline route'), findsOneWidget);
+      await tester.tap(find.text('Online area map'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Agree & load'));
+      await tester.pumpAndSettle();
+      final view = tester
+          .widget<CardioMapRouteOverlay>(find.byType(CardioMapRouteOverlay))
+          .viewport;
+      expect(map.requestedPoint!.latitude, closeTo(39.91, 1e-8));
+      expect(map.requestedPoint!.longitude, closeTo(116.4, 1e-8));
+      expect(find.text('offline route'), findsNothing);
+      expect(view.segments(route).length, 2);
+      await tester.tap(find.byTooltip('Zoom in'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<CardioMapRouteOverlay>(find.byType(CardioMapRouteOverlay))
+            .viewport,
+        same(view),
+      );
+      expect(find.textContaining('Map unavailable'), findsOneWidget);
+      await tester.tap(find.text('Close map'));
+      await tester.pumpAndSettle();
+      expect(find.text('offline route'), findsOneWidget);
+      expect(find.byType(CardioMapRouteOverlay), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets('signed out users never see a key field or send a map request', (
     tester,
   ) async {
@@ -144,5 +212,21 @@ class _FailingMap extends CardioOnlineMap {
   }) async {
     calls++;
     throw const CardioMapUnavailable();
+  }
+}
+
+class _OnceMap extends _FailingMap {
+  RoutePoint? requestedPoint;
+  @override
+  Future<Uint8List> load({
+    required RoutePoint point,
+    int zoom = 15,
+    bool Function()? isCurrent,
+  }) async {
+    if (calls++ > 0) throw const CardioMapUnavailable();
+    requestedPoint = point;
+    return base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5S0AAAAASUVORK5CYII=',
+    );
   }
 }

@@ -17,6 +17,9 @@ class AppStartupGate extends ConsumerStatefulWidget {
 
 class _AppStartupGateState extends ConsumerState<AppStartupGate> {
   String? _continuedScopeKey;
+  String? _readyScopeKey;
+  String? _lastScopeKey;
+  bool _hasOpened = false;
 
   @override
   Widget build(BuildContext context) {
@@ -25,17 +28,41 @@ class _AppStartupGateState extends ConsumerState<AppStartupGate> {
     final theme = ref.watch(resolvedFittinThemeProvider);
     final strings = AppStrings.of(context, ref);
     final scopeKey = currentUserId ?? '__local__';
+    if (_lastScopeKey != scopeKey) {
+      _lastScopeKey = scopeKey;
+      _readyScopeKey = null;
+      _continuedScopeKey = null;
+    }
     final isReadyForCurrentScope =
         readiness.hasValue &&
         !readiness.isLoading &&
         readiness.valueOrNull?.userId == currentUserId;
     final isContinuingCurrentScope = _continuedScopeKey == scopeKey;
+    if (isReadyForCurrentScope || isContinuingCurrentScope) {
+      _readyScopeKey = scopeKey;
+      _hasOpened = true;
+    }
 
     final Widget visibleChild;
-    if (isContinuingCurrentScope || isReadyForCurrentScope) {
+    if (_readyScopeKey == scopeKey) {
       visibleChild = KeyedSubtree(
-        key: const ValueKey('startup-ready-shell'),
+        key: ValueKey('startup-ready-shell:$scopeKey'),
         child: widget.child,
+      );
+    } else if (_hasOpened) {
+      visibleChild = Scaffold(
+        key: const ValueKey('account-scope-loading'),
+        body: Center(
+          child: readiness.hasError && !readiness.isLoading
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(strings.accountUnavailable),
+                    TextButton(onPressed: _retry, child: Text(strings.retry)),
+                  ],
+                )
+              : const CircularProgressIndicator(),
+        ),
       );
     } else {
       visibleChild = StartupSplashScreen(

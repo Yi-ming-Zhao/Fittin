@@ -25,6 +25,42 @@ class _PendingSyncService implements SyncService {
 }
 
 void main() {
+  testWidgets('same-scope refresh and error never unmount the ready shell', (
+    tester,
+  ) async {
+    final refresh = Completer<AppStartupReadiness>();
+    var calls = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          databaseRepositoryProvider.overrideWithValue(
+            InMemoryDatabaseRepository(),
+          ),
+          appStartupReadinessProvider.overrideWith(
+            (ref) => calls++ == 0
+                ? Future.value(const AppStartupReadiness())
+                : refresh.future,
+          ),
+        ],
+        child: const MaterialApp(
+          home: AppStartupGate(child: Scaffold(body: TextField())),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'keep my draft');
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(AppStartupGate)),
+    );
+    container.invalidate(appStartupReadinessProvider);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('keep my draft'), findsOneWidget);
+    expect(find.byKey(const ValueKey('startup-splash')), findsNothing);
+    refresh.completeError(StateError('transient refresh error'));
+    await tester.pump();
+    expect(find.text('keep my draft'), findsOneWidget);
+  });
   testWidgets('keeps the shell hidden until hydration and validation settle', (
     tester,
   ) async {
@@ -223,8 +259,9 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('startup-splash')), findsOneWidget);
+    expect(find.byKey(const ValueKey('startup-splash')), findsNothing);
     expect(find.text('ready-shell'), findsNothing);
+    expect(find.byKey(const ValueKey('account-scope-loading')), findsOneWidget);
     expect(syncService.calls, 1);
 
     syncService.completion.complete();
